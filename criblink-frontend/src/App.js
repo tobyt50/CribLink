@@ -13,6 +13,7 @@ import SelectRole from "./pages/SelectRole";
 import ManageProfile from "./pages/ManageProfile";
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
+import ResetPassword from "./pages/ResetPassword";
 
 import AgentDashboard from './pages/agent/Dashboard';
 import AgentListings from './pages/agent/Listings';
@@ -47,6 +48,7 @@ function App() {
           <Route path="/profile" element={<ManageProfile />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Agent Routes */}
           <Route path="/agent/dashboard" element={<AgentDashboard />} />

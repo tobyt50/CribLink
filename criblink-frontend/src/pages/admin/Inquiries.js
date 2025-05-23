@@ -187,13 +187,13 @@ const Inquiries = () => {
             <input
               type="text"
               placeholder="Search inquiries..."
-              className="w-full md:w-1/3 py-2 px-4 border border-gray-300 rounded-2xl" // Styling from Users.js
+              className="w-full md:w-1/3 py-2 px-4 border border-gray-300 rounded-xl" // Changed to rounded-xl
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }} // Reset page on search
             />
             {/* Status Filter */}
             <select
-              className="py-2 px-4 border border-gray-300 rounded-2xl bg-transparent focus:outline-none" // Styling from Users.js
+              className="py-2 px-4 border border-gray-300 rounded-xl bg-transparent focus:outline-none" // Changed to rounded-xl
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); setPage(1); }} // Reset page on filter change
             >
@@ -204,7 +204,7 @@ const Inquiries = () => {
             </select>
             {/* Export button placeholder (if needed later, similar to Users.js) */}
             {/* <div className="relative inline-block text-left">
-                 <button className="inline-flex justify-center items-center gap-x-1.5 rounded-lg bg-green-400 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+                 <button className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-400 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
                    Export <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
                  </button>
                </div> */}
@@ -251,7 +251,7 @@ const Inquiries = () => {
                         {inquiry.status !== 'resolved' && inquiry.status !== 'assigned' && (
                           <button
                             onClick={() => handleAssign(inquiry.inquiry_id)}
-                            className="text-xs text-white bg-blue-500 hover:bg-blue-600 rounded-lg px-2 py-1 w-full"
+                            className="text-xs text-white bg-blue-500 hover:bg-blue-600 rounded-xl px-2 py-1 w-full" // Changed to rounded-xl
                           >
                             Assign
                           </button>
@@ -260,14 +260,14 @@ const Inquiries = () => {
                         {inquiry.status !== 'resolved' && (
                           <button
                             onClick={() => handleResolve(inquiry.inquiry_id)}
-                            className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full"
+                            className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-xl px-2 py-1 w-full" // Changed to rounded-xl
                           >
                             Resolve
                           </button>
                         )}
                         {/* Example of a disabled button for resolved inquiries */}
                         {inquiry.status === 'resolved' && (
-                          <span className="text-xs text-gray-500 bg-gray-200 rounded-lg px-2 py-1 w-full text-center">Resolved</span>
+                          <span className="text-xs text-gray-500 bg-gray-200 rounded-xl px-2 py-1 w-full text-center">Resolved</span> // Changed to rounded-xl
                         )}
                       </div>
                     </td>
@@ -292,7 +292,7 @@ const Inquiries = () => {
             <button
               disabled={page === 1}
               onClick={() => setPage(p => Math.max(p - 1, 1))}
-              className="px-4 py-2 rounded-lg bg-gray-100 text-sm disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50" // Changed to rounded-xl
             >
               Prev
             </button>
@@ -300,7 +300,7 @@ const Inquiries = () => {
             <button
               disabled={page === totalPages || totalPages === 0}
               onClick={() => setPage(p => p + 1)}
-              className="px-4 py-2 rounded-lg bg-gray-100 text-sm disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50" // Changed to rounded-xl
             >
               Next
             </button>

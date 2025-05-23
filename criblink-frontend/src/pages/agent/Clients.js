@@ -246,7 +246,7 @@ const Clients = () => {
             placeholder="Search clients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-xl shadow-sm"
+            className="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm" // Removed md:w-1/2 to make it full width
           />
 
           <div className="flex gap-2 items-center">
@@ -258,11 +258,11 @@ const Clients = () => {
                 Export to CSV <ChevronDownIcon className="ml-2 h-5 w-5" />
               </button>
               {isExportDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-10">
-                  <button onClick={() => handleExportCsv('current')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100">
+                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow-lg z-10"> {/* Changed to rounded-xl */}
+                  <button onClick={() => handleExportCsv('current')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 rounded-xl"> {/* Changed to rounded-xl */}
                     Current View
                   </button>
-                  <button onClick={() => handleExportCsv('all')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100">
+                  <button onClick={() => handleExportCsv('all')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 rounded-xl"> {/* Changed to rounded-xl */}
                     All Clients
                   </button>
                 </div>
@@ -314,13 +314,13 @@ const Clients = () => {
                       <td className="px-2 py-2">{client.email}</td>
                       <td className="px-2 py-2">{client.client_status}</td>
                       <td className="px-2 py-2 flex gap-2 flex-wrap">
-                        <button onClick={() => handleViewProfile(client.user_id)} className="text-xs text-green-700 hover:underline">View</button>
-                        <button onClick={() => handleSendEmail(client)} className="text-xs text-blue-700 hover:underline">Email</button>
-                        <button onClick={() => handleRespondInquiry(client.user_id)} className="text-xs text-indigo-700 hover:underline">Respond</button>
-                        <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className="text-xs text-yellow-600 hover:underline">
+                        <button onClick={() => handleViewProfile(client.user_id)} className="text-xs text-green-700 hover:underline rounded-xl">View</button> {/* Added rounded-xl */}
+                        <button onClick={() => handleSendEmail(client)} className="text-xs text-blue-700 hover:underline rounded-xl">Email</button> {/* Added rounded-xl */}
+                        <button onClick={() => handleRespondInquiry(client.user_id)} className="text-xs text-indigo-700 hover:underline rounded-xl">Respond</button> {/* Added rounded-xl */}
+                        <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className="text-xs text-yellow-600 hover:underline rounded-xl"> {/* Added rounded-xl */}
                           {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
                         </button>
-                        <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client">
+                        <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className="rounded-xl"> {/* Added rounded-xl to the button */}
                           <TrashIcon className="h-4 w-4 text-red-500 hover:text-red-700" />
                         </button>
                       </td>

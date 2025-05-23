@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; // Assuming the path is correct
-// Removed AdminHeader as it's no longer needed with the new sidebar structure
 import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axios from 'axios';
@@ -46,8 +45,6 @@ const Listings = () => {
             setStatusFilter(location.state.statusFilter);
         }
     }, [location.state]);
-
-    // Removed the resize effect as AdminSidebar is now fixed and manages its own collapse state.
 
     // Effect to close export dropdown when clicking outside
     useEffect(() => {
@@ -460,232 +457,233 @@ const Listings = () => {
                 </div>
 
                 <main className="space-y-6">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="bg-white rounded-3xl p-6 shadow space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <input
+                                type="text"
+                                placeholder="Search listings..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                className="w-full md:w-1/5 py-2 px-4 border border-gray-300 rounded-xl shadow-sm focus:ring focus:ring-green-100"
+                            />
 
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between mt-4">
-                        <input
-                            type="text"
-                            placeholder="Search listings..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring focus:ring-green-100"
-                        />
-
-                        <PurchaseCategoryFilter
-                            selectedCategory={purchaseCategoryFilter}
-                            onChange={setPurchaseCategoryFilter}
-                            className="w-full md:w-1/6 px-4 py-2 border border-gray-300 rounded-xl shadow-sm"
-                        />
-                        <select
-                            value={statusFilter}
-                            onChange={handleStatusChange}
-                            className="w-full md:w-1/6 px-4 py-2 border border-gray-300 rounded-xl shadow-sm"
-                        >
-                            {statusOptions.map((status) => (
-                                <option key={status} value={status === "all statuses" ? "all" : status}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                </option>
-                            ))}
-                        </select>
-
-                        <input
-                            type="number"
-                            placeholder="Min Price"
-                            value={minPriceFilter}
-                            onChange={handleMinPriceChange}
-                            className="w-full md:w-1/6 px-4 py-2 border border-gray-300 rounded-xl shadow-sm"
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Max Price"
-                            value={maxPriceFilter}
-                            onChange={handleMaxPriceChange}
-                            className="w-full md:w-1/6 px-4 py-2 border border-gray-300 rounded-xl shadow-sm"
-                        />
-
-                        {/* Buttons for Add and Export */}
-                        <div className="flex gap-2">
-                            <button
-                                className="bg-green-400 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-500 text-sm font-medium"
-                                onClick={() => navigate('/add-listing')}
+                            <PurchaseCategoryFilter
+                                selectedCategory={purchaseCategoryFilter}
+                                onChange={setPurchaseCategoryFilter}
+                                className="w-full md:w-1/6 py-2 px-4 border border-gray-300 rounded-xl shadow-sm"
+                            />
+                            <select
+                                value={statusFilter}
+                                onChange={handleStatusChange}
+                                className="w-full md:w-1/6 py-2 px-4 border border-gray-300 rounded-xl shadow-sm"
                             >
-                                +Add
-                            </button>
-
-                            {/* Export to CSV button and dropdown */}
-                            <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                                <button
-                                    onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                                    className="flex items-center justify-center h-10 rounded-xl bg-green-400 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500" // Added h-10 for consistent height
-                                >
-                                    Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
-                                </button>
-                                {isExportDropdownOpen && (
-                                    <div className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-                                        <div className="py-1">
-                                            <button onClick={() => handleExportCsv('current')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">Current View</button>
-                                            <button onClick={() => handleExportCsv('all')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">All Listings</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-
-                        <div className="flex gap-2">
-                            <button
-                                className={`p-2 rounded-xl ${viewMode === 'simple' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                onClick={() => setViewMode('simple')}
-                                title="Simple View"
-                            >
-                                <TableCellsIcon className="h-6 w-6" />
-                            </button>
-                            <button
-                                className={`p-2 rounded-xl ${viewMode === 'graphical' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                onClick={() => setViewMode('graphical')}
-                                title="Graphical View"
-                            >
-                                <Squares2X2Icon className="h-6 w-6" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {filteredListings.length === 0 ? (
-                        <div className="text-center text-gray-500 py-8 col-span-full">
-                            No listings found matching your criteria.
-                        </div>
-                    ) : (
-                        viewMode === 'graphical' ? (
-                            <motion.div
-                                layout
-                                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                            >
-                                {filteredListings.map((listing) => (
-                                    // Make the ListingCard clickable and navigate to the edit page
-                                    <div key={listing.property_id}> {/* Added key prop */}
-                                        <ListingCard
-                                            listing={listing}
-                                            onDelete={handleDeleteListing} // Pass the delete handler to the card
-                                        // Pass other necessary props to ListingCard
-                                        />
-                                    </div>
+                                {statusOptions.map((status) => (
+                                    <option key={status} value={status === "all statuses" ? "all" : status}>
+                                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                                    </option>
                                 ))}
-                            </motion.div>
-                        ) : (
-                            <div className="overflow-x-auto bg-white rounded-3xl p-6 shadow">
-                                <table className="w-full mt-4 text-sm table-fixed">
-                                    <thead>
-                                        <tr className="text-gray-500">
-                                            {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
-                                                <th
-                                                    key={key}
-                                                    onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
-                                                    className={`py-2 px-2 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
-                                                >
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="truncate">
-                                                            {{
-                                                                property_id: 'ID',
-                                                                property_type: 'Type',
-                                                                purchase_category: 'Category',
-                                                                actions: 'Actions'
-                                                            }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                        </span>
-                                                        {renderSortIcon(key)}
-                                                    </div>
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredListings.map((listing) => (
-                                            <tr key={listing.property_id} className="border-t hover:bg-gray-50">
-                                                <td className="py-2 px-2 truncate whitespace-nowrap">{listing.property_id}</td>
-                                                <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.title}>{listing.title}</td>
-                                                <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.location}>{listing.location}</td>
-                                                <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.property_type}>{listing.property_type}</td>
-                                                <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}>
-                                                    {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}
-                                                </td>
-                                                <td className="py-2 px-2 whitespace-nowrap">{capitalizeFirstLetter(listing.status)}</td>
-                                                <td className="py-2 px-2 whitespace-nowrap">{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
-                                                <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.purchase_category}>{listing.purchase_category}</td>
-                                                <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bedrooms}</td>
-                                                <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bathrooms}</td>
-                                                <td className="py-2 px-2 whitespace-nowrap">
-                                                    {listing.status && listing.status.toLowerCase() === 'pending' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
-                                                                <CheckCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
-                                                                <XCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
-                                                                <CheckCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
-                                                                <TrashIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
-                                                                <CurrencyDollarIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
-                                                                <ArrowUturnLeftIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                className="bg-green-400 text-white px-3 py-1 rounded-md hover:bg-green-500 text-xs"
-                                                                onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
-                                                                title="Edit Listing"
-                                                            >
-                                                                <PencilIcon className="h-4 w-4 inline" />
-                                                                <span className="ml-1">Edit</span>
-                                                            </button>
-                                                            <button
-                                                                className="text-red-600 hover:text-red-800 p-1"
-                                                                onClick={() => handleDeleteListing(listing.property_id)}
-                                                                title="Delete Listing"
-                                                            >
-                                                                <TrashIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            </select>
 
+                            <input
+                                type="number"
+                                placeholder="Min Price"
+                                value={minPriceFilter}
+                                onChange={handleMinPriceChange}
+                                className="w-full md:w-1/6 py-2 px-4 border border-gray-300 rounded-xl shadow-sm"
+                            />
 
-                                <div className="flex justify-between items-center pt-4">
+                            <input
+                                type="number"
+                                placeholder="Max Price"
+                                value={maxPriceFilter}
+                                onChange={handleMaxPriceChange}
+                                className="w-full md:w-1/6 py-2 px-4 border border-gray-300 rounded-xl shadow-sm"
+                            />
+
+                            {/* Buttons for Add and Export */}
+                            <div className="flex gap-2">
+                                <button
+                                    className="bg-green-400 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-500 text-sm font-medium"
+                                    onClick={() => navigate('/add-listing')}
+                                >
+                                    +Add
+                                </button>
+
+                                {/* Export to CSV button and dropdown */}
+                                <div className="relative inline-block text-left" ref={exportDropdownRef}>
                                     <button
-                                        disabled={page === 1}
-                                        onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                                        className="px-4 py-2 rounded-lg bg-gray-100 text-sm disabled:opacity-50"
+                                        onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                        className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-400 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 h-10"
                                     >
-                                        Prev
+                                        Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
                                     </button>
-                                    <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-                                    <button
-                                        disabled={page === totalPages || totalPages === 0}
-                                        onClick={() => setPage(prev => prev + 1)}
-                                        className="px-4 py-2 rounded-lg bg-gray-100 text-sm disabled:opacity-50"
-                                    >
-                                        Next
-                                    </button>
+                                    {isExportDropdownOpen && (
+                                        <div className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                                            <div className="py-1">
+                                                <button onClick={() => handleExportCsv('current')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">Current View</button>
+                                                <button onClick={() => handleExportCsv('all')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">All Listings</button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )
-                    )}
+
+
+                            <div className="flex gap-2">
+                                <button
+                                    className={`p-2 rounded-xl ${viewMode === 'simple' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    onClick={() => setViewMode('simple')}
+                                    title="Simple View"
+                                >
+                                    <TableCellsIcon className="h-6 w-6" />
+                                </button>
+                                <button
+                                    className={`p-2 rounded-xl ${viewMode === 'graphical' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    onClick={() => setViewMode('graphical')}
+                                    title="Graphical View"
+                                >
+                                    <Squares2X2Icon className="h-6 w-6" />
+                                </button>
+                            </div>
+                        </div>
+                        {/* The table/graphical view content is now inside the same motion.div */}
+                        {filteredListings.length === 0 ? (
+                            <div className="text-center text-gray-500 py-8 col-span-full">
+                                No listings found matching your criteria.
+                            </div>
+                        ) : (
+                            viewMode === 'graphical' ? (
+                                <motion.div
+                                    layout
+                                    className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                                >
+                                    {filteredListings.map((listing) => (
+                                        // Make the ListingCard clickable and navigate to the edit page
+                                        <div key={listing.property_id}> {/* Added key prop */}
+                                            <ListingCard
+                                                listing={listing}
+                                                onDelete={handleDeleteListing} // Pass the delete handler to the card
+                                            // Pass other necessary props to ListingCard
+                                            />
+                                        </div>
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                <div className="overflow-x-auto"> {/* Removed bg-white rounded-3xl p-6 shadow from here */}
+                                    <table className="w-full mt-4 text-sm table-fixed">
+                                        <thead>
+                                            <tr className="text-gray-500">
+                                                {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
+                                                    <th
+                                                        key={key}
+                                                        onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
+                                                        className={`py-2 px-2 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+                                                    >
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="truncate">
+                                                                {{
+                                                                    property_id: 'ID',
+                                                                    property_type: 'Type',
+                                                                    purchase_category: 'Category',
+                                                                    actions: 'Actions'
+                                                                }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                            </span>
+                                                            {renderSortIcon(key)}
+                                                        </div>
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredListings.map((listing) => (
+                                                <tr key={listing.property_id} className="border-t hover:bg-gray-50">
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap">{listing.property_id}</td>
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.title}>{listing.title}</td>
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.location}>{listing.location}</td>
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.property_type}>{listing.property_type}</td>
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}>
+                                                        {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}
+                                                    </td>
+                                                    <td className="py-2 px-2 whitespace-nowrap">{capitalizeFirstLetter(listing.status)}</td>
+                                                    <td className="py-2 px-2 whitespace-nowrap">{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
+                                                    <td className="py-2 px-2 truncate whitespace-nowrap overflow-hidden" title={listing.purchase_category}>{listing.purchase_category}</td>
+                                                    <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bedrooms}</td>
+                                                    <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bathrooms}</td>
+                                                    <td className="py-2 px-2 whitespace-nowrap">
+                                                        {listing.status && listing.status.toLowerCase() === 'pending' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                    <CheckCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
+                                                                    <XCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                    <CheckCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
+                                                                    <TrashIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
+                                                                    <CurrencyDollarIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
+                                                                    <ArrowUturnLeftIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    className="bg-green-400 text-white px-3 py-1 rounded-xl hover:bg-green-500 text-xs"
+                                                                    onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
+                                                                    title="Edit Listing"
+                                                                >
+                                                                    <PencilIcon className="h-4 w-4 inline" />
+                                                                    <span className="ml-1">Edit</span>
+                                                                </button>
+                                                                <button
+                                                                    className="text-red-600 hover:text-red-800 p-1"
+                                                                    onClick={() => handleDeleteListing(listing.property_id)}
+                                                                    title="Delete Listing"
+                                                                >
+                                                                    <TrashIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+
+
+                                    <div className="flex justify-between items-center pt-4">
+                                        <button
+                                            disabled={page === 1}
+                                            onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                                            className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
+                                        >
+                                            Prev
+                                        </button>
+                                        <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
+                                        <button
+                                            disabled={page === totalPages || totalPages === 0}
+                                            onClick={() => setPage(prev => prev + 1)}
+                                            className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        )}
+                    </motion.div>
                 </main>
             </motion.div>
         </div>

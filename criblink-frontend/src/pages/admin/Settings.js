@@ -100,7 +100,7 @@ const [settings, setSettings] = useState({
         {/* Mobile-only toggle and centered heading */}
         <div className="md:hidden flex items-center justify-between mb-6">
           <button
-            className="text-gray-600 hover:text-green-700"
+            className="text-gray-600 hover:text-green-700 rounded-xl" // Added rounded-xl
             onClick={() => setIsSidebarOpen(prev => !prev)}
           >
             <Bars3Icon className="h-6 w-6" />
@@ -120,7 +120,7 @@ const [settings, setSettings] = useState({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-white p-6 rounded-2xl shadow space-y-6"
+          className="bg-white p-6 rounded-3xl shadow space-y-6" // Changed to rounded-3xl for consistency
         >
           <h2 className="text-xl font-semibold">Admin Profile</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

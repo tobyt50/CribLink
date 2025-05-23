@@ -28,7 +28,9 @@ CREATE TABLE users (
     bio TEXT, -- New column for bio
     location VARCHAR(100), -- New column for location
     CONSTRAINT valid_role CHECK (role IN ('client', 'agent', 'admin')),
-    status VARCHAR(20) DEFAULT 'active'
+    status VARCHAR(20) DEFAULT 'active',
+	reset_token VARCHAR(255),
+	reset_token_expires TIMESTAMP WITH TIME ZONE
 );
 
 -- Staff directory for agents and admin users

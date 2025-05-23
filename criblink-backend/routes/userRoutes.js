@@ -9,4 +9,8 @@ router.post('/signin', userController.signinUser);
 router.get('/profile', authenticateToken, userController.getProfile);
 router.put('/update', authenticateToken, userController.updateProfile);
 
+// New routes for password recovery
+router.post('/forgot-password', userController.forgotPassword);
+router.post('/reset-password', userController.resetPassword);
+
 module.exports = router;
