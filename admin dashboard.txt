@@ -1,0 +1,10 @@
+my files and directories for the admin are /pages/admin/Analytics.js, Dashboard.js, Inquiries.js, Listings.js, Reports.js, Settings.js, Staff.js, Users.js. then for /components/admin, i have Header.js, Sidebar.js, and StatCard.js. please generate codes for the following functionalities and take note of the files and paths. use the agent dashboard theme and animation
+
+1. Dashboard: Just like the agent dashboard, but focused on system-wide metrics: Total Listings, Total Agents, Total Inquiries, Pending Approvals
+2. Recent Activity Feed: New listings submitted, Agent and user sign-ups, Listing edits or removals
+3. Agents Page: In ManageStaff.js, List of registered agents with ability to: View agent profile, Approve/disapprove accounts, Suspend/activate, Reset password. Table columns: Agent ID, Name, Email, Status (Active/Suspended), Actions (buttons/dropdown)
+4. Listings Page: All listings (including from all agents), Filters: import functionality from /pages/SearchPage.js, Actions: Approve, Reject, Feature, Remove
+5. Inquiries Page: See inquiries from users, Assign to agents, View inquiry status, Close/Resolve
+6. Settings / Configuration Page: Roles and permissions (manage what agents can do), Admin profile management, System preferences (e.g., default commission rates)
+7. User.js is just for view all users regardless of roles, with options to delete or ban user, escalate or deescalate roles, etc.
+8. Analytics.js Graphs and charts of platform activity (signups, views, conversions).
