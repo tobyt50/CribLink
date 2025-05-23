@@ -1,0 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+INSERT INTO users (full_name, email, password_hash, role, date_joined)
+VALUES (
+    'Matthew Tedunjaiye',
+    'tedunjaiyem@gmail.com',
+    crypt('Obafemi29#', gen_salt('bf')),
+    'admin',
+    NOW()
+);
