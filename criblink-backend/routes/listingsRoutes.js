@@ -6,19 +6,22 @@ const upload = require('../middleware/uploadMiddleware');
 const {
     getAllListings,
     getListingById,
-    // Corrected import: Use createListing instead of addListing
     createListing,
-    updateListing, // Make sure updateListing is imported
+    updateListing,
     deleteListing,
-    // Also include the new getPurchaseCategories endpoint if you've added it to your controller
-    getPurchaseCategories, // Assuming you've added this to listingsController.js
+    getPurchaseCategories,
 } = require('../controllers/listingsController');
-const { authenticateToken } = require('../middleware/authMiddleware');
+// Import both authenticateToken and optionalAuthenticateToken
+const { authenticateToken, optionalAuthenticateToken } = require('../middleware/authMiddleware'); // <--- MODIFIED LINE
 
 // Public Routes
 router.get('/categories', getPurchaseCategories);
-router.get('/', getAllListings);
 router.get('/:id', getListingById);
+
+// The main listings route now uses optionalAuthenticateToken.
+// This allows guests to view available listings, and logged-in users
+// to have req.user populated for role-based filtering in the controller.
+router.get('/', optionalAuthenticateToken, getAllListings); // <--- MODIFIED LINE
 
 // Protected Routes (require authentication)
 router.post(
@@ -28,7 +31,6 @@ router.post(
         { name: 'mainImage', maxCount: 1 },
         { name: 'galleryImages', maxCount: 10 }
     ]),
-    // Corrected handler: Use createListing
     createListing
 );
 
@@ -36,16 +38,10 @@ router.post(
 router.put(
     '/:id', // Listing ID in the URL parameters
     authenticateToken, // Authenticate the user
-    // === ADDED: Middleware to handle multipart/form-data for file uploads and other form fields ===
     upload.fields([
-        // 'mainImageFile' if you're sending the new thumbnail as a file from the frontend
         { name: 'mainImageFile', maxCount: 1 },
-        // 'newImages' for any new gallery files being uploaded from the frontend
-        { name: 'newImages', maxCount: 10 }, // Adjust maxCount as needed
-        // Other non-file fields sent in the FormData (like title, location, etc.)
-        // will be automatically parsed into req.body by this middleware.
+        { name: 'newImages', maxCount: 10 },
     ]),
-    // ==========================================================================================
     updateListing // The controller function to handle updating the listing
 );
 

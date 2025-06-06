@@ -1,21 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import AdminSidebar from '../../components/admin/Sidebar';
-import axios from 'axios';
-import { formatDistanceToNow } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, User, Home, MessageSquare, X } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-import Card from '../../components/ui/Card'; // Import the Card component
-
-const AdminDashboard = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  const [isCollapsed, setIsCollapsed] = useState(false); // Only used on desktop
-  const [activeSection, setActiveSection] = useState('dashboard');
-  const { darkMode } = useTheme(); // Use the dark mode context
-=======
 import AdminSidebar from '../../components/admin/Sidebar'; // Assuming the path is correct
 import StatCard from '../../components/admin/StatCard';
 import { motion } from 'framer-motion';
@@ -29,7 +13,6 @@ const AdminDashboard = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   // State for active section in the sidebar
   const [activeSection, setActiveSection] = useState('dashboard'); // Default active section
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const [agentCount, setAgentCount] = useState(null);
   const [listingCount, setListingCount] = useState(null);
@@ -37,28 +20,10 @@ const AdminDashboard = () => {
   const [pendingApprovals, setPendingApprovals] = useState(null);
   const [activities, setActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
-<<<<<<< HEAD
-
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
   const navigate = useNavigate();
 
-<<<<<<< HEAD
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const goToListings = () => navigate('/admin/listings');
   const goToPendingListings = () =>
     navigate('/admin/listings', { state: { statusFilter: 'pending' } });
@@ -80,10 +45,7 @@ const AdminDashboard = () => {
           axios.get('/admin/inquiries/count', { headers }),
           axios.get('/admin/listings/pending-approvals', { headers }),
         ]);
-<<<<<<< HEAD
-=======
 
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         setAgentCount(agentRes.data.count);
         setListingCount(listingRes.data.count);
         setInquiriesCount(inquiryRes.data.count);
@@ -92,10 +54,7 @@ const AdminDashboard = () => {
         console.error('Error fetching dashboard stats:', err);
       }
     };
-<<<<<<< HEAD
-=======
 
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     fetchStats();
   }, []);
 
@@ -104,28 +63,6 @@ const AdminDashboard = () => {
       try {
         const response = await axios.get('/admin/activity/recent-activity', { headers });
         const activityData = response.data.activities.map(a => {
-<<<<<<< HEAD
-          let IconComponent = User;
-          let tag = 'User';
-          let color = 'gray';
-
-          const message = a.message?.toLowerCase() || '';
-          const type = a.type?.toLowerCase() || '';
-
-          if (type === 'listing' || message.includes('listing')) {
-            IconComponent = Home;
-            tag = 'Listing';
-            color = 'green';
-          } else if (type === 'inquiry' || message.includes('inquiry')) {
-            IconComponent = MessageSquare;
-            tag = 'Inquiry';
-            color = 'blue';
-          }
-
-          return {
-            ...a,
-            icon: <IconComponent size={16} />,
-=======
           let IconComponent = User; // Default: User icon component
           let tag = 'User'; // Default label: User
           let color = 'gray'; // Default color - will be overridden
@@ -153,7 +90,6 @@ const AdminDashboard = () => {
           return {
             ...a,
             icon: <IconComponent size={16} />, // Render the icon component
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             tag,
             color,
             formattedTime: formatDistanceToNow(new Date(a.timestamp), { addSuffix: true }),
@@ -170,90 +106,6 @@ const AdminDashboard = () => {
   }, []);
 
   const stats = [
-<<<<<<< HEAD
-    { label: 'Total Listings', value: listingCount ?? '...', onClick: goToListings },
-    { label: 'Total Agents', value: agentCount ?? '...', onClick: goToAgents },
-    { label: 'Total Inquiries', value: inquiriesCount ?? '...', onClick: goToInquiries },
-    { label: 'Pending Approvals', value: pendingApprovals ?? '...', onClick: goToPendingListings },
-  ];
-
-  const visibleActivities = showAllActivities ? activities : activities.slice(0, 5);
-  const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
-
-  return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0`}>
-      {/* Mobile Sidebar Toggle Button */}
-      {isMobile && (
-        <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
-          initial={false}
-          animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 90 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
-
-      {/* Sidebar */}
-      <AdminSidebar
-        collapsed={isMobile ? false : isCollapsed}
-        setCollapsed={isMobile ? () => {} : setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        isMobile={isMobile}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
-
-      {/* Main Content */}
-      <motion.div
-        key={isMobile ? 'mobile' : 'desktop'}
-        style={{ marginLeft: contentShift }}
-        animate={{ marginLeft: contentShift }}
-        transition={{ duration: 0.3 }}
-        initial={false}
-        className="pt-6 px-4 md:px-8"
-      >
-        {/* Headers */}
-        <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Admin Dashboard</h1>
-        </div>
-        <div className="hidden md:block mb-4">
-          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Admin Dashboard</h1>
-        </div>
-
-        {/* Stat Cards */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            {stats.map((stat, idx) => (
-              <Card key={idx} onClick={stat.onClick}>
-                <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>
-                <p className={`text-4xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>{stat.value}</p>
-              </Card>
-            ))}
-          </div>
-
-          {/* Activity Feed */}
-          <Card>
-            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Activity</h2>
-            <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              {visibleActivities.map((activity, idx) => (
-                <li key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-${activity.color}-500`}>{activity.icon}</span>
-                    <span>{activity.message}</span>
-=======
     {
       label: 'Total Listings',
       value: listingCount !== null ? listingCount : '...',
@@ -328,18 +180,13 @@ const AdminDashboard = () => {
                     <span className={`text-${activity.color}-500`}>{activity.icon}</span> {/* Apply color to icon */}
                     <span>{activity.message}</span>
                     {/* Use the determined tag and color */}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600`}
                     >
                       {activity.tag}
                     </span>
                   </div>
-<<<<<<< HEAD
-                  <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{activity.formattedTime}</span>
-=======
                   <span className="text-gray-400 text-xs">{activity.formattedTime}</span>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 </li>
               ))}
             </ul>
@@ -347,21 +194,13 @@ const AdminDashboard = () => {
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setShowAllActivities(prev => !prev)}
-<<<<<<< HEAD
-                  className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
-=======
                   className="text-sm text-green-600 hover:underline"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 >
                   {showAllActivities ? 'Show Less' : 'Show More'}
                 </button>
               </div>
             )}
-<<<<<<< HEAD
-          </Card>
-=======
           </div>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </motion.div>
       </motion.div>
     </div>

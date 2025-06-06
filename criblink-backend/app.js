@@ -14,6 +14,7 @@ const adminUserRoutes = require('./routes/admin/users');
 const adminStaffRoutes = require('./routes/admin/staff');
 const adminInquiriesRoutes = require('./routes/admin/inquiries');
 const adminActivityRoutes = require('./routes/admin/activity');
+const adminAnalyticsRoutes = require('./routes/admin/analytics')
 const adminStatsRoutes = require('./routes/admin/adminStatsRoutes');
 const agentStatsRoutes = require('./routes/agentStatsRoutes');
 
@@ -30,6 +31,7 @@ app.use('/admin', adminStaffRoutes);
 app.use('/admin/inquiries', adminInquiriesRoutes);
 app.use('/admin/activity', adminActivityRoutes);
 app.use('/admin', adminStatsRoutes);
+app.use('/admin/analytics', adminAnalyticsRoutes);
 app.use('/agent', agentStatsRoutes);
 app.use('/users', userRoutes);
 app.use('/listings', listingsRoutes);

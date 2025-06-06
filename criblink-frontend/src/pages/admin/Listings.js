@@ -1,23 +1,145 @@
 // Listings.js
+<<<<<<< HEAD
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import AdminSidebar from '../../components/admin/Sidebar';
+=======
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; // Assuming the path is correct
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 // Import necessary icons
 import { TableCellsIcon, Squares2X2Icon, ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+<<<<<<< HEAD
+import { ChevronDownIcon } from '@heroicons/react/24/outline'; // Keep this for the export dropdown
+import API_BASE_URL from '../../config';
+import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter'; // Correctly importing PurchaseCategoryFilter
+import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react'; // Import Menu and X icons for sidebar toggle, and new icons for controls
+import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+
+// Reusable Dropdown Component (embedded directly in Listings.js)
+const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+    const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
+
+    const menuVariants = {
+        hidden: { opacity: 0, y: -10, scale: 0.95 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: {
+                type: "spring",
+                stiffness: 500,
+                damping: 30,
+                delayChildren: 0.05,
+                staggerChildren: 0.02,
+            },
+        },
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
+    };
+
+    const itemVariants = {
+        hidden: { y: 10, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+    };
+
+    const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
+
+    return (
+        <div className={`relative ${className}`} ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                // Added h-10 to make the dropdown button height consistent with the search bar
+                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200 h-10
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-500 hover:border-green-500"}`}
+            >
+                {/* Added overflow-hidden and truncate to prevent text wrapping */}
+                <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
+                <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <ChevronDownIcon className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
+                </motion.div>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        variants={menuVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className={`absolute left-0 right-0 mt-2 border rounded-xl shadow-xl py-1 z-50 overflow-hidden transform origin-top
+                          ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
+                    >
+                        {options.map((option) => (
+                            <motion.button
+                                key={option.value}
+                                variants={itemVariants}
+                                whileHover={{ x: 5 }}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
+                                  ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                            >
+                                {option.label}
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+=======
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../config';
 import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter';
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Listings = () => {
     const [listings, setListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+<<<<<<< HEAD
+    const [viewMode, setViewMode] = useState('simple');
+=======
     const [viewMode, setViewMode] = useState('simple'); // 'simple' or 'graphical'
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
     const [purchaseCategoryFilter, setPurchaseCategoryFilter] = useState('');
@@ -25,6 +147,26 @@ const Listings = () => {
     const [maxPriceFilter, setMaxPriceFilter] = useState('');
     const [page, setPage] = useState(1);
     const [totalListings, setTotalListings] = useState(0);
+<<<<<<< HEAD
+    const [totalPages, setTotalPages] = useState(1);
+    const limit = 10;
+    const navigate = useNavigate();
+    const { darkMode } = useTheme(); // Use the dark mode context
+
+    const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+    const exportDropdownRef = useRef(null);
+
+    // State for sidebar responsiveness, matching Dashboard.js
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+    const [isCollapsed, setIsCollapsed] = useState(false); // Only used on desktop
+    const [activeSection, setActiveSection] = useState('listings');
+
+    // State for mobile filter modal
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    // State for desktop filter modal, added to match AgentListings.js
+    const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
+=======
     const limit = 10;
     const totalPages = Math.max(1, Math.ceil(totalListings / limit));
     const navigate = useNavigate();
@@ -37,6 +179,7 @@ const Listings = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     // State for active section in the sidebar, consistent with Dashboard.js
     const [activeSection, setActiveSection] = useState('listings'); // Set default active section for Listings page
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     const location = useLocation();
 
@@ -46,7 +189,22 @@ const Listings = () => {
         }
     }, [location.state]);
 
+<<<<<<< HEAD
+    // Effect to handle window resize for mobile responsiveness
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+=======
     // Effect to close export dropdown when clicking outside
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
@@ -58,6 +216,13 @@ const Listings = () => {
     }, []);
 
 
+<<<<<<< HEAD
+    const fetchListings = useCallback(async () => {
+        try {
+            const params = new URLSearchParams();
+
+            if (purchaseCategoryFilter && purchaseCategoryFilter.toLowerCase() !== 'all') {
+=======
     // Effect to fetch listings whenever filters change or component mounts
     // This effect now depends on the filter states to refetch when they change
     useEffect(() => {
@@ -75,6 +240,7 @@ const Listings = () => {
 
             // Conditionally append parameters only if they have a value
             if (purchaseCategoryFilter && purchaseCategoryFilter !== 'all') { // Ensure 'all' is not sent as a filter
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 params.append('purchase_category', purchaseCategoryFilter);
             }
             if (searchTerm) {
@@ -86,6 +252,53 @@ const Listings = () => {
             if (maxPriceFilter) {
                 params.append('max_price', maxPriceFilter);
             }
+<<<<<<< HEAD
+            if (statusFilter && statusFilter.toLowerCase() !== 'all' && statusFilter.toLowerCase() !== 'all statuses') {
+                params.append('status', statusFilter);
+            } else if (statusFilter.toLowerCase() === 'all' || statusFilter.toLowerCase() === 'all statuses') {
+                params.append('status', statusFilter);
+            }
+
+            params.append('page', page);
+            params.append('limit', limit);
+
+            const token = localStorage.getItem('token');
+            console.log('[Listings.js] Token retrieved:', token ? 'Exists' : 'Does NOT exist');
+
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await axios.get(`${API_BASE_URL}/listings?${params.toString()}`, { headers });
+            console.log('[Listings.js] API Response Data:', response.data);
+
+            setListings(response.data.listings || []);
+            setFilteredListings(response.data.listings || []);
+            setTotalListings(response.data.total || 0);
+            setTotalPages(response.data.totalPages || 1);
+
+        } catch (err) {
+            console.error('Error fetching listings:', err.response?.data || err.message);
+            setListings([]);
+            setFilteredListings([]);
+            setTotalListings(0);
+            setTotalPages(1);
+        }
+    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit]);
+
+    useEffect(() => {
+        fetchListings();
+    }, [fetchListings]);
+
+    // MODIFICATION: Removed filterAndSortListings from its own dependency array
+    const filterAndSortListings = useCallback(() => {
+        let sortedData = [...listings].sort((a, b) => {
+            const aValue = a[sortKey];
+            const bValue = b[sortKey];
+
+            if (sortKey === 'price') {
+=======
 
             // Use the correct API_BASE_URL
             const response = await axios.get(`${API_BASE_URL}/listings?${params.toString()}`);
@@ -115,12 +328,24 @@ const Listings = () => {
             // --- Refined Price Sorting Logic ---
             if (sortKey === 'price') {
                 // Clean the price string by removing non-numeric characters except decimal point and sign
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const cleanPriceA = String(aValue).replace(/[^0-9.-]+/g, '');
                 const cleanPriceB = String(bValue).replace(/[^0-9.-]+/g, '');
                 const numA = parseFloat(cleanPriceA);
                 const numB = parseFloat(cleanPriceB);
 
                 if (!isNaN(numA) && !isNaN(numB)) {
+<<<<<<< HEAD
+                    return sortDirection === 'asc' ? numA - numB : numB - numA;
+                } else if (!isNaN(numA)) {
+                    return sortDirection === 'asc' ? -1 : 1;
+                } else if (!isNaN(numB)) {
+                    return sortDirection === 'asc' ? 1 : -1;
+                }
+                return 0;
+            }
+
+=======
                     // Both are valid numbers, perform numerical comparison
                     return sortDirection === 'asc' ? numA - numB : numB - aValue;
                 } else if (!isNaN(numA)) {
@@ -136,6 +361,7 @@ const Listings = () => {
             // --- End Refined Price Sorting Logic ---
 
             // Handle null or undefined values for other sort keys
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             if (aValue == null && bValue == null) return 0;
             if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
             if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
@@ -148,7 +374,10 @@ const Listings = () => {
             } else if (typeA === 'number' && typeB === 'number') {
                 return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
             } else {
+<<<<<<< HEAD
+=======
                 // Fallback for mixed types or other non-string/non-number types
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const numA = parseFloat(aValue);
                 const numB = parseFloat(bValue);
 
@@ -164,6 +393,87 @@ const Listings = () => {
         });
 
         setFilteredListings(sortedData);
+<<<<<<< HEAD
+    }, [listings, sortKey, sortDirection]); // filterAndSortListings removed from here
+
+    useEffect(() => {
+        filterAndSortListings();
+    }, [listings, sortKey, sortDirection, filterAndSortListings]);
+
+    const handleApproveListing = async (listingId) => {
+        console.log(`Confirming approval for listing ${listingId}`);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Authentication token not found. Please sign in.');
+            return;
+        }
+
+        try {
+            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Listing approved successfully!');
+            fetchListings();
+        } catch (error) {
+            console.error('Error approving listing:', error.response?.data || error.message);
+        }
+    };
+
+    const handleRejectListing = async (listingId) => {
+        console.log(`Confirming rejection for listing ${listingId}`);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Authentication token not found. Please sign in.');
+            return;
+        }
+
+        try {
+            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Listing rejected successfully!');
+            fetchListings();
+        } catch (error) {
+            console.error('Error rejecting listing:', error.response?.data || error.message);
+        }
+    };
+
+    const handleMarkAsSold = async (listingId) => {
+        console.log(`Confirming mark as sold for listing ${listingId}`);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Authentication token not found. Please sign in.');
+            return;
+        }
+
+        try {
+            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Listing marked as Sold successfully!');
+            fetchListings();
+        } catch (error) {
+            console.error('Error marking listing as sold:', error.response?.data || error.message);
+        }
+    };
+
+    const handleMarkAsFailed = async (listingId) => {
+        console.log(`Confirming mark as failed for listing ${listingId}`);
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Authentication token not found. Please sign in.');
+            return;
+        }
+
+        try {
+            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Listing marked as Failed (Available) successfully!');
+            fetchListings();
+        } catch (error) {
+            console.error('Error marking listing as failed:', error.response?.data || error.message);
+=======
     };
 
     // Function to handle approving a listing (status becomes 'Available')
@@ -279,11 +589,40 @@ const Listings = () => {
         } catch (error) {
             console.error('Error marking listing as failed:', error.response?.data || error.message);
             alert('Failed to mark listing as failed.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
 
     const handleDeleteListing = async (listingId) => {
+<<<<<<< HEAD
+        console.log(`Confirming deletion for listing ${listingId}`);
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            console.error('Authentication token not found. Please sign in.');
+            return;
+        }
+
+        try {
+            await axios.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            console.log('Listing deleted successfully!');
+            fetchListings();
+        } catch (error) {
+            console.error('Error deleting listing:', error.response?.data || error.message);
+        }
+    };
+
+    const handleExportCsv = async (scope) => {
+        const dataToExport = scope === 'current' ? filteredListings : listings;
+
+        if (dataToExport.length === 0) {
+            console.warn(`No listing data found for ${scope} export.`);
+=======
         // Show a confirmation dialog
         const isConfirmed = window.confirm('Are you sure you want to delete this listing?');
 
@@ -325,47 +664,83 @@ const Listings = () => {
 
         if (dataToExport.length === 0) {
             alert(`No listing data found for ${scope} export.`);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             setIsExportDropdownOpen(false);
             return;
         }
 
+<<<<<<< HEAD
+=======
         // Define CSV headers based on your table columns
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const headers = [
             'property_id', 'purchase_category', 'title', 'location', 'state', 'price', 'status', 'user_id', 'date_listed', 'property_type', 'bedrooms', 'bathrooms'
         ];
 
+<<<<<<< HEAD
+=======
         // Map listing data to CSV rows
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const csvRows = dataToExport.map(l => [
             l.property_id,
             l.purchase_category || 'N/A',
             l.title,
             l.location,
             l.state,
+<<<<<<< HEAD
+            l.price,
+=======
             l.price, // Price will be exported as is, numerical sorting is for display
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             l.status || 'N/A',
             l.user_id,
             l.date_listed ? new Date(l.date_listed).toLocaleDateString() : 'N/A',
             l.property_type,
             l.bedrooms || 'N/A',
             l.bathrooms || 'N/A'
+<<<<<<< HEAD
+        ].map(field => `"${String(field).replace(/"/g, '""')}"`));
+=======
         ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Enclose fields in quotes and escape existing quotes
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
+<<<<<<< HEAD
+        link.setAttribute('download', 'property_listings.csv');
+=======
         link.setAttribute('download', 'property_listings.csv'); // Set filename
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+<<<<<<< HEAD
+        setIsExportDropdownOpen(false);
+=======
         setIsExportDropdownOpen(false); // Close dropdown after export
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
 
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
+<<<<<<< HEAD
+        setPage(1);
+    };
+
+    const handleStatusChange = (value) => { // Changed to accept value directly from Dropdown
+        setStatusFilter(value);
+        setPage(1);
+    };
+
+    const handlePurchaseCategoryChange = (value) => { // Changed to accept value directly from Dropdown
+        setPurchaseCategoryFilter(value);
+        setPage(1);
+=======
     };
 
     const handleStatusChange = (e) => {
@@ -374,19 +749,32 @@ const Listings = () => {
 
     const handlePurchaseCategoryChange = (e) => {
         setPurchaseCategoryFilter(e.target.value);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMinPriceChange = (e) => {
         setMinPriceFilter(e.target.value);
+<<<<<<< HEAD
+        setPage(1);
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMaxPriceChange = (e) => {
         setMaxPriceFilter(e.target.value);
+<<<<<<< HEAD
+        setPage(1);
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
 
     const handleSortClick = (key) => {
+<<<<<<< HEAD
+        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return;
 
         if (sortKey === key) {
@@ -399,11 +787,25 @@ const Listings = () => {
 
 
     const renderSortIcon = (key) => {
+<<<<<<< HEAD
+        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return null;
 
         if (sortKey === key) {
             return sortDirection === 'asc' ? (
+<<<<<<< HEAD
+                <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
+            ) : (
+                <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
+            );
+        }
+        return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
+    };
+
+=======
                 <ArrowUpIcon className="h-4 w-4 ml-1 inline text-green-700" />
             ) : (
                 <ArrowDownIcon className="h-4 w-4 ml-1 inline text-green-700" />
@@ -413,16 +815,118 @@ const Listings = () => {
     };
 
     // Helper function to capitalize the first letter of a string
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const capitalizeFirstLetter = (string) => {
         if (!string) return '';
         return string.charAt(0).toUpperCase() + string.slice(1);
     };
 
+<<<<<<< HEAD
+=======
     // Handler for clicking a listing card to navigate to the edit page
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const handleCardClick = (listingId) => {
         navigate(`/listing/${listingId}`);
     };
 
+<<<<<<< HEAD
+    const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256; // Adjusted content shift based on mobile and collapsed state
+
+    // Options for status filter, formatted for the Dropdown component
+    const statusOptions = [
+        { value: "all", label: "All statuses" },
+        { value: "available", label: "Available" },
+        { value: "sold", label: "Sold" },
+        { value: "under offer", label: "Under offer" },
+        { value: "pending", label: "Pending" },
+        { value: "rejected", label: "Rejected" },
+        { value: "featured", label: "Featured" }
+    ];
+
+    return (
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}> {/* Outer div for full page background, added min-h-screen and flex-col */}
+            {/* Mobile Sidebar Toggle Button */}
+            {isMobile && (
+                <motion.button
+                    onClick={() => setIsSidebarOpen(prev => !prev)}
+                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`} // Changed to rounded-xl, added h-10 w-10 flex items-center justify-center
+                    initial={false}
+                    animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={isSidebarOpen ? 'close' : 'menu'}
+                            initial={{ opacity: 0, rotate: -90 }}
+                            animate={{ opacity: 1, rotate: 0 }}
+                            exit={{ opacity: 0, rotate: 90 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                        </motion.div>
+                    </AnimatePresence>
+                </motion.button>
+            )}
+
+            <AdminSidebar
+                collapsed={isMobile ? false : isCollapsed}
+                setCollapsed={isMobile ? () => {} : setIsCollapsed}
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isMobile={isMobile}
+                isSidebarOpen={isSidebarOpen}
+                setIsSidebarOpen={setIsSidebarOpen}
+            />
+
+            <motion.div
+                key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+                animate={{ marginLeft: contentShift }}
+                transition={{ duration: 0.3 }}
+                initial={false}
+                className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0" // Added flex-1, overflow-auto, min-w-0
+                style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+            >
+                <div className="md:hidden flex items-center justify-center mb-4">
+                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>All Listings</h1>
+                </div>
+
+                <div className="hidden md:block mb-6">
+                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>All Listings</h1>
+                </div>
+
+                <main className="space-y-6">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}> {/* Added max-w-full */}
+                        {/* Mobile Control Menu */}
+                        {isMobile && (
+                            <div className="flex justify-between items-center mb-4">
+                                <button
+                                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                    onClick={() => navigate('/add-listing')}
+                                    title="Add New Listing"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                                <button
+                                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    title="Open Filters"
+                                >
+                                    <SlidersHorizontal size={20} />
+                                </button>
+                                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                                    <button
+                                        onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                        title="Export"
+                                    >
+                                        <FileText size={20} />
+                                    </button>
+                                    {isExportDropdownOpen && (
+                                        <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                                            <div className="py-1">
+                                                <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                                                <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+=======
     // Adjust contentShift based on isCollapsed state, consistent with Dashboard.js
     const contentShift = isCollapsed ? 80 : 256;
 
@@ -522,10 +1026,103 @@ const Listings = () => {
                                             <div className="py-1">
                                                 <button onClick={() => handleExportCsv('current')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">Current View</button>
                                                 <button onClick={() => handleExportCsv('all')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">All Listings</button>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             </div>
                                         </div>
                                     )}
                                 </div>
+<<<<<<< HEAD
+                                <div className="flex gap-2">
+                                    <button
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => setViewMode('simple')}
+                                        title="List View"
+                                    >
+                                        <LayoutList className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => setViewMode('graphical')}
+                                        title="Grid View"
+                                    >
+                                        <LayoutGrid className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Desktop Filters and Controls */}
+                        {!isMobile && (
+                            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                                {/* Search and Filter Button */}
+                                <div className="flex items-center gap-4 w-full">
+                                    <input
+                                        type="text"
+                                        placeholder="Search listings..."
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                          darkMode
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        }`}
+                                    />
+                                    <button
+                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                        onClick={() => setIsDesktopFilterModalOpen(true)} // Open desktop filter modal
+                                        title="Open Filters"
+                                    >
+                                        <SlidersHorizontal size={20} />
+                                    </button>
+                                </div>
+
+                                {/* Add, Export, and View Mode Buttons - Grouped together */}
+                                <div className="flex gap-2 items-center">
+                                    <button
+                                        className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
+                                        onClick={() => navigate('/add-listing')}
+                                    >
+                                        +Add
+                                    </button>
+
+                                    <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                                        <button
+                                            onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                            className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
+                                        >
+                                            Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
+                                        </button>
+                                        {isExportDropdownOpen && (
+                                            <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                                                <div className="py-1">
+                                                    <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                                                    <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => setViewMode('simple')}
+                                        title="Simple View"
+                                    >
+                                        <TableCellsIcon className="h-6 w-6" />
+                                    </button>
+                                    <button
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => setViewMode('graphical')}
+                                        title="Graphical View"
+                                    >
+                                        <Squares2X2Icon className="h-6 w-6" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {filteredListings.length === 0 ? (
+                            <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                             </div>
 
 
@@ -549,6 +1146,7 @@ const Listings = () => {
                         {/* The table/graphical view content is now inside the same motion.div */}
                         {filteredListings.length === 0 ? (
                             <div className="text-center text-gray-500 py-8 col-span-full">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 No listings found matching your criteria.
                             </div>
                         ) : (
@@ -558,26 +1156,58 @@ const Listings = () => {
                                     className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                                 >
                                     {filteredListings.map((listing) => (
+<<<<<<< HEAD
+                                        <div key={listing.property_id}>
+                                            <ListingCard
+                                                listing={listing}
+                                                onDelete={handleDeleteListing}
+=======
                                         // Make the ListingCard clickable and navigate to the edit page
                                         <div key={listing.property_id}> {/* Added key prop */}
                                             <ListingCard
                                                 listing={listing}
                                                 onDelete={handleDeleteListing} // Pass the delete handler to the card
                                             // Pass other necessary props to ListingCard
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             />
                                         </div>
                                     ))}
                                 </motion.div>
                             ) : (
+<<<<<<< HEAD
+                                <div className="overflow-x-auto"> {/* Added overflow-x-auto */}
+                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Changed table-auto to table-fixed */}
+                                        <thead>
+                                            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                                 <div className="overflow-x-auto"> {/* Removed bg-white rounded-3xl p-6 shadow from here */}
                                     <table className="w-full mt-4 text-sm table-fixed">
                                         <thead>
                                             <tr className="text-gray-500">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                 {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
                                                     <th
                                                         key={key}
                                                         onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
+<<<<<<< HEAD
+                                                        className={`py-2 px-2 whitespace-nowrap ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+                                                        style={{
+                                                            width:
+                                                                key === 'property_id' ? '90px' :
+                                                                key === 'title' ? '120px' : // Greatly reduced title width
+                                                                key === 'location' ? '120px' :
+                                                                key === 'property_type' ? '90px' :
+                                                                key === 'price' ? '120px' :
+                                                                key === 'status' ? '80px' :
+                                                                key === 'date_listed' ? '120px' :
+                                                                key === 'purchase_category' ? '100px' :
+                                                                key === 'bedrooms' ? '70px' :
+                                                                key === 'bathrooms' ? '70px' :
+                                                                key === 'actions' ? '150px' : 'auto'
+                                                        }}
+=======
                                                         className={`py-2 px-2 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                     >
                                                         <div className="flex items-center gap-1">
                                                             <span className="truncate">
@@ -586,7 +1216,11 @@ const Listings = () => {
                                                                     property_type: 'Type',
                                                                     purchase_category: 'Category',
                                                                     actions: 'Actions'
+<<<<<<< HEAD
+                                                                }[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+=======
                                                                 }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                             </span>
                                                             {renderSortIcon(key)}
                                                         </div>
@@ -594,6 +1228,31 @@ const Listings = () => {
                                                 ))}
                                             </tr>
                                         </thead>
+<<<<<<< HEAD
+                                        <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                                            {filteredListings.map((listing) => (
+                                                <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                                                    <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_id && listing.property_id.length > 10 ? listing.property_id : ''}>{listing.property_id}</td>
+                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td> {/* Truncation for title */}
+                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.location && listing.location.length > 15 ? listing.location : ''}>{listing.location}</td>
+                                                    <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_type && listing.property_type.length > 10 ? listing.property_type : ''}>{listing.property_type}</td>
+                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.price ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price) : ''}>
+                                                        {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}
+                                                    </td>
+                                                    <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
+                                                        listing.status && listing.status.toLowerCase() === 'available' ? 'text-green-600' :
+                                                        listing.status && listing.status.toLowerCase() === 'sold' ? 'text-red-600' :
+                                                        listing.status && listing.status.toLowerCase() === 'under offer' ? 'text-yellow-600' :
+                                                        listing.status && listing.status.toLowerCase() === 'pending' ? 'text-blue-600' :
+                                                        listing.status && listing.status.toLowerCase() === 'rejected' ? 'text-purple-600' :
+                                                        'text-gray-600'
+                                                    }`} title={listing.status && listing.status.length > 10 ? capitalizeFirstLetter(listing.status) : ''}>{capitalizeFirstLetter(listing.status)}</td>
+                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : ''}>{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
+                                                    <td className="py-2 px-2 max-w-[100px] truncate" title={listing.purchase_category && listing.purchase_category.length > 12 ? listing.purchase_category : ''}>{listing.purchase_category}</td>
+                                                    <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
+                                                    <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bathrooms ? listing.bathrooms.toString() : ''}>{listing.bathrooms}</td>
+                                                    <td className="py-2 px-2 space-x-2 max-w-[150px]">
+=======
                                         <tbody>
                                             {filteredListings.map((listing) => (
                                                 <tr key={listing.property_id} className="border-t hover:bg-gray-50">
@@ -610,6 +1269,7 @@ const Listings = () => {
                                                     <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bedrooms}</td>
                                                     <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bathrooms}</td>
                                                     <td className="py-2 px-2 whitespace-nowrap">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                         {listing.status && listing.status.toLowerCase() === 'pending' ? (
                                                             <div className="flex items-center gap-2">
                                                                 <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
@@ -640,7 +1300,11 @@ const Listings = () => {
                                                         ) : (
                                                             <div className="flex items-center gap-2">
                                                                 <button
+<<<<<<< HEAD
+                                                                    className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs" // Ensured rounded-xl
+=======
                                                                     className="bg-green-400 text-white px-3 py-1 rounded-xl hover:bg-green-500 text-xs"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                                     onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
                                                                     title="Edit Listing"
                                                                 >
@@ -663,6 +1327,21 @@ const Listings = () => {
                                     </table>
 
 
+<<<<<<< HEAD
+                                    <div className="flex justify-center items-center space-x-4 mt-4"> {/* Adjusted to justify-center and items-center */}
+                                        <button
+                                            disabled={page === 1}
+                                            onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                                            className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+                                        >
+                                            Prev
+                                        </button>
+                                        <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Page {page} of {totalPages}</span> {/* Added text-gray-700 and font-semibold */}
+                                        <button
+                                            disabled={page === totalPages || totalPages === 0}
+                                            onClick={() => setPage(prev => prev + 1)}
+                                            className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+=======
                                     <div className="flex justify-between items-center pt-4">
                                         <button
                                             disabled={page === 1}
@@ -676,6 +1355,7 @@ const Listings = () => {
                                             disabled={page === totalPages || totalPages === 0}
                                             onClick={() => setPage(prev => prev + 1)}
                                             className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                         >
                                             Next
                                         </button>
@@ -686,6 +1366,188 @@ const Listings = () => {
                     </motion.div>
                 </main>
             </motion.div>
+<<<<<<< HEAD
+
+            {/* Mobile Filter Modal */}
+            <AnimatePresence>
+                {isMobile && isFilterModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: "100%" }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className={`fixed inset-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
+                            <button onClick={() => setIsFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}> {/* Changed to rounded-xl, added h-10 w-10 flex items-center justify-center */}
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 flex-grow">
+                            <div className="relative">
+                                <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+                                <input
+                                    type="text"
+                                    placeholder="Search listings..."
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                      darkMode
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                    }`}
+                                />
+                            </div>
+
+                            <PurchaseCategoryFilter
+                                selectedCategory={purchaseCategoryFilter}
+                                onChange={handlePurchaseCategoryChange}
+                                className="w-full"
+                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                  darkMode
+                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                }`}
+                            />
+
+                            <Dropdown
+                                placeholder="Select Status"
+                                options={statusOptions}
+                                value={statusFilter}
+                                onChange={handleStatusChange}
+                                className="w-full"
+                            />
+
+                            <div className="relative">
+                                <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                <input
+                                    type="number"
+                                    placeholder="Min Price"
+                                    value={minPriceFilter}
+                                    onChange={handleMinPriceChange}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                      darkMode
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                    }`}
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                <input
+                                    type="number"
+                                    placeholder="Max Price"
+                                    value={maxPriceFilter}
+                                    onChange={handleMaxPriceChange}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                      darkMode
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                    }`}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setIsFilterModalOpen(false)}
+                            className="w-full mt-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
+                        >
+                            Apply Filters
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Desktop Filter Modal - Refactored to match AgentListings.js */}
+            <AnimatePresence>
+                {!isMobile && isDesktopFilterModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    >
+                        <motion.div
+                            initial={{ y: -50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 50, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className={`rounded-3xl p-6 shadow-xl w-full max-w-md mx-auto ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
+                                <button onClick={() => setIsDesktopFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}>
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <PurchaseCategoryFilter
+                                    selectedCategory={purchaseCategoryFilter}
+                                    onChange={handlePurchaseCategoryChange}
+                                    className="w-full"
+                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                      darkMode
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                    }`}
+                                />
+
+                                <Dropdown
+                                    placeholder="Select Status"
+                                    options={statusOptions}
+                                    value={statusFilter}
+                                    onChange={handleStatusChange}
+                                    className="w-full"
+                                />
+
+                                <div className="relative">
+                                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Min Price"
+                                        value={minPriceFilter}
+                                        onChange={handleMinPriceChange}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                          darkMode
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        }`}
+                                    />
+                                </div>
+
+                                <div className="relative">
+                                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Max Price"
+                                        value={maxPriceFilter}
+                                        onChange={handleMaxPriceChange}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                          darkMode
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        }`}
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setIsDesktopFilterModalOpen(false)}
+                                className="w-full mt-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
+                            >
+                                Apply Filters
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </div>
     );
 };

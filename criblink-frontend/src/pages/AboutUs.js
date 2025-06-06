@@ -1,29 +1,49 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Building2, Users, CheckCircle, Globe2 } from "lucide-react";
+<<<<<<< HEAD
+import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const features = [
   {
     title: "Verified Listings",
+<<<<<<< HEAD
+    icon: <CheckCircle size={32} className="text-green-600 dark:text-green-400" />,
+=======
     icon: <CheckCircle size={32} className="text-green-600" />,
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     description:
       "We ensure every property is validated, verified, and trustworthy—giving you peace of mind.",
   },
   {
     title: "Expert Agents",
+<<<<<<< HEAD
+    icon: <Users size={32} className="text-green-600 dark:text-green-400" />,
+=======
     icon: <Users size={32} className="text-green-600" />,
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     description:
       "Our vetted agents bring deep knowledge and local insights to every interaction.",
   },
   {
     title: "Nationwide Reach",
+<<<<<<< HEAD
+    icon: <Globe2 size={32} className="text-green-600 dark:text-green-400" />,
+=======
     icon: <Globe2 size={32} className="text-green-600" />,
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     description:
       "From Lagos to Abuja and beyond, our network spans the entire country.",
   },
   {
     title: "Smart Matching",
+<<<<<<< HEAD
+    icon: <Building2 size={32} className="text-green-600 dark:text-green-400" />,
+=======
     icon: <Building2 size={32} className="text-green-600" />,
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     description:
       "Intelligent search and filters help you find your ideal home faster.",
   },
@@ -48,8 +68,15 @@ const testimonials = [
 ];
 
 const AboutUs = () => {
+<<<<<<< HEAD
+  const { darkMode } = useTheme(); // Use the dark mode context
+
+  return (
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-8`}>
+=======
   return (
     <div className="bg-gray-50 pt-0 -mt-6 px-4 md:px-8">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
@@ -57,8 +84,13 @@ const AboutUs = () => {
         transition={{ duration: 0.6 }}
         className="max-w-6xl mx-auto text-center"
       >
+<<<<<<< HEAD
+        <h1 className={`text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>About CribLink</h1>
+        <p className={`max-w-3xl mx-auto text-lg ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+=======
         <h1 className="text-3xl font-extrabold text-green-700 mb-6">About CribLink</h1>
         <p className="text-gray-600 max-w-3xl mx-auto text-lg">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           CribLink is Nigeria’s modern real estate hub — designed to connect clients,
           agents, and verified property listings into one seamless experience. We
           believe finding your dream home or managing real estate should be
@@ -72,10 +104,17 @@ const AboutUs = () => {
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
+<<<<<<< HEAD
+          className={`p-8 rounded-2xl shadow-lg border-t-4 border-green-600 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+        >
+          <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Our Mission</h2>
+          <p className={`${darkMode ? "text-gray-300" : "text-gray-700"} leading-relaxed`}>
+=======
           className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-green-600"
         >
           <h2 className="text-2xl font-bold text-green-700 mb-4">Our Mission</h2>
           <p className="text-gray-700 leading-relaxed">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             To redefine how people discover, interact with, and manage real estate
             in Nigeria — through technology, trust, and simplicity.
           </p>
@@ -84,10 +123,17 @@ const AboutUs = () => {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
+<<<<<<< HEAD
+          className={`p-8 rounded-2xl shadow-lg border-t-4 border-green-600 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+        >
+          <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Our Vision</h2>
+          <p className={`${darkMode ? "text-gray-300" : "text-gray-700"} leading-relaxed`}>
+=======
           className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-green-600"
         >
           <h2 className="text-2xl font-bold text-green-700 mb-4">Our Vision</h2>
           <p className="text-gray-700 leading-relaxed">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             To be the most trusted platform for real estate in Africa — where agents
             thrive, clients are empowered, and property meets purpose.
           </p>
@@ -100,7 +146,11 @@ const AboutUs = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
+<<<<<<< HEAD
+          className={`text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
+=======
           className="text-3xl font-extrabold text-center text-green-700 mb-12"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         >
           Why Choose CribLink?
         </motion.h2>
@@ -111,6 +161,19 @@ const AboutUs = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + index * 0.1 }}
+<<<<<<< HEAD
+              className={`p-6 rounded-xl shadow-md text-center border hover:shadow-lg transition duration-300 ${
+                darkMode
+                  ? "bg-gray-800 border-green-700 text-gray-200"
+                  : "bg-white border-green-100"
+              }`}
+            >
+              <div className="mb-4 flex justify-center">{feature.icon}</div>
+              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                {feature.title}
+              </h3>
+              <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{feature.description}</p>
+=======
               className="bg-white p-6 rounded-xl shadow-md text-center border border-green-100 hover:shadow-lg transition duration-300"
             >
               <div className="mb-4 flex justify-center">{feature.icon}</div>
@@ -118,6 +181,7 @@ const AboutUs = () => {
                 {feature.title}
               </h3>
               <p className="text-sm text-gray-600">{feature.description}</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             </motion.div>
           ))}
         </div>
@@ -129,7 +193,11 @@ const AboutUs = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
+<<<<<<< HEAD
+          className={`text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
+=======
           className="text-3xl font-extrabold text-center text-green-700 mb-12"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         >
           What Our Users Say
         </motion.h2>
@@ -140,10 +208,21 @@ const AboutUs = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.1 }}
+<<<<<<< HEAD
+              className={`p-6 rounded-xl shadow-md border hover:shadow-lg ${
+                darkMode
+                  ? "bg-gray-800 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-100"
+              }`}
+            >
+              <p className={`italic mb-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>"{t.quote}"</p>
+              <p className={`font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>- {t.name}</p>
+=======
               className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg"
             >
               <p className="text-gray-600 italic mb-4">"{t.quote}"</p>
               <p className="text-green-700 font-semibold">- {t.name}</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             </motion.div>
           ))}
         </div>
@@ -173,4 +252,8 @@ const AboutUs = () => {
   );
 };
 
+<<<<<<< HEAD
 export default AboutUs;
+=======
+export default AboutUs;
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
