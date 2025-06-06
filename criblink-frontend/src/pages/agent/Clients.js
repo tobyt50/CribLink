@@ -1,16 +1,10 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-=======
-import React, { useEffect, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Squares2X2Icon,
   TableCellsIcon,
-<<<<<<< HEAD
   ArrowUpIcon,
   ArrowDownIcon,
   TrashIcon,
@@ -26,18 +20,6 @@ import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 import Card from '../../components/ui/Card'; // Import the Card component
-=======
-  ChevronDownIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon
-} from '@heroicons/react/24/outline';
-import { toast } from 'react-toastify';
-import AgentSidebar from '../../components/agent/Sidebar';
-import ClientCard from '../../components/agent/ClientCard';
-import SendEmailModal from '../../components/agent/SendEmailModal';
-import API_BASE_URL from '../../config';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -45,18 +27,11 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-<<<<<<< HEAD
   const [viewMode, setViewMode] = useState('simple');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [agentId, setAgentId] = useState(null);
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
-  const [viewMode, setViewMode] = useState('graphical');
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [agentId, setAgentId] = useState(null);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   // State for sidebar visibility and collapse, consistent with other agent pages
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -67,7 +42,6 @@ const Clients = () => {
   const exportDropdownRef = useRef(null);
   const navigate = useNavigate();
 
-<<<<<<< HEAD
   // State for mobile view and sidebar open/close, consistent with Inquiries.js and Listings.js
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
@@ -91,9 +65,6 @@ const Clients = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-=======
-  // Removed the resize effect as AgentSidebar is now fixed and manages its own collapse state.
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -125,25 +96,17 @@ const Clients = () => {
       if (!agentId) return;
       try {
         const token = localStorage.getItem('token');
-<<<<<<< HEAD
         // Note: Backend might need to be updated to support pagination parameters (page, limit)
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const { data } = await axios.get(`${API_BASE_URL}/clients/agent/${agentId}/clients`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setClients(data);
-<<<<<<< HEAD
         setFilteredClients(data); // Initialize filteredClients with all clients
-=======
-        setFilteredClients(data);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       } catch (err) {
         console.error('Failed to fetch clients', err);
       }
     };
     fetchClients();
-<<<<<<< HEAD
   }, [agentId]); // Depend on agentId
 
   useEffect(() => {
@@ -159,34 +122,15 @@ const Clients = () => {
 
     // Apply sorting
     currentClients.sort((a, b) => {
-=======
-  }, [agentId]);
-
-  useEffect(() => {
-    const filtered = clients.filter((c) =>
-      c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredClients(filtered);
-  }, [searchTerm, clients]);
-
-  useEffect(() => {
-    const sorted = [...filteredClients].sort((a, b) => {
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       const aValue = a[sortKey];
       const bValue = b[sortKey];
       if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
-<<<<<<< HEAD
 
     setFilteredClients(currentClients);
     setPage(1); // Reset to first page on filter/sort change
   }, [searchTerm, clients, sortKey, sortDirection]); // Depend on all relevant states
-=======
-    setFilteredClients(sorted);
-  }, [sortKey, sortDirection]);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const handleSendEmail = (client) => {
     setSelectedClient(client);
@@ -272,34 +216,22 @@ const Clients = () => {
   const renderSortIcon = (key) => {
     if (sortKey === key) {
       return sortDirection === 'asc' ? (
-<<<<<<< HEAD
         <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       ) : (
         <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       );
     }
     return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
-=======
-        <ArrowUpIcon className="h-4 w-4 ml-1 inline text-green-700" />
-      ) : (
-        <ArrowDownIcon className="h-4 w-4 ml-1 inline text-green-700" />
-      );
-    }
-    return <ArrowDownIcon className="h-4 w-4 ml-1 inline text-gray-400" />;
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   };
 
   const handleExportCsv = (scope) => {
     const dataToExport = scope === 'current' ? filteredClients : clients;
-<<<<<<< HEAD
     if (dataToExport.length === 0) {
       toast.info(`No client data found for ${scope} export.`);
       setIsExportDropdownOpen(false);
       return;
     }
 
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const headers = ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status'];
     const csvRows = dataToExport.map((c) => [
       c.user_id,
@@ -309,12 +241,8 @@ const Clients = () => {
       c.status,
       c.notes || '',
       c.client_status || '',
-<<<<<<< HEAD
     ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Ensure fields are quoted and escaped
 
-=======
-    ]);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const csvContent = [headers.join(','), ...csvRows.map((row) => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -324,7 +252,6 @@ const Clients = () => {
     link.click();
     document.body.removeChild(link);
     setIsExportDropdownOpen(false);
-<<<<<<< HEAD
     toast.success("Clients exported successfully!");
   };
 
@@ -676,128 +603,6 @@ const Clients = () => {
             </div>
           )}
         </motion.div>
-=======
-  };
-
-  // Adjust contentShift based on isCollapsed state, consistent with other agent pages
-  const contentShift = isCollapsed ? 80 : 256;
-
-  return (
-    <div className="bg-gray-50 pt-0 -mt-6 px-4 md:px-8">
-      {/* AgentSidebar now receives collapsed, setCollapsed, activeSection, setActiveSection */}
-      <AgentSidebar
-        collapsed={isCollapsed}
-        setCollapsed={setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-      />
-      <motion.div
-        animate={{ marginLeft: contentShift }}
-        transition={{ duration: 0.3 }}
-        className="flex-1 p-4 md:p-6" // Restored original padding
-      >
-        {/* Mobile-only H1 element */}
-        <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className="text-2xl font-extrabold text-green-700 text-center">Clients</h1>
-        </div>
-
-        {/* Desktop-only centered title, consistent with other agent pages */}
-        <div className="hidden md:block mb-6"> {/* Restored original mb-6 */}
-          <h1 className="text-3xl font-extrabold text-green-700 mb-6 text-center">Clients</h1>
-        </div>
-
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm" // Removed md:w-1/2 to make it full width
-          />
-
-          <div className="flex gap-2 items-center">
-            <div className="relative" ref={exportDropdownRef}>
-              <button
-                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                className="bg-green-400 text-white flex items-center px-4 h-10 rounded-xl hover:bg-green-500 text-sm font-medium"
-              >
-                Export to CSV <ChevronDownIcon className="ml-2 h-5 w-5" />
-              </button>
-              {isExportDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-xl shadow-lg z-10"> {/* Changed to rounded-xl */}
-                  <button onClick={() => handleExportCsv('current')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 rounded-xl"> {/* Changed to rounded-xl */}
-                    Current View
-                  </button>
-                  <button onClick={() => handleExportCsv('all')} className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100 rounded-xl"> {/* Changed to rounded-xl */}
-                    All Clients
-                  </button>
-                </div>
-              )}
-            </div>
-            <button onClick={() => setViewMode('simple')} className={`p-2 rounded-xl ${viewMode === 'simple' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}>
-              <TableCellsIcon className="h-6 w-6" />
-            </button>
-            <button onClick={() => setViewMode('graphical')} className={`p-2 rounded-xl ${viewMode === 'graphical' ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'}`}>
-              <Squares2X2Icon className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-
-        {filteredClients.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            No clients found matching your criteria.
-          </div>
-        ) : (
-          viewMode === 'graphical' ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredClients.map(client => (
-                <ClientCard
-                  key={client.user_id}
-                  client={{ ...client, agent_id: agentId }}
-                  onSendEmail={() => handleSendEmail(client)}
-                  onRespondInquiry={() => handleRespondInquiry(client.user_id)}
-                  onViewProfile={() => handleViewProfile(client.user_id)}
-                  onRemove={() => handleRemoveClient(client.user_id)}
-                  onToggleStatus={() => handleToggleStatus(client.user_id, client.client_status)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow p-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left">Name {renderSortIcon('full_name')}</th>
-                    <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left">Email {renderSortIcon('email')}</th>
-                    <th className="text-left">Status</th>
-                    <th className="text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.map(client => (
-                    <tr key={client.user_id} className="border-t">
-                      <td className="px-2 py-2">{client.full_name}</td>
-                      <td className="px-2 py-2">{client.email}</td>
-                      <td className="px-2 py-2">{client.client_status}</td>
-                      <td className="px-2 py-2 flex gap-2 flex-wrap">
-                        <button onClick={() => handleViewProfile(client.user_id)} className="text-xs text-green-700 hover:underline rounded-xl">View</button> {/* Added rounded-xl */}
-                        <button onClick={() => handleSendEmail(client)} className="text-xs text-blue-700 hover:underline rounded-xl">Email</button> {/* Added rounded-xl */}
-                        <button onClick={() => handleRespondInquiry(client.user_id)} className="text-xs text-indigo-700 hover:underline rounded-xl">Respond</button> {/* Added rounded-xl */}
-                        <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className="text-xs text-yellow-600 hover:underline rounded-xl"> {/* Added rounded-xl */}
-                          {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
-                        </button>
-                        <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className="rounded-xl"> {/* Added rounded-xl to the button */}
-                          <TrashIcon className="h-4 w-4 text-red-500 hover:text-red-700" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        )}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         <SendEmailModal
           isOpen={emailModalOpen}
@@ -805,10 +610,7 @@ const Clients = () => {
           agentId={agentId}
           client={selectedClient}
           onSent={() => toast.success("Email sent")}
-<<<<<<< HEAD
           darkMode={darkMode} // Pass darkMode prop
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
       </motion.div>
     </div>

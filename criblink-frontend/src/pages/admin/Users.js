@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-<<<<<<< HEAD
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/Sidebar';
@@ -108,12 +107,6 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
-=======
-import { motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/Sidebar';
-import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -123,7 +116,6 @@ const Users = () => {
   const [sortDirection, setSortDirection] = useState('desc');
   const [page, setPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
 
   // State for sidebar responsiveness, matching Dashboard.js
@@ -131,11 +123,6 @@ const Users = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [isCollapsed, setIsCollapsed] = useState(false); // Only used on desktop
   const [activeSection, setActiveSection] = useState('users'); // Set active section to 'users'
-=======
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState('users');
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const [actionSelections, setActionSelections] = useState({});
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
@@ -147,10 +134,7 @@ const Users = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalContent, setConfirmModalContent] = useState('');
   const [confirmModalTitle, setConfirmModalTitle] = useState('');
-<<<<<<< HEAD
   // Corrected useState initialization for confirmModalAction
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const [confirmModalAction, setConfirmModalAction] = useState(() => () => {}); // Function to execute on confirmation
 
   // State for the alert modal
@@ -158,10 +142,6 @@ const Users = () => {
   const [alertModalMessage, setAlertModalMessage] = useState('');
   const [alertModalType, setAlertModalType] = useState('success'); // 'success' or 'error'
 
-<<<<<<< HEAD
-
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   // Function to show the alert modal
   const showCustomAlert = (message, type) => {
     setAlertModalMessage(message);
@@ -197,17 +177,13 @@ const Users = () => {
     } catch (err) {
       console.error('Failed to fetch users:', err);
       showCustomAlert('Failed to fetch users. Please try again later.', 'error');
-<<<<<<< HEAD
       setUsers([]); // Ensure users list is empty on error
       setTotalUsers(0); // Ensure total users is 0 on error
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     }
   };
 
   const location = useLocation();
 
-<<<<<<< HEAD
   // Effect to handle window resize for mobile responsiveness
   useEffect(() => {
     const handleResize = () => {
@@ -221,8 +197,6 @@ const Users = () => {
   }, []);
 
 
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   useEffect(() => {
     if (location.state?.roleFilter) {
       setRoleFilter(location.state.roleFilter);
@@ -256,15 +230,9 @@ const Users = () => {
 
   const renderSortIcon = (key) => sortKey === key
     ? sortDirection === 'asc'
-<<<<<<< HEAD
       ? <ArrowUpIcon className={`h-4 w-4 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       : <ArrowDownIcon className={`h-4 w-4 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
     : <ArrowDownIcon className={`h-4 w-4 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
-=======
-      ? <ArrowUpIcon className="h-4 w-4 inline text-green-700" />
-      : <ArrowDownIcon className="h-4 w-4 inline text-green-700" />
-    : <ArrowDownIcon className="h-4 w-4 inline text-gray-400" />;
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const handleExportCsv = async (scope) => {
     if ((scope === 'current' && users.length === 0) || (scope === 'all' && totalUsers === 0)) {
@@ -419,18 +387,13 @@ const Users = () => {
   };
 
   const totalPages = Math.ceil(totalUsers / limit);
-<<<<<<< HEAD
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256; // Adjust content shift based on mobile and collapsed state
-=======
-  const contentShift = isCollapsed ? 80 : 256;
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   // Confirmation Modal Component
   const ConfirmModal = ({ show, title, message, onConfirm, onCancel }) => {
     if (!show) return null;
     return (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-<<<<<<< HEAD
         <div className={`p-6 rounded-xl shadow-xl max-w-sm w-full mx-4 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
           <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-gray-800"}`}>{title}</h2>
           <p className={`mb-6 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>{message}</p>
@@ -438,15 +401,6 @@ const Users = () => {
             <button
               onClick={onCancel}
               className={`px-4 py-2 rounded-xl transition-colors ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-800 hover:bg-gray-300"}`}
-=======
-        <div className="bg-white p-6 rounded-xl shadow-xl max-w-sm w-full mx-4">
-          <h2 className="text-xl font-bold mb-4 text-gray-800">{title}</h2>
-          <p className="mb-6 text-gray-700">{message}</p>
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             >
               Cancel
             </button>
@@ -484,7 +438,6 @@ const Users = () => {
     );
   };
 
-<<<<<<< HEAD
   const roleOptions = [
     { value: "", label: "All Roles" },
     { value: "admin", label: "Admin" },
@@ -624,53 +577,11 @@ const Users = () => {
                       }}
                     >
                       <div className="flex items-center gap-1"> {/* Changed gap to 1 */}
-=======
-  return (
-    <div className="bg-gray-50 pt-0 -mt-6 px-4 md:px-8">
-      <AdminSidebar
-        collapsed={isCollapsed}
-        setCollapsed={setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-      />
-      <motion.div animate={{ marginLeft: contentShift }} transition={{ duration: 0.3, ease: 'easeInOut' }} className="flex-1 p-4 md:p-6">
-        <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className="text-2xl font-extrabold text-green-700 text-center">Users</h1>
-        </div>
-        <div className="hidden md:block mb-6">
-          <h1 className="text-3xl font-extrabold text-green-700 mb-6 text-center">Users</h1>
-        </div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="bg-white rounded-3xl p-6 shadow space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <input type="text" placeholder="Search by name or email..." value={search} onChange={e => setSearch(e.target.value)} className="w-full md:w-1/3 py-2 px-4 border border-gray-300 rounded-xl" />
-            <div className="relative inline-block text-left" ref={exportDropdownRef}>
-              <button onClick={() => setIsExportDropdownOpen(p => !p)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-400 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
-                Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
-              </button>
-              {isExportDropdownOpen && (
-                <div className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-                  <div className="py-1">
-                    <button onClick={() => handleExportCsv('current')} className="text-gray-700 block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-xl">Current Page</button>
-                    <button onClick={() => handleExportCsv('all')} className="text-gray-700 block w-full px-4 py-2 text-left text-sm hover:bg-gray-100 rounded-xl">All Users</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full mt-4 text-left text-sm table-fixed">
-              <thead>
-                <tr className="text-gray-500">
-                  {['user_id', 'full_name', 'email', 'status', 'date_joined'].map((k) => (
-                    <th key={k} onClick={() => handleSortClick(k)} className="py-2 px-2 cursor-pointer hover:text-green-700 whitespace-nowrap text-left">
-                      <div className="flex items-center justify-start gap-1">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                         <span>{k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                         {renderSortIcon(k)}
                       </div>
                     </th>
                   ))}
-<<<<<<< HEAD
                   <th className={`py-2 px-2 text-left ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '90px' }}> {/* Adjusted padding and width */}
                     <Dropdown
                       placeholder="All Roles"
@@ -740,52 +651,6 @@ const Users = () => {
               disabled={page === totalPages || totalPages === 0}
               className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
             >Next</button>
-=======
-                  <th className="py-2 px-2 text-left">
-                    <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }} className="py-1 px-2 border rounded-xl text-sm w-24 bg-transparent focus:outline-none">
-                      <option value="">All Roles</option>
-                      <option value="admin">Admin</option>
-                      <option value="agent">Agent</option>
-                      <option value="client">Client</option>
-                    </select>
-                  </th>
-                  <th className="px-6 py-2 text-left whitespace-nowrap">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(user => (
-                  <tr key={user.user_id} className="border-t hover:bg-gray-50">
-                    <td className="py-2 px-2 text-left">{user.user_id}</td>
-                    <td title={user.full_name} className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap px-2 text-left">{user.full_name}</td>
-                    <td title={user.email} className="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap px-2 text-left">{user.email}</td>
-                    <td className="px-2 text-left">{user.status || 'active'}</td>
-                    <td className="px-2 text-left">{formatDate(user.date_joined)}</td>
-                    <td className="px-2 text-left">{user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
-                    <td className="text-left px-2">
-                      <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
-                        <select className="py-1 px-2 border rounded-xl text-sm w-full" value={actionSelections[user.user_id] || ''} onChange={(e) => setActionSelections(prev => ({ ...prev, [user.user_id]: e.target.value }))}>
-                          <option value="">Select Action</option>
-                          {(user.role === 'client' || user.role === 'agent') && <option value="role:admin">Promote to Admin</option>}
-                          {user.role === 'client' && <option value="role:agent">Promote to Agent</option>}
-                          {user.role === 'admin' && <option value="role:agent">Demote to Agent</option>}
-                          {(user.role === 'admin' || user.role === 'agent') && <option value="role:client">Demote to Client</option>}
-                          <option value={user.status === 'banned' ? 'unban' : 'ban'}>{user.status === 'banned' ? 'Unban' : 'Ban'}</option>
-                          <option value="delete">Delete</option>
-                        </select>
-                        <button onClick={() => handleActionApply(user)} className="text-xs text-white bg-green-400 hover:bg-green-500 rounded-xl px-2 py-1 w-full">Apply</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {users.length === 0 && <tr><td colSpan="7" className="text-center py-4 text-gray-400">No users found.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-between items-center pt-4">
-            <button disabled={page === 1} onClick={() => setPage(p => Math.max(p - 1, 1))} className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50">Prev</button>
-            <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-            <button disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)} className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50">Next</button>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           </div>
         </motion.div>
       </motion.div>

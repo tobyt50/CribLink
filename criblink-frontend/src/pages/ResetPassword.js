@@ -5,10 +5,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react'; // For password visibility toggle
 import API_BASE_URL from '../config'; // Assuming you have a config file for your API base URL
-<<<<<<< HEAD
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState('');
@@ -18,10 +15,7 @@ export default function ResetPassword() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const location = useLocation(); // Hook to access URL query parameters
   const navigate = useNavigate();
@@ -85,17 +79,12 @@ export default function ResetPassword() {
   };
 
   return (
-<<<<<<< HEAD
     <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-=======
-    <div className="flex items-start justify-center min-h-screen bg-gray-50 px-4 pt-16">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-<<<<<<< HEAD
         className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`}
       >
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Reset Password</h1>
@@ -103,15 +92,6 @@ export default function ResetPassword() {
 
         {message && (
           <div className={`p-3 rounded-xl text-center ${messageType === 'success' ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700') : (darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-700')}`}>
-=======
-        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6"
-      >
-        <h1 className="text-3xl font-bold text-center text-green-700">Reset Password</h1>
-        <p className="text-sm text-center text-gray-500">Enter your new password.</p>
-
-        {message && (
-          <div className={`p-3 rounded-xl text-center ${messageType === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             {message}
           </div>
         )}
@@ -123,24 +103,16 @@ export default function ResetPassword() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
-<<<<<<< HEAD
             className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
               darkMode
                 ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
                 : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
             } pr-12`}
-=======
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 pr-12"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           />
           <button
             type="button"
             onClick={() => setShowNewPassword((prev) => !prev)}
-<<<<<<< HEAD
             className={`absolute top-1/2 right-4 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-=======
-            className="absolute top-1/2 right-4 -translate-y-1/2 text-gray-500"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           >
             {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
@@ -153,24 +125,16 @@ export default function ResetPassword() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-<<<<<<< HEAD
             className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
               darkMode
                 ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
                 : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
             } pr-12`}
-=======
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 pr-12"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword((prev) => !prev)}
-<<<<<<< HEAD
             className={`absolute top-1/2 right-4 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-=======
-            className="absolute top-1/2 right-4 -translate-y-1/2 text-gray-500"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           >
             {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>

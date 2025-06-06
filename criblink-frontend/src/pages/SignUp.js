@@ -3,10 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-<<<<<<< HEAD
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 // Assuming API_BASE_URL is defined in a config file
 import API_BASE_URL from '../config';
@@ -34,10 +31,7 @@ export default function SignUp() {
   const [generalError, setGeneralError] = useState('');
 
   const navigate = useNavigate();
-<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   // Effect to check for existing token and redirect authenticated users
   useEffect(() => {
@@ -157,34 +151,20 @@ export default function SignUp() {
   };
 
   return (
-<<<<<<< HEAD
     <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-=======
-    <div className="flex items-start justify-center min-h-screen bg-gray-50 px-4 pt-16">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-<<<<<<< HEAD
         className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`} // Main form space-y-6
       >
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-=======
-        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6" // Main form space-y-6
-      >
-        <h1 className="text-3xl font-bold text-center text-green-700">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           Create Account
         </h1>
 
         {/* Role Selection Section */}
-<<<<<<< HEAD
         <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-=======
-        <div className="text-center text-sm text-gray-500">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           Sign up as{' '}
           {/* Buttons to switch roles */}
           <button
@@ -212,15 +192,11 @@ export default function SignUp() {
           value={form.full_name} // Bind value to state
           onChange={handleChange}
           required
-<<<<<<< HEAD
           className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
             darkMode
               ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
               : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
           }`}
-=======
-          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
         <input
           type="email"
@@ -229,15 +205,11 @@ export default function SignUp() {
           value={form.email} // Bind value to state
           onChange={handleChange}
           required
-<<<<<<< HEAD
           className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
             darkMode
               ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
               : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
           }`}
-=======
-          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
         <input
           type="password"
@@ -246,15 +218,11 @@ export default function SignUp() {
           value={form.password} // Bind value to state
           onChange={handleChange}
           required
-<<<<<<< HEAD
           className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
             darkMode
               ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
               : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
           }`}
-=======
-          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
         <input
           type="password"
@@ -263,24 +231,16 @@ export default function SignUp() {
           value={form.confirm_password} // Bind value to state
           onChange={handleChange}
           required
-<<<<<<< HEAD
           className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
             darkMode
               ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
               : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
           }`}
-=======
-          className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
 
         {/* Display password validation error */}
         {passwordError && (
-<<<<<<< HEAD
           <p className={`text-sm text-center ${darkMode ? "text-red-400" : "text-red-500"}`}>{passwordError}</p>
-=======
-          <p className="text-red-500 text-sm text-center">{passwordError}</p>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         )}
 
         {/* Agent-Specific Form Fields (Conditionally Rendered) */}
@@ -298,15 +258,11 @@ export default function SignUp() {
               value={form.phone_number} // Bind value to state
               onChange={handleChange}
               required // Make agent-specific fields required for agents
-<<<<<<< HEAD
               className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
                   : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
               }`}
-=======
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             />
             <input
               type="text"
@@ -314,15 +270,11 @@ export default function SignUp() {
               placeholder="Agency Name (Optional)"
               value={form.agency_name} // Bind value to state
               onChange={handleChange}
-<<<<<<< HEAD
               className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
                   : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
               }`}
-=======
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             />
             {/* Add more agent-specific fields here */}
           </motion.div>
@@ -330,11 +282,7 @@ export default function SignUp() {
 
         {/* Display general form submission error */}
         {generalError && (
-<<<<<<< HEAD
           <p className={`text-sm text-center ${darkMode ? "text-red-400" : "text-red-500"}`}>{generalError}</p>
-=======
-          <p className="text-red-500 text-sm text-center">{generalError}</p>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         )}
 
         <button
@@ -344,11 +292,7 @@ export default function SignUp() {
           Create Account
         </button>
 
-<<<<<<< HEAD
         <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-=======
-        <div className="text-center text-sm text-gray-500">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           Already have an account?{' '}
           <a href="/signin" className="text-green-600 hover:underline">
             Sign In

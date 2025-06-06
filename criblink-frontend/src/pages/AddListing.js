@@ -4,10 +4,7 @@ import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config'; // Assuming API_BASE_URL is defined here
-<<<<<<< HEAD
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const App = () => {
   const [purchaseCategory, setPurchaseCategory] = useState('Rent');
@@ -33,11 +30,8 @@ const App = () => {
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
 
-<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
 
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   // Combine all images for easier handling
   const allImages = [...images, ...imageURLs];
 
@@ -264,7 +258,6 @@ const App = () => {
   };
 
 
-<<<<<<< HEAD
   const inputStyles = `mt-1 block w-full py-3 px-4 rounded-xl shadow-outer text-sm ${
     darkMode
       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
@@ -274,29 +267,15 @@ const App = () => {
 
   return (
     <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-=======
-  const inputStyles = "mt-1 block w-full py-3 px-4 bg-green-50 border border-green-200 text-gray-800 rounded-xl shadow-outer text-sm placeholder-green-400";
-
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 md:p-6">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-<<<<<<< HEAD
         className={`rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`}
       >
         <motion.h2
           className={`text-2xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}
-=======
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-6"
-      >
-        <motion.h2
-          className="text-2xl font-bold text-green-700 text-center"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.4 }}
@@ -312,11 +291,7 @@ const App = () => {
           className="space-y-6"
         >
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Purchase Category</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Purchase Category</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <select value={purchaseCategory} onChange={(e) => setPurchaseCategory(e.target.value)} className={inputStyles}>
               <option value="Rent">Rent</option>
               <option value="Sale">Sale</option>
@@ -327,11 +302,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Title</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Title</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="text"
               value={title}
@@ -343,11 +314,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Location</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Location</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="text"
               value={location}
@@ -360,11 +327,7 @@ const App = () => {
 
           {/* State Dropdown */}
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>State</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">State</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <select
               value={stateValue}
               onChange={(e) => setStateValue(e.target.value)}
@@ -382,11 +345,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Property Type</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Property Type</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className={inputStyles} required>
               <option value="">Select Property Type</option>
               <option value="Duplex">Duplex</option>
@@ -401,29 +360,17 @@ const App = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-<<<<<<< HEAD
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Bedrooms</label>
               <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className={inputStyles} required />
             </div>
             <div>
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Bathrooms</label>
-=======
-              <label className="block text-sm font-medium text-gray-700">Bedrooms</label>
-              <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className={inputStyles} required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Bathrooms</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               <input type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} className={inputStyles} required />
             </div>
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-=======
-            <label className="block text-sm font-medium text-gray-700">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               {purchaseCategory === 'Rent' ? 'Price (₦ / Year)' :
                 purchaseCategory === 'Sale' ? 'Price (₦)' :
                   purchaseCategory === 'Lease' ? 'Price (₦ / Lease)' :
@@ -435,11 +382,7 @@ const App = () => {
 
           {/* New fields for property_details */}
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Description</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Description</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -451,11 +394,7 @@ const App = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-<<<<<<< HEAD
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Square Footage</label>
-=======
-              <label className="block text-sm font-medium text-gray-700">Square Footage</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               <input
                 type="number"
                 value={squareFootage}
@@ -464,11 +403,7 @@ const App = () => {
               />
             </div>
             <div>
-<<<<<<< HEAD
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Lot Size (sqft or acres)</label>
-=======
-              <label className="block text-sm font-medium text-gray-700">Lot Size (sqft or acres)</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               <input
                 type="number"
                 step="0.01"
@@ -480,11 +415,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Year Built</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Year Built</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="number"
               value={yearBuilt}
@@ -495,11 +426,7 @@ const App = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-<<<<<<< HEAD
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Heating Type</label>
-=======
-              <label className="block text-sm font-medium text-gray-700">Heating Type</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               <input
                 type="text"
                 value={heatingType}
@@ -508,11 +435,7 @@ const App = () => {
               />
             </div>
             <div>
-<<<<<<< HEAD
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Cooling Type</label>
-=======
-              <label className="block text-sm font-medium text-gray-700">Cooling Type</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
               <input
                 type="text"
                 value={coolingType}
@@ -523,11 +446,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Parking</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Parking</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="text"
               value={parking}
@@ -538,11 +457,7 @@ const App = () => {
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Amenities (comma-separated)</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Amenities (comma-separated)</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <textarea
               value={amenities}
               onChange={(e) => setAmenities(e.target.value)}
@@ -552,39 +467,27 @@ const App = () => {
             ></textarea>
           </div>
 
-<<<<<<< HEAD
           <div {...getRootProps()} className={`p-6 border-dashed border-2 rounded-2xl cursor-pointer text-center ${
             darkMode
               ? "border-gray-600 bg-gray-700 text-gray-300"
               : "border-gray-300 bg-gray-50 text-gray-600"
           }`}>
-=======
-          <div {...getRootProps()} className="p-6 border-dashed border-2 border-gray-300 rounded-2xl cursor-pointer bg-gray-50 text-sm text-gray-600 text-center">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input {...getInputProps()} />
             Drag & drop or click to select images
           </div>
 
           <div>
-<<<<<<< HEAD
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Or Add Image URL</label>
-=======
-            <label className="block text-sm font-medium text-gray-700">Or Add Image URL</label>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <div className="flex gap-2 mt-1">
               <input
                 type="text"
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
-<<<<<<< HEAD
                 className={`flex-grow py-3 px-4 border rounded-2xl text-sm ${
                   darkMode
                     ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                     : "bg-white border-gray-300 text-gray-900"
                 }`}
-=======
-                className="flex-grow py-3 px-4 border border-gray-300 rounded-2xl text-sm"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 placeholder="https://example.com/image.jpg"
               />
               <button type="button" onClick={handleAddImageUrl} className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 text-sm">Add</button>
@@ -596,13 +499,9 @@ const App = () => {
               {allImages.map((item, index) => (
                 <motion.div
                   key={item instanceof File ? item.name : item} // Use file name or URL as key
-<<<<<<< HEAD
                   className={`border p-2 rounded-2xl relative ${index === thumbnailIndex ? 'border-green-500 ring-2 ring-green-500' : ''} ${
                     darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
                   }`} // Highlight thumbnail
-=======
-                  className={`border p-2 rounded-2xl relative ${index === thumbnailIndex ? 'border-green-500 ring-2 ring-green-500' : ''}`} // Highlight thumbnail
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
@@ -620,11 +519,7 @@ const App = () => {
                   <button
                     type="button"
                     onClick={() => setThumbnailIndex(index)}
-<<<<<<< HEAD
                     className={`text-xs underline mt-1 block ${darkMode ? "text-green-400" : "text-green-700"}`}
-=======
-                    className="text-xs text-green-700 underline mt-1 block"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                   >{thumbnailIndex === index ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
                   {/* Add move buttons if needed - requires more complex state management */}
                 </motion.div>
@@ -641,4 +536,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default AddListing;

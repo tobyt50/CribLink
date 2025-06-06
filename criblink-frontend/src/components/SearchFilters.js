@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef } from "react";
 import axios from 'axios';
 import API_BASE_URL from '../config';
@@ -147,29 +146,16 @@ function SearchFilters({ filters, setFilters }) {
     fetchCategories();
   }, []);
 
-=======
-import React, { useEffect, useState } from "react";
-import axios from 'axios';
-import API_BASE_URL from '../config'; // Assuming API_BASE_URL is defined here
-import PurchaseCategoryFilter from './PurchaseCategoryFilter';
-
-function SearchFilters({ filters, setFilters }) {
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const resetFilters = () => {
     setFilters({
       location: "",
       propertyType: "",
-<<<<<<< HEAD
       subtype: "",
-=======
-      subtype: "", // Assuming subtype is a filter option
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       bedrooms: "",
       bathrooms: "",
       minPrice: "",
       maxPrice: "",
-<<<<<<< HEAD
       purchaseCategory: "",
     });
   };
@@ -246,109 +232,30 @@ function SearchFilters({ filters, setFilters }) {
         />
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-2 col-span-1 sm:col-span-2 md:col-span-1">
-=======
-      purchaseCategory: "", // Reset purchase category filter
-    });
-  };
-
-  return (
-    <div className="border rounded-3xl p-4 mb-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Enter location or state"
-          value={filters.location}
-          onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-          className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none"
-        />
-
-        <select
-          value={filters.propertyType}
-          onChange={(e) => setFilters({ ...filters, propertyType: e.target.value })}
-          className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none"
-        >
-          <option value="">All Types</option>
-          {/* Example hardcoded property types - you might want to fetch these dynamically too */}
-          <option value="Duplex">Duplex</option>
-          <option value="Bungalow">Bungalow</option>
-          <option value="Apartment">Apartment</option>
-          <option value="Penthouse">Penthouse</option>
-          <option value="Detached House">Detached House</option>
-          <option value="Semi-Detached House">Semi-Detached House</option>
-          <option value="Condo">Condo</option>
-        </select>
-
-        <select
-          value={filters.bedrooms}
-          onChange={(e) => setFilters({ ...filters, bedrooms: e.target.value })}
-          className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none"
-        >
-          <option value="">Any Bedrooms</option>
-          {[1, 2, 3, 4, 5].map((num) => (
-            <option key={num} value={num}>{num} Bedroom(s)</option>
-          ))}
-        </select>
-
-        <select
-          value={filters.bathrooms}
-          onChange={(e) => setFilters({ ...filters, bathrooms: e.target.value })}
-          className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none"
-        >
-          <option value="">Any Bathrooms</option>
-          {[1, 2, 3, 4, 5].map((num) => (
-            <option key={num} value={num}>{num} Bathroom(s)</option>
-          ))}
-        </select>
-
-        {/* Purchase Category Dropdown using dynamically fetched categories */}
-        <PurchaseCategoryFilter
-          selectedCategory={filters.purchaseCategory}
-          onChange={(value) => setFilters({ ...filters, purchaseCategory: value })}
-          className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none"
-          label={null}
-        />
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-2">
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           <input
             type="number"
             placeholder="Min Price (₦)"
             value={filters.minPrice}
             onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-<<<<<<< HEAD
             className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100
               ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
-=======
-            className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none w-full sm:w-1/2"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           />
           <input
             type="number"
             placeholder="Max Price (₦)"
             value={filters.maxPrice}
             onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-<<<<<<< HEAD
             className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100
               ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
-=======
-            className="p-2 rounded-full border border-gray-300 focus:ring-2 focus:ring-green-500 focus:outline-none w-full sm:w-1/2"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           />
         </div>
       </div>
 
-<<<<<<< HEAD
       <div className="text-right mt-4">
         <button
           onClick={resetFilters}
           className={`px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg
             ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
-=======
-      <div className="text-right">
-        <button
-          onClick={resetFilters}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-full transition"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         >
           Reset Filters
         </button>
