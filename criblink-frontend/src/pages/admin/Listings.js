@@ -1,16 +1,20 @@
 // Listings.js
+<<<<<<< HEAD
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar';
+=======
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar'; // Assuming the path is correct
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 // Import necessary icons
 import { TableCellsIcon, Squares2X2Icon, ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+<<<<<<< HEAD
 import { ChevronDownIcon } from '@heroicons/react/24/outline'; // Keep this for the export dropdown
 import API_BASE_URL from '../../config';
 import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter'; // Correctly importing PurchaseCategoryFilter
@@ -120,17 +124,22 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+=======
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../config';
 import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter';
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Listings = () => {
     const [listings, setListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+<<<<<<< HEAD
     const [viewMode, setViewMode] = useState('simple');
+=======
     const [viewMode, setViewMode] = useState('simple'); // 'simple' or 'graphical'
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
     const [purchaseCategoryFilter, setPurchaseCategoryFilter] = useState('');
@@ -138,6 +147,7 @@ const Listings = () => {
     const [maxPriceFilter, setMaxPriceFilter] = useState('');
     const [page, setPage] = useState(1);
     const [totalListings, setTotalListings] = useState(0);
+<<<<<<< HEAD
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10;
     const navigate = useNavigate();
@@ -156,6 +166,7 @@ const Listings = () => {
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     // State for desktop filter modal, added to match AgentListings.js
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
+=======
     const limit = 10;
     const totalPages = Math.max(1, Math.ceil(totalListings / limit));
     const navigate = useNavigate();
@@ -168,6 +179,7 @@ const Listings = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     // State for active section in the sidebar, consistent with Dashboard.js
     const [activeSection, setActiveSection] = useState('listings'); // Set default active section for Listings page
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     const location = useLocation();
 
@@ -177,6 +189,7 @@ const Listings = () => {
         }
     }, [location.state]);
 
+<<<<<<< HEAD
     // Effect to handle window resize for mobile responsiveness
     useEffect(() => {
         const handleResize = () => {
@@ -189,7 +202,9 @@ const Listings = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+=======
     // Effect to close export dropdown when clicking outside
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
@@ -201,11 +216,13 @@ const Listings = () => {
     }, []);
 
 
+<<<<<<< HEAD
     const fetchListings = useCallback(async () => {
         try {
             const params = new URLSearchParams();
 
             if (purchaseCategoryFilter && purchaseCategoryFilter.toLowerCase() !== 'all') {
+=======
     // Effect to fetch listings whenever filters change or component mounts
     // This effect now depends on the filter states to refetch when they change
     useEffect(() => {
@@ -223,6 +240,7 @@ const Listings = () => {
 
             // Conditionally append parameters only if they have a value
             if (purchaseCategoryFilter && purchaseCategoryFilter !== 'all') { // Ensure 'all' is not sent as a filter
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 params.append('purchase_category', purchaseCategoryFilter);
             }
             if (searchTerm) {
@@ -234,6 +252,7 @@ const Listings = () => {
             if (maxPriceFilter) {
                 params.append('max_price', maxPriceFilter);
             }
+<<<<<<< HEAD
             if (statusFilter && statusFilter.toLowerCase() !== 'all' && statusFilter.toLowerCase() !== 'all statuses') {
                 params.append('status', statusFilter);
             } else if (statusFilter.toLowerCase() === 'all' || statusFilter.toLowerCase() === 'all statuses') {
@@ -279,6 +298,7 @@ const Listings = () => {
             const bValue = b[sortKey];
 
             if (sortKey === 'price') {
+=======
 
             // Use the correct API_BASE_URL
             const response = await axios.get(`${API_BASE_URL}/listings?${params.toString()}`);
@@ -308,12 +328,14 @@ const Listings = () => {
             // --- Refined Price Sorting Logic ---
             if (sortKey === 'price') {
                 // Clean the price string by removing non-numeric characters except decimal point and sign
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const cleanPriceA = String(aValue).replace(/[^0-9.-]+/g, '');
                 const cleanPriceB = String(bValue).replace(/[^0-9.-]+/g, '');
                 const numA = parseFloat(cleanPriceA);
                 const numB = parseFloat(cleanPriceB);
 
                 if (!isNaN(numA) && !isNaN(numB)) {
+<<<<<<< HEAD
                     return sortDirection === 'asc' ? numA - numB : numB - numA;
                 } else if (!isNaN(numA)) {
                     return sortDirection === 'asc' ? -1 : 1;
@@ -323,6 +345,7 @@ const Listings = () => {
                 return 0;
             }
 
+=======
                     // Both are valid numbers, perform numerical comparison
                     return sortDirection === 'asc' ? numA - numB : numB - aValue;
                 } else if (!isNaN(numA)) {
@@ -338,6 +361,7 @@ const Listings = () => {
             // --- End Refined Price Sorting Logic ---
 
             // Handle null or undefined values for other sort keys
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             if (aValue == null && bValue == null) return 0;
             if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
             if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
@@ -350,7 +374,10 @@ const Listings = () => {
             } else if (typeA === 'number' && typeB === 'number') {
                 return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
             } else {
+<<<<<<< HEAD
+=======
                 // Fallback for mixed types or other non-string/non-number types
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const numA = parseFloat(aValue);
                 const numB = parseFloat(bValue);
 
@@ -366,6 +393,7 @@ const Listings = () => {
         });
 
         setFilteredListings(sortedData);
+<<<<<<< HEAD
     }, [listings, sortKey, sortDirection]); // filterAndSortListings removed from here
 
     useEffect(() => {
@@ -445,6 +473,7 @@ const Listings = () => {
             fetchListings();
         } catch (error) {
             console.error('Error marking listing as failed:', error.response?.data || error.message);
+=======
     };
 
     // Function to handle approving a listing (status becomes 'Available')
@@ -560,11 +589,13 @@ const Listings = () => {
         } catch (error) {
             console.error('Error marking listing as failed:', error.response?.data || error.message);
             alert('Failed to mark listing as failed.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
 
     const handleDeleteListing = async (listingId) => {
+<<<<<<< HEAD
         console.log(`Confirming deletion for listing ${listingId}`);
         const token = localStorage.getItem('token');
 
@@ -591,6 +622,7 @@ const Listings = () => {
 
         if (dataToExport.length === 0) {
             console.warn(`No listing data found for ${scope} export.`);
+=======
         // Show a confirmation dialog
         const isConfirmed = window.confirm('Are you sure you want to delete this listing?');
 
@@ -632,51 +664,71 @@ const Listings = () => {
 
         if (dataToExport.length === 0) {
             alert(`No listing data found for ${scope} export.`);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             setIsExportDropdownOpen(false);
             return;
         }
 
+<<<<<<< HEAD
+=======
         // Define CSV headers based on your table columns
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const headers = [
             'property_id', 'purchase_category', 'title', 'location', 'state', 'price', 'status', 'user_id', 'date_listed', 'property_type', 'bedrooms', 'bathrooms'
         ];
 
+<<<<<<< HEAD
+=======
         // Map listing data to CSV rows
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const csvRows = dataToExport.map(l => [
             l.property_id,
             l.purchase_category || 'N/A',
             l.title,
             l.location,
             l.state,
+<<<<<<< HEAD
             l.price,
+=======
             l.price, // Price will be exported as is, numerical sorting is for display
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             l.status || 'N/A',
             l.user_id,
             l.date_listed ? new Date(l.date_listed).toLocaleDateString() : 'N/A',
             l.property_type,
             l.bedrooms || 'N/A',
             l.bathrooms || 'N/A'
+<<<<<<< HEAD
         ].map(field => `"${String(field).replace(/"/g, '""')}"`));
+=======
         ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Enclose fields in quotes and escape existing quotes
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
+<<<<<<< HEAD
         link.setAttribute('download', 'property_listings.csv');
+=======
         link.setAttribute('download', 'property_listings.csv'); // Set filename
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+<<<<<<< HEAD
         setIsExportDropdownOpen(false);
+=======
         setIsExportDropdownOpen(false); // Close dropdown after export
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
 
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
+<<<<<<< HEAD
         setPage(1);
     };
 
@@ -688,6 +740,7 @@ const Listings = () => {
     const handlePurchaseCategoryChange = (value) => { // Changed to accept value directly from Dropdown
         setPurchaseCategoryFilter(value);
         setPage(1);
+=======
     };
 
     const handleStatusChange = (e) => {
@@ -696,22 +749,32 @@ const Listings = () => {
 
     const handlePurchaseCategoryChange = (e) => {
         setPurchaseCategoryFilter(e.target.value);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMinPriceChange = (e) => {
         setMinPriceFilter(e.target.value);
+<<<<<<< HEAD
         setPage(1);
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMaxPriceChange = (e) => {
         setMaxPriceFilter(e.target.value);
+<<<<<<< HEAD
         setPage(1);
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
 
     const handleSortClick = (key) => {
+<<<<<<< HEAD
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return;
 
         if (sortKey === key) {
@@ -724,12 +787,16 @@ const Listings = () => {
 
 
     const renderSortIcon = (key) => {
+<<<<<<< HEAD
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return null;
 
         if (sortKey === key) {
             return sortDirection === 'asc' ? (
+<<<<<<< HEAD
                 <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
             ) : (
                 <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
@@ -738,6 +805,7 @@ const Listings = () => {
         return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
     };
 
+=======
                 <ArrowUpIcon className="h-4 w-4 ml-1 inline text-green-700" />
             ) : (
                 <ArrowDownIcon className="h-4 w-4 ml-1 inline text-green-700" />
@@ -747,16 +815,21 @@ const Listings = () => {
     };
 
     // Helper function to capitalize the first letter of a string
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const capitalizeFirstLetter = (string) => {
         if (!string) return '';
         return string.charAt(0).toUpperCase() + string.slice(1);
     };
 
+<<<<<<< HEAD
+=======
     // Handler for clicking a listing card to navigate to the edit page
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const handleCardClick = (listingId) => {
         navigate(`/listing/${listingId}`);
     };
 
+<<<<<<< HEAD
     const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256; // Adjusted content shift based on mobile and collapsed state
 
     // Options for status filter, formatted for the Dropdown component
@@ -853,6 +926,7 @@ const Listings = () => {
                                             <div className="py-1">
                                                 <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
                                                 <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+=======
     // Adjust contentShift based on isCollapsed state, consistent with Dashboard.js
     const contentShift = isCollapsed ? 80 : 256;
 
@@ -952,10 +1026,12 @@ const Listings = () => {
                                             <div className="py-1">
                                                 <button onClick={() => handleExportCsv('current')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">Current View</button>
                                                 <button onClick={() => handleExportCsv('all')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">All Listings</button>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             </div>
                                         </div>
                                     )}
                                 </div>
+<<<<<<< HEAD
                                 <div className="flex gap-2">
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
@@ -1046,6 +1122,7 @@ const Listings = () => {
 
                         {filteredListings.length === 0 ? (
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                             </div>
 
 
@@ -1069,6 +1146,7 @@ const Listings = () => {
                         {/* The table/graphical view content is now inside the same motion.div */}
                         {filteredListings.length === 0 ? (
                             <div className="text-center text-gray-500 py-8 col-span-full">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 No listings found matching your criteria.
                             </div>
                         ) : (
@@ -1078,33 +1156,40 @@ const Listings = () => {
                                     className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                                 >
                                     {filteredListings.map((listing) => (
+<<<<<<< HEAD
                                         <div key={listing.property_id}>
                                             <ListingCard
                                                 listing={listing}
                                                 onDelete={handleDeleteListing}
+=======
                                         // Make the ListingCard clickable and navigate to the edit page
                                         <div key={listing.property_id}> {/* Added key prop */}
                                             <ListingCard
                                                 listing={listing}
                                                 onDelete={handleDeleteListing} // Pass the delete handler to the card
                                             // Pass other necessary props to ListingCard
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             />
                                         </div>
                                     ))}
                                 </motion.div>
                             ) : (
+<<<<<<< HEAD
                                 <div className="overflow-x-auto"> {/* Added overflow-x-auto */}
                                     <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Changed table-auto to table-fixed */}
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                                 <div className="overflow-x-auto"> {/* Removed bg-white rounded-3xl p-6 shadow from here */}
                                     <table className="w-full mt-4 text-sm table-fixed">
                                         <thead>
                                             <tr className="text-gray-500">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                 {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
                                                     <th
                                                         key={key}
                                                         onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
+<<<<<<< HEAD
                                                         className={`py-2 px-2 whitespace-nowrap ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
                                                         style={{
                                                             width:
@@ -1120,7 +1205,9 @@ const Listings = () => {
                                                                 key === 'bathrooms' ? '70px' :
                                                                 key === 'actions' ? '150px' : 'auto'
                                                         }}
+=======
                                                         className={`py-2 px-2 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                     >
                                                         <div className="flex items-center gap-1">
                                                             <span className="truncate">
@@ -1129,8 +1216,11 @@ const Listings = () => {
                                                                     property_type: 'Type',
                                                                     purchase_category: 'Category',
                                                                     actions: 'Actions'
+<<<<<<< HEAD
                                                                 }[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+=======
                                                                 }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                             </span>
                                                             {renderSortIcon(key)}
                                                         </div>
@@ -1138,6 +1228,7 @@ const Listings = () => {
                                                 ))}
                                             </tr>
                                         </thead>
+<<<<<<< HEAD
                                         <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                                             {filteredListings.map((listing) => (
                                                 <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
@@ -1161,6 +1252,7 @@ const Listings = () => {
                                                     <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
                                                     <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bathrooms ? listing.bathrooms.toString() : ''}>{listing.bathrooms}</td>
                                                     <td className="py-2 px-2 space-x-2 max-w-[150px]">
+=======
                                         <tbody>
                                             {filteredListings.map((listing) => (
                                                 <tr key={listing.property_id} className="border-t hover:bg-gray-50">
@@ -1177,6 +1269,7 @@ const Listings = () => {
                                                     <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bedrooms}</td>
                                                     <td className="py-2 px-2 w-12 text-left whitespace-nowrap">{listing.bathrooms}</td>
                                                     <td className="py-2 px-2 whitespace-nowrap">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                         {listing.status && listing.status.toLowerCase() === 'pending' ? (
                                                             <div className="flex items-center gap-2">
                                                                 <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
@@ -1207,8 +1300,11 @@ const Listings = () => {
                                                         ) : (
                                                             <div className="flex items-center gap-2">
                                                                 <button
+<<<<<<< HEAD
                                                                     className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs" // Ensured rounded-xl
+=======
                                                                     className="bg-green-400 text-white px-3 py-1 rounded-xl hover:bg-green-500 text-xs"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                                     onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
                                                                     title="Edit Listing"
                                                                 >
@@ -1231,6 +1327,7 @@ const Listings = () => {
                                     </table>
 
 
+<<<<<<< HEAD
                                     <div className="flex justify-center items-center space-x-4 mt-4"> {/* Adjusted to justify-center and items-center */}
                                         <button
                                             disabled={page === 1}
@@ -1244,6 +1341,7 @@ const Listings = () => {
                                             disabled={page === totalPages || totalPages === 0}
                                             onClick={() => setPage(prev => prev + 1)}
                                             className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+=======
                                     <div className="flex justify-between items-center pt-4">
                                         <button
                                             disabled={page === 1}
@@ -1257,6 +1355,7 @@ const Listings = () => {
                                             disabled={page === totalPages || totalPages === 0}
                                             onClick={() => setPage(prev => prev + 1)}
                                             className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                         >
                                             Next
                                         </button>
@@ -1267,6 +1366,7 @@ const Listings = () => {
                     </motion.div>
                 </main>
             </motion.div>
+<<<<<<< HEAD
 
             {/* Mobile Filter Modal */}
             <AnimatePresence>
@@ -1446,6 +1546,8 @@ const Listings = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </div>
     );
 };

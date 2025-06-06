@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+<<<<<<< HEAD
     "@fortawesome/fontawesome-free": "^6.7.2",
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     "@heroicons/react": "^2.2.0",
     "axios": "^1.8.4",
     "date-fns": "^4.1.0",
@@ -17,7 +20,10 @@
     "react-router-dom": "^7.5.1",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
+<<<<<<< HEAD
     "recharts": "^2.15.3",
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     "tailwindcss": "^3.4.3"
   },
   "scripts": {

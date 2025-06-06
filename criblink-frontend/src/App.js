@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from "react";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -6,11 +7,13 @@ import Header from "./components/Header";
 import MainLayout from "./layouts/MainLayout";
 import AppShell from "./layouts/AppShell"; // ✅
 
+=======
 // src/App.js
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import Header from "./components/Header";
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import Home from "./pages/Home";
 import AddListing from "./pages/AddListing";
 import ListingDetails from "./pages/ListingDetails";
@@ -35,13 +38,17 @@ import AdminListings from './pages/admin/Listings';
 import AdminInquiries from './pages/admin/Inquiries';
 import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
+<<<<<<< HEAD
 import AdminAnalytics from "./pages/admin/Analytics";
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 import EditListing from './pages/EditListing';
 
 function App() {
   return (
     <Router>
+<<<<<<< HEAD
       <AppShell> {/* ✅ wrap entire app in dark mode logic */}
         <Header /> {/* Header is global, so it stays here */}
         {/* The main content area. Its background and text colors are controlled by AppShell. */}
@@ -85,6 +92,7 @@ function App() {
           </Routes>
         </main>
       </AppShell>
+=======
       <Header />
       <main className="pt-[96px] bg-gray-50 min-h-screen">
         <Routes>
@@ -120,6 +128,7 @@ function App() {
           </Route>
         </Routes>
       </main>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     </Router>
   );
 }

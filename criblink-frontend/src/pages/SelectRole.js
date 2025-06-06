@@ -1,14 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card'; // adjust if your path differs
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
 
 export default function SelectRole() {
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+=======
 
 export default function SelectRole() {
   const navigate = useNavigate();
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const selectRole = (role) => {
     navigate('/signup', { state: { role } });
@@ -20,32 +23,41 @@ export default function SelectRole() {
   ];
 
   return (
+<<<<<<< HEAD
     <div className={`flex flex-col items-center justify-center min-h-screen px-4 ${darkMode ? "bg-gray-900" : "bg-gradient-to-br from-green-50 to-green-100"}`}>
+=======
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-green-100 px-4">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="w-full max-w-4xl mt-[-60px]"
       >
+<<<<<<< HEAD
         <h1 className={`text-3xl font-bold text-center mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>Create Your Criblink Account</h1>
         <p className={`text-center mb-10 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Choose your role to continue</p>
+=======
         <h1 className="text-3xl font-bold text-center text-green-700 mb-2">Create Your Criblink Account</h1>
         <p className="text-center text-gray-600 mb-10">Choose your role to continue</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 justify-center">
           {roles.map((role) => (
             <Card
               key={role.value}
               onClick={() => selectRole(role.value)}
+<<<<<<< HEAD
               className={`cursor-pointer ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-700" : "bg-white text-gray-900 border-gray-200 hover:bg-gray-50"}`}
             >
               <h2 className={`text-xl font-semibold mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>{role.label}</h2>
               <p className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>{role.description}</p>
+=======
               className="cursor-pointer"
             >
               <h2 className="text-xl font-semibold mb-2 text-green-700">{role.label}</h2>
               <p className="text-gray-600">{role.description}</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             </Card>
           ))}
         </div>

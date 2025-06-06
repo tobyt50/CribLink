@@ -1,7 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+<<<<<<< HEAD
 import { motion, AnimatePresence } from 'framer-motion';
+=======
 import { motion } from 'framer-motion';
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import {
   Menu,
   ChevronLeft,
@@ -13,16 +16,19 @@ import {
   FileText, // For Reports
   Archive, // For Archive
   Settings, // For Settings
+<<<<<<< HEAD
   X, // Import X icon for mobile close button
 } from 'lucide-react'; // Using lucide-react for icons
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 
 // Define the navigation links with lucide-react icons
 const MENU_ITEMS = [ // Renamed to MENU_ITEMS for consistency with AdminSidebar
+=======
 } from 'lucide-react'; // Using lucide-react for icons
 
 // Define the navigation links with lucide-react icons
 const links = [
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   { name: 'Dashboard', to: '/agent/dashboard', icon: <Home />, key: 'dashboard' },
   { name: 'Clients', to: '/agent/clients', icon: <Users />, key: 'clients' },
   { name: 'Listings', to: '/agent/listings', icon: <LayoutGrid />, key: 'listings' },
@@ -34,6 +40,7 @@ const links = [
 ];
 
 const AgentSidebar = ({
+<<<<<<< HEAD
   collapsed, // Expecting collapsed state from parent (for desktop)
   setCollapsed, // Expecting setCollapsed function from parent (for desktop)
   activeSection, // Expecting activeSection state from parent
@@ -126,6 +133,7 @@ const AgentSidebar = ({
         />
       )}
     </>
+=======
   collapsed, // Expecting collapsed state from parent
   setCollapsed, // Expecting setCollapsed function from parent
   activeSection, // Expecting activeSection state from parent
@@ -178,6 +186,7 @@ const AgentSidebar = ({
         ))}
       </nav>
     </div>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   );
 };
 

@@ -5,12 +5,18 @@ import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
 import API_BASE_URL from '../config'; // Assuming API_BASE_URL is defined
+<<<<<<< HEAD
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const App = () => {
     const { id } = useParams(); // Get the listing ID from the URL
     const navigate = useNavigate(); // Initialize useNavigate
+<<<<<<< HEAD
     const { darkMode } = useTheme(); // Use the dark mode context
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     const [listing, setListing] = useState(null); // State to hold the fetched listing data
     const [loading, setLoading] = useState(true);
@@ -291,21 +297,27 @@ const App = () => {
 
 
     // Tailwind CSS classes for consistent input styling
+<<<<<<< HEAD
     const inputStyles = `mt-1 block w-full py-3 px-4 rounded-xl shadow-outer text-sm ${
       darkMode
         ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
         : "bg-green-50 border-green-200 text-gray-800 placeholder-green-400"
     }`;
+=======
     const inputStyles = "mt-1 block w-full py-3 px-4 bg-green-50 border border-green-200 text-gray-800 rounded-xl shadow-outer text-sm placeholder-green-400";
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 
     // Render loading state while fetching listing data
     if (loading) {
         return (
+<<<<<<< HEAD
              <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
                  <p className={`text-lg ${darkMode ? "text-green-400" : "text-green-700"}`}>Loading listing...</p>
+=======
              <div className="flex justify-center items-center min-h-screen bg-gray-50">
                  <p className="text-green-700 text-lg">Loading listing...</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
              </div>
         );
     }
@@ -313,10 +325,13 @@ const App = () => {
     // Render error state if fetching failed or no ID was provided
     if (error) {
         return (
+<<<<<<< HEAD
             <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
                  <p className={`text-lg ${darkMode ? "text-red-400" : "text-red-600"}`}>Error: {error}</p>
+=======
             <div className="flex justify-center items-center min-h-screen bg-gray-50">
                  <p className="text-red-600 text-lg">Error: {error}</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             </div>
         );
     }
@@ -326,10 +341,13 @@ const App = () => {
          // This case should ideally be caught by the error state if fetch returns 404
          // but as a fallback check
          return (
+<<<<<<< HEAD
               <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
                  <p className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Listing not found.</p>
+=======
               <div className="flex justify-center items-center min-h-screen bg-gray-50">
                  <p className="text-gray-600 text-lg">Listing not found.</p>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
              </div>
          );
     }
@@ -355,8 +373,11 @@ const App = () => {
 
 
     return (
+<<<<<<< HEAD
         <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+=======
         <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 md:p-6">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             {/* Main content area for the edit form */}
             <main className="space-y-6 w-full max-w-2xl">
                 {/* Animated form container */}
@@ -365,16 +386,19 @@ const App = () => {
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
+<<<<<<< HEAD
                     className={`rounded-2xl shadow-2xl w-full p-8 space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`} // Removed mx-auto as it's now handled by parent flex
                 >
                     {/* Animated form title */}
                     <motion.h2
                         className={`text-2xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}
+=======
                     className="bg-white rounded-2xl shadow-2xl w-full p-8 space-y-6" // Removed mx-auto as it's now handled by parent flex
                 >
                     {/* Animated form title */}
                     <motion.h2
                         className="text-2xl font-bold text-green-700 text-center"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
                         transition={{ duration: 0.4 }}
@@ -391,8 +415,11 @@ const App = () => {
                     >
                          {/* Purchase Category Dropdown */}
                          <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Purchase Category</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Purchase Category</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <select value={purchaseCategory} onChange={(e) => setPurchaseCategory(e.target.value)} className={inputStyles}>
                                 {/* Hardcoded categories - consider fetching dynamically */}
                                 <option value="">Select Category</option>
@@ -404,8 +431,11 @@ const App = () => {
 
                         {/* Title Input */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Title</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Title</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <input
                               type="text"
                               value={title}
@@ -418,8 +448,11 @@ const App = () => {
 
                         {/* Location Input */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Location</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Location</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <input
                               type="text"
                               value={location}
@@ -432,8 +465,11 @@ const App = () => {
 
                         {/* State Input */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>State</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">State</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <input
                               type="text"
                               value={stateValue}
@@ -446,8 +482,11 @@ const App = () => {
 
                         {/* Property Type Dropdown */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Property Type</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Property Type</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)} className={inputStyles} required>
                                 <option value="">Select Property Type</option>
                                  {/* Hardcoded property types - consider fetching dynamically */}
@@ -464,24 +503,30 @@ const App = () => {
                         {/* Bedrooms and Bathrooms Inputs */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
+<<<<<<< HEAD
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Bedrooms</label>
                                 <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className={inputStyles} required />
                             </div>
                             <div>
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Bathrooms</label>
+=======
                                 <label className="block text-sm font-medium text-gray-700">Bedrooms</label>
                                 <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className={inputStyles} required />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Bathrooms</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} className={inputStyles} required />
                             </div>
                         </div>
 
                         {/* Price Input with dynamic label */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+=======
                             <label className="block text-sm font-medium text-gray-700">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 {purchaseCategory === 'Rent' ? 'Price (₦ / Year)' :
                                     purchaseCategory === 'Sale' ? 'Price (₦)' :
                                         purchaseCategory === 'Lease' ? 'Price (₦ / Lease)' :
@@ -493,8 +538,11 @@ const App = () => {
 
                          {/* Status Dropdown */}
                          <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Status</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Status</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputStyles} required>
                                 <option value="">Select Status</option>
                                 {statusOptions.map(option => (
@@ -505,8 +553,11 @@ const App = () => {
 
                         {/* New fields for property_details */}
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Description</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Description</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
@@ -518,8 +569,11 @@ const App = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
+<<<<<<< HEAD
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Square Footage</label>
+=======
                                 <label className="block text-sm font-medium text-gray-700">Square Footage</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input
                                     type="number"
                                     value={squareFootage}
@@ -528,8 +582,11 @@ const App = () => {
                                 />
                             </div>
                             <div>
+<<<<<<< HEAD
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Lot Size (sqft or acres)</label>
+=======
                                 <label className="block text-sm font-medium text-gray-700">Lot Size (sqft or acres)</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input
                                     type="number"
                                     step="0.01"
@@ -541,8 +598,11 @@ const App = () => {
                         </div>
 
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Year Built</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Year Built</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <input
                                 type="number"
                                 value={yearBuilt}
@@ -553,8 +613,11 @@ const App = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
+<<<<<<< HEAD
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Heating Type</label>
+=======
                                 <label className="block text-sm font-medium text-gray-700">Heating Type</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input
                                     type="text"
                                     value={heatingType}
@@ -563,8 +626,11 @@ const App = () => {
                                 />
                             </div>
                             <div>
+<<<<<<< HEAD
                                 <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Cooling Type</label>
+=======
                                 <label className="block text-sm font-medium text-gray-700">Cooling Type</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input
                                     type="text"
                                     value={coolingType}
@@ -575,8 +641,11 @@ const App = () => {
                         </div>
 
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Parking</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Parking</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <input
                                 type="text"
                                 value={parking}
@@ -587,8 +656,11 @@ const App = () => {
                         </div>
 
                         <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Amenities (comma-separated)</label>
+=======
                             <label className="block text-sm font-medium text-gray-700">Amenities (comma-separated)</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                             <textarea
                                 value={amenities}
                                 onChange={(e) => setAmenities(e.target.value)}
@@ -601,6 +673,7 @@ const App = () => {
 
                         {/* Image Upload/Management Section */}
                          <div>
+<<<<<<< HEAD
                             <label className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Images</label>
 
                             {/* Dropzone area for adding new images */}
@@ -609,10 +682,12 @@ const App = () => {
                                 ? "border-gray-600 bg-gray-700 text-gray-300"
                                 : "border-gray-300 bg-gray-50 text-gray-600"
                             }`}>
+=======
                             <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
 
                             {/* Dropzone area for adding new images */}
                             <div {...getRootProps()} className="p-6 border-dashed border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 text-sm text-gray-600 text-center mb-4">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 <input {...getInputProps()} />
                                 Drag & drop or click to add new images
                             </div>
@@ -623,12 +698,15 @@ const App = () => {
                                     type="text"
                                     value={imageUrlInput}
                                     onChange={(e) => setImageUrlInput(e.target.value)}
+<<<<<<< HEAD
                                     className={`flex-grow py-3 px-4 border rounded-xl text-sm ${
                                       darkMode
                                         ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
                                         : "bg-white border-gray-300 text-gray-900"
                                     }`}
+=======
                                     className="flex-grow py-3 px-4 border border-gray-300 rounded-xl text-sm"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                     placeholder="Or add new image URL: https://example.com/image.jpg"
                                 />
                                 {/* Button to trigger adding the URL */}
@@ -646,10 +724,13 @@ const App = () => {
                                             <motion.div
                                                 key={identifier || index} // Use identifier as key, fallback to index
                                                 // Highlight the thumbnail image
+<<<<<<< HEAD
                                                 className={`border p-2 rounded-xl relative ${isThumbnail ? 'border-green-500 ring-2 ring-green-500' : ''} ${
                                                   darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
                                                 }`}
+=======
                                                 className={`border p-2 rounded-xl relative ${isThumbnail ? 'border-green-500 ring-2 ring-green-500' : ''}`}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                 initial={{ scale: 0.9, opacity: 0 }}
                                                 animate={{ scale: 1, opacity: 1 }}
                                                 transition={{ delay: index * 0.05 }}
@@ -671,8 +752,11 @@ const App = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => setAsThumbnail(identifier)} // Pass the identifier
+<<<<<<< HEAD
                                                     className={`text-xs underline mt-1 block ${darkMode ? "text-green-400" : "text-green-700"}`}
+=======
                                                     className="text-xs text-green-700 underline mt-1 block"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                 >{isThumbnail ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
                                                  {/* TODO: Add move buttons if needed - requires more complex state management */}
                                             </motion.div>

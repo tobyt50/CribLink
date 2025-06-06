@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, MapPin, Send, Loader, X } from "lucide-react";
+<<<<<<< HEAD
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const ContactUs = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [showToast, setShowToast] = useState(false);
+<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -53,8 +59,11 @@ const ContactUs = () => {
   }, []);
 
   return (
+<<<<<<< HEAD
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-8`}>
+=======
     <div className="bg-gray-50 pt-0 -mt-6 px-4 md:px-8">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       {/* Toast Notification */}
       <AnimatePresence>
         {showToast && (
@@ -76,10 +85,13 @@ const ContactUs = () => {
         transition={{ duration: 0.6 }}
         className="max-w-4xl mx-auto text-center"
       >
+<<<<<<< HEAD
         <h1 className={`text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Us</h1>
         <p className={`max-w-2xl mx-auto text-lg ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+=======
         <h1 className="text-3xl font-extrabold text-green-700 mb-6">Contact Us</h1>
         <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
           Have questions or need assistance? We're here to help you every step of the
           way. Reach out to the CribLink team today.
         </p>
@@ -93,6 +105,7 @@ const ContactUs = () => {
           className="space-y-6"
         >
           <div className="flex items-start gap-4">
+<<<<<<< HEAD
             <Mail className="text-green-600 dark:text-green-400" size={24} />
             <div>
               <h3 className={`text-lg font-semibold ${darkMode ? "text-green-400" : "text-green-700"}`}>Email</h3>
@@ -115,6 +128,7 @@ const ContactUs = () => {
           </div>
 
           <div className={`rounded-xl overflow-hidden mt-6 shadow-lg border ${darkMode ? "border-green-700" : "border-green-100"}`}>
+=======
             <Mail className="text-green-600" size={24} />
             <div>
               <h3 className="text-lg font-semibold text-green-700">Email</h3>
@@ -137,6 +151,7 @@ const ContactUs = () => {
           </div>
 
           <div className="rounded-xl overflow-hidden mt-6 shadow-lg border border-green-100">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <iframe
               title="CribLink Office Location"
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3944.417107705835!2d3.457116374961688!3d6.436023025005597!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103bf53079a3bb1b%3A0x97ad5ff0e285f1b6!2sLekki%20Phase%201!5e0!3m2!1sen!2sng!4v1716401052342!5m2!1sen!2sng"
@@ -155,20 +170,24 @@ const ContactUs = () => {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
+<<<<<<< HEAD
           className={`p-8 rounded-2xl shadow-xl space-y-6 border ${darkMode ? "bg-gray-800 border-green-700" : "bg-white border-green-100"}`}
         >
           <div>
             <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Name</label>
+=======
           className="bg-white p-8 rounded-2xl shadow-xl space-y-6 border border-green-100"
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
               required
+<<<<<<< HEAD
               className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
@@ -178,17 +197,20 @@ const ContactUs = () => {
           </div>
           <div>
             <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Email</label>
+=======
               className="w-full py-2.5 px-4 bg-green-50 border border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <input
               type="email"
               name="email"
               value={form.email}
               onChange={handleChange}
               required
+<<<<<<< HEAD
               className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
@@ -198,23 +220,28 @@ const ContactUs = () => {
           </div>
           <div>
             <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Message</label>
+=======
               className="w-full py-2.5 px-4 bg-green-50 border border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             <textarea
               name="message"
               value={form.message}
               onChange={handleChange}
               required
               rows={5}
+<<<<<<< HEAD
               className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 resize-none ${
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
                   : "bg-green-50 border-green-200 text-gray-800 focus:ring-green-500"
               }`}
+=======
               className="w-full py-2.5 px-4 bg-green-50 border border-green-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 resize-none"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             ></textarea>
           </div>
           <button

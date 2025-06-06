@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Listings.js (Agent View)
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -121,6 +122,7 @@ const Listings = () => {
     const [filteredAndSortedListings, setFilteredAndSortedListings] = useState([]); // For client-side sorting only
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' means no status filter applied by frontend
+=======
 // Listings.js
 import React, { useEffect, useState, useRef } from 'react'; // Import useRef
 import { motion } from 'framer-motion';
@@ -141,6 +143,7 @@ const Listings = () => {
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const [viewMode, setViewMode] = useState('simple'); // 'simple' or 'graphical'
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
@@ -148,32 +151,39 @@ const Listings = () => {
     const [minPriceFilter, setMinPriceFilter] = useState('');
     const [maxPriceFilter, setMaxPriceFilter] = useState('');
     const [page, setPage] = useState(1);
+<<<<<<< HEAD
     const [totalListings, setTotalListings] = useState(0); // Total count from backend
     const [totalPages, setTotalPages] = useState(1); // Total pages from backend
     const limit = 10; // Items per page, sent to backend for pagination
     const navigate = useNavigate();
     const { darkMode } = useTheme(); // Use the dark mode context
+=======
     const [totalListings, setTotalListings] = useState(0);
     const limit = 10;
     const totalPages = Math.max(1, Math.ceil(totalListings / limit));
     const navigate = useNavigate(); // Initialize useNavigate
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     // State and ref for export dropdown
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
 
+<<<<<<< HEAD
     // State for sidebar visibility and collapse
     const [isCollapsed, setIsCollapsed] = useState(false);
     // State for active section in the sidebar
     const [activeSection, setActiveSection] = useState('listings');
+=======
     // State for sidebar visibility and collapse, consistent with AgentDashboard.js
     const [isCollapsed, setIsCollapsed] = useState(false);
     // State for active section in the sidebar, consistent with AgentDashboard.js
     const [activeSection, setActiveSection] = useState('listings'); // Set default active section for Listings page
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     // State to hold the signed-in agent's ID
     const [agentId, setAgentId] = useState(null);
 
+<<<<<<< HEAD
     const location = useLocation();
 
     // State for mobile view and sidebar open/close, consistent with Inquiries.js
@@ -204,8 +214,10 @@ const Listings = () => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+=======
 
     // Removed the resize effect as AgentSidebar is now fixed and manages its own collapse state.
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
     // Effect to close export dropdown when clicking outside
     useEffect(() => {
@@ -238,18 +250,22 @@ const Listings = () => {
                     navigate('/signin'); // Redirect if user_id is missing
                 }
             } catch (err) {
+<<<<<<< HEAD
                 console.error("Error fetching agent profile:", err.response?.data || err.message);
                 // Handle authentication errors (e.g., expired token)
                 if (err.response && err.response.status === 401) {
                     navigate('/signin');
+=======
                 console.error("Error fetching agent profile:", err);
                 // Handle authentication errors (e.g., expired token)
                 if (err.response && err.response.status === 401) {
                     navigate('/signin'); // Redirect to login on authentication failure
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 }
             }
         };
         fetchAgentProfile();
+<<<<<<< HEAD
     }, [navigate]); // navigate is a dependency because it's used inside the effect
 
 
@@ -261,6 +277,7 @@ const Listings = () => {
             return;
         }
 
+=======
 
     }, [navigate]); // navigate is a dependency because it's used inside the effect
 
@@ -279,12 +296,16 @@ const Listings = () => {
     }, [listings, statusFilter, sortKey, sortDirection]); // Dependency array includes listings and filter/sort states
 
     const fetchListings = async () => {
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         try {
             const params = new URLSearchParams();
 
             // Conditionally append parameters only if they have a value
+<<<<<<< HEAD
             if (purchaseCategoryFilter && purchaseCategoryFilter.toLowerCase() !== 'all') {
+=======
             if (purchaseCategoryFilter && purchaseCategoryFilter !== 'all') { // Ensure 'all' is not sent as a filter
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 params.append('purchase_category', purchaseCategoryFilter);
             }
             if (searchTerm) {
@@ -296,6 +317,7 @@ const Listings = () => {
             if (maxPriceFilter) {
                 params.append('max_price', maxPriceFilter);
             }
+<<<<<<< HEAD
             // Send status filter to backend (even 'all' or 'all statuses' for backend to decide)
             if (statusFilter && statusFilter.toLowerCase() !== 'all statuses') { // Send 'all' as a filter too if needed by backend
                 params.append('status', statusFilter);
@@ -353,6 +375,7 @@ const Listings = () => {
 
             // Refined Price Sorting Logic
             if (sortKey === 'price') {
+=======
 
             // --- This is where the agent_id is added to the query parameters ---
             // This will only be added if the agentId state is not null,
@@ -394,12 +417,14 @@ const Listings = () => {
             // --- Refined Price Sorting Logic ---
             if (sortKey === 'price') {
                 // Clean the price string by removing non-numeric characters except decimal point and sign
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const cleanPriceA = String(aValue).replace(/[^0-9.-]+/g, '');
                 const cleanPriceB = String(bValue).replace(/[^0-9.-]+/g, '');
                 const numA = parseFloat(cleanPriceA);
                 const numB = parseFloat(cleanPriceB);
 
                 if (!isNaN(numA) && !isNaN(numB)) {
+<<<<<<< HEAD
                     return sortDirection === 'asc' ? numA - numB : numB - numA;
                 } else if (!isNaN(numA)) {
                     return sortDirection === 'asc' ? -1 : 1;
@@ -408,6 +433,7 @@ const Listings = () => {
                 }
                 return 0;
             }
+=======
                     // Both are valid numbers, perform numerical comparison
                     return sortDirection === 'asc' ? numA - numB : numB - aValue;
                 } else if (!isNaN(numA)) {
@@ -421,6 +447,7 @@ const Listings = () => {
                 return 0;
             }
             // --- End Refined Price Sorting Logic ---
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
             // Handle null or undefined values for other sort keys
             if (aValue == null && bValue == null) return 0;
@@ -435,7 +462,10 @@ const Listings = () => {
             } else if (typeA === 'number' && typeB === 'number') {
                 return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
             } else {
+<<<<<<< HEAD
+=======
                 // Fallback for mixed types or other non-string/non-number types
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 const numA = parseFloat(aValue);
                 const numB = parseFloat(bValue);
 
@@ -449,6 +479,7 @@ const Listings = () => {
                 return 0;
             }
         });
+<<<<<<< HEAD
         setFilteredAndSortedListings(sortedData); // Update state with sorted data
     }, [listings, sortKey, sortDirection]); // Depend on listings, sortKey, sortDirection
 
@@ -474,6 +505,7 @@ const Listings = () => {
             fetchListings(); // Refresh the list
         } catch (error) {
             console.error('Error approving listing:', error.response?.data || error.message);
+=======
 
         setFilteredListings(sortedData);
     };
@@ -504,11 +536,13 @@ const Listings = () => {
         } catch (error) {
             console.error('Error approving listing:', error.response?.data || error.message);
             alert('Failed to approve listing.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
     // Function to handle rejecting a listing (status becomes 'rejected')
     const handleRejectListing = async (listingId) => {
+<<<<<<< HEAD
         console.log(`Confirming rejection for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
@@ -523,6 +557,7 @@ const Listings = () => {
             fetchListings(); // Refresh the list
         } catch (error) {
             console.error('Error rejecting listing:', error.response?.data || error.message);
+=======
         // Show a confirmation dialog
         const isConfirmed = window.confirm('Are you sure you want to reject this listing?');
 
@@ -547,11 +582,13 @@ const Listings = () => {
         } catch (error) {
             console.error('Error rejecting listing:', error.response?.data || error.message);
             alert('Failed to reject listing.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
     // Function to handle marking an 'under offer' listing as 'sold' (completed)
     const handleMarkAsSold = async (listingId) => {
+<<<<<<< HEAD
         console.log(`Confirming mark as sold for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
@@ -566,6 +603,7 @@ const Listings = () => {
             fetchListings(); // Refresh the list
         } catch (error) {
             console.error('Error marking listing as sold:', error.response?.data || error.message);
+=======
         // Show a confirmation dialog
         const isConfirmed = window.confirm('Are you sure you want to mark this listing as Sold?');
 
@@ -590,11 +628,13 @@ const Listings = () => {
         } catch (error) {
             console.error('Error marking listing as sold:', error.response?.data || error.message);
             alert('Failed to mark listing as sold.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
     // Function to handle marking an 'under offer' listing as 'available' (failed)
     const handleMarkAsFailed = async (listingId) => {
+<<<<<<< HEAD
         console.log(`Confirming mark as failed for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
@@ -627,6 +667,7 @@ const Listings = () => {
             fetchListings();
         } catch (error) {
             console.error('Error deleting listing:', error.response?.data || error.message);
+=======
         // Show a confirmation dialog
         const isConfirmed = window.confirm('Are you sure you want to mark this listing as Failed (return to Available)?');
 
@@ -688,19 +729,23 @@ const Listings = () => {
         } catch (error) {
             console.error('Error deleting listing:', error.response?.data || error.message);
             alert('Failed to delete listing.');
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         }
     };
 
     // Function to handle exporting listings to CSV
     const handleExportCsv = async (scope) => {
+<<<<<<< HEAD
         const dataToExport = scope === 'current' ? filteredAndSortedListings : listings; // Use filteredAndSortedListings for current view
 
         if (dataToExport.length === 0) {
             console.warn(`No listing data found for ${scope} export.`);
+=======
         const dataToExport = scope === 'current' ? filteredListings : listings; // Use filteredListings for current page, all listings for all
 
         if (dataToExport.length === 0) {
             alert(`No listing data found for ${scope} export.`);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             setIsExportDropdownOpen(false);
             return;
         }
@@ -717,30 +762,40 @@ const Listings = () => {
             l.title,
             l.location,
             l.state,
+<<<<<<< HEAD
             l.price,
             l.status || 'N/A',
             l.agent_id, // Use agent_id for agent view
+=======
             l.price, // Price will be exported as is, numerical sorting is for display
             l.status || 'N/A',
             l.agent_id, // Use agent_id here as per your table schema
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             l.date_listed ? new Date(l.date_listed).toLocaleDateString() : 'N/A',
             l.property_type,
             l.bedrooms || 'N/A',
             l.bathrooms || 'N/A'
+<<<<<<< HEAD
         ].map(field => `"${String(field).replace(/"/g, '""')}"`));
+=======
         ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Enclose fields in quotes and escape existing quotes
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
+<<<<<<< HEAD
         link.setAttribute('download', 'property_listings.csv');
+=======
         link.setAttribute('download', 'property_listings.csv'); // Set filename
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+<<<<<<< HEAD
         setIsExportDropdownOpen(false);
     };
 
@@ -757,6 +812,7 @@ const Listings = () => {
     const handlePurchaseCategoryChange = (value) => { // Changed to accept value directly from Dropdown
         setPurchaseCategoryFilter(value);
         setPage(1); // Reset page on category change
+=======
         setIsExportDropdownOpen(false); // Close dropdown after export
     };
 
@@ -771,25 +827,32 @@ const Listings = () => {
 
     const handlePurchaseCategoryChange = (e) => {
         setPurchaseCategoryFilter(e.target.value);
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMinPriceChange = (e) => {
         setMinPriceFilter(e.target.value);
+<<<<<<< HEAD
         setPage(1); // Reset page on price filter change
+=======
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     const handleMaxPriceChange = (e) => {
         setMaxPriceFilter(e.target.value);
+<<<<<<< HEAD
         setPage(1); // Reset page on price filter change
     };
 
     const handleSortClick = (key) => {
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
     };
 
 
     const handleSortClick = (key) => {
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return;
 
         if (sortKey === key) {
@@ -800,27 +863,33 @@ const Listings = () => {
         }
     };
 
+<<<<<<< HEAD
     const renderSortIcon = (key) => {
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+=======
 
     const renderSortIcon = (key) => {
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed'];
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         if (!sortableColumns.includes(key)) return null;
 
         if (sortKey === key) {
             return sortDirection === 'asc' ? (
+<<<<<<< HEAD
                 <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
             ) : (
                 <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
             );
         }
         return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
+=======
                 <ArrowUpIcon className="h-4 w-4 ml-1 inline text-green-700" />
             ) : (
                 <ArrowDownIcon className="h-4 w-4 ml-1 inline text-green-700" />
             );
         }
         return <ArrowDownIcon className="h-4 w-4 ml-1 inline text-gray-400" />;
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     };
 
     // Helper function to capitalize the first letter of a string
@@ -833,6 +902,7 @@ const Listings = () => {
         navigate(`/listing/${listingId}`);
     };
 
+<<<<<<< HEAD
     // Adjusted contentShift based on mobile and collapsed state
     const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
@@ -894,6 +964,7 @@ const Listings = () => {
                 {/* Mobile-only H1 element */}
                 <div className="md:hidden flex items-center justify-center mb-4">
                     <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>My Listings</h1>
+=======
 
     // Adjusted contentShift based on isCollapsed state, consistent with AgentDashboard.js
     const contentShift = isCollapsed ? 80 : 256;
@@ -919,10 +990,12 @@ const Listings = () => {
                 {/* Mobile-only H1 element */}
                 <div className="md:hidden flex items-center justify-center mb-4">
                     <h1 className="text-2xl font-extrabold text-green-700 text-center">My Listings</h1> {/* Changed title */}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 </div>
 
                 {/* Desktop-only centered title */}
                 <div className="hidden md:block mb-6">
+<<<<<<< HEAD
                     <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>My Listings</h1>
                 </div>
 
@@ -958,6 +1031,7 @@ const Listings = () => {
                                             <div className="py-1">
                                                 <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
                                                 <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+=======
                     {/* Centered heading for desktop */}
                     <h1 className="text-3xl font-extrabold text-green-700 mb-6 text-center">My Listings</h1> {/* Changed title */}
                 </div>
@@ -1028,10 +1102,12 @@ const Listings = () => {
                                             <div className="py-1">
                                                 <button onClick={() => handleExportCsv('current')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">Current View</button> {/* Changed text to Current View */}
                                                 <button onClick={() => handleExportCsv('all')} className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-xl">All Listings</button> {/* Changed text to All Listings */}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             </div>
                                         </div>
                                     )}
                                 </div>
+<<<<<<< HEAD
                                 <div className="flex gap-2">
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
@@ -1123,6 +1199,7 @@ const Listings = () => {
                             </div>
                         ) : filteredAndSortedListings.length === 0 ? (
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                             </div>
 
 
@@ -1152,6 +1229,7 @@ const Listings = () => {
                             </div>
                         ) : filteredListings.length === 0 ? (
                             <div className="text-center text-gray-500 py-8 col-span-full">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                 No listings found matching your criteria.
                             </div>
                         ) : viewMode === 'graphical' ? (
@@ -1159,12 +1237,14 @@ const Listings = () => {
                                 layout
                                 className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                             >
+<<<<<<< HEAD
                                 {filteredAndSortedListings.map((listing) => (
                                     <div key={listing.property_id}>
                                         <ListingCard
                                             listing={listing}
                                             onDelete={handleDeleteListing}
                                             darkMode={darkMode} // Pass darkMode prop
+=======
                                 {filteredListings.map((listing) => (
                                     // Make the ListingCard clickable and navigate to the edit page
                                     <div key={listing.property_id}> {/* Added key prop */}
@@ -1172,24 +1252,29 @@ const Listings = () => {
                                             listing={listing}
                                             onDelete={handleDeleteListing} // Pass the delete handler to the card
                                         // Pass other necessary props to ListingCard
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                         />
                                     </div>
                                 ))}
                             </motion.div>
+<<<<<<< HEAD
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                     <thead>
                                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+=======
                         ) : ( // Render table view
                             <div className="overflow-x-auto">
                                 <table className="w-full mt-4 text-sm table-fixed">
                                     <thead>
                                         <tr className="text-gray-500">
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                             {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
                                                 <th
                                                     key={key}
                                                     onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
+<<<<<<< HEAD
                                                     className={`py-2 px-1 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
                                                     style={{
                                                         width:
@@ -1206,9 +1291,11 @@ const Listings = () => {
                                                             key === 'actions' ? '180px' : 'auto'
                                                     }}
                                                 >
+=======
                                                     className={`py-2 px-2 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
                                                 >
                                                     {/* Adjusted flex container to align text and icon closely */}
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                     <div className="flex items-center gap-1">
                                                         <span className="truncate">
                                                             {{
@@ -1224,6 +1311,7 @@ const Listings = () => {
                                             ))}
                                         </tr>
                                     </thead>
+<<<<<<< HEAD
                                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                                         {filteredAndSortedListings.map((listing) => (
                                             <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
@@ -1278,6 +1366,7 @@ const Listings = () => {
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 className={`px-3 py-1 rounded-xl text-xs h-10 flex items-center ${darkMode ? "bg-green-600 text-white hover:bg-green-500" : "bg-green-500 text-white hover:bg-green-600"}`}
+=======
                                     <tbody>
                                         {filteredListings.map((listing) => (
                                             <tr key={listing.property_id} className="border-t hover:bg-gray-50">
@@ -1303,6 +1392,7 @@ const Listings = () => {
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 className="bg-green-400 text-white px-3 py-1 rounded-xl hover:bg-green-500 text-xs"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                                 onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
                                                                 title="Edit Listing"
                                                             >
@@ -1310,7 +1400,9 @@ const Listings = () => {
                                                                 <span className="ml-1">Edit</span>
                                                             </button>
                                                             <button
+<<<<<<< HEAD
                                                                 className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
+=======
                                                                 className="text-red-600 hover:text-red-800 p-1 rounded-xl"
                                                                 onClick={() => handleDeleteListing(listing.property_id)}
                                                                 title="Delete Listing"
@@ -1339,6 +1431,7 @@ const Listings = () => {
                                                             </button>
                                                             <button
                                                                 className="text-red-600 hover:text-red-800 p-1 rounded-xl"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                                                 onClick={() => handleDeleteListing(listing.property_id)}
                                                                 title="Delete Listing"
                                                             >
@@ -1353,6 +1446,7 @@ const Listings = () => {
                                 </table>
 
 
+<<<<<<< HEAD
                                 <div className="flex justify-center items-center space-x-4 mt-4">
                                     <button
                                         disabled={page === 1}
@@ -1366,6 +1460,7 @@ const Listings = () => {
                                         disabled={page === totalPages || totalPages === 0}
                                         onClick={() => setPage(prev => prev + 1)}
                                         className={`px-4 py-2 rounded-xl text-sm disabled:opacity-50 h-10 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+=======
                                 <div className="flex justify-between items-center pt-4">
                                     <button
                                         disabled={page === 1}
@@ -1379,11 +1474,13 @@ const Listings = () => {
                                         disabled={page === totalPages || totalPages === 0}
                                         onClick={() => setPage(prev => prev + 1)}
                                         className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                                     >
                                         Next
                                     </button>
                                 </div>
                             </div>
+<<<<<<< HEAD
                         )}
                     </motion.div>
                 </main>
@@ -1539,11 +1636,13 @@ const Listings = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+=======
                         )
                         }
                     </motion.div>
                 </main>
             </motion.div>
+>>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </div>
     );
 };
