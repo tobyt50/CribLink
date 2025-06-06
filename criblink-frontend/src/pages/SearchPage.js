@@ -1,5 +1,4 @@
 // src/pages/SearchPage.js
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,7 +7,6 @@ import SearchFilters from "../components/SearchFilters";
 import API_BASE_URL from "../config";
 import { SlidersHorizontal, Search } from "lucide-react"; // Import Search icon
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-=======
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +14,6 @@ import ListingCard from "../components/ListingCard";
 import SearchFilters from "../components/SearchFilters";
 import API_BASE_URL from "../config";
 import { SlidersHorizontal } from "lucide-react";
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 function SearchPage() {
   const location = useLocation();
@@ -25,11 +22,8 @@ function SearchPage() {
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-<<<<<<< HEAD
   const searchInputRef = useRef(null); // Ref for the search input
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const [filters, setFilters] = useState({
     location: "",
@@ -57,17 +51,14 @@ function SearchPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/listings?search=${encodeURIComponent(term)}`);
       const data = await response.json();
-<<<<<<< HEAD
       setResults(data.listings);
 
       const lowerTerm = term.toLowerCase();
       const initialFiltered = data.listings.filter(listing =>
-=======
       setResults(data);
 
       const lowerTerm = term.toLowerCase();
       const initialFiltered = data.filter(listing =>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         listing.title?.toLowerCase().includes(lowerTerm) ||
         listing.location?.toLowerCase().includes(lowerTerm) ||
         listing.state?.toLowerCase().includes(lowerTerm) ||
@@ -132,35 +123,28 @@ function SearchPage() {
     const trimmed = searchTerm.trim();
     if (trimmed) {
       navigate(`/search?query=${encodeURIComponent(trimmed)}`);
-<<<<<<< HEAD
     } else {
       // If search term is empty, clear results and navigate to search page without query
       setSearchTerm("");
       setResults([]);
       setFilteredResults([]);
       navigate("/search");
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     }
   };
 
   return (
-<<<<<<< HEAD
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} px-4 md:px-10 py-2 min-h-screen`}>
       {/* Search Bar + Filter Toggle */}
       <motion.div
         className="max-w-2xl mx-auto mb-6 flex items-center gap-4" // Changed max-w-4xl to max-w-2xl
-=======
     <div className="bg-gray-50 px-4 md:px-10 py-2">
       {/* Search Bar + Filter Toggle */}
       <motion.div
         className="max-w-4xl mx-auto mb-6"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-<<<<<<< HEAD
         {/* Search bar from Home.js */}
         <form onSubmit={handleSearchSubmit} className="relative flex-grow">
           <input
@@ -212,7 +196,6 @@ function SearchPage() {
           </motion.div>
         )}
       </AnimatePresence>
-=======
         <form
           onSubmit={handleSearchSubmit}
           className="flex flex-col sm:flex-row items-center gap-4"
@@ -254,7 +237,6 @@ function SearchPage() {
           <SearchFilters filters={filters} setFilters={setFilters} />
         </motion.div>
       )}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
       {/* Listings */}
       <motion.div
@@ -281,11 +263,8 @@ function SearchPage() {
           ))
         ) : (
           <motion.div
-<<<<<<< HEAD
             className={`col-span-full text-center py-10 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-=======
             className="col-span-full text-center text-gray-500 py-10"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >

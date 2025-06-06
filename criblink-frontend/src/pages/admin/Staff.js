@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-<<<<<<< HEAD
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
@@ -107,12 +106,10 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
-=======
 import { motion } from 'framer-motion';
 // Removed AdminHeader as it's no longer needed with the new sidebar structure
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Staff = () => {
   const [staffList, setStaffList] = useState([]);
@@ -121,10 +118,7 @@ const Staff = () => {
   const [sortDirection, setSortDirection] = useState('desc');
   const [page, setPage] = useState(1);
   const [totalStaff, setTotalStaff] = useState(0);
-<<<<<<< HEAD
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   // State for sidebar visibility and collapse, consistent with Dashboard.js and Listings.js
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -137,13 +131,10 @@ const Staff = () => {
   const exportDropdownRef = useRef(null);
   const limit = 10;
 
-<<<<<<< HEAD
   // State for mobile view and sidebar open/close, consistent with Inquiries.js
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
 
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const fetchStaff = async () => {
     const params = new URLSearchParams({ search, page, limit, sort: sortKey, direction: sortDirection });
     try {
@@ -153,17 +144,13 @@ const Staff = () => {
       setTotalStaff(data.total);
     } catch (err) {
       console.error('Failed to fetch staff:', err);
-<<<<<<< HEAD
       setStaffList([]); // Ensure staffList is empty on error
       setTotalStaff(0); // Ensure totalStaff is 0 on error
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     }
   };
 
   useEffect(() => { fetchStaff(); }, [search, page, sortKey, sortDirection]);
 
-<<<<<<< HEAD
   // Handle window resize for mobile view, consistent with Inquiries.js
   useEffect(() => {
     const handleResize = () => {
@@ -175,9 +162,7 @@ const Staff = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-=======
   // Removed the resize effect as AdminSidebar is now fixed and manages its own collapse state.
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -199,7 +184,6 @@ const Staff = () => {
     setPage(1);
   };
 
-<<<<<<< HEAD
   // Render sort icon based on current sort key and direction, consistent with Inquiries.js
   const renderSortIcon = (key) =>
     sortKey === key ? (
@@ -216,7 +200,6 @@ const Staff = () => {
     if ((scope === 'current' && staffList.length === 0) || (scope === 'all' && totalStaff === 0)) {
       // Replaced alert with a custom message or modal if needed in a real app
       console.log(`No staff data found for ${scope} export.`);
-=======
   const renderPersistentSortIcon = (key) => {
     const isSorted = sortKey === key;
     const iconClass = 'h-4 w-4';
@@ -229,7 +212,6 @@ const Staff = () => {
   const handleExportCsv = async (scope) => {
     if ((scope === 'current' && staffList.length === 0) || (scope === 'all' && totalStaff === 0)) {
       alert(`No staff data found for ${scope} export.`);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       setIsExportDropdownOpen(false);
       return;
     }
@@ -242,30 +224,21 @@ const Staff = () => {
         data = fullData.staff || fullData;
       } catch (err) {
         console.error('Export fetch error:', err);
-<<<<<<< HEAD
         // Replaced alert with a custom message or modal if needed in a real app
-=======
         alert('Export failed.');
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         return;
       }
     }
 
-<<<<<<< HEAD
     const headers = ['Staff ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID'];
-=======
     const headers = ['Employee ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID'];
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const csvRows = data.map(s => [
       s.employee_id, s.full_name, s.role, s.department, s.email, s.phone,
       formatDate(s.start_date), s.status || 'N/A', s.user_id || 'N/A'
     ].map(f => `"${String(f).replace(/"/g, '""')}"`));
 
-<<<<<<< HEAD
     const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
-=======
     const csvContent = [headers.join(','), ...csvRows.map(r => r.join(','))].join('\n');
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -279,19 +252,15 @@ const Staff = () => {
   };
 
   const handleDelete = async (id) => {
-<<<<<<< HEAD
     // Replaced window.confirm with a custom message or modal if needed in a real app
     console.log('Delete functionality not yet implemented.');
-=======
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       alert('Delete functionality not yet implemented.');
     }
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   };
 
   const handleStatusToggle = async (id, status) => {
     const newStatus = status === 'active' ? 'suspended' : 'active';
-<<<<<<< HEAD
     // Replaced alert with a custom message or modal if needed in a real app
     console.log(`Status toggle to: ${newStatus} not yet implemented.`);
   };
@@ -299,13 +268,11 @@ const Staff = () => {
   const handleResetPassword = async (id) => {
     // Replaced alert with a custom message or modal if needed in a real app
     console.log(`Reset password for ${id} not yet implemented.`);
-=======
     alert(`Status toggle to: ${newStatus} not yet implemented.`);
   };
 
   const handleResetPassword = async (id) => {
     alert(`Reset password for ${id} not yet implemented.`);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   };
 
   const handleActionApply = (staff) => {
@@ -318,13 +285,10 @@ const Staff = () => {
   };
 
   const totalPages = Math.ceil(totalStaff / limit);
-<<<<<<< HEAD
   // Adjust contentShift based on isCollapsed state, consistent with Inquiries.js
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
-=======
   // Adjust contentShift based on isCollapsed state, consistent with Dashboard.js and Listings.js
   const contentShift = isCollapsed ? 80 : 256;
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const formatDate = (iso) => {
     const d = new Date(iso);
@@ -332,7 +296,6 @@ const Staff = () => {
   };
 
   return (
-<<<<<<< HEAD
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Mobile Sidebar Toggle - consistent with Inquiries.js */}
       {isMobile && (
@@ -378,7 +341,6 @@ const Staff = () => {
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
           <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Staff Directory</h1>
-=======
     <div className="bg-gray-50 pt-0 -mt-6 px-4 md:px-8">
       {/* AdminSidebar now receives collapsed, setCollapsed, activeSection, setActiveSection */}
       <AdminSidebar
@@ -391,12 +353,10 @@ const Staff = () => {
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
           <h1 className="text-2xl font-extrabold text-green-700 text-center">Staff Directory</h1>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </div>
         {/* Desktop-only centered title, consistent with Dashboard.js and Listings.js */}
         <div className="hidden md:block mb-6">
           {/* Centered heading for desktop */}
-<<<<<<< HEAD
           <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Staff Directory</h1>
         </div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
@@ -531,7 +491,6 @@ const Staff = () => {
                       No staff members found.
                     </td>
                   </tr>
-=======
           <h1 className="text-3xl font-extrabold text-green-700 mb-6 text-center">Staff Directory</h1>
         </div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="bg-white rounded-3xl p-6 shadow space-y-4">
@@ -594,13 +553,11 @@ const Staff = () => {
                   <tr>
                     <td colSpan="9" className="text-center py-4 text-gray-400">No staff members found.</td>
                   </tr>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                 )}
               </tbody>
             </table>
           </div>
 
-<<<<<<< HEAD
           {/* Pagination - consistent with Users.js */}
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button
@@ -617,7 +574,6 @@ const Staff = () => {
               onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
               disabled={page === totalPages || totalPages === 0}
               className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-=======
           <div className="flex justify-between items-center pt-4">
             <button
               disabled={page === 1}
@@ -631,7 +587,6 @@ const Staff = () => {
               disabled={page === totalPages || totalPages === 0}
               onClick={() => setPage(prev => prev + 1)}
               className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50"
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             >
               Next
             </button>

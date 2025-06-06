@@ -1,16 +1,12 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-=======
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Squares2X2Icon,
   TableCellsIcon,
-<<<<<<< HEAD
   ArrowUpIcon,
   ArrowDownIcon,
   TrashIcon,
@@ -26,7 +22,6 @@ import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 import Card from '../../components/ui/Card'; // Import the Card component
-=======
   ChevronDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
@@ -37,7 +32,6 @@ import AgentSidebar from '../../components/agent/Sidebar';
 import ClientCard from '../../components/agent/ClientCard';
 import SendEmailModal from '../../components/agent/SendEmailModal';
 import API_BASE_URL from '../../config';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -45,18 +39,15 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-<<<<<<< HEAD
   const [viewMode, setViewMode] = useState('simple');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [agentId, setAgentId] = useState(null);
   const { darkMode } = useTheme(); // Use the dark mode context
-=======
   const [viewMode, setViewMode] = useState('graphical');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [agentId, setAgentId] = useState(null);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   // State for sidebar visibility and collapse, consistent with other agent pages
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -67,7 +58,6 @@ const Clients = () => {
   const exportDropdownRef = useRef(null);
   const navigate = useNavigate();
 
-<<<<<<< HEAD
   // State for mobile view and sidebar open/close, consistent with Inquiries.js and Listings.js
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
@@ -91,9 +81,7 @@ const Clients = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-=======
   // Removed the resize effect as AgentSidebar is now fixed and manages its own collapse state.
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -125,25 +113,18 @@ const Clients = () => {
       if (!agentId) return;
       try {
         const token = localStorage.getItem('token');
-<<<<<<< HEAD
         // Note: Backend might need to be updated to support pagination parameters (page, limit)
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         const { data } = await axios.get(`${API_BASE_URL}/clients/agent/${agentId}/clients`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setClients(data);
-<<<<<<< HEAD
         setFilteredClients(data); // Initialize filteredClients with all clients
-=======
         setFilteredClients(data);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       } catch (err) {
         console.error('Failed to fetch clients', err);
       }
     };
     fetchClients();
-<<<<<<< HEAD
   }, [agentId]); // Depend on agentId
 
   useEffect(() => {
@@ -159,7 +140,6 @@ const Clients = () => {
 
     // Apply sorting
     currentClients.sort((a, b) => {
-=======
   }, [agentId]);
 
   useEffect(() => {
@@ -172,21 +152,17 @@ const Clients = () => {
 
   useEffect(() => {
     const sorted = [...filteredClients].sort((a, b) => {
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       const aValue = a[sortKey];
       const bValue = b[sortKey];
       if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
     });
-<<<<<<< HEAD
 
     setFilteredClients(currentClients);
     setPage(1); // Reset to first page on filter/sort change
   }, [searchTerm, clients, sortKey, sortDirection]); // Depend on all relevant states
-=======
     setFilteredClients(sorted);
   }, [sortKey, sortDirection]);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
   const handleSendEmail = (client) => {
     setSelectedClient(client);
@@ -272,34 +248,28 @@ const Clients = () => {
   const renderSortIcon = (key) => {
     if (sortKey === key) {
       return sortDirection === 'asc' ? (
-<<<<<<< HEAD
         <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       ) : (
         <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       );
     }
     return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
-=======
         <ArrowUpIcon className="h-4 w-4 ml-1 inline text-green-700" />
       ) : (
         <ArrowDownIcon className="h-4 w-4 ml-1 inline text-green-700" />
       );
     }
     return <ArrowDownIcon className="h-4 w-4 ml-1 inline text-gray-400" />;
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   };
 
   const handleExportCsv = (scope) => {
     const dataToExport = scope === 'current' ? filteredClients : clients;
-<<<<<<< HEAD
     if (dataToExport.length === 0) {
       toast.info(`No client data found for ${scope} export.`);
       setIsExportDropdownOpen(false);
       return;
     }
 
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const headers = ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status'];
     const csvRows = dataToExport.map((c) => [
       c.user_id,
@@ -309,12 +279,9 @@ const Clients = () => {
       c.status,
       c.notes || '',
       c.client_status || '',
-<<<<<<< HEAD
     ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Ensure fields are quoted and escaped
 
-=======
     ]);
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     const csvContent = [headers.join(','), ...csvRows.map((row) => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -324,7 +291,6 @@ const Clients = () => {
     link.click();
     document.body.removeChild(link);
     setIsExportDropdownOpen(false);
-<<<<<<< HEAD
     toast.success("Clients exported successfully!");
   };
 
@@ -676,7 +642,6 @@ const Clients = () => {
             </div>
           )}
         </motion.div>
-=======
   };
 
   // Adjust contentShift based on isCollapsed state, consistent with other agent pages
@@ -797,7 +762,6 @@ const Clients = () => {
             </div>
           )
         )}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
         <SendEmailModal
           isOpen={emailModalOpen}
@@ -805,10 +769,7 @@ const Clients = () => {
           agentId={agentId}
           client={selectedClient}
           onSent={() => toast.success("Email sent")}
-<<<<<<< HEAD
           darkMode={darkMode} // Pass darkMode prop
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         />
       </motion.div>
     </div>

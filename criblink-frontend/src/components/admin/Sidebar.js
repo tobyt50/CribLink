@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-<<<<<<< HEAD
 import {
   Menu,
   ChevronLeft,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 
-=======
 import { motion } from 'framer-motion';
 import {
   Menu,
@@ -32,7 +30,6 @@ import {
 } from 'lucide-react'; // Using lucide-react for icons
 
 // Define the navigation links with lucide-react icons
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 const MENU_ITEMS = [
   { name: 'Dashboard', to: '/admin/dashboard', icon: <Home />, key: 'dashboard' },
   { name: 'Users', to: '/admin/users', icon: <Users />, key: 'users' },
@@ -45,7 +42,6 @@ const MENU_ITEMS = [
 ];
 
 const AdminSidebar = ({
-<<<<<<< HEAD
   collapsed,
   setCollapsed,
   activeSection,
@@ -138,7 +134,6 @@ const AdminSidebar = ({
         />
       )}
     </>
-=======
   collapsed, // Expecting collapsed state from parent
   setCollapsed, // Expecting setCollapsed function from parent
   activeSection, // Expecting activeSection state from parent
@@ -193,7 +188,6 @@ const AdminSidebar = ({
         ))}
       </nav>
     </div>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   );
 };
 

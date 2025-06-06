@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-<<<<<<< HEAD
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 
 const ListingCard = ({ listing, onAction }) => {
@@ -12,14 +11,12 @@ const ListingCard = ({ listing, onAction }) => {
       // Assuming onAction handles the API call and state update in the parent component
       // This card component just dispatches the action.
       onAction(listing.id, action);
-=======
 
 const ListingCard = ({ listing, onAction }) => {
   const handleAction = async (action) => {
     try {
       await axios.post(`/admin/listings/${listing.id}/${action}`);
       onAction();
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     } catch (err) {
       console.error(`Failed to ${action} listing`, err);
     }
@@ -30,7 +27,6 @@ const ListingCard = ({ listing, onAction }) => {
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-<<<<<<< HEAD
       className={`rounded-xl shadow-md p-4 border ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
     >
       <h3 className={`text-lg font-semibold ${darkMode ? "text-green-400" : "text-gray-800"}`}>{listing.title}</h3>
@@ -55,7 +51,6 @@ const ListingCard = ({ listing, onAction }) => {
           <button onClick={() => handleAction('reject')} className={`text-sm hover:underline ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}>Reject</button>
           <button onClick={() => handleAction('feature')} className={`text-sm hover:underline ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-800"}`}>Feature</button>
           <button onClick={() => handleAction('remove')} className={`text-sm hover:underline ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"}`}>Remove</button>
-=======
       className="bg-white rounded-xl shadow-md p-4 border border-gray-200"
     >
       <h3 className="text-lg font-semibold">{listing.title}</h3>
@@ -71,7 +66,6 @@ const ListingCard = ({ listing, onAction }) => {
           <button onClick={() => handleAction('reject')} className="text-red-600 hover:underline text-sm">Reject</button>
           <button onClick={() => handleAction('feature')} className="text-blue-600 hover:underline text-sm">Feature</button>
           <button onClick={() => handleAction('remove')} className="text-gray-600 hover:underline text-sm">Remove</button>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         </div>
       </div>
     </motion.div>

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-<<<<<<< HEAD
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/Sidebar';
@@ -25,7 +24,6 @@ const Inquiries = () => {
   const [activeSection, setActiveSection] = useState('inquiries');
   const { darkMode } = useTheme(); // Use the dark mode context
 
-=======
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 // Removed AdminHeader as it's no longer needed with the new sidebar structure
@@ -56,13 +54,11 @@ const Inquiries = () => {
   const [actionSelections, setActionSelections] = useState({});
 
   // Function to format date (copied from Users.js)
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
   };
 
-<<<<<<< HEAD
   const fetchInquiries = async () => {
     const params = new URLSearchParams({
       search,
@@ -80,7 +76,6 @@ const Inquiries = () => {
       setTotalInquiries(data.total || data.length);
     } catch (err) {
       console.error('Failed to fetch inquiries:', err);
-=======
 
   // Fetch inquiries with pagination, sorting, and filtering
   const fetchInquiries = async () => {
@@ -104,7 +99,6 @@ const Inquiries = () => {
     } catch (err) {
       console.error('Failed to fetch inquiries:', err);
       // Optionally set inquiries to empty array and total to 0 on error
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       setInquiries([]);
       setTotalInquiries(0);
     }
@@ -113,7 +107,6 @@ const Inquiries = () => {
   const location = useLocation();
 
   useEffect(() => {
-<<<<<<< HEAD
     if (location.state?.sortKey) setSortKey(location.state.sortKey);
     if (location.state?.sortDirection) setSortDirection(location.state.sortDirection);
   }, [location.state]);
@@ -219,7 +212,6 @@ const Inquiries = () => {
         </div>
 
         {/* Card container */}
-=======
     if (location.state?.sortKey) {
       setSortKey(location.state.sortKey);
     }
@@ -331,12 +323,10 @@ const Inquiries = () => {
         </div>
 
         {/* Main content card with motion animation and styling */}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-<<<<<<< HEAD
           className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}
         >
           {/* Filters */}
@@ -455,7 +445,6 @@ const Inquiries = () => {
                 ) : (
                   <tr>
                     <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-=======
           className="bg-white rounded-3xl p-6 shadow space-y-4" // Rounded corners and shadow from Users.js
         >
           {/* Filter and Search section */}
@@ -555,7 +544,6 @@ const Inquiries = () => {
                 {inquiries.length === 0 && (
                   <tr>
                     <td colSpan="8" className="text-center py-4 text-gray-400"> {/* Adjusted colspan */}
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
                       No inquiries found.
                     </td>
                   </tr>
@@ -564,7 +552,6 @@ const Inquiries = () => {
             </table>
           </div>
 
-<<<<<<< HEAD
           {/* Pagination */}
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button
@@ -581,7 +568,6 @@ const Inquiries = () => {
               onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
               disabled={page === totalPages || totalPages === 0}
               className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-=======
           {/* Pagination Controls */}
           <div className="flex justify-between items-center pt-4">
             <button
@@ -596,7 +582,6 @@ const Inquiries = () => {
               disabled={page === totalPages || totalPages === 0}
               onClick={() => setPage(p => p + 1)}
               className="px-4 py-2 rounded-xl bg-gray-100 text-sm disabled:opacity-50" // Changed to rounded-xl
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
             >
               Next
             </button>

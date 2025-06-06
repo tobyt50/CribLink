@@ -1,19 +1,15 @@
-<<<<<<< HEAD
 import React, { useEffect, useState, useRef } from "react";
 import axios from 'axios';
 import API_BASE_URL from '../config';
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-=======
 import React, { useEffect, useState } from "react";
 import axios from 'axios';
 import API_BASE_URL from '../config';
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
 
 function PurchaseCategoryFilter({
   selectedCategory,
   onChange,
-<<<<<<< HEAD
   className = "", // Accept className prop for external styling (for the wrapper div)
   buttonClassName = "", // Prop to style the internal button
   renderInlineLabel = false,
@@ -122,11 +118,9 @@ function PurchaseCategoryFilter({
   };
   // End of embedded DropdownInternal
 
-=======
   className = "",
   renderInlineLabel = false, // when true, render <label> beside the <select>
 }) {
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   const categoryMap = {
     "All categories": "",
     "For sale": "Sale",
@@ -141,7 +135,6 @@ function PurchaseCategoryFilter({
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-<<<<<<< HEAD
         const options = Object.keys(categoryMap).map(label => ({
           value: categoryMap[label],
           label: label
@@ -154,13 +147,11 @@ function PurchaseCategoryFilter({
           label: label
         }));
         setCategories(options);
-=======
         const response = await axios.get(`${API_BASE_URL}/listings/categories`);
         setCategories(Object.keys(categoryMap));
       } catch (error) {
         console.error("Error fetching purchase categories:", error);
         setCategories(Object.keys(categoryMap));
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       }
     };
 
@@ -169,7 +160,6 @@ function PurchaseCategoryFilter({
 
   if (renderInlineLabel) {
     return (
-<<<<<<< HEAD
       <div className={`flex items-center space-x-3 ${variant === "home" ? "mb-0" : "mb-6"} ${className}`}>
         {/* Added dark mode class for label text */}
         <label className="text-green-700 dark:text-green-400 font-semibold whitespace-nowrap">Show:</label>
@@ -181,7 +171,6 @@ function PurchaseCategoryFilter({
           internalClassName="w-full"
           buttonInternalClassName={buttonClassName}
         />
-=======
       <div className="flex items-center space-x-3 mb-6">
         <label className="text-green-700 font-semibold">Filter by:</label>
         <select
@@ -195,13 +184,11 @@ function PurchaseCategoryFilter({
             </option>
           ))}
         </select>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
       </div>
     );
   }
 
   return (
-<<<<<<< HEAD
     <DropdownInternal
       placeholder="Select Purchase Category"
       options={categories}
@@ -210,7 +197,6 @@ function PurchaseCategoryFilter({
       internalClassName={className}
       buttonInternalClassName={buttonClassName}
     />
-=======
     <select
       value={selectedCategory}
       onChange={(e) => onChange(e.target.value)}
@@ -222,7 +208,6 @@ function PurchaseCategoryFilter({
         </option>
       ))}
     </select>
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
   );
 }
 
