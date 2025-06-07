@@ -129,7 +129,8 @@ const AdminAnalytics = () => {
 
   const [dateRange, setDateRange] = useState('last30days'); // State for date range filter
 
-  const [listingStatusData, setListingStatusData] = useState([]);
+  const [listingStatusPieData, setListingStatusPieData] = useState([]); // Separate state for Pie Chart
+  // Removed listingStatusBarData state
   const [listingsOverTimeData, setListingsOverTimeData] = useState([]);
   const [userRegistrationData, setUserRegistrationData] = useState([]);
   const [inquiryTrendsData, setInquiryTrendsData] = useState([]);
@@ -137,13 +138,18 @@ const AdminAnalytics = () => {
   const [listingPriceDistribution, setListingPriceDistribution] = useState([]);
   const [topLocationsData, setTopLocationsData] = useState([]);
   const [agentPerformanceData, setAgentPerformanceData] = useState([]);
+  // New states for additional charts
+  const [purchaseCategoryData, setPurchaseCategoryData] = useState([]);
+  const [bedroomsDistributionData, setBedroomsDistributionData] = useState([]);
+  const [bathroomsDistributionData, setBathroomsDistributionData] = useState([]);
+  const [userRoleDistributionData, setUserRoleDistributionData] = useState([]); // New state for user role distribution
 
   const [totalListings, setTotalListings] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalInquiries, setTotalInquiries] = useState(0);
   const [revenueSoldListings, setRevenueSoldListings] = useState(0);
   const [totalDealsClosed, setTotalDealsClosed] = useState(0);
-  const [totalAgents, setTotalAgents] = useState(0); // Renamed from totalStaff to totalAgents
+  // Removed totalAgents state
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -182,8 +188,8 @@ const AdminAnalytics = () => {
         totalUsersRes,
         revenueSoldListingsRes,
         totalDealsClosedRes,
-        totalAgentsRes, // Fetch for total agents
-        listingStatusRes,
+        // Removed totalAgentsRes from here
+        listingStatusRes, // This will be used for both pie and bar chart
         listingsOverTimeRes,
         userRegistrationRes,
         inquiryTrendsRes,
@@ -191,21 +197,31 @@ const AdminAnalytics = () => {
         listingPriceDistributionRes,
         topLocationsRes,
         agentPerformanceRes,
+        purchaseCategoryRes,
+        bedroomsDistributionRes,
+        bathroomsDistributionRes,
+        userRoleDistributionRes, // New fetch for user role distribution
       ] = await Promise.all([
         axios.get(`${API_BASE_URL}/stats/listings-count`, { headers }),
         axios.get(`${API_BASE_URL}/stats/inquiries-count`, { headers }),
         axios.get(`${API_BASE_URL}/total-users-count`, { headers }),
-        axios.get(`${API_BASE_URL}/revenue-sold-listings`, { headers, params: { dateRange } }), // Pass dateRange
-        axios.get(`${API_BASE_URL}/total-deals-closed`, { headers, params: { dateRange } }), // Pass dateRange
-        axios.get(`http://localhost:5000/admin/agents/count`, { headers }), // Fetch agent count (assuming this endpoint exists and returns { count: N })
-        axios.get(`${API_BASE_URL}/listing-status`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/listings-over-time`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/user-registrations`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/inquiry-trends`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/property-types`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/listing-price-distribution`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/top-locations`, { headers, params: { dateRange } }),
-        axios.get(`${API_BASE_URL}/agent-performance`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/revenue-sold-listings`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/total-deals-closed`, { headers, params: { dateRange } }),
+        // Removed axios.get for total agents
+        
+        // Data for charts that should display all-time accurate values (no dateRange param)
+        axios.get(`${API_BASE_URL}/listing-status`, { headers }),
+        axios.get(`${API_BASE_URL}/listings-over-time`, { headers, params: { dateRange } }), // Keep dateRange for trends
+        axios.get(`${API_BASE_URL}/user-registrations`, { headers, params: { dateRange } }), // Keep dateRange for trends
+        axios.get(`${API_BASE_URL}/inquiry-trends`, { headers, params: { dateRange } }), // Keep dateRange for trends
+        axios.get(`${API_BASE_URL}/property-types`, { headers }),
+        axios.get(`${API_BASE_URL}/listing-price-distribution`, { headers }),
+        axios.get(`${API_BASE_URL}/top-locations`, { headers, params: { dateRange } }), // Keep dateRange for top locations over time
+        axios.get(`${API_BASE_URL}/agent-performance`, { headers, params: { dateRange } }), // Keep dateRange for agent performance (if backend supports)
+        axios.get(`${API_BASE_URL}/listing-purchase-category`, { headers }),
+        axios.get(`${API_BASE_URL}/listing-bedrooms-distribution`, { headers }), // Changed to all-time
+        axios.get(`${API_BASE_URL}/listing-bathrooms-distribution`, { headers }), // Changed to all-time
+        axios.get(`${API_BASE_URL}/user-role-distribution`, { headers }), // New API call
       ]);
 
       setTotalListings(listingsCountRes.data.count);
@@ -213,14 +229,13 @@ const AdminAnalytics = () => {
       setTotalUsers(totalUsersRes.data.count);
       setRevenueSoldListings(revenueSoldListingsRes.data.total_revenue || 0);
       setTotalDealsClosed(totalDealsClosedRes.data.total_deals || 0);
-      setTotalAgents(totalAgentsRes.data.count); // Set total agents state
+      // Removed setTotalAgents(totalAgentsRes.data.count);
 
-      // Process listing status data for pie chart
+      // Process listing status data for the Pie Chart
       const rawListingStatusData = listingStatusRes.data;
-      const statusMap = new Map(); // Use a Map to preserve order and handle specific display names
+      const statusMapForPie = new Map();
 
-      // Define standard display names and their corresponding lowercase keys
-      const standardStatuses = {
+      const standardStatusesForPie = {
         'available': 'Available',
         'sold': 'Sold',
         'under offer': 'Under Offer',
@@ -229,41 +244,56 @@ const AdminAnalytics = () => {
         'featured': 'Featured'
       };
 
-      // Initialize the map with standard statuses to ensure they appear even if count is 0
-      Object.values(standardStatuses).forEach(displayStatus => {
-          statusMap.set(displayStatus, 0);
+      Object.values(standardStatusesForPie).forEach(displayStatus => {
+          statusMapForPie.set(displayStatus, 0);
       });
 
-      // Populate counts from the API response
       rawListingStatusData.forEach(item => {
-          const statusKey = item.status.toLowerCase(); // Backend sends lowercase status_key
-          let displayStatus = standardStatuses[statusKey]; // Try to get a standard display name
-
+          const statusKey = item.status.toLowerCase();
+          let displayStatus = standardStatusesForPie[statusKey];
           if (!displayStatus) {
-              // If not a standard status, capitalize the first letter for display
               displayStatus = capitalizeFirstLetter(statusKey);
           }
-
-          // Aggregate counts, if a status is already in the map, add to its count
-          statusMap.set(displayStatus, (statusMap.get(displayStatus) || 0) + item.count);
+          statusMapForPie.set(displayStatus, (statusMapForPie.get(displayStatus) || 0) + item.count);
       });
 
-      // Convert the map to an array for Recharts, filtering out statuses with 0 count
-      // unless they are explicitly desired (e.g., from standardStatuses).
-      // For now, we'll include all that appeared or were pre-initialized.
-      const finalListingStatusData = Array.from(statusMap.entries()).map(([status, count]) => ({
+      const finalListingStatusDataForPie = Array.from(statusMapForPie.entries()).map(([status, count]) => ({
           status: status,
           count: count
       }));
+      setListingStatusPieData(finalListingStatusDataForPie); // Set for Pie Chart
 
-      setListingStatusData(finalListingStatusData);
+      // Removed processing for Listing Status Bar Chart
+
       setListingsOverTimeData(listingsOverTimeRes.data);
       setUserRegistrationData(userRegistrationRes.data);
       setInquiryTrendsData(inquiryTrendsRes.data);
-      setPropertyTypeData(propertyTypeRes.data);
+
+      const processedPropertyTypeData = propertyTypeRes.data.map(item => ({
+        type: capitalizeFirstLetter(item.type),
+        count: item.count
+      }));
+      setPropertyTypeData(processedPropertyTypeData);
+
       setListingPriceDistribution(listingPriceDistributionRes.data);
       setTopLocationsData(topLocationsRes.data);
       setAgentPerformanceData(agentPerformanceRes.data);
+
+      const processedPurchaseCategoryData = purchaseCategoryRes.data.map(item => ({
+        category: capitalizeFirstLetter(item.category),
+        count: item.count
+      }));
+      setPurchaseCategoryData(processedPurchaseCategoryData);
+
+      setBedroomsDistributionData(bedroomsDistributionRes.data);
+      setBathroomsDistributionData(bathroomsDistributionRes.data);
+
+      // Process user role distribution data
+      const processedUserRoleData = userRoleDistributionRes.data.map(item => ({
+        role: capitalizeFirstLetter(item.role),
+        count: item.count
+      }));
+      setUserRoleDistributionData(processedUserRoleData);
 
     } catch (err) {
       console.error('Error fetching analytics data:', err.response?.data || err.message);
@@ -274,8 +304,9 @@ const AdminAnalytics = () => {
       setTotalInquiries(0);
       setRevenueSoldListings(0);
       setTotalDealsClosed(0);
-      setTotalAgents(0); // Reset total agents on error
-      setListingStatusData([]);
+      // Removed totalAgents reset
+      setListingStatusPieData([]);
+      // Removed listingStatusBarData reset
       setListingsOverTimeData([]);
       setUserRegistrationData([]);
       setInquiryTrendsData([]);
@@ -283,6 +314,10 @@ const AdminAnalytics = () => {
       setListingPriceDistribution([]);
       setTopLocationsData([]);
       setAgentPerformanceData([]);
+      setPurchaseCategoryData([]);
+      setBedroomsDistributionData([]);
+      setBathroomsDistributionData([]);
+      setUserRoleDistributionData([]); // Reset user role distribution data on error
     } finally {
       setIsLoading(false);
     }
@@ -290,13 +325,13 @@ const AdminAnalytics = () => {
 
   // Trigger data fetching on component mount and when dateRange/token changes
   useEffect(() => {
-    if (token) { // Only fetch if token exists
+    if (token) {
       fetchAnalyticsData();
     } else {
       setError('Authentication token not found. Please log in.');
       setIsLoading(false);
     }
-  }, [fetchAnalyticsData, token]); // Depend on fetchAnalyticsData and token
+  }, [fetchAnalyticsData, token]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#82ca9d', '#ffc658'];
 
@@ -312,7 +347,7 @@ const AdminAnalytics = () => {
   ];
 
   // Custom label rendering function for the PieChart
-  const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, outerRadius, percent, name, status }) => {
+  const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, outerRadius, percent, name, status, role }) => {
     const radius = outerRadius * 1.2; // Increase radius to move labels further out
     const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
     let y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
@@ -322,16 +357,18 @@ const AdminAnalytics = () => {
       y += 10; // Move 'Available' label down by 10 pixels
     }
 
+    const labelText = status ? `${status} (${(percent * 100).toFixed(0)}%)` : `${role} (${(percent * 100).toFixed(0)}%)`;
+
     return (
       <text
         x={x}
         y={y}
-        fill="currentColor" // Use current color for text, which will adapt to dark/light mode
+        fill="currentColor"
         textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
-        className={darkMode ? "text-gray-300" : "text-gray-700"} // Apply text color based on dark mode
+        className={darkMode ? "text-gray-300" : "text-gray-700"}
       >
-        {`${status} (${(percent * 100).toFixed(0)}%)`}
+        {labelText}
       </text>
     );
   }, [darkMode]);
@@ -469,15 +506,7 @@ const AdminAnalytics = () => {
                     </div>
                   </div>
                 </Card>
-                <Card onClick={() => navigate('/admin/users', { state: { roleFilter: 'agent' } })} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
-                  <div className="flex items-center justify-center">
-                    <Users size={24} className="text-pink-500 dark:text-pink-400" />
-                    <div className="ml-3 text-left">
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Agents</p>
-                      <p className="text-xl font-semibold">{totalAgents.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </Card>
+                {/* Removed the "Total Agents" stat card */}
               </div>
 
               {/* Charts Section */}
@@ -486,13 +515,13 @@ const AdminAnalytics = () => {
               <div className="space-y-8">
                 {/* Section: Listings & Property Data */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Listing Status Distribution */}
+                  {/* Listing Status Distribution (Pie Chart Restored) */}
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listing Status Distribution</h3>
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={listingStatusData}
+                          data={listingStatusPieData} // Use the new state for Pie Chart
                           cx="50%"
                           cy="50%"
                           labelLine={false}
@@ -500,9 +529,9 @@ const AdminAnalytics = () => {
                           fill="#8884d8"
                           dataKey="count"
                           nameKey="status"
-                          label={renderCustomizedLabel} // Use the custom label rendering function
+                          label={renderCustomizedLabel}
                         >
-                          {listingStatusData.map((entry, index) => (
+                          {listingStatusPieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -548,7 +577,64 @@ const AdminAnalytics = () => {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Listing Price Distribution (Example - could be a histogram) */}
+                  {/* Listings by Purchase Category Distribution */}
+                  <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Purchase Category</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={purchaseCategoryData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#4B5563" : "#E5E7EB"} />
+                        <XAxis dataKey="category" stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <YAxis stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Bar dataKey="count" fill="#00BCD4" name="Number of Listings" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Removed Listings by Status (Bar) */}
+
+                  {/* Listings by Bedrooms Distribution */}
+                  <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Bedrooms</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={bedroomsDistributionData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#4B5563" : "#E5E7EB"} />
+                        <XAxis dataKey="bedrooms" stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <YAxis stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Bar dataKey="count" fill="#E91E63" name="Number of Listings" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Listings by Bathrooms Distribution */}
+                  <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Bathrooms</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={bathroomsDistributionData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#4B5563" : "#E5E7EB"} />
+                        <XAxis dataKey="bathrooms" stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <YAxis stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Bar dataKey="count" fill="#673AB7" name="Number of Listings" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+
+                  {/* Listing Price Distribution */}
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listing Price Distribution</h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -558,8 +644,8 @@ const AdminAnalytics = () => {
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#4B5563" : "#E5E7EB"} />
                         <XAxis dataKey="range" stroke={darkMode ? "#D1D5DB" : "#374151"} />
-                        <YAxis formatter={(value) => `₦${value.toLocaleString()}`} stroke={darkMode ? "#D1D5DB" : "#374151"} />
-                        <Tooltip formatter={(value) => `₦${value.toLocaleString()}`} contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <YAxis stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <Tooltip formatter={(value) => value.toLocaleString()} contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
                         <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
                         <Bar dataKey="count" fill="#FF5722" name="Number of Listings" />
                       </BarChart>
@@ -588,6 +674,32 @@ const AdminAnalytics = () => {
 
                 {/* Section: User & Inquiry Trends */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* User Role Distribution (New Pie Chart) */}
+                  <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>User Role Distribution</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={userRoleDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="count"
+                          nameKey="role"
+                          label={renderCustomizedLabel}
+                        >
+                          {userRoleDistributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
                   {/* User Registration Trends */}
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>User Registration Trends</h3>

@@ -27,4 +27,12 @@ router.get('/listing-price-distribution', analyticsController.getListingPriceDis
 router.get('/top-locations', analyticsController.getTopLocations);
 router.get('/agent-performance', analyticsController.getAgentPerformanceMetrics);
 
+// New Analytics Routes for property_listings attributes
+router.get('/listing-purchase-category', analyticsController.getListingPurchaseCategoryDistribution);
+router.get('/listing-bedrooms-distribution', analyticsController.getListingBedroomsDistribution);
+router.get('/listing-bathrooms-distribution', analyticsController.getListingBathroomsDistribution);
+
+// New User Analytics Route
+router.get('/user-role-distribution', analyticsController.getUserRoleDistribution);
+
 module.exports = router;

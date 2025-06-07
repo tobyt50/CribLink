@@ -99,7 +99,7 @@ const AgentSidebar = ({
                 className={({ isActive }) =>
                   `flex items-center gap-4 w-full px-6 py-3 transition-all ${
                     isActive || activeSection === item.key
-                      ? (darkMode ? 'bg-green-700 text-green-200 font-semibold border-l-4 border-green-400' : 'bg-green-100 text-green-800 font-semibold border-l-4 border-green-600')
+                      ? (darkMode ? 'bg-gray-900 text-green-200 font-semibold border-l-4 border-green-400' : 'bg-green-100 text-green-800 font-semibold border-l-4 border-green-600')
                       : (darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-gray-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')
                   }`
                 }

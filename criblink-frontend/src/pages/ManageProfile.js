@@ -457,7 +457,7 @@ function ManageProfile() {
                 className={`flex items-center gap-4 w-full px-6 py-3 transition-all duration-150 ease-in-out
                   ${
                     activeSection === item.key
-                      ? `font-semibold border-l-4 border-green-600 ${darkMode ? "bg-green-900 text-green-200" : "bg-green-100 text-green-800"}`
+                      ? `font-semibold border-l-4 border-green-600 ${darkMode ? "bg-gray-900 text-green-200" : "bg-green-100 text-green-800"}`
                       : `${darkMode ? "text-gray-300 hover:bg-gray-700 hover:text-gray-100" : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"}`
                   }`}
               >
@@ -695,7 +695,7 @@ function ManageProfile() {
                 {/* Two-Factor Authentication Section (Placeholder) */}
                 <div>
                    <h3 className={`text-xl font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Two-Factor Authentication (2FA)</h3>
-                   <div className={`p-5 rounded-lg border text-sm ${darkMode ? "bg-green-900 border-green-700 text-green-200" : "bg-green-50 border-green-200 text-green-700"}`}>
+                   <div className={`p-5 rounded-lg border text-sm ${darkMode ? "bg-gray-900 border-green-700 text-green-200" : "bg-green-50 border-green-200 text-green-700"}`}>
                        <p className="mb-2 font-medium">Enhance your account security by enabling Two-Factor Authentication.</p>
                        <p>This section is under development. Please check back later to set up 2FA.</p>
                    </div>

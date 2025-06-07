@@ -177,7 +177,7 @@ const AdminDashboard = () => {
             {stats.map((stat, idx) => (
               <Card key={idx} onClick={stat.onClick}>
                 <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>
-                <p className={`text-4xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>{stat.value}</p>
+                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{stat.value}</p>
               </Card>
             ))}
           </div>

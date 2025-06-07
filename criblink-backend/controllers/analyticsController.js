@@ -79,9 +79,8 @@ exports.getTotalDealsClosed = async (req, res) => {
     }
 };
 
-// 4. Listing Status Distribution
+// 4. Listing Status Distribution (now for ALL listings, no date filter)
 exports.getListingStatusDistribution = async (req, res) => {
-    // Removed date_listed filter to get distribution for all listings
     try {
         const result = await pool.query(
             `SELECT LOWER(status) AS status_key, COUNT(*) AS count
@@ -89,9 +88,8 @@ exports.getListingStatusDistribution = async (req, res) => {
              GROUP BY LOWER(status)
              ORDER BY count DESC`
         );
-        // Map the lowercase status_key to a more readable format for the frontend
         res.json(result.rows.map(row => ({
-            status: row.status_key, // Keep status_key for easier mapping on frontend
+            status: row.status_key,
             count: parseInt(row.count, 10)
         })));
     } catch (err) {
@@ -157,17 +155,15 @@ exports.getInquiryTrends = async (req, res) => {
     }
 };
 
-// 8. Property Type Distribution
+// 8. Property Type Distribution (now for ALL listings, no date filter)
 exports.getPropertyTypeDistribution = async (req, res) => {
-    const { startDate, endDate } = getDateRange(req.query.range);
     try {
         const result = await pool.query(
-            `SELECT property_type AS type, COUNT(*) AS count
+            `SELECT LOWER(property_type) AS type, COUNT(*) AS count
              FROM property_listings
-             WHERE property_type IS NOT NULL AND property_type != '' AND date_listed BETWEEN $1 AND $2
-             GROUP BY property_type
-             ORDER BY count DESC`,
-            [startDate, endDate]
+             WHERE property_type IS NOT NULL AND property_type != ''
+             GROUP BY LOWER(property_type)
+             ORDER BY count DESC`
         );
         res.json(result.rows.map(row => ({ type: row.type, count: parseInt(row.count, 10) })));
     } catch (err) {
@@ -176,9 +172,8 @@ exports.getPropertyTypeDistribution = async (req, res) => {
     }
 };
 
-// 9. Listing Price Distribution
+// 9. Listing Price Distribution (now for ALL listings, no date filter)
 exports.getListingPriceDistribution = async (req, res) => {
-    // Removed date_listed filter to get distribution for all listings
     try {
         // Define price ranges (adjust as needed)
         const priceRanges = [
@@ -212,13 +207,13 @@ exports.getListingPriceDistribution = async (req, res) => {
 
 // 10. Top Locations by Listings
 exports.getTopLocations = async (req, res) => {
-    const { startDate, endDate } = getDateRange(req.query.range);
+    const { startDate, endDate } = getDateRange(req.query.range); // Keep date filter for time-bound analysis
     try {
         const result = await pool.query(
-            `SELECT location, COUNT(*) AS count
+            `SELECT LOWER(location) AS location, COUNT(*) AS count
              FROM property_listings
              WHERE location IS NOT NULL AND location != '' AND date_listed BETWEEN $1 AND $2
-             GROUP BY location
+             GROUP BY LOWER(location)
              ORDER BY count DESC
              LIMIT 10`, // Limit to top 10 locations
             [startDate, endDate]
@@ -232,8 +227,7 @@ exports.getTopLocations = async (req, res) => {
 
 // 11. Agent Performance Data
 exports.getAgentPerformanceMetrics = async (req, res) => {
-    // Note: If agent_performance table had a date column, you'd filter by that.
-    // For now, it fetches all agent performance data.
+    // This data is generally all-time or aggregated by the agent performance system, so no date range needed here.
     try {
         const result = await pool.query(
             `SELECT user_id, full_name, deals_closed, revenue, avg_rating, properties_assigned
@@ -251,5 +245,72 @@ exports.getAgentPerformanceMetrics = async (req, res) => {
     } catch (err) {
         console.error('Error fetching agent performance metrics:', err);
         res.status(500).json({ error: 'Internal server error fetching agent performance metrics' });
+    }
+};
+
+// New: Listings by Purchase Category Distribution (now for ALL listings, no date filter)
+exports.getListingPurchaseCategoryDistribution = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT LOWER(purchase_category) AS category, COUNT(*) AS count
+             FROM property_listings
+             WHERE purchase_category IS NOT NULL AND purchase_category != ''
+             GROUP BY LOWER(purchase_category)
+             ORDER BY count DESC`
+        );
+        res.json(result.rows.map(row => ({ category: row.category, count: parseInt(row.count, 10) })));
+    } catch (err) {
+        console.error('Error fetching listing purchase category distribution:', err);
+        res.status(500).json({ error: 'Internal server error fetching listing purchase category distribution' });
+    }
+};
+
+// New: Listings by Bedrooms Distribution (changed to all-time)
+exports.getListingBedroomsDistribution = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT bedrooms, COUNT(*) AS count
+             FROM property_listings
+             WHERE bedrooms IS NOT NULL
+             GROUP BY bedrooms
+             ORDER BY bedrooms ASC`
+        );
+        res.json(result.rows.map(row => ({ bedrooms: row.bedrooms, count: parseInt(row.count, 10) })));
+    } catch (err) {
+        console.error('Error fetching listing bedrooms distribution:', err);
+        res.status(500).json({ error: 'Internal server error fetching listing bedrooms distribution' });
+    }
+};
+
+// New: Listings by Bathrooms Distribution (changed to all-time)
+exports.getListingBathroomsDistribution = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT bathrooms, COUNT(*) AS count
+             FROM property_listings
+             WHERE bathrooms IS NOT NULL
+             GROUP BY bathrooms
+             ORDER BY bathrooms ASC`
+        );
+        res.json(result.rows.map(row => ({ bathrooms: row.bathrooms, count: parseInt(row.count, 10) })));
+    } catch (err) {
+        console.error('Error fetching listing bathrooms distribution:', err);
+        res.status(500).json({ error: 'Internal server error fetching listing bathrooms distribution' });
+    }
+};
+
+// New: User Role Distribution
+exports.getUserRoleDistribution = async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT LOWER(role) AS role, COUNT(*) AS count
+             FROM users
+             GROUP BY LOWER(role)
+             ORDER BY count DESC`
+        );
+        res.json(result.rows.map(row => ({ role: row.role, count: parseInt(row.count, 10) })));
+    } catch (err) {
+        console.error('Error fetching user role distribution:', err);
+        res.status(500).json({ error: 'Internal server error fetching user role distribution' });
     }
 };
