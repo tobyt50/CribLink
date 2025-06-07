@@ -101,7 +101,7 @@ function SearchPage() {
     }
 
     if (filters.maxPrice) {
-      filtered = filtered.filter(l => Number(l.price) <= Number(filters.maxPrice));
+      filtered = filtered.filter(l => Number(l.price) <= Number(l.maxPrice));
     }
 
     setFilteredResults(filtered);
@@ -138,10 +138,10 @@ function SearchPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by keyword, location, or type..."
-            className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-gray-300 ${
+            className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
               darkMode
-                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             }`}
           />
           <button
@@ -158,8 +158,8 @@ function SearchPage() {
         <button
           type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className={`p-2 rounded-xl text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0 ${
-            darkMode ? "bg-green-700 hover:bg-green-600" : "bg-green-500 hover:bg-green-600"
+          className={`p-2 rounded-xl text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+            darkMode ? "bg-green-700 hover:bg-green-600 focus:ring-green-400" : "bg-green-500 hover:bg-green-600 focus:ring-green-600"
           }`} // Added flex-shrink-0 to prevent resizing
           title="Open Filters"
         >
@@ -175,7 +175,8 @@ function SearchPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="mb-8 max-w-4xl mx-auto overflow-hidden" // Added overflow-hidden to prevent content overflow during animation
+            // Removed overflow-hidden to allow dropdown content to render fully
+            className="mb-8 max-w-4xl mx-auto"
           >
             <SearchFilters filters={filters} setFilters={setFilters} />
           </motion.div>

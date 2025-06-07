@@ -63,8 +63,11 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         // Unified styling for the dropdown button to match input fields
-        className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200
-          ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-700 hover:border-green-500"}`}
+        className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
+          ${darkMode 
+            ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" 
+            : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
+          }`}
       >
         <span>{selectedOptionLabel}</span>
         <motion.div
@@ -192,8 +195,9 @@ function SearchFilters({ filters, setFilters }) {
             placeholder="Enter location or state"
             value={filters.location}
             onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-            className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100
-              ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+            className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            }`}
           />
         </div>
 
@@ -237,16 +241,18 @@ function SearchFilters({ filters, setFilters }) {
             placeholder="Min Price (₦)"
             value={filters.minPrice}
             onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100
-              ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            }`}
           />
           <input
             type="number"
             placeholder="Max Price (₦)"
             value={filters.maxPrice}
             onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100
-              ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            }`}
           />
         </div>
       </div>
@@ -254,8 +260,9 @@ function SearchFilters({ filters, setFilters }) {
       <div className="text-right mt-4">
         <button
           onClick={resetFilters}
-          className={`px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg
-            ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
+          className={`px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+            darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200 focus:ring-green-400" : "bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-green-600"
+          }`}
         >
           Reset Filters
         </button>

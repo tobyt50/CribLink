@@ -44,7 +44,7 @@ function Header() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-green-600 text-white"}`}>
+    <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
       <div className="flex items-center justify-between px-6 h-14">
         <Link to="/" className="flex items-center space-x-2">
           <img src={logo} alt="CribLink Logo" className="h-9 w-auto" />

@@ -116,7 +116,9 @@ function Home() {
                   selectedCategory={category}
                   onChange={setCategory}
                   className="w-full"
-                  buttonClassName="h-[42px]"
+                  buttonClassName={`h-[42px] focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                    darkMode ? "focus:ring-green-400" : "focus:ring-green-600"
+                  }`}
                   renderInlineLabel
                   variant="home"
                 />
@@ -128,10 +130,10 @@ function Home() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by keyword, location, or type..."
-                  className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-gray-300 ${
+                  className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                     darkMode
-                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                   }`}
                 />
                 <button
@@ -146,10 +148,10 @@ function Home() {
 
               <button
                 onClick={handleSortToggle}
-                className={`h-[42px] px-4 flex items-center justify-center gap-2 border rounded-xl shadow-sm transition-all duration-200 ${
+                className={`h-[42px] px-4 flex items-center justify-center gap-2 border rounded-xl shadow-sm transition-all duration-200 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
                   darkMode
-                    ? "bg-gray-800 border-gray-600 text-gray-300 hover:border-green-400"
-                    : "bg-white border-gray-300 text-gray-600 hover:border-green-500"
+                    ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-400 focus:ring-green-400"
+                    : "bg-white border-gray-300 text-gray-600 hover:border-green-500 focus:ring-green-600"
                 }`}
                 title={sortBy === "date_listed_desc" ? "Sort by Oldest First" : "Sort by Newest First"}
               >
@@ -162,51 +164,54 @@ function Home() {
             </div>
 
             {/* Mobile Filter/Search/Sort Controls */}
-            <div className="sm:hidden mt-4 flex flex-col gap-3 mb-6">
-              <div className="flex items-center gap-2">
-                <div className="flex-shrink-0 w-1/4">
-                  <PurchaseCategoryFilter
-                    selectedCategory={category}
-                    onChange={setCategory}
-                    className="w-full"
-                    buttonClassName="h-[42px]"
-                    variant="home"
-                  />
-                </div>
-                <form onSubmit={handleSearch} className="relative flex-grow">
-                  <input
-                    type="text"
-                    ref={searchInputRef}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by keyword, location, or type..."
-                    className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-gray-300 ${
-                      darkMode
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
-                    }`}
-                  />
-                  <button
-                    type="submit"
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${
-                      darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-500 hover:text-green-600"
-                    }`}
-                  >
-                    <Search size={16} />
-                  </button>
-                </form>
-                <button
-                  onClick={handleSortToggle}
-                  className={`p-2 rounded-xl border shadow-sm ml-1 transition-all duration-200 ${
-                    darkMode
-                      ? "bg-gray-800 border-gray-600 text-gray-300 hover:border-green-400"
-                      : "bg-white border-gray-300 text-gray-600 hover:border-green-500"
-                  }`}
-                  title="Sort by Date"
-                >
-                  <Clock size={18} />
-                </button>
+            <div className="sm:hidden mt-4 flex items-center gap-2 mb-6"> {/* Changed to flex items-center and reduced gap for better alignment */}
+              <div className="flex-none w-12"> {/* flex-shrink-0 removed, fixed width w-12 */}
+                <PurchaseCategoryFilter
+                  selectedCategory={category}
+                  onChange={setCategory}
+                  className="w-full"
+                  buttonClassName={`h-[42px] flex items-center justify-center focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                    darkMode ? "focus:ring-green-400" : "focus:ring-green-600"
+                  }`} // Ensure button height matches search bar and center icon
+                  variant="home"
+                  renderInlineLabel={false} // Removed text label for mobile
+                  dropdownContentClassName="min-w-[12rem]" // Added to make the dropdown menu wider
+                />
               </div>
+              <form onSubmit={handleSearch} className="relative flex-grow">
+                <input
+                  type="text"
+                  ref={searchInputRef}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by keyword, location, or type..."
+                  className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                    darkMode
+                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                  }`}
+                />
+                <button
+                  type="submit"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                    darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-500 hover:text-green-600"
+                  }`}
+                >
+                  <Search size={16} />
+                </button>
+              </form>
+              <button
+                onClick={handleSortToggle}
+                // Changed p-2 to h-[42px] and added flex classes for consistent height and alignment
+                className={`flex-none w-12 h-[42px] flex items-center justify-center rounded-xl border shadow-sm transition-all duration-200 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-400 focus:ring-green-400"
+                    : "bg-white border-gray-300 text-gray-600 hover:border-green-500 focus:ring-green-600"
+                }`}
+                title="Sort by Date"
+              >
+                <Clock size={18} />
+              </button>
             </div>
           </div>
         </motion.div>
@@ -251,10 +256,10 @@ function Home() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 ${
+              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
                 darkMode
-                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
+                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
               }`}
             >
               <ChevronLeft size={18} /> Prev
@@ -265,10 +270,10 @@ function Home() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 ${
+              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
                 darkMode
-                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
+                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
               }`}
             >
               Next <ChevronRight size={18} />

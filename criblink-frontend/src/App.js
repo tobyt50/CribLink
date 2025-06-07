@@ -31,6 +31,7 @@ import AdminInquiries from './pages/admin/Inquiries';
 import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
+import AgentPerformance from './pages/admin/AgentPerformance';
 
 import EditListing from './pages/EditListing';
 
@@ -76,6 +77,7 @@ function App() {
               <Route path="staff" element={<AdminStaff />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="agent-performance" element={<AgentPerformance />} /> {/* New: Route for Staff Performance */}
             </Route>
           </Routes>
         </main>

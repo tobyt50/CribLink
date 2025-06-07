@@ -1,11 +1,11 @@
-﻿employee_id,full_name,role,deals_closed,revenue,avg_rating,properties_assigned,client_feedback,region,commission_earned
-100,John Harrison,Real Estate Agent,13,88651154,4.9,23,Soon establish sister.,Port Harcourt,3283147
-101,Shelly Blair,Real Estate Agent,16,71137533,4.4,13,Physical structure run century.,Lagos Mainland,3292536
-102,Diana Morris,Real Estate Agent,10,95781001,4.3,18,Thing country.,Lagos Island,3759582
-103,Patrick Vasquez,Real Estate Agent,8,99491933,4.7,35,Hospital television.,Abuja,3388796
-104,Joseph Webb,Real Estate Agent,9,102166144,4.7,30,Politics thought.,Port Harcourt,3458723
-105,Samantha Morris,Real Estate Agent,17,73170797,4.8,23,Their.,Lagos Mainland,4777544
-106,Debra Scott,Real Estate Agent,17,69228657,4.4,17,Range.,Port Harcourt,4484939
-110,Scott Munoz,Real Estate Agent,12,105219277,4.4,29,Or moment letter.,Lagos Island,5340042
-116,Karen Myers,Real Estate Agent,13,99431787,4.9,11,Hair source power.,Port Harcourt,3473119
-120,Scott Ingram,Real Estate Agent,13,111773613,4.9,32,Administration director.,Lagos Mainland,4684329
+user_id,full_name,deals_closed,revenue,avg_rating,properties_assigned,client_feedback,region,commission_earned
+1,John Harrison,13,88651154,4.9,23,Soon establish sister.,Port Harcourt,3283147
+2,Shelly Blair,16,71137533,4.4,13,Physical structure run century.,Lagos Mainland,3292536
+4,Diana Morris,10,95781001,4.3,18,Thing country.,Lagos Island,3759582
+6,Patrick Vasquez,8,99491933,4.7,35,Hospital television.,Abuja,3388796
+7,Joseph Webb,9,102166144,4.7,30,Politics thought.,Port Harcourt,3458723
+9,Samantha Morris,17,73170797,4.8,23,Their.,Lagos Mainland,4777544
+10,Debra Scott,17,69228657,4.4,17,Range.,Port Harcourt,4484939
+11,Scott Munoz,12,105219277,4.4,29,Or moment letter.,Lagos Island,5340042
+29,Karen Myers,13,99431787,4.9,11,Hair source power.,Port Harcourt,3473119
+30,Scott Ingram,13,111773613,4.9,32,Administration director.,Lagos Mainland,4684329

@@ -140,7 +140,7 @@ const ContactUs = () => {
               value={form.name}
               onChange={handleChange}
               required
-              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:border-transparent focus:ring-2 transition-all duration-200 ${ // Added transition-all duration-200
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
                   : "bg-green-50 border-green-200 text-gray-800 focus:ring-green-500"
@@ -155,7 +155,7 @@ const ContactUs = () => {
               value={form.email}
               onChange={handleChange}
               required
-              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:border-transparent focus:ring-2 transition-all duration-200 ${ // Added transition-all duration-200
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
                   : "bg-green-50 border-green-200 text-gray-800 focus:ring-green-500"
@@ -170,7 +170,7 @@ const ContactUs = () => {
               onChange={handleChange}
               required
               rows={5}
-              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 resize-none ${
+              className={`w-full py-2.5 px-4 border rounded-lg shadow-sm focus:outline-none focus:border-transparent focus:ring-2 resize-none transition-all duration-200 ${ // Added transition-all duration-200
                 darkMode
                   ? "bg-gray-700 border-gray-600 text-white focus:ring-green-700"
                   : "bg-green-50 border-green-200 text-gray-800 focus:ring-green-500"

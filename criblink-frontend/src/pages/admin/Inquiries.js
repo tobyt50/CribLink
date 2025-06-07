@@ -170,10 +170,10 @@ const Inquiries = () => {
             <input
               type="text"
               placeholder="Search inquiries..."
-              className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 ${
+              className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added focus and transition classes
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
               }`}
               value={search}
               onChange={(e) => {
@@ -315,4 +315,4 @@ const Inquiries = () => {
   );
 };
 
-export default AdminInquiries;
+export default Inquiries;

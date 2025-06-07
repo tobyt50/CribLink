@@ -6,19 +6,17 @@ import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-// Import necessary icons
 import { TableCellsIcon, Squares2X2Icon, ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
-import { ChevronDownIcon } from '@heroicons/react/24/outline'; // Keep this for the export dropdown
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../config';
-import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter'; // Correctly importing PurchaseCategoryFilter
-import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react'; // Import Menu and X icons for sidebar toggle, and new icons for controls
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter';
+import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react';
+import { useTheme } from '../../layouts/AppShell';
 
-// Reusable Dropdown Component (embedded directly in Listings.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-    const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
+    const { darkMode } = useTheme();
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -71,11 +69,9 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                // Added h-10 to make the dropdown button height consistent with the search bar
-                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200 h-10
-                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-500 hover:border-green-500"}`}
+                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
             >
-                {/* Added overflow-hidden and truncate to prevent text wrapping */}
                 <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
                 <motion.div
                     animate={{ rotate: isOpen ? 180 : 0 }}
@@ -122,7 +118,6 @@ const Listings = () => {
     const [listings, setListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
     const [viewMode, setViewMode] = useState('simple');
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
@@ -134,36 +129,37 @@ const Listings = () => {
     const [totalPages, setTotalPages] = useState(1);
     const limit = 10;
     const navigate = useNavigate();
-    const { darkMode } = useTheme(); // Use the dark mode context
+    const { darkMode } = useTheme();
 
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
 
-    // State for sidebar responsiveness, matching Dashboard.js
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-    const [isCollapsed, setIsCollapsed] = useState(false); // Only used on desktop
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeSection, setActiveSection] = useState('listings');
 
-    // State for mobile filter modal
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    // State for desktop filter modal, added to match AgentListings.js
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
 
     const location = useLocation();
 
-    useEffect(() => {
-        if (location.state?.statusFilter) {
-            setStatusFilter(location.state.statusFilter);
-        }
-    }, [location.state]);
+    const [statusFilter, setStatusFilter] = useState(() => {
+        return location.state?.statusFilter || 'all';
+    });
 
-    // Effect to handle window resize for mobile responsiveness
+    useEffect(() => {
+        if (location.state?.statusFilter && location.state.statusFilter !== statusFilter) {
+            setStatusFilter(location.state.statusFilter);
+            setPage(1);
+        }
+    }, [location.state?.statusFilter, statusFilter]);
+
     useEffect(() => {
         const handleResize = () => {
             const mobile = window.innerWidth < 768;
             setIsMobile(mobile);
-            setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile
+            setIsSidebarOpen(!mobile);
         };
 
         window.addEventListener('resize', handleResize);
@@ -199,23 +195,18 @@ const Listings = () => {
             }
             if (statusFilter && statusFilter.toLowerCase() !== 'all' && statusFilter.toLowerCase() !== 'all statuses') {
                 params.append('status', statusFilter);
-            } else if (statusFilter.toLowerCase() === 'all' || statusFilter.toLowerCase() === 'all statuses') {
-                params.append('status', statusFilter);
             }
 
             params.append('page', page);
             params.append('limit', limit);
 
             const token = localStorage.getItem('token');
-            console.log('[Listings.js] Token retrieved:', token ? 'Exists' : 'Does NOT exist');
-
             const headers = {};
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
             const response = await axios.get(`${API_BASE_URL}/listings?${params.toString()}`, { headers });
-            console.log('[Listings.js] API Response Data:', response.data);
 
             setListings(response.data.listings || []);
             setFilteredListings(response.data.listings || []);
@@ -235,7 +226,6 @@ const Listings = () => {
         fetchListings();
     }, [fetchListings]);
 
-    // MODIFICATION: Removed filterAndSortListings from its own dependency array
     const filterAndSortListings = useCallback(() => {
         let sortedData = [...listings].sort((a, b) => {
             const aValue = a[sortKey];
@@ -284,14 +274,13 @@ const Listings = () => {
         });
 
         setFilteredListings(sortedData);
-    }, [listings, sortKey, sortDirection]); // filterAndSortListings removed from here
+    }, [listings, sortKey, sortDirection]);
 
     useEffect(() => {
         filterAndSortListings();
     }, [listings, sortKey, sortDirection, filterAndSortListings]);
 
     const handleApproveListing = async (listingId) => {
-        console.log(`Confirming approval for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('Authentication token not found. Please sign in.');
@@ -302,7 +291,6 @@ const Listings = () => {
             await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            console.log('Listing approved successfully!');
             fetchListings();
         } catch (error) {
             console.error('Error approving listing:', error.response?.data || error.message);
@@ -310,7 +298,6 @@ const Listings = () => {
     };
 
     const handleRejectListing = async (listingId) => {
-        console.log(`Confirming rejection for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('Authentication token not found. Please sign in.');
@@ -321,7 +308,6 @@ const Listings = () => {
             await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            console.log('Listing rejected successfully!');
             fetchListings();
         } catch (error) {
             console.error('Error rejecting listing:', error.response?.data || error.message);
@@ -329,7 +315,6 @@ const Listings = () => {
     };
 
     const handleMarkAsSold = async (listingId) => {
-        console.log(`Confirming mark as sold for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('Authentication token not found. Please sign in.');
@@ -340,7 +325,6 @@ const Listings = () => {
             await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            console.log('Listing marked as Sold successfully!');
             fetchListings();
         } catch (error) {
             console.error('Error marking listing as sold:', error.response?.data || error.message);
@@ -348,7 +332,6 @@ const Listings = () => {
     };
 
     const handleMarkAsFailed = async (listingId) => {
-        console.log(`Confirming mark as failed for listing ${listingId}`);
         const token = localStorage.getItem('token');
         if (!token) {
             console.error('Authentication token not found. Please sign in.');
@@ -359,7 +342,6 @@ const Listings = () => {
             await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            console.log('Listing marked as Failed (Available) successfully!');
             fetchListings();
         } catch (error) {
             console.error('Error marking listing as failed:', error.response?.data || error.message);
@@ -368,7 +350,6 @@ const Listings = () => {
 
 
     const handleDeleteListing = async (listingId) => {
-        console.log(`Confirming deletion for listing ${listingId}`);
         const token = localStorage.getItem('token');
 
         if (!token) {
@@ -382,7 +363,6 @@ const Listings = () => {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            console.log('Listing deleted successfully!');
             fetchListings();
         } catch (error) {
             console.error('Error deleting listing:', error.response?.data || error.message);
@@ -436,12 +416,12 @@ const Listings = () => {
         setPage(1);
     };
 
-    const handleStatusChange = (value) => { // Changed to accept value directly from Dropdown
+    const handleStatusChange = useCallback((value) => {
         setStatusFilter(value);
         setPage(1);
-    };
+    }, []);
 
-    const handlePurchaseCategoryChange = (value) => { // Changed to accept value directly from Dropdown
+    const handlePurchaseCategoryChange = (value) => {
         setPurchaseCategoryFilter(value);
         setPage(1);
     };
@@ -458,7 +438,7 @@ const Listings = () => {
 
 
     const handleSortClick = (key) => {
-        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms'];
         if (!sortableColumns.includes(key)) return;
 
         if (sortKey === key) {
@@ -471,7 +451,7 @@ const Listings = () => {
 
 
     const renderSortIcon = (key) => {
-        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
+        const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms'];
         if (!sortableColumns.includes(key)) return null;
 
         if (sortKey === key) {
@@ -493,9 +473,8 @@ const Listings = () => {
         navigate(`/listing/${listingId}`);
     };
 
-    const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256; // Adjusted content shift based on mobile and collapsed state
+    const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
-    // Options for status filter, formatted for the Dropdown component
     const statusOptions = [
         { value: "all", label: "All statuses" },
         { value: "available", label: "Available" },
@@ -507,12 +486,11 @@ const Listings = () => {
     ];
 
     return (
-        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}> {/* Outer div for full page background, added min-h-screen and flex-col */}
-            {/* Mobile Sidebar Toggle Button */}
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
             {isMobile && (
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
-                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`} // Changed to rounded-xl, added h-10 w-10 flex items-center justify-center
+                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
                     initial={false}
                     animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
                     transition={{ duration: 0.3 }}
@@ -542,12 +520,12 @@ const Listings = () => {
             />
 
             <motion.div
-                key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+                key={isMobile ? 'mobile' : 'desktop'}
                 animate={{ marginLeft: contentShift }}
                 transition={{ duration: 0.3 }}
                 initial={false}
-                className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0" // Added flex-1, overflow-auto, min-w-0
-                style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+                className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+                style={{ minWidth: `calc(100% - ${contentShift}px)` }}
             >
                 <div className="md:hidden flex items-center justify-center mb-4">
                     <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>All Listings</h1>
@@ -558,8 +536,7 @@ const Listings = () => {
                 </div>
 
                 <main className="space-y-6">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}> {/* Added max-w-full */}
-                        {/* Mobile Control Menu */}
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
                         {isMobile && (
                             <div className="flex justify-between items-center mb-4">
                                 <button
@@ -612,32 +589,29 @@ const Listings = () => {
                             </div>
                         )}
 
-                        {/* Desktop Filters and Controls */}
                         {!isMobile && (
                             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                                {/* Search and Filter Button */}
                                 <div className="flex items-center gap-4 w-full">
                                     <input
                                         type="text"
                                         placeholder="Search listings..."
                                         value={searchTerm}
                                         onChange={handleSearchChange}
-                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                         }`}
                                     />
                                     <button
                                         className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                        onClick={() => setIsDesktopFilterModalOpen(true)} // Open desktop filter modal
+                                        onClick={() => setIsDesktopFilterModalOpen(true)}
                                         title="Open Filters"
                                     >
                                         <SlidersHorizontal size={20} />
                                     </button>
                                 </div>
 
-                                {/* Add, Export, and View Mode Buttons - Grouped together */}
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
@@ -701,8 +675,8 @@ const Listings = () => {
                                     ))}
                                 </motion.div>
                             ) : (
-                                <div className="overflow-x-auto"> {/* Added overflow-x-auto */}
-                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Changed table-auto to table-fixed */}
+                                <div className="overflow-x-auto">
+                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                                 {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
@@ -713,7 +687,7 @@ const Listings = () => {
                                                         style={{
                                                             width:
                                                                 key === 'property_id' ? '90px' :
-                                                                key === 'title' ? '120px' : // Greatly reduced title width
+                                                                key === 'title' ? '120px' :
                                                                 key === 'location' ? '120px' :
                                                                 key === 'property_type' ? '90px' :
                                                                 key === 'price' ? '120px' :
@@ -744,7 +718,7 @@ const Listings = () => {
                                             {filteredListings.map((listing) => (
                                                 <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
                                                     <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_id && listing.property_id.length > 10 ? listing.property_id : ''}>{listing.property_id}</td>
-                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td> {/* Truncation for title */}
+                                                    <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td>
                                                     <td className="py-2 px-2 max-w-[120px] truncate" title={listing.location && listing.location.length > 15 ? listing.location : ''}>{listing.location}</td>
                                                     <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_type && listing.property_type.length > 10 ? listing.property_type : ''}>{listing.property_type}</td>
                                                     <td className="py-2 px-2 max-w-[120px] truncate" title={listing.price ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price) : ''}>
@@ -793,7 +767,7 @@ const Listings = () => {
                                                         ) : (
                                                             <div className="flex items-center gap-2">
                                                                 <button
-                                                                    className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs" // Ensured rounded-xl
+                                                                    className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
                                                                     onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
                                                                     title="Edit Listing"
                                                                 >
@@ -816,7 +790,7 @@ const Listings = () => {
                                     </table>
 
 
-                                    <div className="flex justify-center items-center space-x-4 mt-4"> {/* Adjusted to justify-center and items-center */}
+                                    <div className="flex justify-center items-center space-x-4 mt-4">
                                         <button
                                             disabled={page === 1}
                                             onClick={() => setPage(prev => Math.max(prev - 1, 1))}
@@ -824,7 +798,7 @@ const Listings = () => {
                                         >
                                             Prev
                                         </button>
-                                        <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Page {page} of {totalPages}</span> {/* Added text-gray-700 and font-semibold */}
+                                        <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Page {page} of {totalPages}</span>
                                         <button
                                             disabled={page === totalPages || totalPages === 0}
                                             onClick={() => setPage(prev => prev + 1)}
@@ -840,7 +814,6 @@ const Listings = () => {
                 </main>
             </motion.div>
 
-            {/* Mobile Filter Modal */}
             <AnimatePresence>
                 {isMobile && isFilterModalOpen && (
                     <motion.div
@@ -848,11 +821,11 @@ const Listings = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "100%" }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className={`fixed inset-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
+                        className={`fixed inset-x-0 top-14 bottom-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
-                            <button onClick={() => setIsFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}> {/* Changed to rounded-xl, added h-10 w-10 flex items-center justify-center */}
+                            <button onClick={() => setIsFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}>
                                 <X size={24} />
                             </button>
                         </div>
@@ -865,10 +838,10 @@ const Listings = () => {
                                     placeholder="Search listings..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                     }`}
                                 />
                             </div>
@@ -877,10 +850,10 @@ const Listings = () => {
                                 selectedCategory={purchaseCategoryFilter}
                                 onChange={handlePurchaseCategoryChange}
                                 className="w-full"
-                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                   darkMode
-                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                 }`}
                             />
 
@@ -899,10 +872,10 @@ const Listings = () => {
                                     placeholder="Min Price"
                                     value={minPriceFilter}
                                     onChange={handleMinPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                     }`}
                                 />
                             </div>
@@ -914,10 +887,10 @@ const Listings = () => {
                                     placeholder="Max Price"
                                     value={maxPriceFilter}
                                     onChange={handleMaxPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                     }`}
                                 />
                             </div>
@@ -933,7 +906,6 @@ const Listings = () => {
                 )}
             </AnimatePresence>
 
-            {/* Desktop Filter Modal - Refactored to match AgentListings.js */}
             <AnimatePresence>
                 {!isMobile && isDesktopFilterModalOpen && (
                     <motion.div
@@ -962,10 +934,10 @@ const Listings = () => {
                                     selectedCategory={purchaseCategoryFilter}
                                     onChange={handlePurchaseCategoryChange}
                                     className="w-full"
-                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                     }`}
                                 />
 
@@ -984,10 +956,10 @@ const Listings = () => {
                                         placeholder="Min Price"
                                         value={minPriceFilter}
                                         onChange={handleMinPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                         }`}
                                     />
                                 </div>
@@ -999,10 +971,10 @@ const Listings = () => {
                                         placeholder="Max Price"
                                         value={maxPriceFilter}
                                         onChange={handleMaxPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
                                         }`}
                                     />
                                 </div>
@@ -1022,4 +994,4 @@ const Listings = () => {
     );
 };
 
-export default AdminListings;
+export default Listings;

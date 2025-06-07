@@ -62,8 +62,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200
-          ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-500 hover:border-green-500"}`}
+        className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
+          ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
       >
         <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
         <motion.div
@@ -328,7 +328,7 @@ const Staff = () => {
                   placeholder="Search by name or email..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className={`flex-grow py-2 px-4 focus:outline-none rounded-xl ${darkMode ? "bg-gray-700 text-white placeholder-gray-400" : "bg-white text-gray-900 placeholder-gray-500"}`}
+                  className={`flex-grow py-2 px-4 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 rounded-xl ${darkMode ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                 />
               </div>
 
@@ -356,7 +356,7 @@ const Staff = () => {
           {/* Desktop Filters and Controls */}
           {!isMobile && (
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`} />
               <div className="relative inline-block text-left" ref={exportDropdownRef}>
                 <button onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10">
                   Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />

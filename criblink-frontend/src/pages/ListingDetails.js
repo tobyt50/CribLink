@@ -25,7 +25,8 @@ const App = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.localStorage.getItem('token');
+        // Corrected line: removed the duplicate 'localStorage'
+        const token = localStorage.getItem('token');
         if (!token) return;
 
         const { data } = await axios.get(`${API_BASE_URL}/users/profile`, {
@@ -507,4 +508,4 @@ const App = () => {
   );
 };
 
-export default ListingDetails;
+export default App;

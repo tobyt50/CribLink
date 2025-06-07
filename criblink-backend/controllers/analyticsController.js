@@ -52,7 +52,7 @@ exports.getRevenueSoldListings = async (req, res) => {
         const result = await pool.query(
             `SELECT SUM(price) AS total_revenue
              FROM property_listings
-             WHERE status = 'sold' AND date_listed BETWEEN $1 AND $2`,
+             WHERE status ILIKE 'sold' AND date_listed BETWEEN $1 AND $2`, // Use ILIKE for case-insensitive status
             [startDate, endDate]
         );
         const totalRevenue = result.rows[0].total_revenue || 0;
@@ -81,17 +81,19 @@ exports.getTotalDealsClosed = async (req, res) => {
 
 // 4. Listing Status Distribution
 exports.getListingStatusDistribution = async (req, res) => {
-    const { startDate, endDate } = getDateRange(req.query.range);
+    // Removed date_listed filter to get distribution for all listings
     try {
         const result = await pool.query(
-            `SELECT status, COUNT(*) AS count
+            `SELECT LOWER(status) AS status_key, COUNT(*) AS count
              FROM property_listings
-             WHERE date_listed BETWEEN $1 AND $2
-             GROUP BY status
-             ORDER BY count DESC`,
-            [startDate, endDate]
+             GROUP BY LOWER(status)
+             ORDER BY count DESC`
         );
-        res.json(result.rows.map(row => ({ status: row.status, count: parseInt(row.count, 10) })));
+        // Map the lowercase status_key to a more readable format for the frontend
+        res.json(result.rows.map(row => ({
+            status: row.status_key, // Keep status_key for easier mapping on frontend
+            count: parseInt(row.count, 10)
+        })));
     } catch (err) {
         console.error('Error fetching listing status distribution:', err);
         res.status(500).json({ error: 'Internal server error fetching listing status distribution' });
@@ -176,7 +178,7 @@ exports.getPropertyTypeDistribution = async (req, res) => {
 
 // 9. Listing Price Distribution
 exports.getListingPriceDistribution = async (req, res) => {
-    const { startDate, endDate } = getDateRange(req.query.range);
+    // Removed date_listed filter to get distribution for all listings
     try {
         // Define price ranges (adjust as needed)
         const priceRanges = [
@@ -184,17 +186,17 @@ exports.getListingPriceDistribution = async (req, res) => {
             { label: '₦1M - ₦5M', min: 1000001, max: 5000000 },
             { label: '₦5M - ₦10M', min: 5000001, max: 10000000 },
             { label: '₦10M - ₦50M', min: 10000001, max: 50000000 },
-            { label: '₦50M - ₦100M', min: 50000001, max: 100000000 },
+            { label: '₦50M - ₦100M', min: 10000001, max: 100000000 },
             { label: '₦100M+', min: 100000001, max: null } // Max is inclusive
         ];
 
         let results = [];
         for (const range of priceRanges) {
-            let queryText = `SELECT COUNT(*) AS count FROM property_listings WHERE date_listed BETWEEN $1 AND $2 AND price >= $3`;
-            let queryValues = [startDate, endDate, range.min];
+            let queryText = `SELECT COUNT(*) AS count FROM property_listings WHERE price >= $1`;
+            let queryValues = [range.min];
 
             if (range.max !== null) {
-                queryText += ` AND price <= $4`;
+                queryText += ` AND price <= $2`;
                 queryValues.push(range.max);
             }
 

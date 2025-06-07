@@ -12,6 +12,7 @@ import {
   FileText,
   Settings,
   X,
+  Award, // New icon for Staff Performance
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
 
@@ -21,6 +22,7 @@ const MENU_ITEMS = [
   { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
   { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
   { name: 'Inquiries', to: '/admin/inquiries', icon: <Inbox />, key: 'inquiries' },
+  { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' }, // New item
   { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Reports', to: '/admin/reports', icon: <FileText />, key: 'reports' },
   { name: 'Settings', to: '/admin/settings', icon: <Settings />, key: 'settings' },

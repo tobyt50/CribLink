@@ -266,11 +266,12 @@ function ManageProfile() {
   }, [token]);
 
   // Styles for form elements
+  // Updated inputFieldStyles to match the focus border and transition from Home.js
   const inputFieldStyles =
-    `mt-1 block w-full py-2.5 px-4 rounded-lg shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-base transition duration-150 ease-in-out ${
+    `mt-1 block w-full py-2.5 px-4 rounded-lg shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
       darkMode
-        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-        : "bg-green-50 border-green-200 text-gray-800"
+        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
     }`;
   const labelStyles = `block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`;
   const inputGroupStyles = "flex flex-col";

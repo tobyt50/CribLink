@@ -192,10 +192,10 @@ export default function SignUp() {
           value={form.full_name} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -205,10 +205,10 @@ export default function SignUp() {
           value={form.email} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -218,10 +218,10 @@ export default function SignUp() {
           value={form.password} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -231,10 +231,10 @@ export default function SignUp() {
           value={form.confirm_password} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
 
@@ -258,10 +258,10 @@ export default function SignUp() {
               value={form.phone_number} // Bind value to state
               onChange={handleChange}
               required // Make agent-specific fields required for agents
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
               }`}
             />
             <input
@@ -270,10 +270,10 @@ export default function SignUp() {
               placeholder="Agency Name (Optional)"
               value={form.agency_name} // Bind value to state
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 ${
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-700"
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-400"
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
               }`}
             />
             {/* Add more agent-specific fields here */}

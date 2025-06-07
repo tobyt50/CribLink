@@ -11,9 +11,10 @@ function PurchaseCategoryFilter({
   buttonClassName = "", // Prop to style the internal button
   renderInlineLabel = false,
   variant = "",
+  dropdownContentClassName = "" // New prop to control the dropdown content's width
 }) {
   // Reusable Dropdown Component (embedded directly here for self-containment)
-  const DropdownInternal = ({ options, value, onChange, placeholder, internalClassName = "", buttonInternalClassName = "" }) => {
+  const DropdownInternal = ({ options, value, onChange, placeholder, internalClassName = "", buttonInternalClassName = "", dropdownContentClassName = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -69,7 +70,7 @@ function PurchaseCategoryFilter({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           // Added dark mode classes for background, border, and text
-          className={`flex items-center w-full px-4 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring focus:ring-green-100 dark:focus:ring-green-800 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-green-500 dark:hover:border-green-400 transition-all duration-200 text-left ${buttonInternalClassName}`}
+          className={`flex items-center w-full px-4 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:ring focus:ring-green-100 dark:focus:ring-green-800 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-green-500 dark:hover:border-green-400 transition-all duration-200 text-left ${buttonInternalClassName}`}
         >
           <span className="flex-grow truncate overflow-hidden whitespace-nowrap">{selectedOptionLabel}</span>
           <motion.div
@@ -90,7 +91,8 @@ function PurchaseCategoryFilter({
               animate="visible"
               exit="exit"
               // Added dark mode classes for background, border, and shadow
-              className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-1 z-50 overflow-hidden transform origin-top"
+              // Apply the dropdownContentClassName here
+              className={`absolute left-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl py-1 z-50 overflow-hidden transform origin-top ${dropdownContentClassName}`}
             >
               {options.map((option) => (
                 <motion.button
@@ -159,6 +161,7 @@ function PurchaseCategoryFilter({
           onChange={onChange}
           internalClassName="w-full"
           buttonInternalClassName={buttonClassName}
+          dropdownContentClassName={dropdownContentClassName} // Pass the prop down
         />
       </div>
     );
@@ -172,6 +175,7 @@ function PurchaseCategoryFilter({
       onChange={onChange}
       internalClassName={className}
       buttonInternalClassName={buttonClassName}
+      dropdownContentClassName={dropdownContentClassName} // Pass the prop down
     />
   );
 }

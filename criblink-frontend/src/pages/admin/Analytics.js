@@ -1,27 +1,27 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import axios from 'axios';
-import { CalendarDays, BarChart3, TrendingUp, Users, Home, MessageSquare, BriefcaseBusiness, AlertCircle, Menu, X, ChevronDownIcon } from 'lucide-react'; // Removed Sun and Moon as toggle is now in Header
+import { CalendarDays, BarChart3, TrendingUp, Users, Home, MessageSquare, BriefcaseBusiness, AlertCircle, Menu, X, ChevronDownIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
 
 // --- START: Imported Components (as per user request) ---
-import AdminSidebar from '../../components/admin/Sidebar'; // Imported from Sidebar.js
-import { useTheme } from '../../layouts/AppShell'; // Imported from AppShell.js
-import Card from '../../components/ui/Card'; // Imported from Card.js
+import AdminSidebar from '../../components/admin/Sidebar';
+import { useTheme } from '../../layouts/AppShell';
+import Card from '../../components/ui/Card';
 // --- END: Imported Components ---
 
-// Mock API_BASE_URL for the Canvas environment
-const API_BASE_URL = 'https://mockapi.example.com'; // Placeholder URL for API calls
-
+// Define the API base URL. In a real application, this would come from a config file (e.g., '../../config')
+const API_BASE_URL = 'http://localhost:5000/admin/analytics'; // Assuming backend runs on port 5000 and analytics routes are under /admin/analytics
 
 // Reusable Dropdown Component (embedded directly in Analytics.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-    const { darkMode } = useTheme(); // Use the imported useTheme hook
+    const { darkMode } = useTheme();
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -74,8 +74,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200 h-10
-                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-500 hover:border-green-500"}`}
+                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
             >
                 <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
                 <motion.div
@@ -124,9 +124,10 @@ const AdminAnalytics = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState('analytics');
-  const { darkMode } = useTheme(); // Use imported useTheme hook, toggleDark is handled by Header.js
+  const { darkMode } = useTheme();
+  const navigate = useNavigate(); // Initialize useNavigate hook
 
-  const [dateRange, setDateRange] = useState('last30days');
+  const [dateRange, setDateRange] = useState('last30days'); // State for date range filter
 
   const [listingStatusData, setListingStatusData] = useState([]);
   const [listingsOverTimeData, setListingsOverTimeData] = useState([]);
@@ -142,13 +143,16 @@ const AdminAnalytics = () => {
   const [totalInquiries, setTotalInquiries] = useState(0);
   const [revenueSoldListings, setRevenueSoldListings] = useState(0);
   const [totalDealsClosed, setTotalDealsClosed] = useState(0);
+  const [totalAgents, setTotalAgents] = useState(0); // Renamed from totalStaff to totalAgents
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const token = "mock_token_for_canvas"; // Mock token
+  // Retrieve token from localStorage
+  const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
+  // Effect to handle window resize for responsive sidebar
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -160,120 +164,117 @@ const AdminAnalytics = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Helper function to capitalize the first letter of a string
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return '';
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
 
-  const fetchAnalyticsData = async () => {
+  // Function to fetch all analytics data from the backend
+  const fetchAnalyticsData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Mock data for Canvas environment
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch Overview Statistics and Detailed Analytics Charts concurrently
+      const [
+        listingsCountRes,
+        inquiriesCountRes,
+        totalUsersRes,
+        revenueSoldListingsRes,
+        totalDealsClosedRes,
+        totalAgentsRes, // Fetch for total agents
+        listingStatusRes,
+        listingsOverTimeRes,
+        userRegistrationRes,
+        inquiryTrendsRes,
+        propertyTypeRes,
+        listingPriceDistributionRes,
+        topLocationsRes,
+        agentPerformanceRes,
+      ] = await Promise.all([
+        axios.get(`${API_BASE_URL}/stats/listings-count`, { headers }),
+        axios.get(`${API_BASE_URL}/stats/inquiries-count`, { headers }),
+        axios.get(`${API_BASE_URL}/total-users-count`, { headers }),
+        axios.get(`${API_BASE_URL}/revenue-sold-listings`, { headers, params: { dateRange } }), // Pass dateRange
+        axios.get(`${API_BASE_URL}/total-deals-closed`, { headers, params: { dateRange } }), // Pass dateRange
+        axios.get(`http://localhost:5000/admin/agents/count`, { headers }), // Fetch agent count (assuming this endpoint exists and returns { count: N })
+        axios.get(`${API_BASE_URL}/listing-status`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/listings-over-time`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/user-registrations`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/inquiry-trends`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/property-types`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/listing-price-distribution`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/top-locations`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/agent-performance`, { headers, params: { dateRange } }),
+      ]);
 
-      const mockListingsCount = { data: { count: 1250 } };
-      const mockInquiriesCount = { data: { count: 345 } };
-      const mockTotalUsers = { data: { count: 5600 } };
-      const mockRevenueSoldListings = { data: { total_revenue: 750000000 } };
-      const mockTotalDealsClosed = { data: { total_deals: 210 } };
+      setTotalListings(listingsCountRes.data.count);
+      setTotalInquiries(inquiriesCountRes.data.count);
+      setTotalUsers(totalUsersRes.data.count);
+      setRevenueSoldListings(revenueSoldListingsRes.data.total_revenue || 0);
+      setTotalDealsClosed(totalDealsClosedRes.data.total_deals || 0);
+      setTotalAgents(totalAgentsRes.data.count); // Set total agents state
 
-      const mockListingStatus = {
-        data: [
-          { status: 'Available', count: 800 },
-          { status: 'Sold', count: 300 },
-          { status: 'Pending', count: 150 },
-        ],
+      // Process listing status data for pie chart
+      const rawListingStatusData = listingStatusRes.data;
+      const statusMap = new Map(); // Use a Map to preserve order and handle specific display names
+
+      // Define standard display names and their corresponding lowercase keys
+      const standardStatuses = {
+        'available': 'Available',
+        'sold': 'Sold',
+        'under offer': 'Under Offer',
+        'pending': 'Pending',
+        'rejected': 'Rejected',
+        'featured': 'Featured'
       };
 
-      const mockListingsOverTime = {
-        data: [
-          { date: '2024-01-01', count: 10 },
-          { date: '2024-01-08', count: 15 },
-          { date: '2024-01-15', count: 20 },
-          { date: '2024-01-22', count: 12 },
-          { date: '2024-01-29', count: 18 },
-        ],
-      };
+      // Initialize the map with standard statuses to ensure they appear even if count is 0
+      Object.values(standardStatuses).forEach(displayStatus => {
+          statusMap.set(displayStatus, 0);
+      });
 
-      const mockUserRegistration = {
-        data: [
-          { date: '2024-01-01', count: 50 },
-          { date: '2024-01-08', count: 70 },
-          { date: '2024-01-15', count: 60 },
-          { date: '2024-01-22', count: 80 },
-          { date: '2024-01-29', count: 90 },
-        ],
-      };
+      // Populate counts from the API response
+      rawListingStatusData.forEach(item => {
+          const statusKey = item.status.toLowerCase(); // Backend sends lowercase status_key
+          let displayStatus = standardStatuses[statusKey]; // Try to get a standard display name
 
-      const mockInquiryTrends = {
-        data: [
-          { date: '2024-01-01', count: 5 },
-          { date: '2024-01-08', count: 8 },
-          { date: '2024-01-15', count: 12 },
-          { date: '2024-01-22', count: 7 },
-          { date: '2024-01-29', count: 10 },
-        ],
-      };
+          if (!displayStatus) {
+              // If not a standard status, capitalize the first letter for display
+              displayStatus = capitalizeFirstLetter(statusKey);
+          }
 
-      const mockPropertyType = {
-        data: [
-          { type: 'House', count: 600 },
-          { type: 'Apartment', count: 400 },
-          { type: 'Land', count: 200 },
-          { type: 'Commercial', count: 50 },
-        ],
-      };
+          // Aggregate counts, if a status is already in the map, add to its count
+          statusMap.set(displayStatus, (statusMap.get(displayStatus) || 0) + item.count);
+      });
 
-      const mockListingPriceDistribution = {
-        data: [
-          { range: '₦0 - ₦1M', count: 150 },
-          { range: '₦1M - ₦5M', count: 300 },
-          { range: '₦5M - ₦10M', count: 250 },
-          { range: '₦10M - ₦50M', count: 180 },
-          { range: '₦50M - ₦100M', count: 100 },
-          { range: '₦100M+', count: 50 },
-        ],
-      };
+      // Convert the map to an array for Recharts, filtering out statuses with 0 count
+      // unless they are explicitly desired (e.g., from standardStatuses).
+      // For now, we'll include all that appeared or were pre-initialized.
+      const finalListingStatusData = Array.from(statusMap.entries()).map(([status, count]) => ({
+          status: status,
+          count: count
+      }));
 
-      const mockTopLocations = {
-        data: [
-          { location: 'Lagos', count: 400 },
-          { location: 'Abuja', count: 300 },
-          { location: 'Port Harcourt', count: 200 },
-          { location: 'Ibadan', count: 100 },
-          { location: 'Kano', count: 50 },
-        ],
-      };
-
-      const mockAgentPerformance = {
-        data: [
-          { user_id: 1, full_name: 'John Doe', deals_closed: 50, revenue: 150000000, avg_rating: 4.8, properties_assigned: 80 },
-          { user_id: 2, full_name: 'Jane Smith', deals_closed: 45, revenue: 120000000, avg_rating: 4.5, properties_assigned: 75 },
-          { user_id: 3, full_name: 'Peter Jones', deals_closed: 30, revenue: 90000000, avg_rating: 4.2, properties_assigned: 60 },
-          { user_id: 4, full_name: 'Alice Brown', deals_closed: 25, revenue: 80000000, avg_rating: 4.7, properties_assigned: 55 },
-        ],
-      };
-
-      setTotalListings(mockListingsCount.data.count);
-      setTotalInquiries(mockInquiriesCount.data.count);
-      setTotalUsers(mockTotalUsers.data.count);
-      setRevenueSoldListings(mockRevenueSoldListings.data.total_revenue);
-      setTotalDealsClosed(mockTotalDealsClosed.data.total_deals);
-
-      setListingStatusData(mockListingStatus.data);
-      setListingsOverTimeData(mockListingsOverTime.data);
-      setUserRegistrationData(mockUserRegistration.data);
-      setInquiryTrendsData(mockInquiryTrends.data);
-      setPropertyTypeData(mockPropertyType.data);
-      setListingPriceDistribution(mockListingPriceDistribution.data);
-      setTopLocationsData(mockTopLocations.data);
-      setAgentPerformanceData(mockAgentPerformance.data);
+      setListingStatusData(finalListingStatusData);
+      setListingsOverTimeData(listingsOverTimeRes.data);
+      setUserRegistrationData(userRegistrationRes.data);
+      setInquiryTrendsData(inquiryTrendsRes.data);
+      setPropertyTypeData(propertyTypeRes.data);
+      setListingPriceDistribution(listingPriceDistributionRes.data);
+      setTopLocationsData(topLocationsRes.data);
+      setAgentPerformanceData(agentPerformanceRes.data);
 
     } catch (err) {
-      console.error('Error fetching analytics data:', err);
+      console.error('Error fetching analytics data:', err.response?.data || err.message);
       setError('Failed to load analytics data. Please check your network connection and server status.');
+      // Reset all data on error
       setTotalListings(0);
       setTotalUsers(0);
       setTotalInquiries(0);
       setRevenueSoldListings(0);
       setTotalDealsClosed(0);
+      setTotalAgents(0); // Reset total agents on error
       setListingStatusData([]);
       setListingsOverTimeData([]);
       setUserRegistrationData([]);
@@ -285,13 +286,19 @@ const AdminAnalytics = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange, token]); // Re-fetch data when dateRange or token changes
 
+  // Trigger data fetching on component mount and when dateRange/token changes
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [dateRange]);
+    if (token) { // Only fetch if token exists
+      fetchAnalyticsData();
+    } else {
+      setError('Authentication token not found. Please log in.');
+      setIsLoading(false);
+    }
+  }, [fetchAnalyticsData, token]); // Depend on fetchAnalyticsData and token
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#82ca9d', '#ffc658'];
 
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
@@ -300,16 +307,43 @@ const AdminAnalytics = () => {
     { value: "last30days", label: "Last 30 Days" },
     { value: "last90days", label: "Last 90 Days" },
     { value: "ytd", label: "Year to Date" },
-    { value: "custom", label: "Custom Range (Not implemented)" },
+    // Custom range functionality would require additional date picker components
+    // { value: "custom", label: "Custom Range (Not implemented)" },
   ];
+
+  // Custom label rendering function for the PieChart
+  const renderCustomizedLabel = useCallback(({ cx, cy, midAngle, outerRadius, percent, name, status }) => {
+    const radius = outerRadius * 1.2; // Increase radius to move labels further out
+    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+    let y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+
+    // Specific adjustment for 'Available' label
+    if (status && status.toLowerCase() === 'available') {
+      y += 10; // Move 'Available' label down by 10 pixels
+    }
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="currentColor" // Use current color for text, which will adapt to dark/light mode
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className={darkMode ? "text-gray-300" : "text-gray-700"} // Apply text color based on dark mode
+      >
+        {`${status} (${(percent * 100).toFixed(0)}%)`}
+      </text>
+    );
+  }, [darkMode]);
+
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {/* Mobile Sidebar Toggle - consistent with Dashboard.js */}
+      {/* Mobile Sidebar Toggle */}
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -328,24 +362,24 @@ const AdminAnalytics = () => {
         </motion.button>
       )}
 
-      {/* AdminSidebar component - now imported */}
+      {/* AdminSidebar component */}
       <AdminSidebar
-        collapsed={isMobile ? false : isCollapsed} // Sidebar is never collapsed in mobile view
-        setCollapsed={isMobile ? () => {} : setIsCollapsed} // Disable setCollapsed on mobile
+        collapsed={isMobile ? false : isCollapsed}
+        setCollapsed={isMobile ? () => {} : setIsCollapsed}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
-        isMobile={isMobile} // Pass isMobile prop
-        isSidebarOpen={isSidebarOpen} // Pass isSidebarOpen prop
-        setIsSidebarOpen={setIsSidebarOpen} // Pass setIsSidebarOpen prop
+        isMobile={isMobile}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
 
       {/* Main content area with motion animation */}
       <motion.div
-        key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+        key={isMobile ? 'mobile' : 'desktop'}
         animate={{ marginLeft: contentShift }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="flex-1 p-4 md:p-6 overflow-auto min-w-0" // Added overflow-auto and min-w-0
-        style={{ willChange: 'margin-left', minWidth: `calc(100% - ${contentShift}px)` }} // Added minWidth
+        className="flex-1 p-4 md:p-6 overflow-auto min-w-0"
+        style={{ willChange: 'margin-left', minWidth: `calc(100% - ${contentShift}px)` }}
       >
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
@@ -357,13 +391,11 @@ const AdminAnalytics = () => {
           <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Analytics</h1>
         </div>
 
-        {/* Removed Dark Mode Toggle Button from here */}
-
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className={`rounded-3xl p-6 shadow space-y-6 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`} // Apply dark mode bg
+          className={`rounded-3xl p-6 shadow space-y-6 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}
         >
           {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row items-center justify-end gap-4 mb-6">
@@ -392,9 +424,7 @@ const AdminAnalytics = () => {
               {/* Overview Statistics */}
               <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Overview Statistics</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <Card // Using the imported Card component
-                  onClick={() => console.log('Navigating to total listings')} // Example onClick
-                >
+                <Card onClick={() => navigate('/admin/listings')} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center justify-center">
                     <Home size={24} className="text-green-500 dark:text-green-400" />
                     <div className="ml-3 text-left">
@@ -403,9 +433,7 @@ const AdminAnalytics = () => {
                     </div>
                   </div>
                 </Card>
-                <Card // Using the imported Card component
-                  onClick={() => console.log('Navigating to total users')} // Example onClick
-                >
+                <Card onClick={() => navigate('/admin/users')} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center justify-center">
                     <Users size={24} className="text-blue-500 dark:text-blue-400" />
                     <div className="ml-3 text-left">
@@ -414,9 +442,7 @@ const AdminAnalytics = () => {
                     </div>
                   </div>
                 </Card>
-                <Card // Using the imported Card component
-                  onClick={() => console.log('Navigating to total inquiries')} // Example onClick
-                >
+                <Card onClick={() => navigate('/admin/inquiries')} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center justify-center">
                     <MessageSquare size={24} className="text-purple-500 dark:text-purple-400" />
                     <div className="ml-3 text-left">
@@ -425,9 +451,7 @@ const AdminAnalytics = () => {
                     </div>
                   </div>
                 </Card>
-                <Card // Using the imported Card component
-                  onClick={() => console.log('Navigating to revenue details')} // Example onClick
-                >
+                <Card onClick={() => navigate('/admin/listings', { state: { statusFilter: 'Sold' } })} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center justify-center">
                     <TrendingUp size={24} className="text-orange-500 dark:text-orange-400" />
                     <div className="ml-3 text-left">
@@ -436,14 +460,21 @@ const AdminAnalytics = () => {
                     </div>
                   </div>
                 </Card>
-                <Card // Using the imported Card component
-                  onClick={() => console.log('Navigating to deals closed')} // Example onClick
-                >
+                <Card onClick={() => console.log('Total Deals Closed clicked')} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
                   <div className="flex items-center justify-center">
                     <BriefcaseBusiness size={24} className="text-teal-500 dark:text-teal-400" />
                     <div className="ml-3 text-left">
                       <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Deals Closed</p>
                       <p className="text-xl font-semibold">{totalDealsClosed.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card onClick={() => navigate('/admin/users', { state: { roleFilter: 'agent' } })} className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
+                  <div className="flex items-center justify-center">
+                    <Users size={24} className="text-pink-500 dark:text-pink-400" />
+                    <div className="ml-3 text-left">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Agents</p>
+                      <p className="text-xl font-semibold">{totalAgents.toLocaleString()}</p>
                     </div>
                   </div>
                 </Card>
@@ -469,7 +500,7 @@ const AdminAnalytics = () => {
                           fill="#8884d8"
                           dataKey="count"
                           nameKey="status"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          label={renderCustomizedLabel} // Use the custom label rendering function
                         >
                           {listingStatusData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -527,7 +558,7 @@ const AdminAnalytics = () => {
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#4B5563" : "#E5E7EB"} />
                         <XAxis dataKey="range" stroke={darkMode ? "#D1D5DB" : "#374151"} />
-                        <YAxis stroke={darkMode ? "#D1D5DB" : "#374151"} />
+                        <YAxis formatter={(value) => `₦${value.toLocaleString()}`} stroke={darkMode ? "#D1D5DB" : "#374151"} />
                         <Tooltip formatter={(value) => `₦${value.toLocaleString()}`} contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
                         <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
                         <Bar dataKey="count" fill="#FF5722" name="Number of Listings" />

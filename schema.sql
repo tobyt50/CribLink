@@ -27,10 +27,7 @@ CREATE TABLE users (
     agency VARCHAR(255),
     bio TEXT, -- New column for bio
     location VARCHAR(100), -- New column for location
-<<<<<<< HEAD
 	profile_picture_url TEXT,
-=======
->>>>>>> dd9ece3b45b6f7e418258a154428618e314c087e
     CONSTRAINT valid_role CHECK (role IN ('client', 'agent', 'admin')),
     status VARCHAR(20) DEFAULT 'active',
 	reset_token VARCHAR(255),

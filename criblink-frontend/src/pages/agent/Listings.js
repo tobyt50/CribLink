@@ -70,8 +70,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 transition-all duration-200
-                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500" : "bg-white border-gray-300 text-gray-700 hover:border-green-500"}`}
+                className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"}`}
             >
                 {/* Added overflow-hidden and truncate to prevent text wrapping */}
                 <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
@@ -682,7 +682,7 @@ const Listings = () => {
                                         placeholder="Search listings..."
                                         value={searchTerm}
                                         onChange={handleSearchChange}
-                                        className={`w-full md:w-1/2 py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                        className={`w-full md:w-1/2 py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                     />
                                     <button
                                         className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
@@ -908,7 +908,7 @@ const Listings = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "100%" }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className={`fixed inset-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
+                        className={`fixed inset-x-0 top-14 bottom-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
@@ -925,7 +925,7 @@ const Listings = () => {
                                     placeholder="Search listings..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                 />
                             </div>
 
@@ -933,7 +933,8 @@ const Listings = () => {
                                 selectedCategory={purchaseCategoryFilter}
                                 onChange={handlePurchaseCategoryChange}
                                 className="w-full"
-                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                // The buttonClassName for PurchaseCategoryFilter should also adopt the new styles
+                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                             />
 
                             <Dropdown
@@ -951,7 +952,7 @@ const Listings = () => {
                                     placeholder="Min Price"
                                     value={minPriceFilter}
                                     onChange={handleMinPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                 />
                             </div>
 
@@ -962,7 +963,7 @@ const Listings = () => {
                                     placeholder="Max Price"
                                     value={maxPriceFilter}
                                     onChange={handleMaxPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                 />
                             </div>
                         </div>
@@ -1006,7 +1007,8 @@ const Listings = () => {
                                     selectedCategory={purchaseCategoryFilter}
                                     onChange={handlePurchaseCategoryChange}
                                     className="w-full"
-                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                    // The buttonClassName for PurchaseCategoryFilter should also adopt the new styles
+                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                 />
 
                                 <Dropdown
@@ -1024,7 +1026,7 @@ const Listings = () => {
                                         placeholder="Min Price"
                                         value={minPriceFilter}
                                         onChange={handleMinPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                     />
                                 </div>
 
@@ -1035,7 +1037,7 @@ const Listings = () => {
                                         placeholder="Max Price"
                                         value={maxPriceFilter}
                                         onChange={handleMaxPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:ring focus:ring-green-100 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500"}`}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                     />
                                 </div>
                             </div>
@@ -1054,4 +1056,4 @@ const Listings = () => {
     );
 };
 
-export default AgentListings;
+export default Listings;

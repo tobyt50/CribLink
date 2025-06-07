@@ -10,7 +10,7 @@ function Footer() {
   };
 
   return (
-    <footer className={`mt-16 ${darkMode ? "bg-gray-900 text-gray-300" : "bg-[#2c332f] text-gray-300"}`}>
+    <footer className={`mt-16 ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid gap-10 md:grid-cols-5 text-sm">
           {/* Company Info */}
