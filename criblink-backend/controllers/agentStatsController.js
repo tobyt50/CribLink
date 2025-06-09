@@ -1,4 +1,3 @@
-
 // controllers/agentController.js
 const pool = require('../db');
 
@@ -22,7 +21,7 @@ const getAgentDashboardStats = async (req, res) => {
 
     const inquiriesRes = await pool.query(
       `SELECT COUNT(*) FROM inquiries WHERE assigned_agent = $1`,
-      [req.user.email]
+      [req.user.user_id] // Corrected: Use req.user.user_id (integer) instead of req.user.email (string)
     );
 
     res.json({
@@ -38,17 +37,17 @@ const getAgentDashboardStats = async (req, res) => {
 // ✅ NEW: Recent activity relevant to agent
 const getAgentActivity = async (req, res) => {
   try {
-    const { full_name, email } = req.user;
+    // Note: req.user.full_name might not exist, but req.user.user_id is guaranteed by authenticateToken
+    const user_id = req.user.user_id;
 
     const result = await pool.query(
       `SELECT type, message, actor_name, timestamp
-   FROM activity_logs
-   WHERE user_id = $1
-   ORDER BY timestamp DESC
-   LIMIT 10`,
-      [req.user.user_id]
+       FROM activity_logs
+       WHERE user_id = $1 -- Ensure this user_id in activity_logs is also INT
+       ORDER BY timestamp DESC
+       LIMIT 10`,
+      [user_id]
     );
-
 
     res.json({ activities: result.rows });
   } catch (err) {

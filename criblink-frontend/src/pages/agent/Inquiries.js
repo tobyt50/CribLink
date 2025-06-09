@@ -1,16 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/Sidebar';
+import { useLocation, useNavigate } from 'react-router-dom';
+import AgentSidebar from '../../components/agent/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Menu, X } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-
+import { useTheme } from '../../layouts/AppShell';
+import AgentInquiryModal from '../../components/AgentInquiryModal'; // Import the new AgentInquiryModal
 
 const Inquiries = () => {
   const [inquiries, setInquiries] = useState([]);
   const [search, setSearch] = useState('');
-  // Removed statusFilter state as the dropdown is being removed
   const [sortKey, setSortKey] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
 
@@ -22,7 +21,14 @@ const Inquiries = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState('inquiries');
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+
+  // State for the AgentInquiryModal (for viewing/responding/deleting inquiries)
+  const [isAgentInquiryModalOpen, setIsAgentInquiryModalOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState(null); // The inquiry object for the modal
+  const [agentMessageForResolution, setAgentMessageForResolution] = useState(''); // Only used when mode is 'resolve'
+
+  const navigate = useNavigate();
 
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
@@ -32,7 +38,6 @@ const Inquiries = () => {
   const fetchInquiries = async () => {
     const params = new URLSearchParams({
       search,
-      // Removed status filter from params
       page,
       limit,
       sort: sortKey,
@@ -40,10 +45,23 @@ const Inquiries = () => {
     });
 
     try {
-      const res = await fetch(`http://localhost:5000/admin/inquiries?${params}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/agent/inquiries?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          console.error("Authentication or Authorization error fetching inquiries.");
+          navigate('/login');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
       const data = await res.json();
-      setInquiries(data.inquiries || data);
-      setTotalInquiries(data.total || data.length);
+      setInquiries(data.inquiries || []);
+      setTotalInquiries(data.total || 0);
     } catch (err) {
       console.error('Failed to fetch inquiries:', err);
       setInquiries([]);
@@ -60,7 +78,7 @@ const Inquiries = () => {
 
   useEffect(() => {
     fetchInquiries();
-  }, [search, page, sortKey, sortDirection]); // Removed statusFilter from dependencies
+  }, [search, page, sortKey, sortDirection]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -74,8 +92,7 @@ const Inquiries = () => {
   }, []);
 
   const handleSortClick = (key) => {
-    // All columns except 'actions' are now sortable
-    if (key !== 'actions') {
+    if (key !== 'message_action' && key !== 'view_property') {
       setSortDirection(sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc');
       setSortKey(key);
       setPage(1);
@@ -93,17 +110,84 @@ const Inquiries = () => {
       <ArrowDownIcon className={`h-4 w-4 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
     );
 
-  const handleAssign = async (inquiryId) => {
-    console.log(`Assigning inquiry ${inquiryId}. Agent ID will be prompted in a custom modal.`);
+  // Clicking the message directly opens AgentInquiryModal
+  const handleViewMessageAndResolve = (inquiry) => {
+    setSelectedInquiry(inquiry);
+    setAgentMessageForResolution(inquiry.agent_response || ''); // Pre-fill with agent's existing response
+    setIsAgentInquiryModalOpen(true); // Open the AgentInquiryModal
   };
 
-  const handleResolve = async (inquiryId) => {
-    console.log(`Confirming resolution for inquiry ${inquiryId}.`);
+  const handleDeleteInquiry = async () => {
+    if (!selectedInquiry) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/agent/inquiries/${selectedInquiry.inquiry_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        console.log(`Inquiry ${selectedInquiry.inquiry_id} deleted successfully.`);
+        setIsAgentInquiryModalOpen(false); // Close modal
+        setSelectedInquiry(null);
+        fetchInquiries(); // Re-fetch inquiries
+      } else {
+        console.error('Failed to delete inquiry.');
+      }
+    } catch (err) {
+      console.error('Error deleting inquiry:', err);
+    }
+  };
+
+  const handleSubmitResolution = async (inquiryToResolve, agentResponse, setInquiryStatus) => {
+    if (!inquiryToResolve || !agentResponse.trim()) {
+      setInquiryStatus('error');
+      console.error('No inquiry selected or message is empty for resolution.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/agent/inquiries/${inquiryToResolve.inquiry_id}/resolve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          agent_response: agentResponse,
+          client_email: inquiryToResolve.email,
+        }),
+      });
+
+      if (res.ok) {
+        setInquiryStatus('success');
+        console.log(`Inquiry ${inquiryToResolve.inquiry_id} resolved successfully.`);
+        setTimeout(() => {
+          setIsAgentInquiryModalOpen(false);
+          setSelectedInquiry(null);
+          setAgentMessageForResolution('');
+          fetchInquiries();
+        }, 2000);
+      } else {
+        setInquiryStatus('error');
+        console.error('Failed to resolve inquiry.');
+      }
+    } catch (err) {
+      setInquiryStatus('error');
+      console.error('Error resolving inquiry:', err);
+    }
+  };
+
+  const handleViewProperty = (propertyId) => {
+    navigate(`/listings/${propertyId}`);
   };
 
   const totalPages = Math.ceil(totalInquiries / limit);
 
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
@@ -111,7 +195,7 @@ const Inquiries = () => {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -131,7 +215,7 @@ const Inquiries = () => {
       )}
 
       {/* Sidebar */}
-      <AdminSidebar
+      <AgentSidebar
         collapsed={isMobile ? false : isCollapsed}
         setCollapsed={isMobile ? () => {} : setIsCollapsed}
         activeSection={activeSection}
@@ -152,10 +236,10 @@ const Inquiries = () => {
       >
         {/* Headers */}
         <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>User Inquiries</h1>
+          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Client Inquiries</h1>
         </div>
         <div className="hidden md:block mb-6">
-          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>User Inquiries</h1>
+          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Client Inquiries</h1>
         </div>
 
         {/* Card container */}
@@ -170,10 +254,10 @@ const Inquiries = () => {
             <input
               type="text"
               placeholder="Search inquiries..."
-              className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added focus and transition classes
+              className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
               }`}
               value={search}
               onChange={(e) => {
@@ -181,7 +265,6 @@ const Inquiries = () => {
                 setPage(1);
               }}
             />
-            {/* Removed the status filter select element */}
           </div>
 
           {/* Table container with horizontal scroll */}
@@ -191,42 +274,53 @@ const Inquiries = () => {
                 <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                   {[
                     'inquiry_id',
+                    'message_action', // Combined message and action for table header
+                    'client_id',
+                    'property_id',
                     'name',
                     'email',
                     'phone',
-                    'message',
                     'status',
                     'assigned_agent',
+                    'agent_response',
                     'created_at',
-                    'actions',
+                    'updated_at',
                   ].map((key) => (
                     <th
                       key={key}
-                      onClick={() => handleSortClick(key)} // Now all columns except 'actions' are clickable for sorting
+                      onClick={() => handleSortClick(key)}
                       className={`py-2 px-2 cursor-pointer select-none ${
                         sortKey === key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''
                       }`}
                       style={{
                         width:
                           key === 'inquiry_id' ? '90px' :
+                          key === 'message_action' ? '200px' : // Increased width for message/actions
+                          key === 'client_id' ? '120px' :
+                          key === 'property_id' ? '120px' :
                           key === 'name' ? '120px' :
                           key === 'email' ? '160px' :
                           key === 'phone' ? '120px' :
-                          key === 'message' ? '150px' :
                           key === 'status' ? '80px' :
                           key === 'assigned_agent' ? '120px' :
+                          key === 'agent_response' ? '150px' :
                           key === 'created_at' ? '120px' :
-                          key === 'actions' ? '150px' : 'auto'
+                          key === 'updated_at' ? '120px' : 'auto'
                       }}
                     >
                       <div className="flex items-center gap-1">
                         <span>
                           {key === 'inquiry_id' ? 'ID' :
+                           key === 'message_action' ? 'Message / Actions' :
+                           key === 'client_id' ? 'Client ID' :
+                           key === 'property_id' ? 'Property ID' :
                            key === 'assigned_agent' ? 'Agent' :
+                           key === 'agent_response' ? 'Agent Response' :
                            key === 'created_at' ? 'Created At' :
+                           key === 'updated_at' ? 'Updated At' :
                            key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </span>
-                        {key !== 'actions' && renderSortIcon(key)} {/* Sort icon for all sortable columns */}
+                        {(key !== 'message_action' && key !== 'property_id' && key !== 'client_id') && renderSortIcon(key)}
                       </div>
                     </th>
                   ))}
@@ -239,11 +333,37 @@ const Inquiries = () => {
                       key={inq.inquiry_id}
                       className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
                     >
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={inq.inquiry_id && inq.inquiry_id.length > 10 ? inq.inquiry_id : ''}>{inq.inquiry_id}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.name && inq.name.length > 15 ? inq.name : ''}>{inq.name}</td>
-                      <td className="py-2 px-2 max-w-[160px] truncate" title={inq.email && inq.email.length > 20 ? inq.email : ''}>{inq.email}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.phone && inq.phone.length > 15 ? inq.phone : ''}>{inq.phone}</td>
-                      <td className="py-2 px-2 max-w-[150px] truncate" title={inq.message && inq.message.length > 20 ? inq.message : ''}>{inq.message}</td>
+                      <td className="py-2 px-2 max-w-[90px] truncate" title={inq.inquiry_id}>{inq.inquiry_id}</td>
+                      {/* Message column: Clicking message opens AgentInquiryModal */}
+                      <td className="py-2 px-2 max-w-[200px]">
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className="truncate cursor-pointer text-blue-500 hover:underline"
+                            onClick={() => handleViewMessageAndResolve(inq)}
+                            title="Click to view message & resolve"
+                          >
+                            {inq.message}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.client_id || 'N/A'}>{inq.client_id || 'Guest'}</td>
+                      <td className="py-2 px-2 max-w-[120px] truncate">
+                        {inq.property_id ? (
+                          <div className="flex items-center">
+                            <span className="truncate" title={inq.property_id}>{inq.property_id}</span>
+                            <button
+                              onClick={() => handleViewProperty(inq.property_id)}
+                              className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition text-xs"
+                              title="View"
+                            >
+                              View
+                            </button>
+                          </div>
+                        ) : 'N/A'}
+                      </td>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.name}>{inq.name}</td>
+                      <td className="py-2 px-2 max-w-[160px] truncate" title={inq.email}>{inq.email}</td>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.phone || 'N/A'}>{inq.phone || 'N/A'}</td>
                       <td
                         className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
                           inq.status === 'new'
@@ -252,35 +372,27 @@ const Inquiries = () => {
                             ? 'text-yellow-600'
                             : 'text-green-600'
                         }`}
-                        title={inq.status && inq.status.length > 10 ? inq.status : ''}
+                        title={inq.status}
                       >
                         {inq.status}
                       </td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.assigned_agent && inq.assigned_agent.length > 15 ? inq.assigned_agent : ''}>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={inq.assigned_agent || 'Unassigned'}>
                         {inq.assigned_agent || 'Unassigned'}
                       </td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(inq.created_at) && formatDate(inq.created_at).length > 15 ? formatDate(inq.created_at) : ''}>
+                      <td className="py-2 px-2 max-w-[150px] truncate" title={inq.agent_response || 'No response yet'}>
+                         {inq.agent_response || 'N/A'}
+                      </td>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(inq.created_at)}>
                         {formatDate(inq.created_at)}
                       </td>
-                      <td className="py-2 px-2 space-x-2 max-w-[150px]">
-                        <button
-                          onClick={() => handleAssign(inq.inquiry_id)}
-                          className="py-1 px-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition text-xs"
-                        >
-                          Assign
-                        </button>
-                        <button
-                          onClick={() => handleResolve(inq.inquiry_id)}
-                          className="py-1 px-3 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition text-xs"
-                        >
-                          Resolve
-                        </button>
+                      <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(inq.updated_at)}>
+                        {formatDate(inq.updated_at)}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    <td colSpan={12} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       No inquiries found.
                     </td>
                   </tr>
@@ -296,7 +408,7 @@ const Inquiries = () => {
               disabled={page === 1}
               className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
             >
-              Prev
+              Previous
             </button>
             <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               Page {page} of {totalPages}
@@ -311,6 +423,22 @@ const Inquiries = () => {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* AgentInquiryModal (for viewing, resolving, and deleting) */}
+      <AnimatePresence>
+        {isAgentInquiryModalOpen && selectedInquiry && (
+          <AgentInquiryModal
+            isOpen={isAgentInquiryModalOpen}
+            onClose={() => setIsAgentInquiryModalOpen(false)}
+            onSubmit={handleSubmitResolution}
+            inquiry={selectedInquiry}
+            initialAgentMessage={agentMessageForResolution}
+            darkMode={darkMode}
+            onViewProperty={handleViewProperty}
+            onDelete={handleDeleteInquiry}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

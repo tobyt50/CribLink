@@ -21,7 +21,6 @@ const MENU_ITEMS = [
   { name: 'Users', to: '/admin/users', icon: <Users />, key: 'users' },
   { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
   { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
-  { name: 'Inquiries', to: '/admin/inquiries', icon: <Inbox />, key: 'inquiries' },
   { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' }, // New item
   { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Settings', to: '/admin/settings', icon: <Settings />, key: 'settings' },

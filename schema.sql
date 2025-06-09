@@ -13,7 +13,7 @@ DROP TABLE IF EXISTS agent_clients CASCADE;
 DROP TABLE IF EXISTS archived_clients CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS property_details CASCADE;
-
+DROP TABLE IF EXISTS user_favourites CASCADE;
 -- Users table to manage all user roles
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -92,6 +92,13 @@ CREATE TABLE property_images (
     image_url TEXT NOT NULL
 );
 
+CREATE TABLE user_favourites (
+    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    property_id INT REFERENCES property_listings(property_id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    PRIMARY KEY (user_id, property_id)
+);
+
 -- Client interactions, also referencing users.user_id for agent
 CREATE TABLE client_interactions (
     interaction_id SERIAL PRIMARY KEY,
@@ -126,14 +133,34 @@ CREATE TABLE support_tickets (
 );
 
 CREATE TABLE inquiries (
-  inquiry_id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  message TEXT NOT NULL,
-  status TEXT DEFAULT 'new',
-  assigned_agent TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+    inquiry_id SERIAL PRIMARY KEY, -- Auto-generates an INT for each new inquiry
+    client_id INT, -- NULLABLE: Can be NULL if from guest. Foreign Key to users(user_id)
+    agent_id INT NOT NULL, -- MANDATORY: ID of the agent associated with the property. Foreign Key to users(user_id)
+    property_id INT NOT NULL, -- MANDATORY: ID of the property. Foreign Key to listings(property_id)
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT, -- NULLABLE
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'new' NOT NULL,
+    assigned_agent INT, -- NULLABLE: ID of assigned agent. Foreign Key to users(user_id)
+    agent_response TEXT, -- NULLABLE
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+-- Create a trigger function to update updated_at on every row update
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create the trigger
+CREATE TRIGGER update_inquiries_updated_at
+BEFORE UPDATE ON inquiries
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
 
 -- New table to relate agents with their clients
 

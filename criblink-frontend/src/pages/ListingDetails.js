@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import API_BASE_URL from '../config';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Corrected import: changed 'react-router-router-dom' to 'react-router-dom'
 import { jwtDecode } from 'jwt-decode';
 import ListingCard from '../components/ListingCard'; // Import ListingCard
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+import { X, Bookmark } from 'lucide-react'; // Import X and Bookmark icon for the modal close button and favourite button
+import ClientInquiryModal from '../components/ClientInquiryModal'; // Import the dedicated ClientInquiryModal
 
 const App = () => {
   const { id } = useParams();
@@ -18,16 +20,29 @@ const App = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState('');
   const [userId, setUserId] = useState('');
+  const [clientName, setClientName] = useState(''); // State for authenticated client's name
+  const [clientEmail, setClientEmail] = useState(''); // State for authenticated client's email
+  const [clientPhone, setClientPhone] = useState(''); // State for authenticated client's phone
   const [agentInfo, setAgentInfo] = useState(null);
   const [similarListings, setSimilarListings] = useState([]); // New state for similar listings
   const { darkMode } = useTheme(); // Use the dark mode context
 
+  // State for client inquiry modal visibility and status
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [inquiryStatus, setInquiryStatus] = useState(null); // 'success', 'error', or null for ClientInquiryModal
+
+  // State for favourite status
+  const [isFavorited, setIsFavorited] = useState(false);
+
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        // Corrected line: removed the duplicate 'localStorage'
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          setUserRole('guest'); // Set role as guest if no token
+          return;
+        }
 
         const { data } = await axios.get(`${API_BASE_URL}/users/profile`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -36,15 +51,21 @@ const App = () => {
         if (data) {
           setUserRole(data.role);
           setUserId(data.user_id);
+          // Set client details if authenticated
+          setClientName(data.full_name || '');
+          setClientEmail(data.email || '');
+          setClientPhone(data.phone || '');
+        } else {
+          setUserRole('guest'); // Fallback to guest if data is not received
         }
       } catch (err) {
         console.error('Error fetching user profile:', err);
+        setUserRole('guest'); // Assume guest if there's an error fetching profile (e.g., invalid token)
       }
     };
 
     fetchUser();
   }, []);
-
 
   useEffect(() => {
     const fetchListingAndSimilar = async () => {
@@ -69,21 +90,16 @@ const App = () => {
 
         // Fetch all listings to find similar ones
         const allListingsResponse = await axios.get(`${API_BASE_URL}/listings`);
-        // Access the 'listings' array from the response data
         const allListings = allListingsResponse.data.listings;
 
         // Filter for similar listings (excluding the current one)
         const filteredSimilar = allListings.filter(
           (item) =>
             item.property_id !== data.property_id
-            // Commented out similarity logic for debugging purposes:
             // && item.property_type === data.property_type
             // && item.purchase_category === data.purchase_category
             // && item.state === data.state
         );
-        // Take up to 3 random similar listings (or any 3 if similarity logic is commented out)
-        // To ensure randomness for debug, you might shuffle the array before slicing,
-        // but for simply displaying "any 3", slicing after filtering out the current one is sufficient.
         setSimilarListings(filteredSimilar.slice(0, 3));
 
       } catch (err) {
@@ -91,18 +107,40 @@ const App = () => {
       }
     };
     fetchListingAndSimilar();
-  }, [id, darkMode]); // Added darkMode to dependency array for agentInfo profilePic
+  }, [id, darkMode]);
 
-  // Escape key and outside click to close preview
+  // Effect to check favorite status
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (userId && listing && userRole !== 'guest') {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${API_BASE_URL}/favourites/status/${listing.property_id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setIsFavorited(response.data.isFavorited);
+        } catch (err) {
+          console.error('Error checking favorite status:', err);
+          setIsFavorited(false); // Assume not favorited on error
+        }
+      } else {
+        setIsFavorited(false); // Not favorited if no user or guest
+      }
+    };
+    checkFavoriteStatus();
+  }, [userId, listing, userRole]); // Re-run when userId or listing changes
+
+  // Escape key and outside click to close preview/modals
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") {
         setShowPreview(false);
+        setIsInquiryModalOpen(false);
       }
     };
 
     const handleClickOutside = (e) => {
-      if (previewRef.current && !previewRef.current.contains(e.target)) {
+      if (showPreview && previewRef.current && !previewRef.current.contains(e.target)) {
         setShowPreview(false);
       }
     };
@@ -111,12 +149,16 @@ const App = () => {
       document.addEventListener("keydown", handleEscape);
       document.addEventListener("mousedown", handleClickOutside);
     }
+    if (isInquiryModalOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showPreview]);
+  }, [showPreview, isInquiryModalOpen]);
 
   const formatPrice = (price, category) => {
     if (price == null) return 'Price not available';
@@ -179,7 +221,6 @@ const App = () => {
         console.log('Link copied to clipboard!');
     }).catch(err => {
         console.error('Failed to copy link: ', err);
-        // Fallback for older browsers or if clipboard API is not available/permitted
         const el = document.createElement('textarea');
         el.value = window.location.href;
         document.body.appendChild(el);
@@ -188,6 +229,109 @@ const App = () => {
         document.body.removeChild(el);
         console.log('Link copied via fallback method!');
     });
+  };
+
+  // Handler for sending inquiry (used by ClientInquiryModal)
+  const handleSendInquiry = async (inquiryData, setModalInquiryStatus) => { // Added setModalInquiryStatus
+    if (!listing || !listing.agent_id) {
+      console.error('Agent ID not found for this listing.');
+      setModalInquiryStatus('error'); // Use the modal's internal status setter
+      return;
+    }
+
+    let inquiryPayload = {
+      agent_id: listing.agent_id,
+      property_id: listing.property_id,
+      message: inquiryData.message,
+    };
+
+    let token = localStorage.getItem('token');
+    let currentClientId = userId;
+
+    if (userRole === 'client' && currentClientId) {
+      inquiryPayload = {
+        ...inquiryPayload,
+        client_id: currentClientId, // Use integer ID
+        name: clientName,
+        email: clientEmail,
+        phone: clientPhone,
+      };
+    } else {
+      if (!inquiryData.name || !inquiryData.email) {
+        setModalInquiryStatus('error');
+        console.error('Name and Email are required for guest inquiries.');
+        return;
+      }
+      inquiryPayload = {
+        ...inquiryPayload,
+        client_id: null,
+        name: inquiryData.name,
+        email: inquiryData.email,
+        phone: inquiryData.phone,
+      };
+      token = null; // No token for guests
+    }
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/agent/inquiries`, inquiryPayload, {
+        headers: headers,
+      });
+
+      if (response.status === 201) {
+        setModalInquiryStatus('success'); // Use the modal's internal status setter
+        setTimeout(() => {
+          setIsInquiryModalOpen(false);
+          setModalInquiryStatus(null); // Reset status after modal closes
+        }, 3000);
+      } else {
+        setModalInquiryStatus('error'); // Use the modal's internal status setter
+      }
+    } catch (err) {
+      console.error('Error sending inquiry:', err);
+      setModalInquiryStatus('error'); // Use the modal's internal status setter
+    }
+  };
+
+  // Handle toggling favorite status
+  const handleToggleFavorite = async () => {
+    if (!userId || !listing || userRole === 'guest') {
+      console.warn('User not authenticated or not a client/agent/admin to favorite.');
+      // Potentially show a message asking guest to log in
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error("Authentication token not found.");
+        return;
+    }
+
+    try {
+      if (isFavorited) {
+        // Remove from favorites
+        await axios.delete(`${API_BASE_URL}/favourites/${listing.property_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsFavorited(false);
+        console.log('Removed from favorites!');
+      } else {
+        // Add to favorites
+        await axios.post(`${API_BASE_URL}/favourites`, { property_id: listing.property_id }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsFavorited(true);
+        console.log('Added to favorites!');
+      }
+    } catch (err) {
+      console.error('Error toggling favorite status:', err.response?.data || err.message);
+    }
   };
 
 
@@ -256,17 +400,31 @@ const App = () => {
 
           {/* Listing Overview */}
           <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-            <div className="flex justify-between items-start flex-wrap">
+            <div className="flex justify-between items-center flex-wrap"> {/* Changed items-start to items-center and added justify-between */}
               <h1 className={`text-2xl md:text-3xl font-extrabold ${darkMode ? "text-green-400" : "text-green-800"}`}>
                 {listing.title}
               </h1>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 items-center mt-2 md:mt-0"> {/* Added items-center and removed mt-2 for larger screens */}
                 <span className="bg-green-600 text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm">
                   {getCategoryLabel(listing.purchase_category)}
                 </span>
                 <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(listing.status)}`}>
                   {listing.status?.toUpperCase()}
                 </span>
+                {/* Favorite button (Instagram save icon) */}
+                {userRole !== 'guest' && ( // Only show if user is logged in
+                    <button
+                        onClick={handleToggleFavorite}
+                        className={`p-2 rounded-full shadow-md transition-all duration-200 ml-2 ${ // Added ml-2 for spacing
+                            isFavorited
+                                ? 'bg-blue-500 text-white hover:bg-blue-600' // Blue for saved
+                                : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
+                        }`}
+                        title={isFavorited ? "Remove from Saved" : "Save to Favourites"}
+                    >
+                        <Bookmark size={20} fill={isFavorited ? "currentColor" : "none"} />
+                    </button>
+                )}
               </div>
             </div>
 
@@ -363,21 +521,33 @@ const App = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                {agentInfo.email !== 'N/A' && (
-                  <a
-                    href={`mailto:${agentInfo.email}`}
-                    className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl hover:bg-green-600 transition-colors duration-300 shadow-md justify-center"
-                  >
-                    📧 Email Agent
-                  </a>
-                )}
-                {agentInfo.phone !== 'N/A' && (
+                {/* Always show Call Agent if phone is available and user is authenticated */}
+                {agentInfo.phone !== 'N/A' && userRole !== 'guest' && (
                   <a
                     href={`tel:${agentInfo.phone}`}
-                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors duration-300 shadow-md justify-center"
+                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors duration-300 shadow-md justify-center w-full"
                   >
                     📞 Call Agent
                   </a>
+                )}
+
+                {/* Show Inquire Now for clients and guests, Email Agent for agents/admins viewing others' listings */}
+                {userRole === 'client' || userRole === 'guest' ? (
+                  <button
+                    onClick={() => setIsInquiryModalOpen(true)}
+                    className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl hover:bg-green-600 transition-colors duration-300 shadow-md justify-center w-full"
+                  >
+                    📝 Inquire Now
+                  </button>
+                ) : (
+                  agentInfo.email !== 'N/A' && (
+                    <a
+                      href={`mailto:${agentInfo.email}`}
+                      className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl hover:bg-green-600 transition-colors duration-300 shadow-md justify-center w-full"
+                    >
+                      📧 Email Agent
+                    </a>
+                  )
                 )}
               </div>
             </div>
@@ -488,20 +658,41 @@ const App = () => {
                 <>
                   <button
                     onClick={handlePrev}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-40 hover:bg-opacity-60 p-3 rounded-full"
+                    className="absolute top-1/2 left-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
                   >
-                    ←
+                    <span className="sr-only">Previous image</span>←
                   </button>
                   <button
                     onClick={handleNext}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-4xl font-bold bg-black bg-opacity-40 hover:bg-opacity-60 p-3 rounded-full"
+                    className="absolute top-1/2 right-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
                   >
-                    →
+                    <span className="sr-only">Next image</span>→
                   </button>
                 </>
               )}
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Inquiry Modal (for clients/guests) */}
+      <AnimatePresence>
+        {isInquiryModalOpen && (
+          <ClientInquiryModal
+            isOpen={isInquiryModalOpen}
+            onClose={() => {
+              setIsInquiryModalOpen(false);
+              setInquiryStatus(null); // Reset status on close
+            }}
+            onSubmit={handleSendInquiry}
+            listingTitle={listing.title}
+            darkMode={darkMode}
+            userRole={userRole}
+            clientName={clientName}
+            clientEmail={clientEmail}
+            clientPhone={clientPhone}
+            inquiryStatus={inquiryStatus} // Pass status to ClientInquiryModal
+          />
         )}
       </AnimatePresence>
     </motion.div>
