@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
 import { motion, AnimatePresence } from 'framer-motion';
 import API_BASE_URL from '../config';
-import { useNavigate } from 'react-router-dom'; // Corrected import: changed 'react-router-router-dom' to 'react-router-dom'
+import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import ListingCard from '../components/ListingCard'; // Import ListingCard
-import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-import { X, Bookmark } from 'lucide-react'; // Import X and Bookmark icon for the modal close button and favourite button
-import ClientInquiryModal from '../components/ClientInquiryModal'; // Import the dedicated ClientInquiryModal
+import ListingCard from '../components/ListingCard';
+import { useTheme } from '../layouts/AppShell';
+import { X, Bookmark } from 'lucide-react';
+import ClientInquiryModal from '../components/ClientInquiryModal';
+import { useMessage } from '../context/MessageContext';
 
-const App = () => {
+const ListingDetails = () => { // Renamed App to ListingDetails for clarity
   const { id } = useParams();
   const [listing, setListing] = useState(null);
   const [images, setImages] = useState([]);
@@ -20,31 +21,31 @@ const App = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState('');
   const [userId, setUserId] = useState('');
-  const [clientName, setClientName] = useState(''); // State for authenticated client's name
-  const [clientEmail, setClientEmail] = useState(''); // State for authenticated client's email
-  const [clientPhone, setClientPhone] = useState(''); // State for authenticated client's phone
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
   const [agentInfo, setAgentInfo] = useState(null);
-  const [similarListings, setSimilarListings] = useState([]); // New state for similar listings
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const [similarListings, setSimilarListings] = useState([]);
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
 
-  // State for client inquiry modal visibility and status
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-  const [inquiryStatus, setInquiryStatus] = useState(null); // 'success', 'error', or null for ClientInquiryModal
+  // inquiryStatus is managed here in parent, but the modal will manage its own submission status
+  const [inquiryStatus, setInquiryStatus] = useState(null);
 
-  // State for favourite status
   const [isFavorited, setIsFavorited] = useState(false);
 
 
   useEffect(() => {
     const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setUserRole('guest'); // Set role as guest if no token
-          return;
-        }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUserRole('guest'); // Set role as guest if no token
+        return;
+      }
 
-        const { data } = await axios.get(`${API_BASE_URL}/users/profile`, {
+      try {
+        const { data } = await axiosInstance.get(`${API_BASE_URL}/users/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -58,9 +59,18 @@ const App = () => {
         } else {
           setUserRole('guest'); // Fallback to guest if data is not received
         }
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
-        setUserRole('guest'); // Assume guest if there's an error fetching profile (e.g., invalid token)
+      } catch (error) {
+        console.error("Error fetching user profile in ListingDetails:", error);
+        let errorMessage = 'Failed to load user profile. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error'); // Display error message
+        setUserRole('guest'); // Fallback to guest if fetching profile fails
+        localStorage.removeItem('token'); // Clear invalid token
+        localStorage.removeItem('user');
       }
     };
 
@@ -71,7 +81,7 @@ const App = () => {
     const fetchListingAndSimilar = async () => {
       try {
         // Fetch the main listing
-        const { data } = await axios.get(`${API_BASE_URL}/listings/${id}`);
+        const { data } = await axiosInstance.get(`${API_BASE_URL}/listings/${id}`);
         setListing(data);
 
         const mainImage = data.image_url ? [data.image_url] : [];
@@ -89,7 +99,7 @@ const App = () => {
         }
 
         // Fetch all listings to find similar ones
-        const allListingsResponse = await axios.get(`${API_BASE_URL}/listings`);
+        const allListingsResponse = await axiosInstance.get(`${API_BASE_URL}/listings`);
         const allListings = allListingsResponse.data.listings;
 
         // Filter for similar listings (excluding the current one)
@@ -102,8 +112,17 @@ const App = () => {
         );
         setSimilarListings(filteredSimilar.slice(0, 3));
 
-      } catch (err) {
-        console.error('Error fetching listing or similar listings:', err);
+      } catch (error) {
+        console.error("Error fetching listing details or similar listings:", error);
+        let errorMessage = 'Failed to load listing details.';
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error'); // Display error message
+        setListing(null); // Clear listing if fetching fails
+        setSimilarListings([]); // Clear similar listings
       }
     };
     fetchListingAndSimilar();
@@ -113,15 +132,26 @@ const App = () => {
   useEffect(() => {
     const checkFavoriteStatus = async () => {
       if (userId && listing && userRole !== 'guest') {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsFavorited(false);
+          return;
+        }
         try {
-          const token = localStorage.getItem('token');
-          const response = await axios.get(`${API_BASE_URL}/favourites/status/${listing.property_id}`, {
+          const response = await axiosInstance.get(`${API_BASE_URL}/favourites/status/${listing.property_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsFavorited(response.data.isFavorited);
-        } catch (err) {
-          console.error('Error checking favorite status:', err);
-          setIsFavorited(false); // Assume not favorited on error
+        } catch (error) {
+          console.error("Error checking favorite status:", error);
+          let errorMessage = 'Failed to check favorite status.';
+          if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          showMessage(errorMessage, 'error'); // Display error message
+          setIsFavorited(false);
         }
       } else {
         setIsFavorited(false); // Not favorited if no user or guest
@@ -217,26 +247,56 @@ const App = () => {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-        console.log('Link copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy link: ', err);
-        const el = document.createElement('textarea');
-        el.value = window.location.href;
-        document.body.appendChild(el);
-        el.select();
+    // Fallback for document.execCommand('copy') is deprecated, but useful in some environments.
+    // Modern approach is navigator.clipboard.writeText
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+          showMessage('Link copied to clipboard!', 'success', 3000);
+      }).catch(err => {
+          console.error('Failed to copy link using clipboard API: ', err);
+          // Fallback if clipboard API fails
+          const el = document.createElement('textarea');
+          el.value = window.location.href;
+          document.body.appendChild(el);
+          el.select();
+          try {
+            document.execCommand('copy');
+            showMessage('Link copied to clipboard (fallback)!', 'info', 3000);
+          } catch (execErr) {
+            console.error('Fallback copy failed: ', execErr);
+            showMessage('Could not copy link to clipboard.', 'error', 3000);
+          } finally {
+            document.body.removeChild(el);
+          }
+      });
+    } else {
+      // Older browser fallback
+      const el = document.createElement('textarea');
+      el.value = window.location.href;
+      document.body.appendChild(el);
+      el.select();
+      try {
         document.execCommand('copy');
+        showMessage('Link copied to clipboard (fallback)!', 'info', 3000);
+      } catch (execErr) {
+        console.error('Fallback copy failed: ', execErr);
+        showMessage('Could not copy link to clipboard.', 'error', 3000);
+      } finally {
         document.body.removeChild(el);
-        console.log('Link copied via fallback method!');
-    });
+      }
+    }
   };
 
+
   // Handler for sending inquiry (used by ClientInquiryModal)
-  const handleSendInquiry = async (inquiryData, setModalInquiryStatus) => { // Added setModalInquiryStatus
+  // This function no longer accepts setModalInquiryStatus, as that's managed by the modal itself.
+  const handleSendInquiry = async (inquiryData) => {
     if (!listing || !listing.agent_id) {
       console.error('Agent ID not found for this listing.');
-      setModalInquiryStatus('error'); // Use the modal's internal status setter
-      return;
+      setInquiryStatus('error'); // Set parent status
+      showMessage('Could not send inquiry: Agent information missing.', 'error'); // Display error message
+      // Propagate error so modal can catch it
+      throw new Error('Agent information missing');
     }
 
     let inquiryPayload = {
@@ -258,9 +318,11 @@ const App = () => {
       };
     } else {
       if (!inquiryData.name || !inquiryData.email) {
-        setModalInquiryStatus('error');
+        setInquiryStatus('error'); // Set parent status
+        showMessage('Name and Email are required for guest inquiries.', 'error'); // Display error message
         console.error('Name and Email are required for guest inquiries.');
-        return;
+        // Propagate error so modal can catch it
+        throw new Error('Name and Email are required for guest inquiries.');
       }
       inquiryPayload = {
         ...inquiryPayload,
@@ -280,57 +342,70 @@ const App = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await axios.post(`${API_BASE_URL}/agent/inquiries`, inquiryPayload, {
+      const response = await axiosInstance.post(`${API_BASE_URL}/agent/inquiries`, inquiryPayload, {
         headers: headers,
       });
 
       if (response.status === 201) {
-        setModalInquiryStatus('success'); // Use the modal's internal status setter
-        setTimeout(() => {
-          setIsInquiryModalOpen(false);
-          setModalInquiryStatus(null); // Reset status after modal closes
-        }, 3000);
+        setInquiryStatus('success'); // Set parent status
+        // The modal will handle showing its own success message and closing
       } else {
-        setModalInquiryStatus('error'); // Use the modal's internal status setter
+        setInquiryStatus('error'); // Set parent status
+        showMessage('Failed to send inquiry.', 'error'); // Display error message
+        throw new Error('Failed to send inquiry'); // Propagate error
       }
     } catch (err) {
-      console.error('Error sending inquiry:', err);
-      setModalInquiryStatus('error'); // Use the modal's internal status setter
+      console.error('Error sending inquiry:', err); // Log error for debugging
+      setInquiryStatus('error'); // Set parent status
+      let errorMessage = 'Failed to send inquiry. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error'); // Display error message
+      throw err; // Re-throw the error so the modal's catch block can handle it
     }
   };
 
   // Handle toggling favorite status
   const handleToggleFavorite = async () => {
     if (!userId || !listing || userRole === 'guest') {
-      console.warn('User not authenticated or not a client/agent/admin to favorite.');
-      // Potentially show a message asking guest to log in
+      showMessage('Please log in to add to favorites.', 'info'); // Provide feedback for guests
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-        console.error("Authentication token not found.");
+        showMessage("Authentication token not found. Please log in.", 'error'); // Display error message
         return;
     }
 
-    try {
+    try { // Keep try/catch to update local state (isFavorited)
       if (isFavorited) {
         // Remove from favorites
-        await axios.delete(`${API_BASE_URL}/favourites/${listing.property_id}`, {
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/${listing.property_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsFavorited(false);
-        console.log('Removed from favorites!');
+        showMessage('Removed from favorites!', 'info');
       } else {
         // Add to favorites
-        await axios.post(`${API_BASE_URL}/favourites`, { property_id: listing.property_id }, {
+        await axiosInstance.post(`${API_BASE_URL}/favourites`, { property_id: listing.property_id }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsFavorited(true);
-        console.log('Added to favorites!');
+        showMessage('Added to favorites!', 'success');
       }
     } catch (err) {
       console.error('Error toggling favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error'); // Display error message
     }
   };
 
@@ -684,14 +759,16 @@ const App = () => {
               setIsInquiryModalOpen(false);
               setInquiryStatus(null); // Reset status on close
             }}
-            onSubmit={handleSendInquiry}
+            onSubmit={handleSendInquiry} // This is the function that makes the API call
             listingTitle={listing.title}
             darkMode={darkMode}
             userRole={userRole}
             clientName={clientName}
             clientEmail={clientEmail}
             clientPhone={clientPhone}
-            inquiryStatus={inquiryStatus} // Pass status to ClientInquiryModal
+            // The inquiryStatus prop here can be used to show general status from parent if needed,
+            // but the modal will manage its own immediate submission state.
+            inquiryStatus={inquiryStatus}
           />
         )}
       </AnimatePresence>
@@ -699,4 +776,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default ListingDetails;

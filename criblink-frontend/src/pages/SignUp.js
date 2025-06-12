@@ -1,12 +1,12 @@
 // src/pages/SignUp.js
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
 import { motion } from 'framer-motion';
-import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-
-// Assuming API_BASE_URL is defined in a config file
-import API_BASE_URL from '../config';
+import { useTheme } from '../layouts/AppShell';
+import { useMessage } from '../context/MessageContext';
+// API_BASE_URL is not needed here if axiosInstance is configured with a base URL
+// import API_BASE_URL from '../config'; 
 
 export default function SignUp() {
   const location = useLocation();
@@ -27,11 +27,10 @@ export default function SignUp() {
 
   // State for displaying password validation errors
   const [passwordError, setPasswordError] = useState('');
-  // State for general form submission errors
-  const [generalError, setGeneralError] = useState('');
 
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Use the showMessage function from MessageContext
 
   // Effect to check for existing token and redirect authenticated users
   useEffect(() => {
@@ -58,8 +57,6 @@ export default function SignUp() {
     if (e.target.name === 'password' || e.target.name === 'confirm_password') {
       setPasswordError('');
     }
-    // Clear general error when user types
-    setGeneralError('');
   };
 
   // Handle role switch
@@ -68,7 +65,6 @@ export default function SignUp() {
     // Optionally reset form fields when switching roles if needed
     // setForm({ full_name: '', email: '', password: '', confirm_password: '', phone_number: '', agency_name: '' });
     setPasswordError(''); // Clear errors on role switch
-    setGeneralError('');
   };
 
   // Function to validate password strength
@@ -87,17 +83,18 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setPasswordError(''); // Clear previous password errors
-    setGeneralError(''); // Clear previous general errors
 
     // Client-side password validation
     if (form.password !== form.confirm_password) {
       setPasswordError('Passwords do not match.');
+      showMessage('Passwords do not match.', 'error'); // Also show as a toast
       return; // Stop form submission
     }
 
     const passwordStrengthError = validatePassword(form.password);
     if (passwordStrengthError) {
       setPasswordError(passwordStrengthError);
+      showMessage(passwordStrengthError, 'error'); // Also show as a toast
       return; // Stop form submission
     }
 
@@ -117,11 +114,12 @@ export default function SignUp() {
     }
 
     try {
-      // Send signup data to the backend endpoint
-      await axios.post(`${API_BASE_URL}/users/signup`, payload);
+      // Send signup data to the backend endpoint using axiosInstance
+      await axiosInstance.post('/users/signup', payload);
+      showMessage('Account created successfully!', 'success', 3000); // Show success message for signup
 
-      // On successful signup, automatically sign in the user
-      const { data } = await axios.post(`${API_BASE_URL}/users/signin`, {
+      // On successful signup, automatically sign in the user using axiosInstance
+      const { data } = await axiosInstance.post('/users/signin', {
         email: form.email,
         password: form.password,
       });
@@ -130,6 +128,8 @@ export default function SignUp() {
       localStorage.setItem('user', JSON.stringify(data.user));
       // Tell the app "auth state changed"
       window.dispatchEvent(new Event("authChange"));
+      showMessage('Signed in automatically!', 'success', 3000); // Show success message for auto-signin
+
 
       // Redirect based on role or to home
       switch (data.user.role) {
@@ -143,10 +143,15 @@ export default function SignUp() {
           navigate('/'); // Redirect to home page
       }
     } catch (err) {
-      console.error('Registration or Sign-in failed:', err.response?.data || err.message);
-      // Display a more informative error if available from the backend
-      const errorMessage = err.response?.data?.message || 'An unexpected error occurred during registration or sign-in.';
-      setGeneralError(errorMessage); // Set general error state
+      console.error('Signup error caught locally:', err); // Log the error for debugging
+      // Display a user-friendly error message using showMessage
+      let errorMessage = 'An unexpected error occurred during signup.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error'); 
     }
   };
 
@@ -278,11 +283,6 @@ export default function SignUp() {
             />
             {/* Add more agent-specific fields here */}
           </motion.div>
-        )}
-
-        {/* Display general form submission error */}
-        {generalError && (
-          <p className={`text-sm text-center ${darkMode ? "text-red-400" : "text-red-500"}`}>{generalError}</p>
         )}
 
         <button

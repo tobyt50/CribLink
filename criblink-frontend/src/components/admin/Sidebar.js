@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Menu,
@@ -12,30 +12,32 @@ import {
   FileText,
   Settings,
   X,
-  Award, // New icon for Staff Performance
+  Award,
+  Bookmark,
 } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useTheme } from '../../layouts/AppShell.js'; // Added .js extension
 
 const MENU_ITEMS = [
   { name: 'Dashboard', to: '/admin/dashboard', icon: <Home />, key: 'dashboard' },
   { name: 'Users', to: '/admin/users', icon: <Users />, key: 'users' },
   { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
   { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
-  { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' }, // New item
+  { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' },
   { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
+  { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
   { name: 'Settings', to: '/admin/settings', icon: <Settings />, key: 'settings' },
 ];
 
 const AdminSidebar = ({
-  collapsed,
-  setCollapsed,
+  collapsed, // Now directly receives the collapsed state from parent
+  setCollapsed, // Receives the setter function from parent
   activeSection,
   setActiveSection,
   isMobile = false,
   isSidebarOpen = true,
   setIsSidebarOpen = () => {},
 }) => {
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
 
   // On mobile: always expanded (no collapse)
   // On desktop: respect collapsed state
@@ -65,7 +67,7 @@ const AdminSidebar = ({
         {/* Toggle Button - only desktop */}
         {!isMobile && (
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setCollapsed(!collapsed)} // Use the passed setCollapsed
             aria-label="Toggle sidebar"
             className={`flex flex-col items-center py-3 mb-6 w-full border-b px-6 hover:bg-gray-100
               ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200"}`}
@@ -91,7 +93,9 @@ const AdminSidebar = ({
               <NavLink
                 to={item.to}
                 onClick={() => {
-                  setActiveSection(item.key);
+                  if (typeof setActiveSection === 'function') {
+                    setActiveSection(item.key);
+                  }
                   if (isMobile) setIsSidebarOpen(false);
                 }}
                 className={({ isActive }) =>
@@ -114,7 +118,7 @@ const AdminSidebar = ({
       {/* Backdrop on mobile */}
       {isMobile && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40 md:hidden"
+          className={`fixed inset-0 z-40 md:hidden ${darkMode ? 'bg-gray-900 bg-opacity-70' : 'bg-black bg-opacity-20'}`}
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

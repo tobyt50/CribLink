@@ -115,7 +115,7 @@ const AgentDashboard = () => {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -155,11 +155,11 @@ const AgentDashboard = () => {
       >
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Dashboard</h1>
+          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Dashboard</h1>
         </div>
 
         <div className="hidden md:block mb-6">
-          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Dashboard</h1>
+          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Dashboard</h1>
         </div>
 
         <motion.div
@@ -167,8 +167,8 @@ const AgentDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+          {/* Stats Cards - Adjusted grid layout for desktop responsiveness */}
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-6 mb-10">
             {stats.map((stat, idx) => (
               <Card key={idx} onClick={stat.onClick} className="cursor-pointer">
                 <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>

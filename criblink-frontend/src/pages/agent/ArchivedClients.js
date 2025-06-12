@@ -3,39 +3,29 @@ import AgentSidebar from '../../components/agent/Sidebar';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../config';
-import { motion, AnimatePresence } from 'framer-motion'; // Import AnimatePresence for mobile toggle
-import { ArrowUpIcon, ArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline'; // Import icons for sorting and delete
-import { Menu, X } from 'lucide-react'; // Import Menu and X icons for sidebar toggle
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUpIcon, ArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Menu, X } from 'lucide-react';
+import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
 const ArchivedClients = () => {
   const [clients, setClients] = useState([]);
   const [agentId, setAgentId] = useState(null);
   const navigate = useNavigate();
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog();
 
-  // State for sidebar visibility and collapse, consistent with other agent pages
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Use the useSidebarState hook
+  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('archived-clients'); // Set default active section
 
   // State for sorting
   const [sortKey, setSortKey] = useState('archived_at'); // Default sort by archived date
   const [sortDirection, setSortDirection] = useState('desc'); // Default sort descending
-
-  // Sync sidebar state on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -45,13 +35,14 @@ const ArchivedClients = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAgentId(data.user_id);
-      } catch {
-        console.error("Failed to fetch agent profile. Redirecting to signin.");
+      } catch (err) {
+        console.error("Failed to fetch agent profile:", err);
+        showMessage('Failed to load profile. Please sign in again.', 'error');
         navigate('/signin');
       }
     };
     fetchProfile();
-  }, [navigate]);
+  }, [navigate, showMessage]);
 
   useEffect(() => {
     if (!agentId) return;
@@ -64,48 +55,60 @@ const ArchivedClients = () => {
         setClients(data);
       } catch (err) {
         console.error('Fetch archived clients error:', err);
+        showMessage('Failed to fetch archived clients.', 'error');
       }
     };
     fetchArchived();
-  }, [agentId]);
+  }, [agentId, showMessage]);
 
   const handleRestore = async (clientId) => {
     const token = localStorage.getItem('token');
-    try {
-      await axios.post(`${API_BASE_URL}/clients/agent/${agentId}/archived-clients/${clientId}/restore`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setClients((prev) => prev.filter((c) => c.user_id !== clientId));
-      console.log('Client restored successfully!'); // Replaced alert
-    } catch (err) {
-      console.error('Restore failed:', err);
-      console.log('Failed to restore client.'); // Replaced alert
-    }
+    showConfirm({
+      title: "Restore Client",
+      message: "Are you sure you want to restore this client?",
+      onConfirm: async () => {
+        try {
+          await axios.post(`${API_BASE_URL}/clients/agent/${agentId}/archived-clients/${clientId}/restore`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setClients((prev) => prev.filter((c) => c.user_id !== clientId));
+          showMessage('Client restored successfully!', 'success');
+        } catch (err) {
+          console.error('Restore failed:', err);
+          showMessage('Failed to restore client. Please try again.', 'error');
+        }
+      },
+      confirmLabel: "Restore",
+      cancelLabel: "Cancel"
+    });
   };
 
   const handleDelete = async (clientId) => {
-    const isConfirmed = window.confirm('Are you sure you want to permanently delete this archived client? This action cannot be undone.'); // Kept for now as per instructions, but ideally replaced with custom modal
+    showConfirm({
+      title: "Permanently Delete Client",
+      message: "Are you sure you want to permanently delete this archived client? This action cannot be undone.",
+      onConfirm: async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          showMessage('Authentication token not found. Please sign in.', 'error');
+          navigate('/signin');
+          return;
+        }
 
-    if (!isConfirmed) {
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('Authentication token not found. Please sign in.'); // Replaced alert
-      return;
-    }
-
-    try {
-      await axios.delete(`${API_BASE_URL}/clients/agent/${agentId}/archived-clients/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setClients((prev) => prev.filter((c) => c.user_id !== clientId));
-      console.log('Archived client deleted permanently.'); // Replaced alert
-    } catch (err) {
-      console.error('Delete failed:', err);
-      console.log('Failed to permanently delete client.'); // Replaced alert
-    }
+        try {
+          await axios.delete(`${API_BASE_URL}/clients/agent/${agentId}/archived-clients/${clientId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setClients((prev) => prev.filter((c) => c.user_id !== clientId));
+          showMessage('Archived client deleted permanently.', 'success');
+        } catch (err) {
+          console.error('Delete failed:', err);
+          showMessage('Failed to permanently delete client. Please try again.', 'error');
+        }
+      },
+      confirmLabel: "Delete Permanently",
+      cancelLabel: "Cancel"
+    });
   };
 
   const handleSortClick = (key) => {
@@ -171,7 +174,7 @@ const ArchivedClients = () => {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -200,10 +203,12 @@ const ArchivedClients = () => {
         setIsSidebarOpen={setIsSidebarOpen}
       />
       <motion.div
+        key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
         animate={{ marginLeft: contentShift }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="flex-1 p-6 overflow-auto min-w-0" // Added overflow-auto and min-w-0
-        style={{ willChange: 'margin-left', minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+        initial={false}
+        className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+        style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
       >
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
@@ -214,7 +219,7 @@ const ArchivedClients = () => {
           <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Archived Clients</h1>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
           <div className="overflow-x-auto">
             <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               <thead>

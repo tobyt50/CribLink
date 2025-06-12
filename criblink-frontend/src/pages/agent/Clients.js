@@ -12,14 +12,17 @@ import {
   CheckIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { toast } from 'react-toastify';
 import AgentSidebar from '../../components/agent/Sidebar';
 import ClientCard from '../../components/agent/ClientCard'; // Keep if ClientCard is still used elsewhere or for reference
 import SendEmailModal from '../../components/agent/SendEmailModal';
 import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card'; // Import the Card component
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the useSidebarState hook
+
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -27,24 +30,22 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [viewMode, setViewMode] = useState('simple');
+  // Initialize viewMode from localStorage, default to 'simple' (table view)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultClientsView') || 'simple');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [agentId, setAgentId] = useState(null);
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog();
 
-  // State for sidebar visibility and collapse, consistent with other agent pages
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  // State for active section in the sidebar, consistent with other agent pages
+  // Use the useSidebarState hook
+  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('clients'); // Set default active section for Clients page
 
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const exportDropdownRef = useRef(null);
   const navigate = useNavigate();
-
-  // State for mobile view and sidebar open/close, consistent with Inquiries.js and Listings.js
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
 
   // States for editable notes
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -54,17 +55,6 @@ const Clients = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 12; // Display 12 clients per page
 
-  // Effect to handle window resize for mobile responsiveness, consistent with other pages
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Close sidebar on mobile, open on desktop
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -84,12 +74,14 @@ const Clients = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAgentId(data.user_id);
-      } catch {
+      } catch (err) {
+        console.error("Failed to fetch agent profile:", err);
+        showMessage('Failed to load agent profile. Please sign in.', 'error');
         navigate('/signin');
       }
     };
     fetchProfile();
-  }, [navigate]);
+  }, [navigate, showMessage]);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -104,10 +96,11 @@ const Clients = () => {
         setFilteredClients(data); // Initialize filteredClients with all clients
       } catch (err) {
         console.error('Failed to fetch clients', err);
+        showMessage('Failed to fetch clients. Please try again.', 'error');
       }
     };
     fetchClients();
-  }, [agentId]); // Depend on agentId
+  }, [agentId, showMessage]); // Depend on agentId and showMessage
 
   useEffect(() => {
     let currentClients = [...clients];
@@ -146,49 +139,39 @@ const Clients = () => {
   };
 
   const handleRemoveClient = async (clientId) => {
-    const removed = clients.find((c) => c.user_id === clientId);
-    setClients((prev) => prev.filter((c) => c.user_id !== clientId));
-    setFilteredClients((prev) => prev.filter((c) => c.user_id !== clientId));
+    showConfirm({
+      title: "Archive Client",
+      message: "Are you sure you want to archive this client? You can restore them later from 'Archived Clients'.",
+      onConfirm: async () => {
+        const removed = clients.find((c) => c.user_id === clientId);
+        setClients((prev) => prev.filter((c) => c.user_id !== clientId));
+        setFilteredClients((prev) => prev.filter((c) => c.user_id !== clientId));
 
-    const undoId = toast.loading("Archiving client...");
-
-    const timeout = setTimeout(async () => {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        toast.update(undoId, { render: "Client archived", type: "success", isLoading: false, autoClose: 3000 });
-      } catch {
-        toast.update(undoId, { render: "Failed to archive", type: "error", isLoading: false, autoClose: 3000 });
-        setClients((prev) => [...prev, removed]);
-        setFilteredClients((prev) => [...prev, removed]);
-      }
-    }, 3000);
-
-    toast.update(undoId, {
-      render: (
-        <div>
-          Client archived
-          <button
-            onClick={() => {
-              clearTimeout(timeout);
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          showMessage("Client archived successfully!", 'success');
+        } catch (err) {
+          console.error("Failed to archive client:", err);
+          showMessage("Failed to archive client. Please try again.", 'error', 7000, [{
+            label: 'Undo',
+            onClick: () => {
               setClients((prev) => [...prev, removed]);
               setFilteredClients((prev) => [...prev, removed]);
-              toast.dismiss(undoId);
-              toast.info("Archive canceled");
-            }}
-            className="ml-3 underline text-sm text-blue-200 hover:text-white"
-          >
-            Undo
-          </button>
-        </div>
-      ),
-      type: "warning",
-      isLoading: false,
-      autoClose: 5000,
+              showMessage('Archiving undone.', 'info');
+            }
+          }]);
+          setClients((prev) => [...prev, removed]); // Revert on failure
+          setFilteredClients((prev) => [...prev, removed]); // Revert on failure
+        }
+      },
+      confirmLabel: "Archive",
+      cancelLabel: "Cancel"
     });
   };
+
 
   const handleToggleStatus = async (clientId, currentStatus) => {
     const newStatus = currentStatus === 'vip' ? 'regular' : 'vip';
@@ -199,8 +182,10 @@ const Clients = () => {
       });
       setClients((prev) => prev.map((c) => c.user_id === clientId ? { ...c, client_status: newStatus } : c));
       setFilteredClients((prev) => prev.map((c) => c.user_id === clientId ? { ...c, client_status: newStatus } : c));
-    } catch {
-      toast.error("Failed to update status");
+      showMessage(`Client status updated to ${newStatus.toUpperCase()}.`, 'success');
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      showMessage("Failed to update status. Please try again.", 'error');
     }
   };
 
@@ -227,7 +212,7 @@ const Clients = () => {
   const handleExportCsv = (scope) => {
     const dataToExport = scope === 'current' ? filteredClients : clients;
     if (dataToExport.length === 0) {
-      toast.info(`No client data found for ${scope} export.`);
+      showMessage(`No client data found for ${scope} export.`, 'info');
       setIsExportDropdownOpen(false);
       return;
     }
@@ -252,7 +237,7 @@ const Clients = () => {
     link.click();
     document.body.removeChild(link);
     setIsExportDropdownOpen(false);
-    toast.success("Clients exported successfully!");
+    showMessage("Clients exported successfully!", 'success');
   };
 
   // Adjust contentShift based on isCollapsed and isMobile states, consistent with other pages
@@ -279,15 +264,15 @@ const Clients = () => {
       setFilteredClients((prev) =>
         prev.map((c) => (c.user_id === clientId ? { ...c, notes: editedNoteContent } : c))
       );
-      toast.success('Note updated successfully!');
+      showMessage('Note updated successfully!', 'success');
     } catch (err) {
       console.error('Failed to update note:', err);
-      toast.error('Failed to update note.');
+      showMessage('Failed to update note. Please try again.', 'error');
     } finally {
       setEditingNoteId(null); // Exit editing mode
       setEditedNoteContent(''); // Clear edited content
     }
-  }, [agentId, editedNoteContent, clients]); // Depend on agentId, editedNoteContent, and clients
+  }, [agentId, editedNoteContent, clients, showMessage]); // Depend on agentId, editedNoteContent, clients, and showMessage
 
   // Handler for canceling note edit
   const handleCancelEdit = useCallback(() => {
@@ -307,7 +292,7 @@ const Clients = () => {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -355,7 +340,7 @@ const Clients = () => {
         </div>
 
         {/* Main content area wrapped in a single white container */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
           {/* Mobile Control Menu */}
           {isMobile && (
             <div className="flex justify-between items-center mb-4">
@@ -393,14 +378,14 @@ const Clients = () => {
               <div className="flex gap-2">
                 <button
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                  onClick={() => setViewMode('simple')}
+                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultClientsView', 'simple'); }}
                   title="List View"
                 >
                   <LayoutList className="h-5 w-5" />
                 </button>
                 <button
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                  onClick={() => setViewMode('graphical')}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultClientsView', 'graphical'); }}
                   title="Grid View"
                 >
                   <LayoutGrid className="h-5 w-5" />
@@ -446,10 +431,10 @@ const Clients = () => {
                   )}
                 </div>
 
-                <button onClick={() => setViewMode('simple')} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultClientsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                   <TableCellsIcon className="h-6 w-6" />
                 </button>
-                <button onClick={() => setViewMode('graphical')} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <button onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultClientsView', 'graphical'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                   <Squares2X2Icon className="h-6 w-6" />
                 </button>
               </div>
@@ -488,10 +473,10 @@ const Clients = () => {
                     </div>
                     <div className="text-sm mb-2">{client.email}</div>
 
-                    {/* Notes Section - Notes label, content, and icons on the same line and centered */}
+                    {/* Notes Section */}
                     <div className="w-full mb-4 px-2">
                       {editingNoteId === client.user_id ? (
-                        <div className="flex flex-col items-center w-full"> {/* Centralize the textarea and buttons */}
+                        <div className="flex flex-col items-center w-full">
                           <textarea
                             className={`w-full p-2 border rounded-md text-sm text-center ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-gray-50 border-gray-300 text-gray-800"}`}
                             value={editedNoteContent}
@@ -499,7 +484,7 @@ const Clients = () => {
                             rows="1"
                             style={{ minHeight: '1.5rem', maxHeight: '5rem', overflowY: 'auto' }}
                           />
-                          <div className="flex gap-2 mt-2"> {/* Buttons closer to textarea */}
+                          <div className="flex gap-2 mt-2">
                             <button
                               onClick={() => handleSaveNote(client.user_id)}
                               className={`p-1 rounded-full ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-700"}`}
@@ -517,11 +502,9 @@ const Clients = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-2"> {/* This row will be centered */}
-                          <span className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} flex-shrink-0`}>Notes:</span>
-                          <div className={`text-sm text-gray-500 dark:text-gray-400 italic break-words flex-grow-0`}> {/* No flex-grow */}
-                            {client.notes || 'No notes yet.'}
-                          </div>
+                        <div className="flex items-start gap-1 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Notes:</span>
+                          <span className="italic break-words flex-grow">{client.notes || 'No notes yet.'}</span>
                           <button
                             onClick={() => handleEditNote(client.user_id, client.notes)}
                             className={`p-1 rounded-full ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
@@ -533,17 +516,19 @@ const Clients = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      <button onClick={() => handleViewProfile(client.user_id)} className={`text-xs hover:underline rounded-xl px-2 py-1 h-8 flex items-center justify-center ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}>View</button>
-                      <button onClick={() => handleSendEmail(client)} className={`text-xs hover:underline rounded-xl px-2 py-1 h-8 flex items-center justify-center ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-700 hover:text-blue-800"}`}>Email</button>
-                      <button onClick={() => handleRespondInquiry(client.user_id)} className={`text-xs hover:underline rounded-xl px-2 py-1 h-8 flex items-center justify-center ${darkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-700 hover:text-indigo-800"}`}>Respond</button>
-                      <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-xs hover:underline rounded-xl px-2 py-1 h-8 flex items-center justify-center ${darkMode ? "text-yellow-400 hover:text-yellow-300" : "text-yellow-600 hover:text-yellow-700"}`}>
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap justify-center gap-2 w-full mt-2">
+                      <button onClick={() => handleViewProfile(client.user_id)} className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}>View</button>
+                      <button onClick={() => handleSendEmail(client)} className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-700 hover:text-blue-800"}`}>Email</button>
+                      <button onClick={() => handleRespondInquiry(client.user_id)} className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center ${darkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-700 hover:text-indigo-800"}`}>Respond</button>
+                      <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center ${darkMode ? "text-yellow-400 hover:text-yellow-300" : "text-yellow-600 hover:text-yellow-700"}`}>
                         {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
                       </button>
                       <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-500 hover:text-red-700"}`}>
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
+                    
                   </Card>
                 ))}
               </div>
@@ -609,7 +594,7 @@ const Clients = () => {
           onClose={() => setEmailModalOpen(false)}
           agentId={agentId}
           client={selectedClient}
-          onSent={() => toast.success("Email sent")}
+          onSent={() => showMessage("Email sent", 'success')} // Use showMessage here
           darkMode={darkMode} // Pass darkMode prop
         />
       </motion.div>

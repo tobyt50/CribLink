@@ -12,7 +12,8 @@ function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef(null);
 
-  const { darkMode, toggleDark } = useTheme(); // ✅ Access global dark mode
+  // Destructure darkMode and the new setThemePreference from useTheme
+  const { darkMode, setThemePreference } = useTheme(); 
 
   const syncUser = () => {
     const storedUser = localStorage.getItem("user");
@@ -42,6 +43,13 @@ function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
+
+  // New handler for the dark mode toggle to explicitly switch between light and dark
+  const handleToggleTheme = () => {
+    // If currently in dark mode (as indicated by the derived darkMode state), switch to 'light'
+    // Otherwise, switch to 'dark'
+    setThemePreference(darkMode ? 'light' : 'dark');
+  };
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
@@ -74,7 +82,7 @@ function Header() {
         <div className="flex items-center space-x-4">
           {/* Dark Mode Toggle - Desktop */}
           <button
-            onClick={toggleDark}
+            onClick={handleToggleTheme}
             className="hidden md:inline-block text-white hover:text-yellow-300 transition"
             title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
@@ -83,7 +91,7 @@ function Header() {
 
           {/* Dark Mode Toggle - Mobile (Moved out of hamburger menu) */}
           <button
-            onClick={toggleDark}
+            onClick={handleToggleTheme}
             className="md:hidden text-white hover:text-yellow-300 transition"
             title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >

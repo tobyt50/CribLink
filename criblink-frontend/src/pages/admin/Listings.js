@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar';
 import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
-import axios from 'axios';
+import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { TableCellsIcon, Squares2X2Icon, ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
@@ -12,6 +12,9 @@ import API_BASE_URL from '../../config';
 import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter';
 import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -118,7 +121,8 @@ const Listings = () => {
     const [listings, setListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState('simple');
+    // Initialize viewMode from localStorage, default to 'simple' (table view)
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
     const [purchaseCategoryFilter, setPurchaseCategoryFilter] = useState('');
@@ -130,14 +134,15 @@ const Listings = () => {
     const limit = 10;
     const navigate = useNavigate();
     const { darkMode } = useTheme();
+    const { showMessage } = useMessage();
+    const { showConfirm } = useConfirmDialog();
+
+    // Use the useSidebarState hook
+    const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+    const [activeSection, setActiveSection] = useState('listings');
 
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
-
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [activeSection, setActiveSection] = useState('listings');
 
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
@@ -156,17 +161,6 @@ const Listings = () => {
     }, [location.state?.statusFilter, statusFilter]);
 
     useEffect(() => {
-        const handleResize = () => {
-            const mobile = window.innerWidth < 768;
-            setIsMobile(mobile);
-            setIsSidebarOpen(!mobile);
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    useEffect(() => {
         const handleClickOutside = (e) => {
             if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
                 setIsExportDropdownOpen(false);
@@ -178,49 +172,53 @@ const Listings = () => {
 
 
     const fetchListings = useCallback(async () => {
+        const params = new URLSearchParams();
+
+        if (purchaseCategoryFilter && purchaseCategoryFilter.toLowerCase() !== 'all') {
+            params.append('purchase_category', purchaseCategoryFilter);
+        }
+        if (searchTerm) {
+            params.append('search', searchTerm);
+        }
+        if (minPriceFilter) {
+            params.append('min_price', minPriceFilter);
+        }
+        if (maxPriceFilter) {
+            params.append('max_price', maxPriceFilter);
+        }
+        if (statusFilter && statusFilter.toLowerCase() !== 'all' && statusFilter.toLowerCase() !== 'all statuses') {
+            params.append('status', statusFilter);
+        }
+
+        params.append('page', page);
+        params.append('limit', limit);
+
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         try {
-            const params = new URLSearchParams();
-
-            if (purchaseCategoryFilter && purchaseCategoryFilter.toLowerCase() !== 'all') {
-                params.append('purchase_category', purchaseCategoryFilter);
-            }
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-            if (minPriceFilter) {
-                params.append('min_price', minPriceFilter);
-            }
-            if (maxPriceFilter) {
-                params.append('max_price', maxPriceFilter);
-            }
-            if (statusFilter && statusFilter.toLowerCase() !== 'all' && statusFilter.toLowerCase() !== 'all statuses') {
-                params.append('status', statusFilter);
-            }
-
-            params.append('page', page);
-            params.append('limit', limit);
-
-            const token = localStorage.getItem('token');
-            const headers = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await axios.get(`${API_BASE_URL}/listings?${params.toString()}`, { headers });
-
+            const response = await axiosInstance.get(`${API_BASE_URL}/listings?${params.toString()}`, { headers });
             setListings(response.data.listings || []);
             setFilteredListings(response.data.listings || []);
             setTotalListings(response.data.total || 0);
             setTotalPages(response.data.totalPages || 1);
-
-        } catch (err) {
-            console.error('Error fetching listings:', err.response?.data || err.message);
+        } catch (error) {
+            let errorMessage = 'Failed to fetch listings. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
             setListings([]);
             setFilteredListings([]);
             setTotalListings(0);
             setTotalPages(1);
         }
-    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit]);
+    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, showMessage]);
 
     useEffect(() => {
         fetchListings();
@@ -283,97 +281,142 @@ const Listings = () => {
     const handleApproveListing = async (listingId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+            await axiosInstance.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            showMessage('Listing approved successfully!', 'success');
             fetchListings();
         } catch (error) {
-            console.error('Error approving listing:', error.response?.data || error.message);
+            let errorMessage = 'Failed to approve listing. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
     };
 
     const handleRejectListing = async (listingId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
+            await axiosInstance.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            showMessage('Listing rejected successfully!', 'success');
             fetchListings();
         } catch (error) {
-            console.error('Error rejecting listing:', error.response?.data || error.message);
+            let errorMessage = 'Failed to reject listing. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
     };
 
     const handleMarkAsSold = async (listingId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
+            await axiosInstance.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            showMessage('Listing marked as sold successfully!', 'success');
             fetchListings();
         } catch (error) {
-            console.error('Error marking listing as sold:', error.response?.data || error.message);
+            let errorMessage = 'Failed to mark listing as sold. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
     };
 
     const handleMarkAsFailed = async (listingId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+            await axiosInstance.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            showMessage('Listing status updated to Available (failed deal)!', 'success');
             fetchListings();
         } catch (error) {
-            console.error('Error marking listing as failed:', error.response?.data || error.message);
+            let errorMessage = 'Failed to update listing status. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
     };
 
 
-    const handleDeleteListing = async (listingId) => {
+    const performDeleteListing = async (listingId) => {
         const token = localStorage.getItem('token');
 
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            await axios.delete(`${API_BASE_URL}/listings/${listingId}`, {
+            await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            showMessage(`Listing ${listingId} deleted successfully!`, 'success');
             fetchListings();
         } catch (error) {
-            console.error('Error deleting listing:', error.response?.data || error.message);
+            let errorMessage = 'Failed to delete listing. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
+    };
+
+    const handleDeleteListing = (listingId) => {
+        showConfirm({
+            title: "Delete Listing",
+            message: "Are you sure you want to permanently delete this listing? This action cannot be undone.",
+            onConfirm: () => performDeleteListing(listingId),
+            confirmLabel: "Delete",
+            cancelLabel: "Cancel"
+        });
     };
 
     const handleExportCsv = async (scope) => {
         const dataToExport = scope === 'current' ? filteredListings : listings;
 
         if (dataToExport.length === 0) {
-            console.warn(`No listing data found for ${scope} export.`);
+            showMessage(`No listing data found for ${scope} export.`, 'info');
             setIsExportDropdownOpen(false);
             return;
         }
@@ -408,6 +451,7 @@ const Listings = () => {
         link.click();
         document.body.removeChild(link);
         setIsExportDropdownOpen(false);
+        showMessage('Listing data exported successfully!', 'success');
     };
 
 
@@ -528,15 +572,21 @@ const Listings = () => {
                 style={{ minWidth: `calc(100% - ${contentShift}px)` }}
             >
                 <div className="md:hidden flex items-center justify-center mb-4">
-                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>All Listings</h1>
+                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
                 </div>
 
                 <div className="hidden md:block mb-6">
-                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>All Listings</h1>
+                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
                 </div>
 
                 <main className="space-y-6">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        // Conditionally apply classes based on mobile view
+                        className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                    >
                         {isMobile && (
                             <div className="flex justify-between items-center mb-4">
                                 <button
@@ -597,10 +647,10 @@ const Listings = () => {
                                         placeholder="Search listings..."
                                         value={searchTerm}
                                         onChange={handleSearchChange}
-                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                         }`}
                                     />
                                     <button
@@ -663,7 +713,8 @@ const Listings = () => {
                             viewMode === 'graphical' ? (
                                 <motion.div
                                     layout
-                                    className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                                    // Modified grid classes for better mobile responsiveness
+                                    className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
                                 >
                                     {filteredListings.map((listing) => (
                                         <div key={listing.property_id}>
@@ -731,7 +782,7 @@ const Listings = () => {
                                                         listing.status && listing.status.toLowerCase() === 'pending' ? 'text-blue-600' :
                                                         listing.status && listing.status.toLowerCase() === 'rejected' ? 'text-purple-600' :
                                                         'text-gray-600'
-                                                    }`} title={listing.status && listing.status.length > 10 ? capitalizeFirstLetter(listing.status) : ''}>{capitalizeFirstLetter(listing.status)}</td>
+                                                    }`} title={capitalizeFirstLetter(listing.status)}>{capitalizeFirstLetter(listing.status)}</td>
                                                     <td className="py-2 px-2 max-w-[120px] truncate" title={listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : ''}>{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
                                                     <td className="py-2 px-2 max-w-[100px] truncate" title={listing.purchase_category && listing.purchase_category.length > 12 ? listing.purchase_category : ''}>{listing.purchase_category}</td>
                                                     <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
@@ -838,10 +889,10 @@ const Listings = () => {
                                     placeholder="Search listings..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                     }`}
                                 />
                             </div>
@@ -850,10 +901,10 @@ const Listings = () => {
                                 selectedCategory={purchaseCategoryFilter}
                                 onChange={handlePurchaseCategoryChange}
                                 className="w-full"
-                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                   darkMode
-                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                 }`}
                             />
 
@@ -872,10 +923,10 @@ const Listings = () => {
                                     placeholder="Min Price"
                                     value={minPriceFilter}
                                     onChange={handleMinPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                     }`}
                                 />
                             </div>
@@ -887,10 +938,10 @@ const Listings = () => {
                                     placeholder="Max Price"
                                     value={maxPriceFilter}
                                     onChange={handleMaxPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                     }`}
                                 />
                             </div>
@@ -934,10 +985,10 @@ const Listings = () => {
                                     selectedCategory={purchaseCategoryFilter}
                                     onChange={handlePurchaseCategoryChange}
                                     className="w-full"
-                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                       darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                     }`}
                                 />
 
@@ -956,10 +1007,10 @@ const Listings = () => {
                                         placeholder="Min Price"
                                         value={minPriceFilter}
                                         onChange={handleMinPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                         }`}
                                     />
                                 </div>
@@ -971,10 +1022,10 @@ const Listings = () => {
                                         placeholder="Max Price"
                                         value={maxPriceFilter}
                                         onChange={handleMaxPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                                           darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Added focus:ring-green-400
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" // Added focus:ring-green-600
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                                         }`}
                                     />
                                 </div>

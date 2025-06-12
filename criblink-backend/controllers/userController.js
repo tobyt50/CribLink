@@ -97,10 +97,18 @@ exports.signupUser = async (req, res) => {
             }
         });
     } catch (err) {
-        if (err.code === '23505' && err.constraint === 'users_email_key') {
-            return res.status(400).json({ message: 'Email already exists' });
+        if (err.code === '23505') {
+            if (err.constraint === 'users_email_key') {
+                return res.status(400).json({ message: 'This email is already registered.' });
+            }
+            if (err.constraint === 'users_pkey') {
+                return res.status(400).json({ message: 'A registration error occurred. Please try again or contact support if the problem persists.' });
+            }
+            // Add other unique constraints here if needed
+            // Example: if (err.constraint === 'users_username_key') { ... }
         }
-        res.status(500).json({ message: 'Registration failed', error: err.message });
+        console.error('Registration error:', err); // Log the full error for server-side debugging
+        res.status(500).json({ message: 'Registration failed unexpectedly.', error: err.message });
     }
 };
 

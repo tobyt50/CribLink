@@ -2,18 +2,40 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useMessage } from '../../context/MessageContext'; // Import useMessage hook
+import { useConfirmDialog } from '../../context/ConfirmDialogContext'; // Import useConfirmDialog hook
 
 const ListingCard = ({ listing, onAction }) => {
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
+  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
 
-  const handleAction = async (action) => {
+  const performAction = async (action) => {
     try {
       // Assuming onAction handles the API call and state update in the parent component
       // This card component just dispatches the action.
-      onAction(listing.id, action);
+      await onAction(listing.id, action);
+      showMessage(`Listing ${listing.title} successfully ${action}d!`, 'success');
     } catch (err) {
       console.error(`Failed to ${action} listing`, err);
+      let errorMessage = `Failed to ${action} listing. Please try again.`;
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
     }
+  };
+
+  const handleDeleteConfirmation = () => {
+    showConfirm({
+      title: "Confirm Deletion",
+      message: `Are you sure you want to remove the listing "${listing.title}"? This action cannot be undone.`,
+      onConfirm: () => performAction('remove'), // Call performAction if confirmed
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel"
+    });
   };
 
   return (
@@ -41,10 +63,10 @@ const ListingCard = ({ listing, onAction }) => {
           {listing.status}
         </span>
         <div className="flex gap-2">
-          <button onClick={() => handleAction('approve')} className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-800"}`}>Approve</button>
-          <button onClick={() => handleAction('reject')} className={`text-sm hover:underline ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}>Reject</button>
-          <button onClick={() => handleAction('feature')} className={`text-sm hover:underline ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-800"}`}>Feature</button>
-          <button onClick={() => handleAction('remove')} className={`text-sm hover:underline ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"}`}>Remove</button>
+          <button onClick={() => performAction('approve')} className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-800"}`}>Approve</button>
+          <button onClick={() => performAction('reject')} className={`text-sm hover:underline ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}>Reject</button>
+          <button onClick={() => performAction('feature')} className={`text-sm hover:underline ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-800"}`}>Feature</button>
+          <button onClick={handleDeleteConfirmation} className={`text-sm hover:underline ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"}`}>Remove</button>
         </div>
       </div>
     </motion.div>

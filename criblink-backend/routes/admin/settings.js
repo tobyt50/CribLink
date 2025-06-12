@@ -1,43 +1,26 @@
+// routes/admin/settings.js
 const express = require('express');
+const {
+    getAdminSettings,
+    updateAdminSettings,
+    clearApplicationCache,
+    backupDatabase,
+    viewErrorLogs
+} = require('../../controllers/settingsController'); // Path to your new settings controller
+const { authenticateToken, authorizeRoles } = require('../../middleware/authMiddleware'); // Your auth middleware
+
 const router = express.Router();
-const pool = require('../../db');
-const authenticate = require('../../middleware/authenticate');
-const authenticateAdmin = require('../../middleware/authenticateAdmin');
 
-// GET admin settings
-router.get('/', authenticate, authenticateAdmin, async(req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT * FROM admin_settings WHERE user_id = $1', [req.user.user_id]
-        );
+// Routes for Admin Settings
+router.route('/')
+    .get(authenticateToken, authorizeRoles('admin'), getAdminSettings)
+    .put(authenticateToken, authorizeRoles('admin'), updateAdminSettings);
 
-        res.json(result.rows[0] || {});
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
-    }
-});
+// Routes for System & Maintenance actions
+// Ensure these are correctly referenced as functions
+router.post('/clear-cache', authenticateToken, authorizeRoles('admin'), clearApplicationCache);
+router.post('/backup-database', authenticateToken, authorizeRoles('admin'), backupDatabase);
+router.get('/error-logs', authenticateToken, authorizeRoles('admin'), viewErrorLogs);
 
-// UPDATE admin settings
-router.put('/', authenticate, authenticateAdmin, async(req, res) => {
-    const { commission_rate, notifications_enabled } = req.body;
-
-    try {
-        await pool.query(
-            `
-      INSERT INTO admin_settings (user_id, commission_rate, notifications_enabled)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (user_id) DO UPDATE
-      SET commission_rate = EXCLUDED.commission_rate,
-          notifications_enabled = EXCLUDED.notifications_enabled
-      `, [req.user.user_id, commission_rate, notifications_enabled]
-        );
-
-        res.json({ message: 'Settings updated' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
-    }
-});
 
 module.exports = router;

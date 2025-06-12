@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, MapPin, Send, Loader, X } from "lucide-react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 const ContactUs = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [showToast, setShowToast] = useState(false);
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Use the showMessage function from MessageContext
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -19,6 +20,7 @@ const ContactUs = () => {
     setSending(true);
 
     try {
+      // Direct fetch call, AxiosErrorInterceptor does not apply here
       const response = await fetch("https://criblink-api.onrender.com/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,13 +30,14 @@ const ContactUs = () => {
       if (response.ok) {
         setSent(true);
         setForm({ name: "", email: "", message: "" });
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 4000);
+        showMessage('Message sent successfully!', 'success', 4000); // Display success toast
       } else {
-        throw new Error("Failed to send message");
+        const errorData = await response.json().catch(() => ({ message: "Failed to send message" }));
+        showMessage(errorData.message || "Failed to send message.", 'error'); // Display error toast
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      showMessage("An unexpected error occurred while sending your message.", 'error'); // Display generic error toast
     } finally {
       setSending(false);
     }
@@ -54,20 +57,7 @@ const ContactUs = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-8`}>
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg z-50 flex items-center gap-3"
-          >
-            <span>✅ Message sent successfully!</span>
-            <button onClick={() => setShowToast(false)}><X size={18} /></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Toast Notification - Removed as GlobalMessageToasts handles this */}
 
       <motion.div
         initial={{ opacity: 0, y: 40 }}

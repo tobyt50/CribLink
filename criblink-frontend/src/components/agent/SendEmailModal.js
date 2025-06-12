@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useMessage } from '../../context/MessageContext'; // Import useMessage hook
 
 const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
 
   if (!isOpen || !client) return null;
 
@@ -23,10 +25,18 @@ const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
           },
         }
       );
+      showMessage('Email sent successfully!', 'success', 3000); // Display success toast
       onSent();
       onClose();
     } catch (err) {
       console.error('Failed to send email:', err);
+      let errorMessage = 'Failed to send email. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error'); // Display error toast
     } finally {
       setSending(false);
     }

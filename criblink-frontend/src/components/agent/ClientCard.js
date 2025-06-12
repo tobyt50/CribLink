@@ -6,26 +6,58 @@ import {
   TrashIcon
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useMessage } from '../../context/MessageContext'; // Import useMessage hook
+import { useConfirmDialog } from '../../context/ConfirmDialogContext'; // Import useConfirmDialog hook
 
 const ClientCard = ({ client, onSendEmail, onRespondInquiry, onViewProfile, onRemove, onToggleStatus }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notes, setNotes] = useState(client.notes || '');
   const [status, setStatus] = useState(client.client_status || 'regular');
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
+  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
 
   useEffect(() => {
     setStatus(client.client_status || 'regular');
   }, [client.client_status]);
 
-  const toggleVip = () => {
+  const toggleVip = async () => {
     if (onToggleStatus) {
-      onToggleStatus();
+      try {
+        await onToggleStatus(); // Assuming onToggleStatus handles API call and potentially returns success
+        showMessage(`Client status updated to ${status === 'vip' ? 'Regular' : 'VIP'}.`, 'success');
+      } catch (error) {
+        showMessage('Failed to update client status. Please try again.', 'error');
+      }
     }
   };
 
   const saveNotes = () => {
     setIsEditingNotes(false);
     // Add API call here if needed
+    // Example:
+    // try {
+    //   await axios.put(`/api/clients/${client.user_id}/notes`, { notes });
+    //   showMessage('Notes saved successfully!', 'success');
+    // } catch (error) {
+    //   showMessage('Failed to save notes. Please try again.', 'error');
+    // }
+    showMessage('Notes saved locally (API call not implemented).', 'info'); // Placeholder
+  };
+
+  const handleRemoveClient = () => {
+    showConfirm({
+      title: "Remove Client",
+      message: `Are you sure you want to remove ${client.full_name} from your clients? This action cannot be undone.`,
+      onConfirm: () => {
+        if (onRemove) {
+          onRemove(); // Execute the actual remove logic from the parent
+          showMessage(`${client.full_name} has been removed.`, 'success');
+        }
+      },
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel"
+    });
   };
 
   return (
@@ -109,7 +141,7 @@ const ClientCard = ({ client, onSendEmail, onRespondInquiry, onViewProfile, onRe
           Respond
         </button>
         <button
-          onClick={onRemove}
+          onClick={handleRemoveClient} // Changed to call the new handleRemoveClient function
           className={`flex items-center gap-1 text-sm hover:text-red-700 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-500"}`}
           title="Remove client"
         >

@@ -20,6 +20,9 @@ const agentStatsRoutes = require('./routes/agentStatsRoutes');
 // Updated import path for staffPerformanceRoutes
 const agentPerformanceRoutes = require('./routes/admin/agentPerformanceRoutes');
 const favouritesRoutes = require('./routes/favouritesRoutes'); // Import the new favourites routes
+const adminSettingsRoutes = require('./routes/admin/settings'); // Import the new settings routes
+const agentSettingsRoutes = require('./routes/agentSettings'); // Import the new agent settings routes
+const clientSettingsRoutes = require('./routes/clientSettings'); // Import the new client settings routes
 
 require('dotenv').config();
 
@@ -42,6 +45,9 @@ app.use('/listings', listingsRoutes);
 // This means routes in staffPerformanceRoutes.js like '/performance' will be accessible at '/admin/staff/performance'
 app.use('/admin/agent', agentPerformanceRoutes);
 app.use('/favourites', favouritesRoutes); // Mount the new favourites routes
+app.use('/admin/settings', adminSettingsRoutes); // Mount the new admin settings routes
+app.use('/agent/settings', agentSettingsRoutes); // Mount the new agent settings routes
+app.use('/client/settings', clientSettingsRoutes); // Mount the new client settings routes
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

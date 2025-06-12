@@ -1,15 +1,18 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminSidebar from '../../components/admin/Sidebar'; // Adjust path if necessary
-import axios from 'axios';
+import AdminSidebar from '../../components/admin/Sidebar';
+import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon,
 } from '@heroicons/react/24/outline';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
-import API_BASE_URL from '../../config'; // Your API base URL
+import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, Plus, FileText } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
 // Reusable Dropdown component from Listings.js
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -117,36 +120,38 @@ const AgentPerformance = () => {
     const [performanceData, setPerformanceData] = useState([]);
     const [filteredPerformance, setFilteredPerformance] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortKey, setSortKey] = useState('full_name'); // Default sort key
-    const [sortDirection, setSortDirection] = useState('asc'); // Default sort direction
+    const [sortKey, setSortKey] = useState('full_name');
+    const [sortDirection, setSortDirection] = useState('asc');
     const [page, setPage] = useState(1);
     const [totalEntries, setTotalEntries] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
-    const limit = 10; // Items per page
+    const limit = 10;
     const navigate = useNavigate();
     const { darkMode } = useTheme();
+    const { showMessage } = useMessage();
+    const { showConfirm } = useConfirmDialog();
+
+    // Use the useSidebarState hook
+    const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+    const [activeSection, setActiveSection] = useState('agent-performance');
 
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
 
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [activeSection, setActiveSection] = useState('agent-performance'); // Set active section
-
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
 
-    useEffect(() => {
-        const handleResize = () => {
-            const mobile = window.innerWidth < 768;
-            setIsMobile(mobile);
-            setIsSidebarOpen(!mobile);
-        };
+    // No longer need this useEffect as useSidebarState handles it
+    // useEffect(() => {
+    //     const handleResize = () => {
+    //         const mobile = window.innerWidth < 768;
+    //         setIsMobile(mobile);
+    //         setIsSidebarOpen(!mobile);
+    //     };
 
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    //     window.addEventListener('resize', handleResize);
+    //     return () => window.removeEventListener('resize', handleResize);
+    // }, []);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -159,36 +164,40 @@ const AgentPerformance = () => {
     }, []);
 
     const fetchAgentPerformance = useCallback(async () => {
+        const params = new URLSearchParams();
+        if (searchTerm) {
+            params.append('search', searchTerm);
+        }
+        params.append('page', page);
+        params.append('limit', limit);
+
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         try {
-            const params = new URLSearchParams();
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-            params.append('page', page);
-            params.append('limit', limit);
-
-            const token = localStorage.getItem('token');
-            const headers = {};
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            // Updated API endpoint for agent performance to reflect /admin/agent/performance
-            const response = await axios.get(`${API_BASE_URL}/admin/agent/performance?${params.toString()}`, { headers });
+            const response = await axiosInstance.get(`${API_BASE_URL}/admin/agent/performance?${params.toString()}`, { headers });
 
             setPerformanceData(response.data.performance || []);
             setFilteredPerformance(response.data.performance || []);
             setTotalEntries(response.data.total || 0);
             setTotalPages(response.data.totalPages || 1);
-
-        } catch (err) {
-            console.error('Error fetching agent performance:', err.response?.data || err.message);
+        } catch (error) {
+            let errorMessage = 'Failed to fetch agent performance data. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
             setPerformanceData([]);
             setFilteredPerformance([]);
             setTotalEntries(0);
             setTotalPages(1);
         }
-    }, [searchTerm, page, limit]);
+    }, [searchTerm, page, limit, showMessage]);
 
     useEffect(() => {
         fetchAgentPerformance();
@@ -211,7 +220,6 @@ const AgentPerformance = () => {
             } else if (typeA === 'number' && typeB === 'number') {
                 return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
             } else {
-                // Fallback for mixed types or other cases (e.g., boolean, objects)
                 if (aValue < bValue) {
                     return sortDirection === 'asc' ? -1 : 1;
                 } else if (aValue > bValue) {
@@ -228,69 +236,95 @@ const AgentPerformance = () => {
         filterAndSortPerformance();
     }, [performanceData, sortKey, sortDirection, filterAndSortPerformance]);
 
-    const handleDeletePerformance = async (userId) => {
+    const performDeletePerformance = async (userId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            console.error('Authentication token not found. Please sign in.');
+            showMessage('Authentication token not found. Please sign in.', 'error');
             return;
         }
 
         try {
-            // Updated API endpoint for deleting agent performance entry
-            await axios.delete(`${API_BASE_URL}/admin/agent/performance/${userId}`, {
+            await axiosInstance.delete(`${API_BASE_URL}/admin/agent/performance/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            showMessage('Agent performance entry deleted successfully!', 'success');
             fetchAgentPerformance();
         } catch (error) {
-            console.error('Error deleting agent performance entry:', error.response?.data || error.message);
+            let errorMessage = 'Failed to delete agent performance entry. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
         }
+    };
+
+    const handleDeletePerformance = (userId) => {
+        showConfirm({
+            title: "Delete Agent Performance Entry",
+            message: `Are you sure you want to delete the performance entry for user ID ${userId}? This action cannot be undone.`,
+            onConfirm: () => performDeletePerformance(userId),
+            confirmLabel: "Delete",
+            cancelLabel: "Cancel"
+        });
     };
 
     const handleExportCsv = async (scope) => {
         const dataToExport = scope === 'current' ? filteredPerformance : performanceData;
 
         if (dataToExport.length === 0) {
-            console.warn(`No agent performance data found for ${scope} export.`);
+            showMessage(`No agent performance data found for ${scope} export.`, 'info');
             setIsExportDropdownOpen(false);
             return;
         }
 
-        // Define headers based on your agent_performance table
         const headers = [
             'user_id', 'full_name', 'deals_closed', 'revenue', 'avg_rating',
             'properties_assigned', 'client_feedback', 'region', 'commission_earned'
         ];
 
-        const csvRows = dataToExport.map(p => [
-            p.user_id,
-            p.full_name,
-            p.deals_closed,
-            p.revenue,
-            p.avg_rating,
-            p.properties_assigned,
-            p.client_feedback ? `"${String(p.client_feedback).replace(/"/g, '""')}"` : 'N/A', // Handle quotes in text fields
-            p.region,
-            p.commission_earned
-        ].map(field => `"${String(field).replace(/"/g, '""')}"`)); // Ensure all fields are quoted and escaped
+        try {
+            const csvRows = dataToExport.map(p => [
+                p.user_id,
+                p.full_name,
+                p.deals_closed,
+                p.revenue,
+                p.avg_rating,
+                p.properties_assigned,
+                p.client_feedback ? `"${String(p.client_feedback).replace(/"/g, '""')}"` : 'N/A',
+                p.region,
+                p.commission_earned
+            ].map(field => `"${String(field).replace(/"/g, '""')}"`));
 
-        const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'agent_performance.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setIsExportDropdownOpen(false);
+            const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'agent_performance.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setIsExportDropdownOpen(false);
+            showMessage('Agent performance data exported successfully!', 'success');
+        } catch (error) {
+            let errorMessage = 'Failed to export agent performance data to CSV. Please try again.';
+            if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            showMessage(errorMessage, 'error');
+        }
     };
 
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
-        setPage(1); // Reset page on search
+        setPage(1);
     };
 
     const handleSortClick = (key) => {
@@ -336,7 +370,7 @@ const AgentPerformance = () => {
             {isMobile && (
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
-                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
                     initial={false}
                     animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
                     transition={{ duration: 0.3 }}
@@ -382,13 +416,18 @@ const AgentPerformance = () => {
                 </div>
 
                 <main className="space-y-6">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        // Conditionally apply classes based on mobile view
+                        className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                    >
                         {isMobile && (
                             <div className="flex justify-between items-center mb-4">
-                                {/* Add New button (if applicable for agent performance) */}
                                 <button
                                     className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/admin/agent/performance/add')} // Updated: Correct path for adding new entry
+                                    onClick={() => navigate('/admin/agent/performance/add')}
                                     title="Add New Performance Entry"
                                 >
                                     <Plus size={20} />
@@ -439,7 +478,7 @@ const AgentPerformance = () => {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/admin/agent/performance/add')} // Updated: Correct path for adding new entry
+                                        onClick={() => navigate('/admin/agent/performance/add')}
                                     >
                                         +Add Entry
                                     </button>
@@ -531,7 +570,7 @@ const AgentPerformance = () => {
                                                     <div className="flex items-center gap-2">
                                                         <button
                                                             className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                            onClick={() => navigate(`/admin/agent/performance/edit/${entry.user_id}`)} // Updated: Correct path for editing
+                                                            onClick={() => navigate(`/admin/agent/performance/edit/${entry.user_id}`)}
                                                             title="Edit Entry"
                                                         >
                                                             <PencilIcon className="h-4 w-4 inline" />
@@ -606,7 +645,6 @@ const AgentPerformance = () => {
                                     }`}
                                 />
                             </div>
-                            {/* Add more filter options here if needed, similar to Listings.js */}
                         </div>
 
                         <button
@@ -644,7 +682,6 @@ const AgentPerformance = () => {
                             </div>
 
                             <div className="space-y-4">
-                                {/* Add more filter options here if needed, similar to Listings.js */}
                             </div>
 
                             <button

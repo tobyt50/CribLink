@@ -1,12 +1,14 @@
 // src/pages/AddListing.js
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use axiosInstance
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion'; // Import AnimatePresence
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import API_BASE_URL from '../config'; // Assuming API_BASE_URL is defined here
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
 import { ChevronDown } from 'lucide-react'; // Import ChevronDown icon for the dropdown
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
+// Removed: import { useApiErrorHandler } from '../utils/handleApiError'; // No longer needed
 
 // Reusable Dropdown Component (embedded directly here for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -115,7 +117,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 
-const App = () => {
+const AddListing = () => { // Renamed from App to AddListing for clarity
   const navigate = useNavigate(); // Initialize useNavigate
   const [purchaseCategory, setPurchaseCategory] = useState('Rent');
   const [title, setTitle] = useState('');
@@ -141,6 +143,8 @@ const App = () => {
   const [amenities, setAmenities] = useState('');
 
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
+  // Removed: const handleApiError = useApiErrorHandler(); // No longer needed
 
   // Combine all images for easier handling
   const allImages = [...images, ...imageURLs];
@@ -193,15 +197,11 @@ const App = () => {
     // If no thumbnail is set, set the first newly added image as thumbnail
     if (thumbnailIndex === null && allImages.length === 0 && acceptedFiles.length > 0) {
       setThumbnailIndex(0); // Index in the combined array
-    } else if (thumbnailIndex !== null && allImages.length > 0 && acceptedFiles.length > 0) {
-      // If thumbnail was set before adding new files, its index might shift
-      // Need to recalculate thumbnail index based on new images added before it
-      // For simplicity, we'll just keep the current thumbnail index if it's valid
-      // A more robust solution would involve finding the old thumbnail in the new array
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: 'image/*' });
+  // Updated accept syntax for useDropzone
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } });
 
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim()) {
@@ -211,6 +211,8 @@ const App = () => {
       if (thumbnailIndex === null && allImages.length === 0 && imageURLs.length === 0) {
         setThumbnailIndex(images.length); // Index in the combined array
       }
+    } else {
+      showMessage('Please enter a valid image URL.', 'error');
     }
   };
 
@@ -299,19 +301,19 @@ const App = () => {
 
     // Validate required fields
     if (!purchaseCategory || !title || !location || !stateValue || !propertyType || !bedrooms || !bathrooms || !price) {
-      console.error('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Bedrooms, Bathrooms, Price).');
+      showMessage('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Bedrooms, Bathrooms, Price).', 'error');
       return;
     }
 
     // Validate at least two images are uploaded
     if (allImagesCombined.length < 2) {
-      console.error('Please upload at least two images.');
+      showMessage('Please upload at least two images for your listing.', 'error');
       return;
     }
 
     // Ensure a thumbnail is selected
     if (thumbnailIndex === null || thumbnailIndex >= allImagesCombined.length) {
-      console.error('Please set a thumbnail image.');
+      showMessage('Please set a thumbnail image for your listing.', 'error');
       return;
     }
 
@@ -361,23 +363,20 @@ const App = () => {
     const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
 
     if (!token) {
-      console.error('Authentication token not found. Please sign in.');
-      // Optionally navigate to login page
-      // navigate('/signin');
+      showMessage('Authentication token not found. Please sign in to add a listing.', 'error');
+      navigate('/signin'); // Optionally navigate to login page
       return;
     }
 
-
     try {
-      // Include the Authorization header with the Bearer token
-      await axios.post(`${API_BASE_URL}/listings`, formData, {
+      await axiosInstance.post(`${API_BASE_URL}/listings`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data', // Important for file uploads
           'Authorization': `Bearer ${token}` // Include the JWT token
         }
       });
 
-      console.log('Listing added successfully!');
+      showMessage('Listing added successfully!', 'success', 3000); // Show success message
       // Reset form fields after successful submission
       setPurchaseCategory('Rent');
       setTitle('');
@@ -400,14 +399,15 @@ const App = () => {
       setParking('');
       setAmenities('');
       // Optionally navigate to the listings page
-      // navigate('/admin/listings');
-
+      navigate('/admin/listings');
     } catch (error) {
-      console.error('Error adding listing:', error.response?.data || error.message);
-      // Use a custom message box instead of alert
-      // For simplicity, I'll use a console log here, but in a real app,
-      // you'd render a modal or a toast notification.
-      console.error('Failed to add listing.');
+      let errorMessage = 'Failed to add listing. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -446,7 +446,7 @@ const App = () => {
           animate={{ scale: 1 }}
           transition={{ duration: 0.4 }}
         >
-          Add Property Listing
+          Add Listing
         </motion.h2>
 
         {/* Form Fields */}
@@ -700,4 +700,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default AddListing; // Export as AddListing

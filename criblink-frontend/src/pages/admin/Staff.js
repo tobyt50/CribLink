@@ -2,14 +2,18 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { Menu, X, FileText } from 'lucide-react'; // Import Menu, X, and FileText icons
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import { Menu, X, FileText } from 'lucide-react';
+import { useTheme } from '../../layouts/AppShell';
+import axiosInstance from '../../api/axiosInstance';
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
 // Reusable Dropdown Component (embedded directly in Staff.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -114,12 +118,13 @@ const Staff = () => {
   const [sortDirection, setSortDirection] = useState('desc');
   const [page, setPage] = useState(1);
   const [totalStaff, setTotalStaff] = useState(0);
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog();
 
-  // State for sidebar visibility and collapse, consistent with Dashboard.js and Listings.js
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  // State for active section in the sidebar, consistent with Dashboard.js and Listings.js
-  const [activeSection, setActiveSection] = useState('staff'); // Set default active section for Staff page
+  // Use the useSidebarState hook
+  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+  const [activeSection, setActiveSection] = useState('staff');
 
   const [actionSelections, setActionSelections] = useState({});
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
@@ -127,37 +132,39 @@ const Staff = () => {
   const exportDropdownRef = useRef(null);
   const limit = 10;
 
-  // State for mobile view and sidebar open/close, consistent with Inquiries.js
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-
   const fetchStaff = async () => {
     const params = new URLSearchParams({ search, page, limit, sort: sortKey, direction: sortDirection });
     try {
-      const res = await fetch(`http://localhost:5000/admin/staff?${params.toString()}`);
-      const data = await res.json();
-      setStaffList(data.staff);
-      setTotalStaff(data.total);
-    } catch (err) {
-      console.error('Failed to fetch staff:', err);
-      setStaffList([]); // Ensure staffList is empty on error
-      setTotalStaff(0); // Ensure totalStaff is 0 on error
+        const res = await axiosInstance.get(`http://localhost:5000/admin/staff?${params.toString()}`);
+        const data = res.data;
+        setStaffList(data.staff);
+        setTotalStaff(data.total);
+    } catch (error) {
+        let errorMessage = 'Failed to fetch staff data. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error');
+        setStaffList([]);
+        setTotalStaff(0);
     }
   };
 
-  useEffect(() => { fetchStaff(); }, [search, page, sortKey, sortDirection]);
+  useEffect(() => { fetchStaff(); }, [search, page, sortKey, sortDirection, showMessage]);
 
-  // Handle window resize for mobile view, consistent with Inquiries.js
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Close sidebar on mobile, open on desktop
-    };
+  // Removed the local useEffect for window resize, as useSidebarState handles it.
+  // useEffect(() => {
+  //   const handleResize = () => {
+  //     const mobile = window.innerWidth < 768;
+  //     setIsMobile(mobile);
+  //     setIsSidebarOpen(!mobile);
+  //   };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  //   window.addEventListener('resize', handleResize);
+  //   return () => window.removeEventListener('resize', handleResize);
+  // }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -179,85 +186,178 @@ const Staff = () => {
     setPage(1);
   };
 
-  // Render sort icon based on current sort key and direction, consistent with Inquiries.js
   const renderSortIcon = (key) =>
     sortKey === key ? (
       sortDirection === 'asc' ? (
-        <ArrowUpIcon className={`h-4 w-4 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
+        <ArrowUpIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       ) : (
-        <ArrowDownIcon className={`h-4 w-4 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
+        <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-green-400" : "text-green-700"}`} />
       )
     ) : (
-      <ArrowDownIcon className={`h-4 w-4 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+      <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
     );
 
   const handleExportCsv = async (scope) => {
     if ((scope === 'current' && staffList.length === 0) || (scope === 'all' && totalStaff === 0)) {
-      // Replaced alert with a custom message or modal if needed in a real app
-      console.log(`No staff data found for ${scope} export.`);
+      showMessage(`No staff data found for ${scope} export.`, 'info');
       setIsExportDropdownOpen(false);
       return;
     }
     let data = staffList;
-    if (scope === 'all') {
-      const params = new URLSearchParams({ search, sort: sortKey, direction: sortDirection });
-      try {
-        const res = await fetch(`http://localhost:5000/admin/staff?${params.toString()}`);
-        const fullData = await res.json();
-        data = fullData.staff || fullData;
-      } catch (err) {
-        console.error('Export fetch error:', err);
-        // Replaced alert with a custom message or modal if needed in a real app
-        return;
-      }
+    try {
+        if (scope === 'all') {
+          const params = new URLSearchParams({ search, sort: sortKey, direction: sortDirection });
+          const res = await axiosInstance.get(`http://localhost:5000/admin/staff?${params.toString()}`);
+          const fullData = res.data;
+          data = fullData.staff || fullData;
+        }
+
+        const headers = ['Staff ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID'];
+        const csvRows = data.map(s => [
+          s.employee_id, s.full_name, s.role, s.department, s.email, s.phone,
+          formatDate(s.start_date), s.status || 'N/A', s.user_id || 'N/A'
+        ].map(f => `"${String(f).replace(/"/g, '""')}"`));
+
+        const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'staff_directory.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setIsExportDropdownOpen(false);
+        showMessage('Staff data exported successfully!', 'success');
+    } catch (error) {
+        let errorMessage = 'Failed to export staff to CSV. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error');
     }
-
-    const headers = ['Staff ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID'];
-    const csvRows = data.map(s => [
-      s.employee_id, s.full_name, s.role, s.department, s.email, s.phone,
-      formatDate(s.start_date), s.status || 'N/A', s.user_id || 'N/A'
-    ].map(f => `"${String(f).replace(/"/g, '""')}"`));
-
-    const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'staff_directory.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setIsExportDropdownOpen(false);
   };
 
-  const handleDelete = async (id) => {
-    // Replaced window.confirm with a custom message or modal if needed in a real app
-    console.log('Delete functionality not yet implemented.');
+  const performDelete = async (id) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage('Authentication token not found. Please sign in.', 'error');
+      return;
+    }
+    try {
+        await axiosInstance.delete(`http://localhost:5000/admin/staff/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        showMessage(`Staff member ${id} deleted successfully.`, 'success');
+        fetchStaff();
+    } catch (error) {
+        let errorMessage = 'Failed to delete staff member. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error');
+    }
   };
 
-  const handleStatusToggle = async (id, status) => {
+  const handleDelete = (staffId) => {
+    showConfirm({
+      title: "Delete Staff Member",
+      message: `Are you sure you want to permanently delete staff member ${staffId}? This action cannot be undone.`,
+      onConfirm: () => performDelete(staffId),
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel"
+    });
+  };
+
+  const performStatusToggle = async (id, status) => {
     const newStatus = status === 'active' ? 'suspended' : 'active';
-    // Replaced alert with a custom message or modal if needed in a real app
-    console.log(`Status toggle to: ${newStatus} not yet implemented.`);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage('Authentication token not found. Please sign in.', 'error');
+      return;
+    }
+    try {
+        await axiosInstance.put(`http://localhost:5000/admin/staff/${id}/status`, { status: newStatus }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        showMessage(`Staff member ${id} status changed to ${newStatus}.`, 'success');
+        fetchStaff();
+    } catch (error) {
+        let errorMessage = `Failed to change status for staff member ${id}. Please try again.`;
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error');
+    }
   };
 
-  const handleResetPassword = async (id) => {
-    // Replaced alert with a custom message or modal if needed in a real app
-    console.log(`Reset password for ${id} not yet implemented.`);
+  const handleStatusToggle = (staff) => {
+    const actionText = staff.status === 'active' ? 'suspend' : 'activate';
+    const message = staff.status === 'active'
+      ? `Are you sure you want to suspend staff member ${staff.full_name}? They will lose access to the system.`
+      : `Are you sure you want to activate staff member ${staff.full_name}? They will regain access to the system.`;
+    showConfirm({
+      title: `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Staff Member`,
+      message: message,
+      onConfirm: () => performStatusToggle(staff.employee_id, staff.status),
+      confirmLabel: actionText.charAt(0).toUpperCase() + actionText.slice(1),
+      cancelLabel: "Cancel"
+    });
   };
+
+  const performResetPassword = async (id) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage('Authentication token not found. Please sign in.', 'error');
+      return;
+    }
+    try {
+        await axiosInstance.post(`http://localhost:5000/admin/staff/${id}/reset-password`, {}, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        showMessage(`Password reset link sent for staff member ${id}.`, 'success');
+    } catch (error) {
+        let errorMessage = `Failed to send password reset link for staff member ${id}. Please try again.`;
+        if (error.response && error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        showMessage(errorMessage, 'error');
+    }
+  };
+
+  const handleResetPassword = (staffId) => {
+    showConfirm({
+      title: "Reset Password",
+      message: `Are you sure you want to send a password reset link to staff member ${staffId}?`,
+      onConfirm: () => performResetPassword(staffId),
+      confirmLabel: "Send Link",
+      cancelLabel: "Cancel"
+    });
+  };
+
 
   const handleActionApply = (staff) => {
     const action = actionSelections[staff.employee_id];
-    if (!action) return;
-    if (action === 'suspend' || action === 'activate') handleStatusToggle(staff.employee_id, staff.status);
+    if (!action) {
+        showMessage('Please select an action to apply.', 'info');
+        return;
+    }
+    if (action === 'suspend' || action === 'activate') handleStatusToggle(staff);
     else if (action === 'delete') handleDelete(staff.employee_id);
     else if (action === 'reset-password') handleResetPassword(staff.employee_id);
     setActionSelections(prev => ({ ...prev, [staff.employee_id]: '' }));
   };
 
   const totalPages = Math.ceil(totalStaff / limit);
-  // Adjust contentShift based on isCollapsed state, consistent with Inquiries.js
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
   const formatDate = (iso) => {
@@ -267,11 +367,10 @@ const Staff = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {/* Mobile Sidebar Toggle - consistent with Inquiries.js */}
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -290,38 +389,38 @@ const Staff = () => {
         </motion.button>
       )}
 
-      {/* AdminSidebar now receives collapsed, setCollapsed, activeSection, setActiveSection, isMobile, isSidebarOpen, setIsSidebarOpen */}
       <AdminSidebar
-        collapsed={isMobile ? false : isCollapsed} // Sidebar is never collapsed in mobile view
-        setCollapsed={isMobile ? () => {} : setIsCollapsed} // Disable setCollapsed on mobile
+        collapsed={isMobile ? false : isCollapsed}
+        setCollapsed={isMobile ? () => {} : setIsCollapsed}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
-        isMobile={isMobile} // Pass isMobile prop
-        isSidebarOpen={isSidebarOpen} // Pass isSidebarOpen prop
-        setIsSidebarOpen={setIsSidebarOpen} // Pass setIsSidebarOpen prop
+        isMobile={isMobile}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
       <motion.div
-        key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+        key={isMobile ? 'mobile' : 'desktop'}
         animate={{ marginLeft: contentShift }}
         transition={{ duration: 0.3 }}
         initial={false}
-        className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0" // Added overflow-auto and min-w-0
-        style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+        className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+        style={{ minWidth: `calc(100% - ${contentShift}px)` }}
       >
-        {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
           <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Staff Directory</h1>
         </div>
-        {/* Desktop-only centered title, consistent with Dashboard.js and Listings.js */}
         <div className="hidden md:block mb-6">
-          {/* Centered heading for desktop */}
           <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Staff Directory</h1>
         </div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-          {/* Mobile Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          // Conditionally apply classes based on mobile view
+          className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+        >
           {isMobile && (
             <div className="flex justify-between items-center mb-4">
-              {/* Always open Search Bar for Mobile */}
               <div className={`flex items-center flex-grow rounded-xl shadow-sm border overflow-hidden mr-2 ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}>
                 <input
                   type="text"
@@ -332,11 +431,10 @@ const Staff = () => {
                 />
               </div>
 
-              {/* Export Dropdown for Mobile */}
               <div className="relative inline-block text-left" ref={exportDropdownRef}>
                 <button
                   onClick={() => setIsExportDropdownOpen(p => !p)}
-                  className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md" // Added h-10 w-10 for height
+                  className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md"
                   title="Export"
                 >
                   <FileText size={20} />
@@ -353,7 +451,6 @@ const Staff = () => {
             </div>
           )}
 
-          {/* Desktop Filters and Controls */}
           {!isMobile && (
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`} />
@@ -372,9 +469,8 @@ const Staff = () => {
               </div>
             </div>
           )}
-          {/* Table container with horizontal scroll - consistent with Inquiries.js */}
           <div className="overflow-x-auto">
-            <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Added min-w-max */}
+            <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               <thead>
                 <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                   {["employee_id", "full_name", "role", "department", "email", "phone", "start_date", "status"].map(key => (
@@ -384,20 +480,19 @@ const Staff = () => {
                       className={`py-2 px-2 cursor-pointer select-none ${
                         sortKey === key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''
                       }`}
-                      // Set fixed widths for columns for better mobile formatting
                       style={{
                         width:
                           key === 'employee_id' ? '90px' :
                           key === 'full_name' ? '120px' :
                           key === 'role' ? '120px' :
-                          key === 'department' ? '90px' : // Further reduced width for department
+                          key === 'department' ? '90px' :
                           key === 'email' ? '160px' :
                           key === 'phone' ? '120px' :
                           key === 'start_date' ? '120px' :
                           key === 'status' ? '80px' : 'auto'
                       }}
                     >
-                      <div className="flex items-center gap-1"> {/* Changed gap to 1 */}
+                      <div className="flex items-center gap-1">
                         <span>
                           {key === 'employee_id' ? 'Staff ID' : key === 'department' ? 'Dept.' : key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </span>
@@ -408,14 +503,14 @@ const Staff = () => {
                   <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '150px' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}> {/* Added divide-y and divide-gray-200 */}
+              <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                 {staffList.length > 0 ? (
                   staffList.map(staff => (
-                    <tr key={staff.employee_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}> {/* Added max-w-full break-words */}
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.employee_id && staff.employee_id.length > 10 ? staff.employee_id : ''}>{staff.employee_id}</td> {/* Added max-w and truncate */}
+                    <tr key={staff.employee_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.employee_id && staff.employee_id.length > 10 ? staff.employee_id : ''}>{staff.employee_id}</td>
                       <td className="py-2 px-2 max-w-[120px] truncate" title={staff.full_name && staff.full_name.length > 15 ? staff.full_name : ''}>{staff.full_name}</td>
                       <td className="py-2 px-2 max-w-[120px] truncate" title={staff.role && staff.role.length > 15 ? staff.role : ''}>{staff.role}</td>
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.department && staff.department.length > 10 ? staff.department : ''}>{staff.department}</td> {/* Reduced max-w for department and adjusted truncation condition */}
+                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.department && staff.department.length > 10 ? staff.department : ''}>{staff.department}</td>
                       <td className="py-2 px-2 max-w-[160px] truncate" title={staff.email && staff.email.length > 20 ? staff.email : ''}>{staff.email}</td>
                       <td className="py-2 px-2 max-w-[120px] truncate" title={staff.phone && staff.phone.length > 15 ? staff.phone : ''}>{staff.phone}</td>
                       <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(staff.start_date) && formatDate(staff.start_date).length > 15 ? formatDate(staff.start_date) : ''}>{formatDate(staff.start_date)}</td>
@@ -423,8 +518,8 @@ const Staff = () => {
                           staff.status === 'active'
                             ? 'text-green-600'
                             : 'text-red-600'
-                        }`} title={staff.status && staff.status.length > 10 ? staff.status : ''}>{staff.status || 'N/A'}</td> {/* Added styling for status */}
-                      <td className="py-2 px-2 space-x-2 max-w-[150px]"> {/* Adjusted max-w */}
+                        }`} title={staff.status && staff.status.length > 10 ? staff.status : ''}>{staff.status || 'N/A'}</td>
+                      <td className="py-2 px-2 space-x-2 max-w-[150px]">
                         <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
                           <Dropdown
                             placeholder="Select Action"
@@ -445,7 +540,7 @@ const Staff = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}> {/* Adjusted colSpan */}
+                    <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       No staff members found.
                     </td>
                   </tr>
@@ -454,7 +549,6 @@ const Staff = () => {
             </table>
           </div>
 
-          {/* Pagination - consistent with Users.js */}
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button
               onClick={() => setPage((p) => Math.max(p - 1, 1))}

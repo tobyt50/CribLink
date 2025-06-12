@@ -1,17 +1,21 @@
 // Listings.js (Agent View)
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AgentSidebar from '../../components/agent/Sidebar'; // Changed to AgentSidebar
+import AgentSidebar from '../../components/agent/Sidebar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axios from 'axios';
-// Import necessary icons
+// Import necessary icons from @heroicons/react/24/outline
 import { TableCellsIcon, Squares2X2Icon, ArrowUpIcon, ArrowDownIcon, TrashIcon, PencilIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../../config';
-import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter'; // Correctly importing PurchaseCategoryFilter
-import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react'; // Corrected import statement for lucide-react
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+import PurchaseCategoryFilter from '../../components/PurchaseCategoryFilter';
+// Corrected import statement for lucide-react icons
+import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react';
+import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
+import { useConfirmDialog } from '../../context/ConfirmDialogContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the useSidebarState hook
 
 // Reusable Dropdown Component (embedded directly in Listings.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -70,8 +74,9 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"}`}
+                // Adjusted height to be consistent with other buttons/inputs (h-10)
+                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
             >
                 {/* Added overflow-hidden and truncate to prevent text wrapping */}
                 <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
@@ -120,8 +125,8 @@ const Listings = () => {
     const [listings, setListings] = useState([]); // Raw listings from API (paginated)
     const [filteredAndSortedListings, setFilteredAndSortedListings] = useState([]); // For client-side sorting only
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all'); // 'all' means no status filter applied by frontend
-    const [viewMode, setViewMode] = useState('simple'); // 'simple' or 'graphical'
+    // Initialize viewMode from localStorage, default to 'simple' (table view)
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
     const [purchaseCategoryFilter, setPurchaseCategoryFilter] = useState('');
@@ -133,49 +138,39 @@ const Listings = () => {
     const limit = 10; // Items per page, sent to backend for pagination
     const navigate = useNavigate();
     const { darkMode } = useTheme(); // Use the dark mode context
+    const { showMessage } = useMessage(); // Initialize useMessage
+    const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
+
+    // Use the useSidebarState hook for mobile/sidebar state
+    const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+    // State for active section in the sidebar
+    const [activeSection, setActiveSection] = useState('listings');
 
     // State and ref for export dropdown
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
-
-    // State for sidebar visibility and collapse
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    // State for active section in the sidebar
-    const [activeSection, setActiveSection] = useState('listings');
-
-    // State to hold the signed-in agent's ID
-    const [agentId, setAgentId] = useState(null);
-
-    const location = useLocation();
-
-    // State for mobile view and sidebar open/close, consistent with Inquiries.js
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
 
     // State for mobile filter modal
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     // State for desktop filter modal
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
 
+    // State to hold the signed-in agent's ID
+    const [agentId, setAgentId] = useState(null);
+
+    const location = useLocation();
 
     // Effect to set initial status filter from location state (e.g., from dashboard links)
+    const [statusFilter, setStatusFilter] = useState(() => {
+        return location.state?.statusFilter || 'all';
+    });
+
     useEffect(() => {
-        if (location.state?.statusFilter) {
+        if (location.state?.statusFilter && location.state.statusFilter !== statusFilter) {
             setStatusFilter(location.state.statusFilter);
+            setPage(1);
         }
-    }, [location.state]);
-
-    // Effect to handle window resize for mobile responsiveness, consistent with Inquiries.js
-    useEffect(() => {
-        const handleResize = () => {
-            const mobile = window.innerWidth < 768;
-            setIsMobile(mobile);
-            setIsSidebarOpen(!mobile); // Close sidebar on mobile, open on desktop
-        };
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [location.state?.statusFilter, statusFilter]);
 
     // Effect to close export dropdown when clicking outside
     useEffect(() => {
@@ -195,6 +190,7 @@ const Listings = () => {
                 const token = localStorage.getItem('token'); // Assuming token is in local storage
                 if (!token) {
                     console.error("Authentication token not found. Please sign in.");
+                    showMessage('Authentication required. Please sign in.', 'error');
                     navigate('/signin'); // Redirect to login if no token
                     return;
                 }
@@ -205,10 +201,12 @@ const Listings = () => {
                     setAgentId(data.user_id);
                 } else {
                     console.error("Agent profile fetched, but user_id not found.");
+                    showMessage('User profile incomplete. Please sign in again.', 'error');
                     navigate('/signin'); // Redirect if user_id is missing
                 }
             } catch (err) {
                 console.error("Error fetching agent profile:", err.response?.data || err.message);
+                showMessage('Failed to fetch agent profile. Please try again.', 'error');
                 // Handle authentication errors (e.g., expired token)
                 if (err.response && err.response.status === 401) {
                     navigate('/signin');
@@ -216,7 +214,7 @@ const Listings = () => {
             }
         };
         fetchAgentProfile();
-    }, [navigate]); // navigate is a dependency because it's used inside the effect
+    }, [navigate, showMessage]); // navigate and showMessage are dependencies because they're used inside the effect
 
 
     // Fetch listings function - now sends all filters and pagination to backend
@@ -276,6 +274,7 @@ const Listings = () => {
 
         } catch (err) {
             console.error('Error fetching listings:', err.response?.data || err.message);
+            showMessage('Failed to fetch listings. Please try again.', 'error');
             setListings([]);
             setFilteredAndSortedListings([]); // Clear sorted listings on error
             setTotalListings(0);
@@ -285,7 +284,7 @@ const Listings = () => {
                 navigate('/signin');
             }
         }
-    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, agentId, navigate]); // All filters, pagination, and agentId dependencies
+    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, agentId, navigate, showMessage]); // All filters, pagination, and agentId dependencies
 
     // Effect to fetch listings whenever relevant states change
     useEffect(() => {
@@ -352,96 +351,136 @@ const Listings = () => {
 
     // Function to handle approving a listing (status becomes 'Available')
     const handleApproveListing = async (listingId) => {
-        console.log(`Confirming approval for listing ${listingId}`);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Authentication token not found. Please sign in.');
-            return;
-        }
-        try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Listing approved successfully!');
-            fetchListings(); // Refresh the list
-        } catch (error) {
-            console.error('Error approving listing:', error.response?.data || error.message);
-        }
+        showConfirm({
+            title: "Approve Listing",
+            message: "Are you sure you want to approve this listing and make it available?",
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    showMessage('Authentication token not found. Please sign in.', 'error');
+                    return;
+                }
+                try {
+                    await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    showMessage('Listing approved successfully!', 'success');
+                    fetchListings(); // Refresh the list
+                } catch (error) {
+                    console.error('Error approving listing:', error.response?.data || error.message);
+                    showMessage('Failed to approve listing. Please try again.', 'error');
+                }
+            },
+            confirmLabel: "Approve",
+            cancelLabel: "Cancel"
+        });
     };
 
     // Function to handle rejecting a listing (status becomes 'rejected')
     const handleRejectListing = async (listingId) => {
-        console.log(`Confirming rejection for listing ${listingId}`);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Authentication token not found. Please sign in.');
-            return;
-        }
-        try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Listing rejected successfully!');
-            fetchListings(); // Refresh the list
-        } catch (error) {
-            console.error('Error rejecting listing:', error.response?.data || error.message);
-        }
+        showConfirm({
+            title: "Reject Listing",
+            message: "Are you sure you want to reject this listing?",
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    showMessage('Authentication token not found. Please sign in.', 'error');
+                    return;
+                }
+                try {
+                    await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'rejected' }, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    showMessage('Listing rejected successfully!', 'success');
+                    fetchListings(); // Refresh the list
+                } catch (error) {
+                    console.error('Error rejecting listing:', error.response?.data || error.message);
+                    showMessage('Failed to reject listing. Please try again.', 'error');
+                }
+            },
+            confirmLabel: "Reject",
+            cancelLabel: "Cancel"
+        });
     };
 
     // Function to handle marking an 'under offer' listing as 'sold' (completed)
     const handleMarkAsSold = async (listingId) => {
-        console.log(`Confirming mark as sold for listing ${listingId}`);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Authentication token not found. Please sign in.');
-            return;
-        }
-        try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Listing marked as Sold successfully!');
-            fetchListings(); // Refresh the list
-        } catch (error) {
-            console.error('Error marking listing as sold:', error.response?.data || error.message);
-        }
+        showConfirm({
+            title: "Mark as Sold",
+            message: "Are you sure you want to mark this listing as 'Sold'?",
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    showMessage('Authentication token not found. Please sign in.', 'error');
+                    return;
+                }
+                try {
+                    await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Sold' }, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    showMessage('Listing marked as Sold successfully!', 'success');
+                    fetchListings(); // Refresh the list
+                } catch (error) {
+                    console.error('Error marking listing as sold:', error.response?.data || error.message);
+                    showMessage('Failed to mark listing as sold. Please try again.', 'error');
+                }
+            },
+            confirmLabel: "Mark Sold",
+            cancelLabel: "Cancel"
+        });
     };
 
     // Function to handle marking an 'under offer' listing as 'available' (failed)
     const handleMarkAsFailed = async (listingId) => {
-        console.log(`Confirming mark as failed for listing ${listingId}`);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Authentication token not found. Please sign in.');
-            return;
-        }
-        try {
-            await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Listing marked as Failed (Available) successfully!');
-            fetchListings(); // Refresh the list
-        } catch (error) {
-            console.error('Error marking listing as failed:', error.response?.data || error.message);
-        }
+        showConfirm({
+            title: "Mark as Available",
+            message: "Are you sure you want to mark this listing as 'Available' (undo offer)?",
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    showMessage('Authentication token not found. Please sign in.', 'error');
+                    return;
+                }
+                try {
+                    await axios.put(`${API_BASE_URL}/listings/${listingId}`, { status: 'Available' }, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    showMessage('Listing marked as Available successfully!', 'success');
+                    fetchListings(); // Refresh the list
+                } catch (error) {
+                    console.error('Error marking listing as failed:', error.response?.data || error.message);
+                    showMessage('Failed to mark listing as available. Please try again.', 'error');
+                }
+            },
+            confirmLabel: "Mark Available",
+            cancelLabel: "Cancel"
+        });
     };
 
     const handleDeleteListing = async (listingId) => {
-        console.log(`Confirming deletion for listing ${listingId}`);
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Authentication token not found. Please sign in.');
-            return;
-        }
-        try {
-            await axios.delete(`${API_BASE_URL}/listings/${listingId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            console.log('Listing deleted successfully!');
-            fetchListings();
-        } catch (error) {
-            console.error('Error deleting listing:', error.response?.data || error.message);
-        }
+        showConfirm({
+            title: "Delete Listing",
+            message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    showMessage('Authentication token not found. Please sign in.', 'error');
+                    return;
+                }
+                try {
+                    await axios.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    showMessage('Listing deleted successfully!', 'success');
+                    fetchListings();
+                } catch (error) {
+                    console.error('Error deleting listing:', error.response?.data || error.message);
+                    showMessage('Failed to delete listing. Please try again.', 'error');
+                }
+            },
+            confirmLabel: "Delete",
+            cancelLabel: "Cancel"
+        });
     };
 
     // Function to handle exporting listings to CSV
@@ -449,7 +488,7 @@ const Listings = () => {
         const dataToExport = scope === 'current' ? filteredAndSortedListings : listings; // Use filteredAndSortedListings for current view
 
         if (dataToExport.length === 0) {
-            console.warn(`No listing data found for ${scope} export.`);
+            showMessage(`No listing data found for ${scope} export.`, 'info');
             setIsExportDropdownOpen(false);
             return;
         }
@@ -486,6 +525,7 @@ const Listings = () => {
         link.click();
         document.body.removeChild(link);
         setIsExportDropdownOpen(false);
+        showMessage("Listings exported successfully!", 'success');
     };
 
     const handleSearchChange = (e) => {
@@ -493,10 +533,10 @@ const Listings = () => {
         setPage(1); // Reset page on search
     };
 
-    const handleStatusChange = (value) => { // Changed to accept value directly from Dropdown
+    const handleStatusChange = useCallback((value) => { // Changed to accept value directly from Dropdown
         setStatusFilter(value);
         setPage(1); // Reset page on status change
-    };
+    }, []);
 
     const handlePurchaseCategoryChange = (value) => { // Changed to accept value directly from Dropdown
         setPurchaseCategoryFilter(value);
@@ -563,14 +603,13 @@ const Listings = () => {
         { value: "featured", label: "Featured" }
     ];
 
-
     return (
         <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
             {/* Mobile Sidebar Toggle Button */}
             {isMobile && (
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
-                    className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+                    className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
                     initial={false}
                     animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
                     transition={{ duration: 0.3 }}
@@ -600,25 +639,31 @@ const Listings = () => {
             />
 
             <motion.div
-                key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+                key={isMobile ? 'mobile' : 'desktop'}
                 animate={{ marginLeft: contentShift }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                transition={{ duration: 0.3 }}
                 initial={false}
                 className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
-                style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+                style={{ minWidth: `calc(100% - ${contentShift}px)` }}
             >
                 {/* Mobile-only H1 element */}
                 <div className="md:hidden flex items-center justify-center mb-4">
-                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>My Listings</h1>
+                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
                 </div>
 
                 {/* Desktop-only centered title */}
                 <div className="hidden md:block mb-6">
-                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>My Listings</h1>
+                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
                 </div>
 
                 <main className="space-y-6">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`rounded-3xl p-6 shadow space-y-4 max-w-full ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        // Conditionally apply classes based on mobile view (removed main container for mobile)
+                        className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                    >
                         {/* Mobile Control Menu */}
                         {isMobile && (
                             <div className="flex justify-between items-center mb-4">
@@ -653,17 +698,17 @@ const Listings = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2"> {/* Added flex gap-2 for view mode buttons */}
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('simple')}
+                                        onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
                                         title="List View"
                                     >
                                         <LayoutList className="h-5 w-5" />
                                     </button>
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('graphical')}
+                                        onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                                         title="Grid View"
                                     >
                                         <LayoutGrid className="h-5 w-5" />
@@ -682,7 +727,11 @@ const Listings = () => {
                                         placeholder="Search listings..."
                                         value={searchTerm}
                                         onChange={handleSearchChange}
-                                        className={`w-full md:w-1/2 py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                          darkMode
+                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                        }`}
                                     />
                                     <button
                                         className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
@@ -721,14 +770,14 @@ const Listings = () => {
 
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('simple')}
+                                        onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
                                         title="Simple View"
                                     >
                                         <TableCellsIcon className="h-6 w-6" />
                                     </button>
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('graphical')}
+                                        onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                                         title="Graphical View"
                                     >
                                         <Squares2X2Icon className="h-6 w-6" />
@@ -749,14 +798,22 @@ const Listings = () => {
                         ) : viewMode === 'graphical' ? (
                             <motion.div
                                 layout
-                                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                                // Modified grid classes for better mobile responsiveness
+                                className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
                             >
                                 {filteredAndSortedListings.map((listing) => (
                                     <div key={listing.property_id}>
                                         <ListingCard
                                             listing={listing}
-                                            onDelete={handleDeleteListing}
-                                            darkMode={darkMode} // Pass darkMode prop
+                                            onDelete={handleDeleteListing} // Use direct delete handler as in AdminListings
+                                            onAction={async (id, action) => { // This will call the internal functions of Listings.js
+                                                if (action === 'approve') await handleApproveListing(id);
+                                                else if (action === 'reject') await handleRejectListing(id);
+                                                else if (action === 'mark_sold') await handleMarkAsSold(id); // Added mark_sold
+                                                else if (action === 'mark_failed') await handleMarkAsFailed(id); // Added mark_failed
+                                                else if (action === 'delete') await handleDeleteListing(id); // Use the Listings.js delete handler
+                                                else if (action === 'edit') navigate(`/edit-listing/${id}`); // Direct navigation for edit
+                                            }}
                                         />
                                     </div>
                                 ))}
@@ -770,20 +827,20 @@ const Listings = () => {
                                                 <th
                                                     key={key}
                                                     onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
-                                                    className={`py-2 px-1 whitespace-nowrap truncate ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+                                                    className={`py-2 px-2 whitespace-nowrap ${key !== 'actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
                                                     style={{
                                                         width:
-                                                            key === 'property_id' ? '80px' :
-                                                            key === 'title' ? '100px' :
-                                                            key === 'location' ? '100px' :
-                                                            key === 'property_type' ? '80px' :
-                                                            key === 'price' ? '100px' :
+                                                            key === 'property_id' ? '90px' :
+                                                            key === 'title' ? '120px' :
+                                                            key === 'location' ? '120px' :
+                                                            key === 'property_type' ? '90px' :
+                                                            key === 'price' ? '120px' :
                                                             key === 'status' ? '80px' :
-                                                            key === 'date_listed' ? '100px' :
+                                                            key === 'date_listed' ? '120px' :
                                                             key === 'purchase_category' ? '100px' :
-                                                            key === 'bedrooms' ? '60px' :
-                                                            key === 'bathrooms' ? '60px' :
-                                                            key === 'actions' ? '180px' : 'auto'
+                                                            key === 'bedrooms' ? '70px' :
+                                                            key === 'bathrooms' ? '70px' :
+                                                            key === 'actions' ? '150px' : 'auto'
                                                     }}
                                                 >
                                                     <div className="flex items-center gap-1">
@@ -793,7 +850,7 @@ const Listings = () => {
                                                                 property_type: 'Type',
                                                                 purchase_category: 'Category',
                                                                 actions: 'Actions'
-                                                            }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                            }[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                                         </span>
                                                         {renderSortIcon(key)}
                                                     </div>
@@ -804,57 +861,57 @@ const Listings = () => {
                                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                                         {filteredAndSortedListings.map((listing) => (
                                             <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[80px]" title={listing.property_id || ''}>{listing.property_id}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[100px]" title={listing.title || ''}>{listing.title}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[100px]" title={listing.location || ''}>{listing.location}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[80px]" title={listing.property_type || ''}>{listing.property_type}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[100px]" title={new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}>
+                                                <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_id && listing.property_id.length > 10 ? listing.property_id : ''}>{listing.property_id}</td>
+                                                <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td>
+                                                <td className="py-2 px-2 max-w-[120px] truncate" title={listing.location && listing.location.length > 15 ? listing.location : ''}>{listing.location}</td>
+                                                <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_type && listing.property_type.length > 10 ? listing.property_type : ''}>{listing.property_type}</td>
+                                                <td className="py-2 px-2 max-w-[120px] truncate" title={listing.price ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price) : ''}>
                                                     {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}
                                                 </td>
-                                                <td className={`py-2 px-1 whitespace-nowrap overflow-hidden truncate max-w-[80px] font-semibold ${
+                                                <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
                                                     listing.status && listing.status.toLowerCase() === 'available' ? 'text-green-600' :
                                                     listing.status && listing.status.toLowerCase() === 'sold' ? 'text-red-600' :
                                                     listing.status && listing.status.toLowerCase() === 'under offer' ? 'text-yellow-600' :
                                                     listing.status && listing.status.toLowerCase() === 'pending' ? 'text-blue-600' :
                                                     listing.status && listing.status.toLowerCase() === 'rejected' ? 'text-purple-600' :
-                                                    (darkMode ? 'text-gray-300' : 'text-gray-600')
-                                                }`} title={listing.status ? capitalizeFirstLetter(listing.status) : ''}>{capitalizeFirstLetter(listing.status)}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[100px]" title={listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}>{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
-                                                <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[100px]" title={listing.purchase_category || ''}>{listing.purchase_category}</td>
-                                                <td className="py-2 px-1 w-12 text-left whitespace-nowrap overflow-hidden max-w-[60px]" title={listing.bedrooms || ''}>{listing.bedrooms}</td>
-                                                <td className="py-2 px-1 w-12 text-left whitespace-nowrap overflow-hidden max-w-[60px]" title={listing.bathrooms || ''}>{listing.bathrooms}</td>
-                                                <td className="py-2 px-1 whitespace-nowrap max-w-[180px]">
+                                                    'text-gray-600'
+                                                }`} title={capitalizeFirstLetter(listing.status)}>{capitalizeFirstLetter(listing.status)}</td>
+                                                <td className="py-2 px-2 max-w-[120px] truncate" title={listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : ''}>{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
+                                                <td className="py-2 px-2 max-w-[100px] truncate" title={listing.purchase_category && listing.purchase_category.length > 12 ? listing.purchase_category : ''}>{listing.purchase_category}</td>
+                                                <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
+                                                <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bathrooms ? listing.bathrooms.toString() : ''}>{listing.bathrooms}</td>
+                                                <td className="py-2 px-2 space-x-2 max-w-[150px]">
                                                     {listing.status && listing.status.toLowerCase() === 'pending' ? (
                                                         <div className="flex items-center gap-2">
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-800"}`} onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
                                                                 <CheckCircleIcon className="h-6 w-6" />
                                                             </button>
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`} onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
+                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
                                                                 <XCircleIcon className="h-6 w-6" />
                                                             </button>
                                                         </div>
                                                     ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
                                                         <div className="flex items-center gap-2">
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-800"}`} onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
                                                                 <CheckCircleIcon className="h-6 w-6" />
                                                             </button>
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`} onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
+                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
                                                                 <TrashIcon className="h-6 w-6" />
                                                             </button>
                                                         </div>
                                                     ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
                                                         <div className="flex items-center gap-2">
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-800"}`} onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
+                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
                                                                 <CurrencyDollarIcon className="h-6 w-6" />
                                                             </button>
-                                                            <button className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"}`} onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
+                                                            <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
                                                                 <ArrowUturnLeftIcon className="h-6 w-6" />
                                                             </button>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-2">
                                                             <button
-                                                                className={`px-3 py-1 rounded-xl text-xs h-10 flex items-center ${darkMode ? "bg-green-600 text-white hover:bg-green-500" : "bg-green-500 text-white hover:bg-green-600"}`}
+                                                                className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
                                                                 onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
                                                                 title="Edit Listing"
                                                             >
@@ -862,7 +919,7 @@ const Listings = () => {
                                                                 <span className="ml-1">Edit</span>
                                                             </button>
                                                             <button
-                                                                className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
+                                                                className="text-red-600 hover:text-red-800 p-1"
                                                                 onClick={() => handleDeleteListing(listing.property_id)}
                                                                 title="Delete Listing"
                                                             >
@@ -881,7 +938,7 @@ const Listings = () => {
                                     <button
                                         disabled={page === 1}
                                         onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                                        className={`px-4 py-2 rounded-xl text-sm disabled:opacity-50 h-10 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+                                        className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
                                     >
                                         Prev
                                     </button>
@@ -889,7 +946,7 @@ const Listings = () => {
                                     <button
                                         disabled={page === totalPages || totalPages === 0}
                                         onClick={() => setPage(prev => prev + 1)}
-                                        className={`px-4 py-2 rounded-xl text-sm disabled:opacity-50 h-10 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
+                                        className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
                                     >
                                         Next
                                     </button>
@@ -925,7 +982,11 @@ const Listings = () => {
                                     placeholder="Search listings..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                      darkMode
+                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                    }`}
                                 />
                             </div>
 

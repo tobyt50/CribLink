@@ -1,13 +1,29 @@
 import React from "react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 function Footer() {
   const currentYear = new Date().getFullYear();
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const handleNewsletterSubscribe = (e) => {
+    e.preventDefault();
+    const emailInput = e.target.elements[0]; // Get the email input element
+    const email = emailInput.value;
+
+    if (email && email.includes('@') && email.includes('.')) {
+      showMessage('Thank you for subscribing to our newsletter!', 'success', 3000);
+      emailInput.value = ''; // Clear the input field
+    } else {
+      showMessage('Please enter a valid email address.', 'error', 3000);
+    }
+  };
+
 
   return (
     <footer className={`mt-16 ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
@@ -44,7 +60,7 @@ function Footer() {
           <div>
             <h3 className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}>Newsletter</h3>
             <p className={`${darkMode ? "text-gray-400" : "text-gray-400"} mb-2`}>Get updates about new listings and offers.</p>
-            <form className="flex flex-col sm:flex-row gap-2">
+            <form onSubmit={handleNewsletterSubscribe} className="flex flex-col sm:flex-row gap-2">
               <input
                 type="email"
                 placeholder="Enter your email"

@@ -1,21 +1,21 @@
 // src/pages/ResetPassword.js
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react'; // For password visibility toggle
 import API_BASE_URL from '../config'; // Assuming you have a config file for your API base URL
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 export default function ResetPassword() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
 
   const location = useLocation(); // Hook to access URL query parameters
   const navigate = useNavigate();
@@ -27,54 +27,54 @@ export default function ResetPassword() {
   useEffect(() => {
     // Optional: You might want to validate the token's existence immediately
     if (!token) {
-      setMessage('Invalid or missing password reset token.');
-      setMessageType('error');
+      showMessage('Invalid or missing password reset token.', 'error'); // Use showMessage
     }
-  }, [token]);
+  }, [token, showMessage]); // Add showMessage to dependency array
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(''); // Clear previous messages
-    setMessageType('');
     setLoading(true);
 
     if (!token) {
-      setMessage('Password reset token is missing.');
-      setMessageType('error');
+      showMessage('Password reset token is missing.', 'error'); // Use showMessage
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setMessage('Passwords do not match.');
-      setMessageType('error');
+      showMessage('Passwords do not match.', 'error'); // Use showMessage
       setLoading(false);
       return;
     }
 
     if (newPassword.length < 6) { // Example: enforce minimum password length
-      setMessage('New password must be at least 6 characters long.');
-      setMessageType('error');
+      showMessage('New password must be at least 6 characters long.', 'error'); // Use showMessage
       setLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/users/reset-password`, {
+      // Use axiosInstance instead of direct axios
+      const response = await axiosInstance.post(`${API_BASE_URL}/users/reset-password`, {
         token,
         newPassword,
       });
-      setMessage(response.data.message);
-      setMessageType('success');
+      showMessage(response.data.message, 'success'); // Use showMessage
       // Optionally redirect to sign-in page after a short delay
       setTimeout(() => {
         navigate('/signin');
       }, 3000);
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Failed to reset password. Please try again.');
-      setMessageType('error');
+      console.error("Reset password error caught locally:", error);
+      let errorMessage = 'Failed to reset password. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
     } finally {
-      setLoading(false);
+      setLoading(false); // Ensure loading is false after attempt
     }
   };
 
@@ -90,12 +90,6 @@ export default function ResetPassword() {
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Reset Password</h1>
         <p className={`text-sm text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Enter your new password.</p>
 
-        {message && (
-          <div className={`p-3 rounded-xl text-center ${messageType === 'success' ? (darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-700') : (darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-700')}`}>
-            {message}
-          </div>
-        )}
-
         <div className="relative">
           <input
             type={showNewPassword ? 'text' : 'password'}
@@ -105,7 +99,7 @@ export default function ResetPassword() {
             required
             className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
               darkMode
-                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
                 : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             } pr-12`}
           />
@@ -125,9 +119,9 @@ export default function ResetPassword() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+            className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
               darkMode
-                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
                 : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             } pr-12`}
           />

@@ -1,22 +1,23 @@
 // src/pages/SignIn.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
-import { useEffect } from 'react';
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+import { useMessage } from '../context/MessageContext';
+import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog
 
 export default function SignIn() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
-  const [forgotPasswordMessageType, setForgotPasswordMessageType] = useState(''); // 'success' or 'error'
 
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Use the showMessage function from MessageContext
+  const { showConfirm } = useConfirmDialog(); // Use the showConfirm function from ConfirmDialogContext
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,32 +31,31 @@ export default function SignIn() {
           navigate('/agent/dashboard');
           break;
         default:
-          navigate('/home');
+          navigate('/home'); // Or '/' depending on your default client route
       }
     }
-  }, []);
+  }, [navigate]); // Add navigate to dependency array
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('http://localhost:5000/users/signin', form);
+      // Use axiosInstance instead of direct axios
+      const { data } = await axiosInstance.post('/users/signin', form);
 
-      // Check if the user is banned (this check is now redundant if backend handles 403, but kept for robustness)
       if (data.user.status === 'banned') {
-        // Use a custom message box instead of alert
-        console.error('Your account has been banned.');
-        // Clear any potentially stored token/user data if the backend sent it before status check
+        showMessage('Your account has been banned.', 'error', 7000);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        return; // Stop the sign-in process
+        return;
       }
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      // Tell the app "auth state changed"
-      window.dispatchEvent(new Event("authChange"));
+      window.dispatchEvent(new Event("authChange")); // Notify app of auth state change
+      showMessage('Sign-in successful!', 'success', 3000); // Show success message
+
       switch (data.user.role) {
         case 'admin':
           navigate('/admin/dashboard');
@@ -66,33 +66,43 @@ export default function SignIn() {
         default:
           navigate('/');
       }
-    } catch (err) {
-      // Check for specific error message from the backend
-      if (err.response && err.response.status === 403 && err.response.data && err.response.data.message) {
-        // Use a custom message box instead of alert
-        console.error(err.response.data.message); // Display the specific message from the server (e.g., "Your account has been banned.")
-      } else {
-        // Generic error message for other failures
-        // Use a custom message box instead of alert
-        console.error('Sign-in failed. Please check your email and password.');
+    } catch (error) {
+      console.error("Sign-in error caught locally:", error);
+      // Display a user-friendly error message using showMessage
+      let errorMessage = 'An unexpected error occurred during sign-in.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      showMessage(errorMessage, 'error');
     }
   };
 
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
-    setForgotPasswordMessage(''); // Clear previous messages
-    setForgotPasswordMessageType('');
-
     try {
-      const response = await axios.post('http://localhost:5000/users/forgot-password', { email: forgotPasswordEmail });
-      setForgotPasswordMessage(response.data.message);
-      setForgotPasswordMessageType('success');
+      // Use axiosInstance for forgot password request
+      const response = await axiosInstance.post('/users/forgot-password', { email: forgotPasswordEmail });
+      showMessage(response.data.message, 'success', 5000); // Show success message using toast
+      setForgotPasswordEmail(''); // Clear the email input on success
+      setShowForgotPasswordModal(false); // Close the modal on success
     } catch (error) {
-      setForgotPasswordMessage(error.response?.data?.message || 'Failed to send reset link. Please try again.');
-      setForgotPasswordMessageType('error');
+      console.error("Forgot password error caught locally:", error);
+      let errorMessage = 'Failed to send reset link. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
     }
   };
+
+  const handleOpenForgotPasswordModal = () => {
+    setShowForgotPasswordModal(true);
+  };
+
 
   return (
     <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -151,7 +161,7 @@ export default function SignIn() {
         <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
           <button
             type="button"
-            onClick={() => setShowForgotPasswordModal(true)}
+            onClick={handleOpenForgotPasswordModal}
             className="text-green-600 hover:underline"
           >
             Forgot password?
@@ -166,7 +176,7 @@ export default function SignIn() {
         </div>
       </motion.form>
 
-      {/* Forgot Password Modal */}
+      {/* Forgot Password Modal (still rendered conditionally) */}
       {showForgotPasswordModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
@@ -191,11 +201,6 @@ export default function SignIn() {
                     : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                 }`}
               />
-              {forgotPasswordMessage && (
-                <p className={`text-sm text-center ${forgotPasswordMessageType === 'success' ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-red-400' : 'text-red-600')}`}>
-                  {forgotPasswordMessage}
-                </p>
-              )}
               <button
                 type="submit"
                 className="w-full py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
@@ -206,8 +211,7 @@ export default function SignIn() {
                 type="button"
                 onClick={() => {
                   setShowForgotPasswordModal(false);
-                  setForgotPasswordMessage('');
-                  setForgotPasswordEmail('');
+                  setForgotPasswordEmail(''); // Clear email on cancel
                 }}
                 className={`w-full py-2 rounded-xl font-medium hover:bg-gray-300 transition ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-700"}`}
               >

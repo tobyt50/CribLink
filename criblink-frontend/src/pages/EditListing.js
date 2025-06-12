@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axiosInstance from '../api/axiosInstance'; // Use axiosInstance
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config';
 import { useTheme } from '../layouts/AppShell';
 import { ChevronDown } from 'lucide-react'; // Import ChevronDown icon for the dropdown
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
+import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog hook
 
 // Reusable Dropdown Component (embedded directly here for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -91,18 +93,20 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
           >
             {options.map((option) => (
               <motion.button
-                key={option.value}
-                variants={itemVariants}
-                whileHover={{ x: 5 }}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                  ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
-              >
-                {option.label}
-              </motion.button>
+              type="button"
+              key={option.value}
+              variants={itemVariants}
+              whileHover={{ x: 5 }}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
+                ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+            >
+              {option.label}
+            </motion.button>
+            
             ))}
           </motion.div>
         )}
@@ -112,14 +116,17 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 
-const App = () => {
+const EditListing = () => { // Renamed from App to EditListing for clarity
   const { id } = useParams();
   const navigate = useNavigate();
   const { darkMode } = useTheme();
+  const { showMessage } = useMessage(); // Initialize useMessage
+  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
+  // Removed: const handleApiError = useApiErrorHandler(); // No longer needed
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); // Keep local error for initial fetch
 
   const [purchaseCategory, setPurchaseCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -150,13 +157,14 @@ const App = () => {
   useEffect(() => {
     const fetchListing = async () => {
       setLoading(true);
-      setError(null);
+      setError(null); // Clear local error state
       try {
-        const response = await axios.get(`${API_BASE_URL}/listings/${id}`);
+        const response = await axiosInstance.get(`${API_BASE_URL}/listings/${id}`);
         const fetchedListing = response.data;
 
         if (!fetchedListing) {
-          setError('Listing not found.');
+          setError('Listing not found.'); // Set local error
+          showMessage('Listing not found.', 'error'); // Show toast
           setLoading(false);
           return;
         }
@@ -184,13 +192,13 @@ const App = () => {
 
         const initialExistingImages = [];
         if (fetchedListing.image_url) {
-          initialExistingImages.push({ url: fetchedListing.image_url });
+          initialExistingImages.push({ url: fetchedListing.image_url, source: 'existing' });
           setThumbnailIdentifier(fetchedListing.image_url);
         }
         if (fetchedListing.gallery_images && Array.isArray(fetchedListing.gallery_images)) {
           fetchedListing.gallery_images.forEach(url => {
             if (url !== fetchedListing.image_url) {
-              initialExistingImages.push({ url: url });
+              initialExistingImages.push({ url: url, source: 'existing' });
             }
           });
         }
@@ -198,8 +206,15 @@ const App = () => {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching listing:', err);
-        setError('Failed to fetch listing.');
+        console.error('Failed to fetch listing:', err);
+        let errorMessage = 'Failed to fetch listing. Please try again.';
+        if (err.response && err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage); // Set local error state
+        showMessage(errorMessage, 'error'); // Show toast
         setLoading(false);
       }
     };
@@ -208,19 +223,21 @@ const App = () => {
       fetchListing();
     } else {
       setLoading(false);
-      setError('No listing ID provided.');
+      setError('No listing ID provided.'); // Set local error
+      showMessage('No listing ID provided for editing.', 'error'); // Show toast
     }
 
-  }, [id]);
+  }, [id, showMessage]);
 
   const onDrop = (acceptedFiles) => {
     setNewImages(prev => [...prev, ...acceptedFiles]);
     if (thumbnailIdentifier === null && acceptedFiles.length > 0) {
+      // Set the first new file as thumbnail if no thumbnail is set yet
       setThumbnailIdentifier(acceptedFiles[0].name);
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: 'image/*' });
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } }); // Updated accept syntax
 
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim()) {
@@ -230,10 +247,12 @@ const App = () => {
       if (thumbnailIdentifier === null) {
         setThumbnailIdentifier(newUrl);
       }
+    } else {
+      showMessage('Please enter a valid image URL.', 'error');
     }
   };
 
-  const handleRemoveImage = (identifier, type) => {
+  const performRemoveImage = (identifier, type) => {
     let updatedThumbnailIdentifier = thumbnailIdentifier;
 
     if (type === 'existing') {
@@ -245,23 +264,34 @@ const App = () => {
     }
 
     if (updatedThumbnailIdentifier === identifier) {
-      updatedThumbnailIdentifier = null;
+      updatedThumbnailIdentifier = null; // Clear thumbnail if the removed image was the thumbnail
     }
 
-    const remainingImages = [
+    // Attempt to re-select a thumbnail if the current one was removed
+    // Re-calculating allImagesForDisplay after state updates might be safer
+    const remainingImagesAfterRemoval = [
       ...existingImages.filter(img => img.url !== identifier),
       ...newImages.filter(file => file.name !== identifier),
       ...newImageURLs.filter(url => url !== identifier)
     ];
 
-    if (updatedThumbnailIdentifier === null && remainingImages.length > 0) {
-      if (remainingImages[0].url) {
-        updatedThumbnailIdentifier = remainingImages[0].url;
-      } else if (remainingImages[0].file) {
-        updatedThumbnailIdentifier = remainingImages[0].file.name;
-      }
+    if (updatedThumbnailIdentifier === null && remainingImagesAfterRemoval.length > 0) {
+      // Prioritize existing images, then new URLs, then new files for re-selection
+      // The `getImageIdentifier` function is crucial here to get the correct string identifier
+      updatedThumbnailIdentifier = getImageIdentifier(remainingImagesAfterRemoval[0]);
     }
     setThumbnailIdentifier(updatedThumbnailIdentifier);
+    showMessage('Image removed successfully!', 'info');
+  };
+
+  const handleRemoveImage = (identifier, type) => {
+    showConfirm({
+      title: "Remove Image",
+      message: "Are you sure you want to remove this image? This action cannot be undone for existing images.",
+      onConfirm: () => performRemoveImage(identifier, type),
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel"
+    });
   };
 
 
@@ -287,18 +317,19 @@ const App = () => {
       ...newImageURLs.map(url => ({ url, source: 'newUrl' }))
     ];
 
+    // Client-side validations
     if (!title || !location || !price || !status || !propertyType || !bedrooms || !bathrooms || !purchaseCategory) {
-      console.error('Please fill in all required fields.');
+      showMessage('Please fill in all required fields (Title, Location, Price, Status, Property Type, Bedrooms, Bathrooms, Purchase Category).', 'error');
       return;
     }
 
     if (allImagesCombined.length < 2) {
-      console.error('Please ensure at least two images are uploaded.');
+      showMessage('Please ensure at least two images are uploaded or provided via URL.', 'error');
       return;
     }
 
     if (thumbnailIdentifier === null) {
-      console.error('Please set a thumbnail image.');
+      showMessage('Please select a thumbnail image for your listing.', 'error');
       return;
     }
 
@@ -336,12 +367,13 @@ const App = () => {
     const token = localStorage.getItem('token');
 
     if (!token) {
-      console.error('Authentication token not found. Please sign in.');
+      showMessage('Authentication token not found. Please sign in to update the listing.', 'error');
+      navigate('/signin'); // Redirect to sign-in page if token is missing
       return;
     }
 
     try {
-      const response = await axios.put(`${API_BASE_URL}/listings/${id}`, formData, {
+      const response = await axiosInstance.put(`${API_BASE_URL}/listings/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
@@ -349,15 +381,20 @@ const App = () => {
       });
 
       if (response.status === 200) {
-        console.log('Listing updated successfully!');
-        navigate('/admin/listings');
+        showMessage('Listing updated successfully!', 'success', 3000);
+        navigate('/admin/listings'); // Redirect to listings page on success
       } else {
-        console.error(`Failed to update listing. Server returned status: ${response.status}`);
+        // This case might be caught by the general catch block, but explicit check
+        showMessage(`Failed to update listing. Server returned status: ${response.status}.`, 'error');
       }
-
     } catch (error) {
-      console.error('Error updating listing:', error.response?.data || error.message);
-      console.error('Failed to update listing.');
+      let errorMessage = 'Failed to update listing. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -428,10 +465,12 @@ const App = () => {
     );
   }
 
+  // Display error from initial fetch using showMessage
   if (error) {
     return (
       <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        <p className={`text-lg ${darkMode ? "text-red-400" : "text-red-600"}`}>Error: {error}</p>
+        {/* The error message is already shown via toast, so a simple message here */}
+        <p className={`text-lg ${darkMode ? "text-red-400" : "text-red-600"}`}>Error loading listing. Please check the URL.</p>
       </div>
     );
   }
@@ -479,14 +518,19 @@ const App = () => {
             &times;
           </button>
 
-          <motion.h2
-            className={`text-2xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}
+          <motion.div
+            className="text-center max-w-3xl mx-auto px-4"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.4 }}
           >
-            Edit Listing: {listing.title}
-          </motion.h2>
+            <div className="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+              Editing:
+            </div>
+            <h2 className={`text-2xl font-bold break-words leading-snug ${darkMode ? "text-green-400" : "text-green-700"}`}>
+              {listing.title}
+            </h2>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -730,7 +774,7 @@ const App = () => {
                         />
                         <button
                           type="button"
-                          onClick={() => handleRemoveImage(identifier, item.source)}
+                          onClick={() => handleRemoveImage(identifier, item.source)} // Use the confirmation handler
                           className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200"
                         >✕</button>
                         <button
@@ -755,4 +799,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default EditListing;

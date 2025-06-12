@@ -5,15 +5,17 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, User, Home, MessageSquare, X } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-import Card from '../../components/ui/Card'; // Import the Card component
+import { useTheme } from '../../layouts/AppShell';
+import Card from '../../components/ui/Card';
+import { useMessage } from '../../context/MessageContext';
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
 const AdminDashboard = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-  const [isCollapsed, setIsCollapsed] = useState(false); // Only used on desktop
+  // Use the useSidebarState hook for sidebar management
+  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('dashboard');
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
 
   const [agentCount, setAgentCount] = useState(null);
   const [listingCount, setListingCount] = useState(null);
@@ -21,20 +23,19 @@ const AdminDashboard = () => {
   const [pendingApprovals, setPendingApprovals] = useState(null);
   const [activities, setActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile
-    };
+  // Removed the local useEffect for window resize, as useSidebarState handles it.
+  // useEffect(() => {
+  //   const handleResize = () => {
+  //     const mobile = window.innerWidth < 768;
+  //     setIsMobile(mobile);
+  //     setIsSidebarOpen(!mobile);
+  //   };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  //   window.addEventListener('resize', handleResize);
+  //   return () => window.removeEventListener('resize', handleResize);
+  // }, []);
 
   const goToListings = () => navigate('/admin/listings');
   const goToPendingListings = () =>
@@ -48,8 +49,21 @@ const AdminDashboard = () => {
       state: { sortKey: 'created_at', sortDirection: 'desc' },
     });
 
+  // Effect for fetching Dashboard statistics (agent count, listings, inquiries, pending approvals)
   useEffect(() => {
     const fetchStats = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log("No token found for fetchStats, skipping API calls.");
+        setAgentCount(null);
+        setListingCount(null);
+        setInquiriesCount(null);
+        setPendingApprovals(null);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
       try {
         const [agentRes, listingRes, inquiryRes, pendingRes] = await Promise.all([
           axios.get('/admin/agents/count', { headers }),
@@ -61,15 +75,40 @@ const AdminDashboard = () => {
         setListingCount(listingRes.data.count);
         setInquiriesCount(inquiryRes.data.count);
         setPendingApprovals(pendingRes.data.count);
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
+      } catch (error) {
+        console.error("Error fetching admin stats:", error);
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            console.warn("Authentication error during stats fetch (expected on logout).");
+        } else {
+            showMessage('Failed to load dashboard statistics.', 'error', 3000);
+        }
       }
     };
+
     fetchStats();
+
+    const handleAuthChange = () => {
+        fetchStats();
+    };
+    window.addEventListener('authChange', handleAuthChange);
+
+    return () => {
+        window.removeEventListener('authChange', handleAuthChange);
+    };
   }, []);
 
+  // Effect for fetching Recent Activity
   useEffect(() => {
     const fetchRecentActivity = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log("No token found for recent activity, skipping API call.");
+        setActivities([]);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
       try {
         const response = await axios.get('/admin/activity/recent-activity', { headers });
         const activityData = response.data.activities.map(a => {
@@ -98,15 +137,29 @@ const AdminDashboard = () => {
             formattedTime: formatDistanceToNow(new Date(a.timestamp), { addSuffix: true }),
           };
         });
-
         setActivities(activityData);
-      } catch (err) {
-        console.error('Failed to fetch recent activities:', err);
+      } catch (error) {
+        console.error("Error fetching recent activity:", error);
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            console.warn("Authentication error during activity fetch (expected on logout).");
+        } else {
+            showMessage('Failed to load recent activity.', 'error', 3000);
+        }
       }
     };
 
     fetchRecentActivity();
+
+    const handleAuthChange = () => {
+        fetchRecentActivity();
+    };
+    window.addEventListener('authChange', handleAuthChange);
+
+    return () => {
+        window.removeEventListener('authChange', handleAuthChange);
+    };
   }, []);
+
 
   const stats = [
     { label: 'Total Listings', value: listingCount ?? '...', onClick: goToListings },
@@ -124,7 +177,7 @@ const AdminDashboard = () => {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-full shadow-md ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -165,15 +218,16 @@ const AdminDashboard = () => {
       >
         {/* Headers */}
         <div className="md:hidden flex items-center justify-center mb-4">
-          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Admin Dashboard</h1>
+          <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Dashboard</h1>
         </div>
         <div className="hidden md:block mb-4">
-          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Admin Dashboard</h1>
+          <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Dashboard</h1>
         </div>
 
         {/* Stat Cards */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {/* Changed grid-cols-1 to grid-cols-2 for mobile grid layout */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             {stats.map((stat, idx) => (
               <Card key={idx} onClick={stat.onClick}>
                 <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>

@@ -14,6 +14,10 @@ DROP TABLE IF EXISTS archived_clients CASCADE;
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS property_details CASCADE;
 DROP TABLE IF EXISTS user_favourites CASCADE;
+DROP TABLE IF EXISTS admin_settings CASCADE;
+DROP TABLE IF EXISTS agent_settings CASCADE;
+DROP TABLE IF EXISTS client_settings CASCADE; -- New: Drop client settings table
+
 -- Users table to manage all user roles
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -204,6 +208,66 @@ CREATE TABLE property_details (
     parking VARCHAR(100),
     amenities TEXT, -- Can store a comma-separated list of amenities
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- New table for Admin Settings (remains global)
+CREATE TABLE admin_settings (
+    id SERIAL PRIMARY KEY, -- Will likely only have one row with ID = 1
+    default_list_view VARCHAR(50) DEFAULT 'simple',
+    sidebar_permanently_expanded BOOLEAN DEFAULT FALSE,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    sms_notifications BOOLEAN DEFAULT FALSE,
+    in_app_notifications BOOLEAN DEFAULT TRUE,
+    sender_email VARCHAR(255) DEFAULT 'admin@example.com',
+    smtp_host VARCHAR(255) DEFAULT 'smtp.example.com',
+    require_2fa BOOLEAN DEFAULT FALSE,
+    min_password_length INTEGER DEFAULT 8,
+    crm_integration_enabled BOOLEAN DEFAULT FALSE,
+    analytics_id VARCHAR(255) DEFAULT '',
+    auto_approve_listings BOOLEAN DEFAULT FALSE,
+    enable_comments BOOLEAN DEFAULT TRUE,
+    maintenance_mode BOOLEAN DEFAULT FALSE,
+    database_backup_scheduled BOOLEAN DEFAULT FALSE,
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert initial default settings if the table is empty
+INSERT INTO admin_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- New table for Agent Settings (personalized for each agent)
+CREATE TABLE agent_settings (
+    user_id INT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    in_app_notifications BOOLEAN DEFAULT TRUE,
+    new_inquiry_alert BOOLEAN DEFAULT TRUE,
+    ticket_update_alert BOOLEAN DEFAULT TRUE,
+    is_available BOOLEAN DEFAULT TRUE,
+    default_signature TEXT,
+    auto_assign_inquiries BOOLEAN DEFAULT FALSE,
+    theme VARCHAR(50) DEFAULT 'system', -- Personalized display setting
+    default_list_view VARCHAR(50) DEFAULT 'simple', -- Personalized display setting
+    sidebar_permanently_expanded BOOLEAN DEFAULT FALSE, -- Personalized display setting
+    language VARCHAR(10) DEFAULT 'en', -- Personalized display setting
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- New table for Client Settings (personalized for each client)
+CREATE TABLE client_settings (
+    user_id INT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    in_app_notifications BOOLEAN DEFAULT TRUE,
+    new_listing_alert BOOLEAN DEFAULT TRUE,
+    price_drop_alert BOOLEAN DEFAULT TRUE,
+    favourite_update_alert BOOLEAN DEFAULT TRUE,
+    preferred_property_type VARCHAR(50) DEFAULT 'any',
+    preferred_location TEXT DEFAULT 'any',
+    max_price_alert BIGINT DEFAULT 100000000,
+    theme VARCHAR(50) DEFAULT 'system',
+    default_list_view VARCHAR(50) DEFAULT 'graphical', -- Clients might prefer grid view by default
+    language VARCHAR(10) DEFAULT 'en',
+    sidebar_permanently_expanded BOOLEAN DEFAULT FALSE, -- New: Personalized sidebar setting for clients
+    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP -- Corrected from TIMESTANDARD to TIMESTAMPTZ
 );
 
 -- Reset the sequence for the users table after all table creations

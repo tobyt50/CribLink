@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 const InquiryModal = ({ isOpen, onClose, onSubmit, listingTitle, darkMode, userRole, clientName, clientEmail, clientPhone }) => {
   if (!isOpen) return null;
@@ -14,25 +15,31 @@ const InquiryModal = ({ isOpen, onClose, onSubmit, listingTitle, darkMode, userR
   const [localInquiryPhone, setLocalInquiryPhone] = useState(isClientAuthenticated ? clientPhone : '');
   const [localInquiryMessage, setLocalInquiryMessage] = useState('');
 
-  // Local state for inquiry submission status within the modal
-  const [inquiryStatus, setInquiryStatus] = useState(null); // 'success', 'error', or null
+  // Local state for modal's inquiry submission status
+  const [modalInquiryStatus, setModalInquiryStatus] = useState(null); // 'sending', 'success', 'error'
+
+  // Initialize useMessage
+  const { showMessage } = useMessage();
 
   // Ref for the inquiry modal content to detect clicks outside
   const inquiryModalRef = useRef(null);
 
   // Update local state when authenticated client's info changes (e.g., initial fetch)
+  // Also reset status when modal opens or user context changes
   useEffect(() => {
     if (isClientAuthenticated) {
       setLocalInquiryName(clientName);
       setLocalInquiryEmail(clientEmail);
       setLocalInquiryPhone(clientPhone);
     }
-    // Also reset status when modal opens or user context changes
-    setInquiryStatus(null);
+    setLocalInquiryMessage(''); // Clear message on new open
+    setModalInquiryStatus(null); // Reset modal status when it opens
   }, [isClientAuthenticated, clientName, clientEmail, clientPhone, isOpen]); // Add isOpen to dependency array
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault(); // Prevent default form submission
+
+    setModalInquiryStatus('sending'); // Set status to sending
 
     const inquiryData = {
       name: localInquiryName,
@@ -40,14 +47,24 @@ const InquiryModal = ({ isOpen, onClose, onSubmit, listingTitle, darkMode, userR
       phone: localInquiryPhone,
       message: localInquiryMessage,
     };
-    // Pass local form data and local status setter to parent's onSubmit handler
-    // The parent (App component) will handle the API call and update the status via this callback
-    onSubmit(inquiryData, setInquiryStatus);
 
-    // Clear local message field after submission attempt
-    setLocalInquiryMessage('');
-    // For guest users, also clear other fields, but only if submission was successful or if no error occurred
-    // This is handled by the parent component's success logic, so we don't clear here immediately.
+    try {
+      // Pass local form data to parent's onSubmit handler
+      // The parent component (e.g., ListingDetails) will handle the API call
+      await onSubmit(inquiryData);
+      setModalInquiryStatus('success');
+      showMessage('Inquiry sent successfully!', 'success', 4000);
+      // Give a brief moment for the user to see the success message before closing
+      setTimeout(() => {
+        onClose(); // Close modal on success
+      }, 1000);
+    } catch (error) {
+      setModalInquiryStatus('error');
+      // The parent's onSubmit should ideally show the specific error message
+      // But if an unexpected error occurs before reaching the parent's catch, show a generic message
+      showMessage('Failed to send inquiry. Please try again.', 'error');
+      console.error("Error submitting inquiry from modal:", error);
+    }
   };
 
   // Handle click outside to close modal
@@ -82,26 +99,6 @@ const InquiryModal = ({ isOpen, onClose, onSubmit, listingTitle, darkMode, userR
           <X size={20} />
         </button>
         <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Inquire About "{listingTitle}"</h2>
-
-        {/* Conditional display of inquiry status messages */}
-        {inquiryStatus === 'success' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="p-3 mb-4 text-center text-green-700 bg-green-100 rounded-lg dark:bg-green-800 dark:text-green-200"
-          >
-            Inquiry sent successfully!
-          </motion.div>
-        )}
-        {inquiryStatus === 'error' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="p-3 mb-4 text-center text-red-700 bg-red-100 rounded-lg dark:bg-red-800 dark:text-red-200"
-          >
-            Failed to send inquiry. Please try again.
-          </motion.div>
-        )}
 
         <form onSubmit={handleFormSubmit} className="space-y-4">
           {isClientAuthenticated ? (
@@ -170,11 +167,17 @@ const InquiryModal = ({ isOpen, onClose, onSubmit, listingTitle, darkMode, userR
           <div className="flex justify-end">
             <button
               type="submit"
-              className="py-2 px-6 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-semibold"
+              className="py-2 px-6 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={modalInquiryStatus === 'sending'}
             >
-              Send Inquiry
+              {modalInquiryStatus === 'sending' ? 'Sending...' : 'Send Inquiry'}
             </button>
           </div>
+          {modalInquiryStatus === 'error' && (
+            <p className="text-red-500 text-sm mt-2 text-right">
+              There was an error sending your inquiry. Please try again.
+            </p>
+          )}
         </form>
       </motion.div>
     </div>

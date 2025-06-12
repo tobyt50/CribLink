@@ -7,6 +7,8 @@ import SearchFilters from "../components/SearchFilters";
 import API_BASE_URL from "../config";
 import { SlidersHorizontal, Search } from "lucide-react"; // Import Search icon
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 function SearchPage() {
   const location = useLocation();
@@ -17,6 +19,7 @@ function SearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const searchInputRef = useRef(null); // Ref for the search input
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
 
   const [filters, setFilters] = useState({
     location: "",
@@ -42,8 +45,8 @@ function SearchPage() {
 
   const fetchResults = async (term) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/listings?search=${encodeURIComponent(term)}`);
-      const data = await response.json();
+      const response = await axiosInstance.get(`${API_BASE_URL}/listings?search=${encodeURIComponent(term)}`);
+      const data = response.data; // Axios automatically parses JSON
       setResults(data.listings);
 
       const lowerTerm = term.toLowerCase();
@@ -55,8 +58,17 @@ function SearchPage() {
       );
 
       setFilteredResults(initialFiltered);
-    } catch (err) {
-      console.error("Search fetch error:", err);
+    } catch (error) {
+      console.error("Search results fetch error:", error);
+      let errorMessage = 'Failed to fetch search results. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error'); // Display error message
+      setResults([]);
+      setFilteredResults([]);
     }
   };
 
@@ -113,7 +125,7 @@ function SearchPage() {
     if (trimmed) {
       navigate(`/search?query=${encodeURIComponent(trimmed)}`);
     } else {
-      // If search term is empty, clear results and navigate to search page without query
+      showMessage('Please enter a search term.', 'info'); // Display info message
       setSearchTerm("");
       setResults([]);
       setFilteredResults([]);
@@ -138,7 +150,7 @@ function SearchPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by keyword, location, or type..."
-            className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+            className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
               darkMode
                 ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
                 : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"

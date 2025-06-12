@@ -6,6 +6,8 @@ import API_BASE_URL from "../config";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Clock, ArrowDownUp, Search } from "lucide-react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+import { useMessage } from "../context/MessageContext"; // Import useMessage hook
+import axiosInstance from '../api/axiosInstance'; // Use axiosInstance
 
 const ITEMS_PER_PAGE = 12;
 
@@ -20,6 +22,8 @@ function Home() {
   const searchInputRef = useRef(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
+  // Removed: const handleApiError = useApiErrorHandler(); // No longer needed
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -35,41 +39,41 @@ function Home() {
 
   useEffect(() => {
     fetchListings();
-  }, [category, searchTerm, user, currentPage, sortBy]);
+  }, [category, searchTerm, user, currentPage, sortBy, darkMode]); // Added darkMode to dependency array to trigger re-fetch when theme changes
 
   useEffect(() => {
     setCurrentPage(1);
   }, [category, searchTerm]);
 
   const fetchListings = async () => {
+    const params = new URLSearchParams();
+    if (category) params.append("purchase_category", category);
+    if (searchTerm) params.append("search", searchTerm);
+    params.append("page", currentPage);
+    params.append("limit", ITEMS_PER_PAGE);
+    params.append("sortBy", sortBy);
+
+    const url = `${API_BASE_URL}/listings?${params.toString()}`;
+
+    const token = localStorage.getItem("token");
+    const headers = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     try {
-      const params = new URLSearchParams();
-      if (category) params.append("purchase_category", category);
-      if (searchTerm) params.append("search", searchTerm);
-      params.append("page", currentPage);
-      params.append("limit", ITEMS_PER_PAGE);
-      params.append("sortBy", sortBy);
+      const response = await axiosInstance.get(url, { headers });
 
-      const url = `${API_BASE_URL}/listings?${params.toString()}`;
-
-      const token = localStorage.getItem("token");
-      const headers = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(url, { headers });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(`HTTP error! Status: ${response.status}. Message: ${errorData.message || "Server error"}`);
-      }
-
-      const responseData = await response.json();
-      setListings(responseData.listings || []);
-      setTotalPages(responseData.totalPages || 1);
+      setListings(response.data.listings || []);
+      setTotalPages(response.data.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching listings:", error);
+      let errorMessage = 'Failed to fetch listings. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
       setListings([]);
       setTotalPages(1);
     }
@@ -82,6 +86,7 @@ function Home() {
       navigate(`/search?query=${encodeURIComponent(trimmed)}`);
     } else {
       setSearchTerm("");
+      showMessage('Search term cannot be empty.', 'info');
     }
   };
 

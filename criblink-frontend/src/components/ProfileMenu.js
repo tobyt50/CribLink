@@ -13,12 +13,14 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+import { useMessage } from '../context/MessageContext'; // Import useMessage hook
 
 function ProfileMenu({ user, onCloseMobileHeaderMenu }) { // Accept new prop
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { showMessage } = useMessage(); // Initialize useMessage
 
   // Close the menu when clicking outside of it or pressing the Escape key
   useEffect(() => {
@@ -59,6 +61,7 @@ function ProfileMenu({ user, onCloseMobileHeaderMenu }) { // Accept new prop
     setShowMenu(false); // Close the ProfileMenu
     onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false); // Close the Header's mobile menu
     navigate("/signin"); // Redirect to the sign-in page
+    showMessage('You have been logged out.', 'info', 3000); // Show logout message
   };
 
   // Handles redirection to the appropriate dashboard based on user role
@@ -114,7 +117,7 @@ function ProfileMenu({ user, onCloseMobileHeaderMenu }) { // Accept new prop
               {user.full_name?.charAt(0).toUpperCase() || "U"}
             </div>
             {/* Display user's first name on medium screens and up */}
-            <span className={`text-base text-sm font-semibold hidden md:inline ${darkMode ? "text-gray-200" : "text-white"}`}>
+            <span className={`text-sm font-semibold hidden md:inline ${darkMode ? "text-gray-200" : "text-white"}`}>
               {user.full_name?.split(" ")[0]}
             </span>
           </>
