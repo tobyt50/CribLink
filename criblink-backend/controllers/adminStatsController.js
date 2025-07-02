@@ -1,6 +1,6 @@
 const pool = require('../db');
 
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'lionel_messi_10_is_the_goat!';
