@@ -214,7 +214,7 @@ const AdminSettings = () => {
         setSidebarPermanentlyExpanded(prev => {
             const newState = !prev;
             setIsCollapsed(!newState);
-            showMessage(`Sidebar permanently expanded: ${newState ? 'On' : 'Off'}`, 'success');
+            showMessage(`Sidebar permanently ${newState ? 'expanded' : 'collapsed'}`, 'success');
             return newState;
         });
     };
@@ -402,7 +402,7 @@ const AdminSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
                                 </div>
                             </div>
-                            <Switch label="Permanently Expand Sidebar (Desktop Only)" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+                            <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
                         </div>
                     )}
 

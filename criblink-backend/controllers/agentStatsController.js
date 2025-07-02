@@ -19,9 +19,10 @@ const getAgentDashboardStats = async (req, res) => {
       [req.user.user_id]
     );
 
+    // Corrected: Changed 'assigned_agent' to 'agent_id'
     const inquiriesRes = await pool.query(
-      `SELECT COUNT(*) FROM inquiries WHERE assigned_agent = $1`,
-      [req.user.user_id] // Corrected: Use req.user.user_id (integer) instead of req.user.email (string)
+      `SELECT COUNT(*) FROM inquiries WHERE agent_id = $1`,
+      [req.user.user_id]
     );
 
     res.json({
@@ -51,10 +52,11 @@ const getAgentActivity = async (req, res) => {
 
     res.json({ activities: result.rows });
   } catch (err) {
-    console.error('Error fetching agent activity:', err);
+    console.error('Error fetching agent recent activity:', err);
     res.status(500).json({ error: 'Failed to load agent activity' });
   }
 };
+
 
 module.exports = {
   getAllAgents,

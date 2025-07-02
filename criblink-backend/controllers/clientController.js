@@ -1,22 +1,597 @@
 const db = require('../db');
+// const logActivity = require('../utils/logActivity'); // Assuming you have this utility if needed
 
-// Fetch clients + VIP + notes
+// Fetch all clients + VIP + notes for a specific agent
 exports.getClientsForAgent = async (req, res) => {
   const { agentId } = req.params;
   try {
     const result = await db.query(`
-      SELECT u.user_id, u.full_name, u.email, u.date_joined, u.status, ac.notes, ac.status AS client_status
+      SELECT u.user_id, u.full_name, u.email, u.date_joined, u.status, ac.notes, ac.status AS client_status, u.profile_picture_url
       FROM agent_clients ac
       JOIN users u ON ac.client_id = u.user_id
-      WHERE ac.agent_id = $1
-    `, [agentId]);
-
+      WHERE ac.agent_id = $1 AND ac.request_status = 'accepted'
+    `, [agentId]); // Only show clients where relationship is accepted
     res.status(200).json(result.rows);
   } catch (err) {
     console.error('Get clients error:', err);
     res.status(500).json({ error: 'Internal error fetching clients' });
   }
 };
+
+// Function to get a specific client's full profile details
+exports.getClientProfileDetails = async (req, res) => {
+    const { clientId } = req.params;
+    const requestingUserId = req.user.user_id; // The ID of the authenticated user
+    const requestingUserRole = req.user.role; // The role of the authenticated user
+
+
+    try {
+        // Fetch client details from the 'users' table, now including 'last_login' and share_favourites_with_agents
+        const userResult = await db.query(
+            `SELECT
+                user_id,
+                full_name,
+                email,
+                phone,
+                profile_picture_url,
+                date_joined,
+                last_login,
+                status AS user_status,
+                share_favourites_with_agents, -- NEW: Add this column to the select statement
+                share_property_preferences_with_agents -- NEW: Add this column
+             FROM users WHERE user_id = $1`,
+            [clientId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Client not found.' });
+        }
+        const clientDetails = userResult.rows[0];
+
+
+        // Fetch client-agent relationship details (notes, client_status)
+        // Now also checking request_status
+        const agentClientResult = await db.query(
+            `SELECT notes, status AS client_status, request_status
+             FROM agent_clients
+             WHERE agent_id = $1 AND client_id = $2`,
+            [requestingUserId, clientId]
+        );
+
+        let agentSpecificDetails = {};
+        if (agentClientResult.rows.length > 0) {
+            agentSpecificDetails = agentClientResult.rows[0];
+        } else {
+            // If an agent is trying to view a client not linked to them, and there's no relationship, deny
+            if (requestingUserRole === 'agent') {
+                return res.status(403).json({ message: 'Forbidden: This client is not associated with your account.' });
+            }
+        }
+
+        const combinedClientData = {
+            ...clientDetails,
+            ...agentSpecificDetails
+        };
+
+        res.status(200).json(combinedClientData);
+
+    } catch (err) {
+        console.error('Get client profile details error:', err);
+        res.status(500).json({ error: 'Internal error fetching client profile details.', details: err.message });
+    }
+};
+
+// Get Client Property Preferences
+exports.getClientPreferences = async (req, res) => {
+    const { clientId } = req.params;
+    try {
+        const result = await db.query(
+            `SELECT preferred_property_type, preferred_location, min_price, max_price, min_bedrooms, min_bathrooms
+             FROM client_property_preferences
+             WHERE user_id = $1`,
+            [clientId]
+        );
+
+        if (result.rows.length === 0) {
+            // If no preferences are set, return defaults or an empty object
+            return res.status(200).json({
+                preferred_property_type: 'any',
+                preferred_location: 'any',
+                min_price: 0,
+                max_price: 1000000000,
+                min_bedrooms: 0,
+                min_bathrooms: 0
+            });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching client preferences:', err);
+        res.status(500).json({ error: 'Failed to fetch client preferences.', details: err.message });
+    }
+};
+
+// Update Client Property Preferences
+exports.updateClientPreferences = async (req, res) => {
+    const { clientId } = req.params;
+    const { preferred_property_type, preferred_location, min_price, max_price, min_bedrooms, min_bathrooms } = req.body;
+
+    try {
+        const query = `
+            INSERT INTO client_property_preferences (user_id, preferred_property_type, preferred_location, min_price, max_price, min_bedrooms, min_bathrooms, last_updated)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            ON CONFLICT (user_id) DO UPDATE
+            SET
+                preferred_property_type = EXCLUDED.preferred_property_type,
+                preferred_location = EXCLUDED.preferred_location,
+                min_price = EXCLUDED.min_price,
+                max_price = EXCLUDED.max_price,
+                min_bedrooms = EXCLUDED.min_bedrooms,
+                min_bathrooms = EXCLUDED.min_bathrooms,
+                last_updated = NOW()
+            RETURNING *;
+        `;
+        const values = [clientId, preferred_property_type, preferred_location, min_price, max_price, min_bedrooms, min_bathrooms];
+        const result = await db.query(query, values);
+
+        res.status(200).json({ message: 'Client preferences updated successfully.', preferences: result.rows[0] });
+    } catch (err) {
+        console.error('Error updating client preferences:', err);
+        res.status(500).json({ error: 'Failed to update client preferences.', details: err.message });
+    }
+};
+
+// Get Agent-Recommended Listings for a Client (Existing: for agents to see what they recommended to a client)
+exports.getRecommendedListings = async (req, res) => {
+    const { clientId } = req.params;
+    const agentId = req.user.user_id; // The authenticated agent
+
+    // Authorization: Only the recommending agent or admin can access this
+    if (req.user.role === 'client' || (req.user.role === 'agent' && parseInt(agentId) !== req.user.user_id)) {
+        return res.status(403).json({ message: 'Forbidden: You are not authorized to view these recommendations.' });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT arl.property_id, pl.title, pl.location, pl.price, pl.image_url, arl.recommended_at,
+                    pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.status,
+                    pd.square_footage, pd.description, pd.amenities,
+                    (SELECT ARRAY_AGG(pi.image_url ORDER BY pi.image_id)
+                     FROM property_images pi
+                     WHERE pi.property_id = pl.property_id) AS gallery_images
+             FROM agent_recommended_listings arl
+             JOIN property_listings pl ON arl.property_id = pl.property_id
+             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+             WHERE arl.agent_id = $1 AND arl.client_id = $2
+             ORDER BY arl.recommended_at DESC`,
+            [agentId, clientId]
+        );
+        res.status(200).json({ recommendations: result.rows }); // Wrap in 'recommendations' object
+    } catch (err) {
+        console.error('Error fetching recommended listings:', err);
+        res.status(500).json({ error: 'Failed to fetch recommended listings.', details: err.message });
+    }
+};
+
+// NEW: Get Recommended Listings from a Specific Agent for an Authenticated Client
+exports.getRecommendedListingsByAgentForClient = async (req, res) => {
+    const { clientId, agentId } = req.params;
+    const requestingUserId = req.user.user_id;
+    const requestingUserRole = req.user.role;
+
+    // Authorization: Only the client themselves, or an admin, can view these recommendations.
+    // An agent should not be able to see recommendations made by *other* agents to *this* client.
+    if (requestingUserRole === 'client' && parseInt(clientId) !== requestingUserId) {
+        return res.status(403).json({ message: 'Forbidden: You can only view recommendations for your own account.' });
+    }
+    if (requestingUserRole === 'agent' && parseInt(agentId) !== requestingUserId) {
+      // If an agent tries to use this endpoint, it should be for their own recommendations to a client.
+      // If the agentId in the URL doesn't match the authenticated agent's ID, deny.
+      return res.status(403).json({ message: 'Forbidden: You can only view recommendations made by yourself.' });
+    }
+     if (requestingUserRole === 'guest') {
+        return res.status(401).json({ message: 'Authentication required to view recommended listings.' });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT arl.property_id, pl.title, pl.location, pl.price, pl.image_url, arl.recommended_at,
+                    pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.status,
+                    pd.square_footage, pd.description, pd.amenities,
+                    (SELECT ARRAY_AGG(pi.image_url ORDER BY pi.image_id)
+                     FROM property_images pi
+                     WHERE pi.property_id = pl.property_id) AS gallery_images
+             FROM agent_recommended_listings arl
+             JOIN property_listings pl ON arl.property_id = pl.property_id
+             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+             WHERE arl.agent_id = $1 AND arl.client_id = $2
+             ORDER BY arl.recommended_at DESC`,
+            [agentId, clientId]
+        );
+        res.status(200).json({ recommendations: result.rows }); // Wrap in 'recommendations' object
+    } catch (err) {
+        console.error('Error fetching recommended listings by agent for client:', err);
+        res.status(500).json({ error: 'Failed to fetch recommended listings by agent for client.', details: err.message });
+    }
+};
+
+
+// Add a Recommended Listing for a Client
+exports.addRecommendedListing = async (req, res) => {
+    const { clientId, propertyId } = req.params;
+    const agentId = req.user.user_id;
+
+    try {
+        const result = await db.query(
+            `INSERT INTO agent_recommended_listings (agent_id, client_id, property_id)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (agent_id, client_id, property_id) DO NOTHING
+             RETURNING *;`, // RETURNING * to see if it was inserted or conflicted
+            [agentId, clientId, propertyId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(200).json({ message: 'Listing already recommended to this client by you.' });
+        }
+        res.status(201).json({ message: 'Listing recommended successfully.', recommendation: result.rows[0] });
+    } catch (err) {
+        console.error('Error adding recommended listing:', err);
+        res.status(500).json({ error: 'Failed to add recommended listing.', details: err.message });
+    }
+};
+
+// Remove a Recommended Listing for a Client
+exports.removeRecommendedListing = async (req, res) => {
+    const { clientId, propertyId } = req.params;
+    const agentId = req.user.user_id;
+
+    try {
+        const result = await db.query(
+            `DELETE FROM agent_recommended_listings
+             WHERE agent_id = $1 AND client_id = $2 AND property_id = $3
+             RETURNING property_id;`,
+            [agentId, clientId, propertyId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Recommended listing not found.' });
+        }
+        res.status(200).json({ message: 'Recommended listing removed successfully.', removedPropertyId: result.rows[0].property_id });
+    } catch (err) {
+        console.error('Error removing recommended listing:', err);
+        res.status(500).json({ error: 'Failed to remove recommended listing.', details: err.message });
+    }
+};
+
+
+// NEW: sendConnectionRequestToAgent - Client sends a connection request to an agent
+exports.sendConnectionRequestToAgent = async (req, res) => {
+    const { agentId } = req.params; // The agent the client wants to connect with
+    const clientId = req.user.user_id; // The authenticated client sending the request
+    const { message } = req.body; // Optional message
+
+    // Authorization: Only authenticated clients can send requests to agents
+    if (req.user.role !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: Only clients can send connection requests to agents.' });
+    }
+    if (parseInt(agentId) === clientId) {
+        return res.status(400).json({ message: 'You cannot send a connection request to yourself.' });
+    }
+
+    try {
+        // Check if the recipient is actually an agent
+        const agentCheck = await db.query(`SELECT user_id FROM users WHERE user_id = $1 AND role = 'agent'`, [agentId]);
+        if (agentCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'The specified recipient is not a valid agent.' });
+        }
+
+        // Check for existing relationship in agent_clients (already connected)
+        const existingAgentClientRelationship = await db.query(
+            `SELECT * FROM agent_clients WHERE agent_id = $1 AND client_id = $2 AND request_status = 'accepted'`,
+            [agentId, clientId]
+        );
+        if (existingAgentClientRelationship.rows.length > 0) {
+            return res.status(200).json({ message: 'You are already connected with this agent.', status: 'connected' });
+        }
+
+        // Check for existing request (any status) between client and agent
+        const existingRequest = await db.query(
+            `SELECT request_id, status, sender_id FROM agent_client_requests
+             WHERE (sender_id = $1 AND receiver_id = $2)
+             OR (sender_id = $2 AND receiver_id = $1)`, // Check both directions regardless of status
+            [clientId, agentId]
+        );
+
+        if (existingRequest.rows.length > 0) {
+            const request = existingRequest.rows[0];
+            const reqStatus = request.status;
+
+            if (reqStatus === 'pending') {
+                if (request.sender_id === clientId) {
+                    return res.status(200).json({ message: 'Connection request already sent and pending.', status: 'pending_sent' });
+                } else {
+                    return res.status(200).json({ message: 'This agent has already sent you a connection request. Check your incoming requests.', status: 'pending_received' });
+                }
+            } else if (reqStatus === 'accepted') {
+                // This case should ideally be caught by existingAgentClientRelationship check above, but as a safeguard
+                return res.status(200).json({ message: 'You are already connected with this agent.', status: 'connected' });
+            } else if (reqStatus === 'rejected') {
+                // If rejected, update the existing request back to pending
+                await db.query(
+                    `UPDATE agent_client_requests
+                     SET status = 'pending', message = $1, updated_at = NOW(), sender_id = $2, receiver_id = $3, sender_role = 'client', receiver_role = 'agent'
+                     WHERE request_id = $4
+                     RETURNING *;`,
+                    [message, clientId, agentId, request.request_id]
+                );
+                return res.status(200).json({ message: 'Connection request re-sent successfully.', status: 'pending_sent' });
+            }
+        }
+
+        // If no existing request (or it was handled by the rejected logic), insert a new one
+        await db.query(
+            `INSERT INTO agent_client_requests (sender_id, receiver_id, sender_role, receiver_role, status, message)
+             VALUES ($1, $2, 'client', 'agent', 'pending', $3)`,
+            [clientId, agentId, message]
+        );
+        res.status(201).json({ message: 'Connection request sent successfully to agent.', status: 'pending_sent' });
+
+    } catch (err) {
+        console.error('Error sending connection request to agent:', err);
+        res.status(500).json({ error: 'Failed to send connection request to agent.', details: err.message });
+    }
+};
+
+// NEW: getConnectionStatus - Get connection status between a client and an agent
+exports.getConnectionStatus = async (req, res) => {
+    const { clientId, agentId } = req.params;
+    const requestingUserId = req.user.user_id;
+    const requestingUserRole = req.user.role;
+
+    // Authorization: Only the client or agent involved, or an admin can check status
+    if (requestingUserRole === 'client' && parseInt(clientId) !== requestingUserId) {
+        return res.status(403).json({ message: 'Forbidden: You can only check connection status for your own account.' });
+    }
+    if (requestingUserRole === 'agent' && parseInt(agentId) !== requestingUserId) {
+        return res.status(403).json({ message: 'Forbidden: You can only check connection status for your own agent profile.' });
+    }
+    // Admin role has implicit access, no specific check needed beyond authenticateToken
+
+    try {
+        // Check if there's an accepted relationship in agent_clients
+        const acceptedRelationship = await db.query(
+            `SELECT * FROM agent_clients WHERE (agent_id = $1 AND client_id = $2) AND request_status = 'accepted'`,
+            [agentId, clientId]
+        );
+
+        if (acceptedRelationship.rows.length > 0) {
+            return res.status(200).json({ status: 'connected' });
+        }
+
+        // Check for pending requests (sent by client to agent OR by agent to client)
+        const pendingRequest = await db.query(
+            `SELECT * FROM agent_client_requests
+             WHERE (sender_id = $1 AND receiver_id = $2 AND sender_role = 'client' AND receiver_role = 'agent' AND status = 'pending')
+             OR (sender_id = $2 AND receiver_id = $1 AND sender_role = 'agent' AND receiver_role = 'client' AND status = 'pending')`,
+            [clientId, agentId] // clientId is $1, agentId is $2
+        );
+
+        if (pendingRequest.rows.length > 0) {
+            const request = pendingRequest.rows[0];
+            if (request.sender_id === parseInt(clientId) && request.receiver_id === parseInt(agentId)) {
+                return res.status(200).json({ status: 'pending_sent' });
+            } else if (request.sender_id === parseInt(agentId) && request.receiver_id === parseInt(clientId)) {
+                return res.status(200).json({ status: 'pending_received' });
+            }
+        }
+
+        // Additionally, check for rejected requests. If one exists, it means the client can potentially resend.
+        // We do not want to block them from re-attempting if the previous one was rejected.
+        const rejectedRequest = await db.query(
+            `SELECT * FROM agent_client_requests
+             WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1))
+             AND status = 'rejected'`,
+            [clientId, agentId]
+        );
+
+        if (rejectedRequest.rows.length > 0) {
+            // A rejected request exists, which means a new one *could* be sent (or the old one updated)
+            // The client can re-send, so for the UI's purpose, it's like no active request exists.
+            return res.status(200).json({ status: 'none' });
+        }
+
+
+        // If neither connected, nor pending, nor rejected (which would reset to 'none'), then status is 'none'
+        res.status(200).json({ status: 'none' });
+
+    } catch (err) {
+        console.error('Error fetching connection status:', err);
+        res.status(500).json({ error: 'Failed to fetch connection status.', details: err.message });
+    }
+};
+
+// NEW: disconnectFromAgent - Client disconnects from an agent
+exports.disconnectFromAgent = async (req, res) => {
+    const { clientId, agentId } = req.params;
+    const requestingUserId = req.user.user_id;
+
+    // Authorization: Only the client disconnecting can call this
+    if (parseInt(clientId) !== requestingUserId || req.user.role !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: You can only disconnect yourself from an agent.' });
+    }
+
+    try {
+        await db.query('BEGIN'); // Start transaction
+
+        // 1. Delete the entry from agent_clients (remove the active connection)
+        const deleteAgentClientResult = await db.query(
+            `DELETE FROM agent_clients
+             WHERE agent_id = $1 AND client_id = $2 AND request_status = 'accepted'
+             RETURNING *;`,
+            [agentId, clientId]
+        );
+
+        if (deleteAgentClientResult.rows.length === 0) {
+            await db.query('ROLLBACK');
+            return res.status(404).json({ message: 'Active connection not found between client and agent.' });
+        }
+
+        // 2. Update the status in agent_client_requests to 'rejected'
+        // This ensures the request can be re-sent later and reflects the disconnection.
+        await db.query(
+            `UPDATE agent_client_requests
+             SET status = 'rejected', updated_at = NOW()
+             WHERE (sender_id = $1 AND receiver_id = $2 AND status = 'accepted')
+             OR (sender_id = $2 AND receiver_id = $1 AND status = 'accepted');`,
+            [clientId, agentId] // Checks both directions
+        );
+
+        await db.query('COMMIT'); // Commit transaction
+        res.status(200).json({ message: 'Successfully disconnected from agent.' });
+
+    } catch (err) {
+        await db.query('ROLLBACK'); // Rollback transaction on error
+        console.error('Error disconnecting from agent:', err);
+        res.status(500).json({ error: 'Failed to disconnect from agent.', details: err.message });
+    }
+};
+
+
+// NEW: getClientIncomingRequests - Get connection requests sent TO the authenticated client (from agents)
+exports.getClientIncomingRequests = async (req, res) => {
+    const clientId = req.user.user_id; // The authenticated client
+    const clientRole = req.user.role;
+
+    if (clientRole !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: This endpoint is for clients only.' });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT acr.request_id, acr.sender_id AS agent_id, u.full_name AS client_name, u.email AS client_email, -- Renamed to client_name/email as this is what ClientCard expects
+                    u.profile_picture_url AS client_profile_picture_url, acr.message, acr.created_at, acr.status
+             FROM agent_client_requests acr
+             JOIN users u ON acr.sender_id = u.user_id
+             WHERE acr.receiver_id = $1 AND acr.receiver_role = 'client' AND acr.status = 'pending'
+             ORDER BY acr.created_at DESC`,
+            [clientId]
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Error fetching client incoming requests:', err);
+        res.status(500).json({ error: 'Failed to fetch incoming connection requests.', details: err.message });
+    }
+};
+
+// NEW: getClientOutgoingRequests - Get connection requests sent BY the authenticated client (to agents)
+exports.getClientOutgoingRequests = async (req, res) => {
+    const clientId = req.user.user_id; // The authenticated client
+    const clientRole = req.user.role;
+
+    if (clientRole !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: This endpoint is for clients only.' });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT acr.request_id, acr.receiver_id AS agent_id, u.full_name AS agent_name, u.email AS agent_email,
+                    u.profile_picture_url AS agent_profile_picture_url, acr.message, acr.created_at, acr.status
+             FROM agent_client_requests acr
+             JOIN users u ON acr.receiver_id = u.user_id
+             WHERE acr.sender_id = $1 AND acr.sender_role = 'client'
+             ORDER BY acr.created_at DESC`,
+            [clientId]
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Error fetching client outgoing requests:', err);
+        res.status(500).json({ error: 'Failed to fetch outgoing connection requests.', details: err.message });
+    }
+};
+
+// NEW: acceptConnectionRequestFromAgent - Client accepts a connection request from an agent
+exports.acceptConnectionRequestFromAgent = async (req, res) => {
+    const { requestId } = req.params;
+    const clientId = req.user.user_id;
+    const clientRole = req.user.role;
+
+    if (clientRole !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: Only clients can accept connection requests.' });
+    }
+
+    try {
+        await db.query('BEGIN'); // Start transaction
+
+        // 1. Update the request status to 'accepted'
+        const requestUpdateResult = await db.query(
+            `UPDATE agent_client_requests
+             SET status = 'accepted', updated_at = NOW()
+             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role = 'client' AND status = 'pending'
+             RETURNING sender_id, receiver_id;`,
+            [requestId, clientId]
+        );
+
+        if (requestUpdateResult.rows.length === 0) {
+            await db.query('ROLLBACK');
+            return res.status(404).json({ message: 'Connection request not found, already accepted, or not pending.' });
+        }
+
+        const { sender_id: agentId, receiver_id: acceptedClientId } = requestUpdateResult.rows[0];
+
+        // 2. Insert into agent_clients table if not already present (establishing the primary relationship)
+        await db.query(
+            `INSERT INTO agent_clients (agent_id, client_id, status, request_status)
+             VALUES ($1, $2, 'regular', 'accepted')
+             ON CONFLICT (agent_id, client_id) DO UPDATE SET request_status = 'accepted', status = 'regular';`,
+            [agentId, acceptedClientId]
+        );
+
+        await db.query('COMMIT'); // Commit transaction
+
+        // Optional: Log activity
+        // await logActivity(`Client (ID: ${clientId}) accepted connection request from Agent (ID: ${agentId})`, req.user, 'connection_accepted');
+
+        res.status(200).json({ message: 'Connection request accepted successfully.' });
+
+    } catch (err) {
+        await db.query('ROLLBACK'); // Rollback transaction on error
+        console.error('Error accepting connection request:', err);
+        res.status(500).json({ error: 'Failed to accept connection request.', details: err.message });
+    }
+};
+
+// NEW: rejectConnectionRequestFromAgent - Client rejects a connection request from an agent
+exports.rejectConnectionRequestFromAgent = async (req, res) => {
+    const { requestId } = req.params;
+    const clientId = req.user.user_id;
+    const clientRole = req.user.role;
+
+    if (clientRole !== 'client') {
+        return res.status(403).json({ message: 'Forbidden: Only clients can reject connection requests.' });
+    }
+
+    try {
+        const result = await db.query(
+            `UPDATE agent_client_requests
+             SET status = 'rejected', updated_at = NOW()
+             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role = 'client' AND status = 'pending'
+             RETURNING request_id;`,
+            [requestId, clientId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Connection request not found, already processed, or not pending.' });
+        }
+
+        // Optional: Log activity
+        // await logActivity(`Client (ID: ${clientId}) rejected connection request (ID: ${requestId})`, req.user, 'connection_rejected');
+        res.status(200).json({ message: 'Connection request rejected successfully.' });
+
+    } catch (err) {
+        console.error('Error rejecting connection request:', err);
+        res.status(500).json({ error: 'Failed to reject connection request.', details: err.message });
+    }
+};
+
 
 // Send email mock
 exports.sendEmailToClient = async (req, res) => {
@@ -43,7 +618,7 @@ exports.addNoteToClient = async (req, res) => {
 
   try {
     await db.query(`
-      UPDATE agent_clients SET notes = $1 WHERE agent_id = $2 AND client_id = $3
+      UPDATE agent_clients SET notes = $1 WHERE agent_id = $2 AND client_id = $3 AND request_status = 'accepted'
     `, [note, agentId, clientId]);
 
     res.status(200).json({ message: 'Note added' });
@@ -63,8 +638,9 @@ exports.toggleVipFlag = async (req, res) => {
   }
 
   try {
+    // Only update if the request_status is 'accepted'
     await db.query(`
-      UPDATE agent_clients SET status = $1 WHERE agent_id = $2 AND client_id = $3
+      UPDATE agent_clients SET status = $1 WHERE agent_id = $2 AND client_id = $3 AND request_status = 'accepted'
     `, [status, agentId, clientId]);
 
     res.status(200).json({ message: 'Client status updated' });
@@ -80,12 +656,8 @@ exports.sendMessageToClient = async (req, res) => {
   const { message } = req.body;
 
   try {
-    await db.query(`
-      INSERT INTO client_messages (agent_id, client_id, message)
-      VALUES ($1, $2, $3)
-    `, [agentId, clientId, message]);
-
-    res.status(200).json({ message: 'Message logged' });
+    console.log(`Simulating message from agent ${agentId} to client ${clientId}: ${message}`);
+    res.status(200).json({ message: 'Message logged (simulated)' });
   } catch (err) {
     console.error('Send message error:', err);
     res.status(500).json({ error: 'Error sending message' });
@@ -94,24 +666,57 @@ exports.sendMessageToClient = async (req, res) => {
 
 exports.archiveClient = async (req, res) => {
   const { agentId, clientId } = req.params;
+  // Log incoming parameters for debugging
+  console.log(`[archiveClient] Attempting to archive client: agentId=${agentId}, clientId=${clientId}`);
   try {
-    // Copy to archive first
-    await db.query(`
+    // Start a transaction to ensure atomicity
+    await db.query('BEGIN');
+
+    // 1. Copy to archive first
+    const insertArchiveResult = await db.query(`
       INSERT INTO archived_clients (agent_id, client_id, notes, status)
       SELECT agent_id, client_id, notes, status
       FROM agent_clients
-      WHERE agent_id = $1 AND client_id = $2
+      WHERE agent_id = $1 AND client_id = $2 AND request_status = 'accepted'
+      ON CONFLICT (agent_id, client_id) DO UPDATE
+      SET
+          notes = EXCLUDED.notes,
+          status = EXCLUDED.status,
+          archived_at = NOW()
+      RETURNING *;
     `, [agentId, clientId]);
 
-    // Delete from active table
+    // Log result of insert operation
+    console.log(`[archiveClient] Insert into archived_clients result: rows=${insertArchiveResult.rows.length}`);
+
+    if (insertArchiveResult.rows.length === 0) {
+      // If no rows were inserted/updated, it means the client was not found in agent_clients with 'accepted' status
+      await db.query('ROLLBACK');
+      console.warn(`[archiveClient] Client ${clientId} not found or not in an accepted relationship with agent ${agentId} for archiving.`);
+      return res.status(404).json({ message: 'Client not found or not in an accepted relationship to be archived.' });
+    }
+
+    // 2. Delete from active agent_clients table
     await db.query(`
-      DELETE FROM agent_clients WHERE agent_id = $1 AND client_id = $2
+      DELETE FROM agent_clients WHERE agent_id = $1 AND client_id = $2 AND request_status = 'accepted';
     `, [agentId, clientId]);
 
-    res.status(200).json({ message: 'Client archived' });
+    // 3. Update status in agent_client_requests to 'rejected'
+    // This allows client to resend connection request in the future and signifies disconnection.
+    await db.query(`
+        UPDATE agent_client_requests
+        SET status = 'rejected', updated_at = NOW()
+        WHERE (sender_id = $1 AND receiver_id = $2 AND status = 'accepted')
+        OR (sender_id = $2 AND receiver_id = $1 AND status = 'accepted');
+    `, [clientId, agentId]); // Note: clientId is sender_id, agentId is receiver_id for client-sent. Reverse for agent-sent.
+
+    await db.query('COMMIT'); // Commit transaction
+    console.log(`[archiveClient] Client ${clientId} archived and relationship disconnected successfully.`);
+    res.status(200).json({ message: 'Client archived and relationship disconnected successfully.' });
   } catch (err) {
-    console.error('Archive client error:', err);
-    res.status(500).json({ error: 'Failed to archive client' });
+    await db.query('ROLLBACK'); // Rollback transaction on error
+    console.error('Archive client error:', err.message, err.stack); // Log specific error message and stack trace
+    res.status(500).json({ error: 'Failed to archive client.', details: err.message }); // Send error message to frontend
   }
 };
 
@@ -135,17 +740,28 @@ exports.restoreClient = async (req, res) => {
   const { agentId, clientId } = req.params;
   try {
     // Move back to active table
+    // When restoring, set request_status to 'accepted' as it signifies an active relationship
     await db.query(`
-      INSERT INTO agent_clients (agent_id, client_id, notes, status)
-      SELECT agent_id, client_id, notes, status
+      INSERT INTO agent_clients (agent_id, client_id, notes, status, request_status)
+      SELECT agent_id, client_id, notes, status, 'accepted' as request_status
       FROM archived_clients
       WHERE agent_id = $1 AND client_id = $2
+      ON CONFLICT (agent_id, client_id) DO UPDATE SET request_status = 'accepted';
     `, [agentId, clientId]);
 
     // Remove from archive
     await db.query(`
       DELETE FROM archived_clients WHERE agent_id = $1 AND client_id = $2
     `, [agentId, clientId]);
+
+    // If there was a rejected request, and now it's restored, maybe set it to accepted?
+    // Or clear it entirely. For now, we assume if client is restored, they are connected.
+    await db.query(`
+        UPDATE agent_client_requests
+        SET status = 'accepted', updated_at = NOW()
+        WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1);
+    `, [clientId, agentId]);
+
 
     res.status(200).json({ message: 'Client restored' });
   } catch (err) {
@@ -164,11 +780,10 @@ exports.deleteArchivedClient = async (req, res) => {
       RETURNING *; -- Optional: return deleted row to confirm deletion
     `, [agentId, clientId]);
 
-    if (result.rowCount === 0) {
+    if (result.rows.length === 0) {
       // If no rows were deleted, the client was not found
       return res.status(404).json({ error: 'Archived client not found' });
     }
-
     res.status(200).json({ message: 'Archived client deleted permanently' });
   } catch (err) {
     console.error('Delete archived client error:', err);

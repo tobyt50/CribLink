@@ -1,12 +1,12 @@
 // src/pages/SignIn.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
+import axiosInstance from '../api/axiosInstance';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
-import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
+import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
-import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog
+import { useConfirmDialog } from '../context/ConfirmDialogContext';
 
 export default function SignIn() {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -15,33 +15,46 @@ export default function SignIn() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
 
   const navigate = useNavigate();
-  const { darkMode } = useTheme(); // Use the dark mode context
-  const { showMessage } = useMessage(); // Use the showMessage function from MessageContext
-  const { showConfirm } = useConfirmDialog(); // Use the showConfirm function from ConfirmDialogContext
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog();
+
+  // Function to determine the redirection path
+  const getRedirectPath = (userData) => {
+    if (userData && userData.default_landing_page) {
+      return userData.default_landing_page; // Prioritize user's saved landing page
+    }
+
+    if (userData && userData.role) {
+      switch (userData.role) {
+        case 'admin':
+          return '/admin/dashboard'; //
+        case 'agent':
+          return '/agent/dashboard'; //
+        case 'client':
+          return '/client/inquiries'; // Specific client dashboard path
+        default:
+          return '/profile/general'; // General fallback for authenticated users
+      }
+    }
+    return '/'; // Fallback for unhandled roles or no user data
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('user')); //
+
     if (token && user) {
-      switch (user.role) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'agent':
-          navigate('/agent/dashboard');
-          break;
-        default:
-          navigate('/home'); // Or '/' depending on your default client route
-      }
+      // If a token and user data exist, redirect based on settings/role
+      navigate(getRedirectPath(user), { replace: true }); // Use replace to prevent back navigation to sign-in
     }
-  }, [navigate]); // Add navigate to dependency array
+  }, [navigate]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Use axiosInstance instead of direct axios
       const { data } = await axiosInstance.post('/users/signin', form);
 
       if (data.user.status === 'banned') {
@@ -51,24 +64,17 @@ export default function SignIn() {
         return;
       }
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token); //
+      localStorage.setItem('user', JSON.stringify(data.user)); // Store the full user object including default_landing_page
       window.dispatchEvent(new Event("authChange")); // Notify app of auth state change
-      showMessage('Sign-in successful!', 'success', 3000); // Show success message
 
-      switch (data.user.role) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'agent':
-          navigate('/agent/dashboard');
-          break;
-        default:
-          navigate('/');
-      }
+      showMessage('Sign-in successful!', 'success', 3000);
+
+      // Redirect after successful login using the new logic
+      navigate(getRedirectPath(data.user)); //
+
     } catch (error) {
       console.error("Sign-in error caught locally:", error);
-      // Display a user-friendly error message using showMessage
       let errorMessage = 'An unexpected error occurred during sign-in.';
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
@@ -82,11 +88,10 @@ export default function SignIn() {
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Use axiosInstance for forgot password request
       const response = await axiosInstance.post('/users/forgot-password', { email: forgotPasswordEmail });
-      showMessage(response.data.message, 'success', 5000); // Show success message using toast
-      setForgotPasswordEmail(''); // Clear the email input on success
-      setShowForgotPasswordModal(false); // Close the modal on success
+      showMessage(response.data.message, 'success', 5000);
+      setForgotPasswordEmail('');
+      setShowForgotPasswordModal(false);
     } catch (error) {
       console.error("Forgot password error caught locally:", error);
       let errorMessage = 'Failed to send reset link. Please try again.';
@@ -102,7 +107,6 @@ export default function SignIn() {
   const handleOpenForgotPasswordModal = () => {
     setShowForgotPasswordModal(true);
   };
-
 
   return (
     <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -211,7 +215,7 @@ export default function SignIn() {
                 type="button"
                 onClick={() => {
                   setShowForgotPasswordModal(false);
-                  setForgotPasswordEmail(''); // Clear email on cancel
+                  setForgotPasswordEmail('');
                 }}
                 className={`w-full py-2 rounded-xl font-medium hover:bg-gray-300 transition ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-700"}`}
               >

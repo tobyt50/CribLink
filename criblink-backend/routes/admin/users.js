@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 // Corrected import: Destructure the 'pool' property from the exported object
-const { pool, query } = require('../../db'); 
+const { pool, query } = require('../../db');
 const logActivity = require('../../utils/logActivity'); // Corrected path to logActivity
 
 // GET users with optional filters, search, sorting, and conditional pagination
@@ -44,7 +44,7 @@ router.get('/users', async (req, res) => {
   const orderByDirection = direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
   // Base query text without LIMIT and OFFSET
-  let queryText = `SELECT user_id, full_name, email, role, status, date_joined
+  let queryText = `SELECT user_id, full_name, email, role, status, date_joined, profile_picture_url
                    FROM users
                    ${whereSQL}
                    ORDER BY ${orderByColumn} ${orderByDirection}`;

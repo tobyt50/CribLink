@@ -45,7 +45,7 @@ export default function SignUp() {
           navigate('/agent/dashboard');
           break;
         default:
-          navigate('/home');
+          navigate('/');
       }
     }
   }, [navigate]); // Add navigate to dependency array

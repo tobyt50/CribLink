@@ -5,35 +5,17 @@ import logo from "../assets/criblink-logo.png";
 import { Menu, X, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileMenu from "./ProfileMenu";
-import { useTheme } from "../layouts/AppShell"; // ✅ Import theme context
+import { useTheme } from "../layouts/AppShell";
+import { useAuth } from '../context/AuthContext'; // <--- NEW IMPORT
 
 function Header() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth(); // <--- Get user from AuthContext
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef(null);
 
-  // Destructure darkMode and the new setThemePreference from useTheme
-  const { darkMode, setThemePreference } = useTheme(); 
+  const { darkMode, setThemePreference } = useTheme();
 
-  const syncUser = () => {
-    const storedUser = localStorage.getItem("user");
-    try {
-      setUser(storedUser ? JSON.parse(storedUser) : null);
-    } catch {
-      setUser(null);
-    }
-  };
-
-  useEffect(() => {
-    syncUser();
-    window.addEventListener("authChange", syncUser);
-    window.addEventListener("storage", syncUser);
-    return () => {
-      window.removeEventListener("authChange", syncUser);
-      window.removeEventListener("storage", syncUser);
-    };
-  }, []);
-
+  // No need for syncUser or direct localStorage listeners here, AuthContext handles it
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (mobileMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -44,15 +26,12 @@ function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
 
-  // New handler for the dark mode toggle to explicitly switch between light and dark
   const handleToggleTheme = () => {
-    // If currently in dark mode (as indicated by the derived darkMode state), switch to 'light'
-    // Otherwise, switch to 'dark'
     setThemePreference(darkMode ? 'light' : 'dark');
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
+    <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-green-600 text-white"}`}>
       <div className="flex items-center justify-between px-6 h-14">
         <Link to="/" className="flex items-center space-x-2">
           <img src={logo} alt="CribLink Logo" className="h-9 w-auto" />
@@ -89,7 +68,7 @@ function Header() {
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {/* Dark Mode Toggle - Mobile (Moved out of hamburger menu) */}
+          {/* Dark Mode Toggle - Mobile */}
           <button
             onClick={handleToggleTheme}
             className="md:hidden text-white hover:text-yellow-300 transition"
@@ -100,7 +79,7 @@ function Header() {
 
           {/* Profile or Menu Toggle */}
           <div className="hidden md:block">
-            <ProfileMenu user={user} />
+            <ProfileMenu user={user} /> {/* Pass user from AuthContext */}
           </div>
 
           <button
@@ -121,7 +100,7 @@ function Header() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 500, damping: 30, duration: 0.25 }}
           className={`md:hidden px-6 py-4 space-y-4 text-sm font-medium shadow-inner relative z-[100]
-            ${darkMode ? "bg-gray-700 text-gray-200" : "bg-green-700 text-white"}`}
+            ${darkMode ? "bg-gray-700 text-gray-200" : "bg-green-800 text-white"}`}
         >
           <Link to="/" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
             Listings
@@ -133,10 +112,8 @@ function Header() {
             Contact Us
           </Link>
 
-          {/* Dark mode toggle for mobile - REMOVED from here as per instructions */}
-
           <div className={`pt-2 border-t ${darkMode ? "border-gray-600" : "border-white/20"}`}>
-            <ProfileMenu user={user} onCloseMobileHeaderMenu={setMobileMenuOpen} />
+            <ProfileMenu user={user} onCloseMobileHeaderMenu={setMobileMenuOpen} /> {/* Pass user from AuthContext */}
           </div>
         </motion.div>
       )}

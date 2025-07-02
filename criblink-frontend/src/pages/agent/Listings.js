@@ -669,7 +669,7 @@ const Listings = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <button
                                     className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/add-listing')}
+                                    onClick={() => navigate('/agent/add-listing')}
                                     title="Add New Listing"
                                 >
                                     <Plus size={20} />
@@ -746,7 +746,7 @@ const Listings = () => {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/add-listing')}
+                                        onClick={() => navigate('/agent/add-listing')}
                                     >
                                         +Add
                                     </button>
@@ -812,7 +812,7 @@ const Listings = () => {
                                                 else if (action === 'mark_sold') await handleMarkAsSold(id); // Added mark_sold
                                                 else if (action === 'mark_failed') await handleMarkAsFailed(id); // Added mark_failed
                                                 else if (action === 'delete') await handleDeleteListing(id); // Use the Listings.js delete handler
-                                                else if (action === 'edit') navigate(`/edit-listing/${id}`); // Direct navigation for edit
+                                                else if (action === 'edit') navigate(`/agent/edit-listing/${id}`); // Direct navigation for edit
                                             }}
                                         />
                                     </div>
@@ -912,7 +912,7 @@ const Listings = () => {
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                                onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
+                                                                onClick={() => navigate(`/agent/edit-listing/${listing.property_id}`)}
                                                                 title="Edit Listing"
                                                             >
                                                                 <PencilIcon className="h-4 w-4 inline" />

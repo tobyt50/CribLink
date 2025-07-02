@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, User, Home, MessageSquare, X } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card';
+import StatCard from '../../components/StatCard'; // Import StatCard
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
@@ -19,23 +20,12 @@ const AdminDashboard = () => {
 
   const [agentCount, setAgentCount] = useState(null);
   const [listingCount, setListingCount] = useState(null);
-  const [inquiriesCount, setInquiriesCount] = useState(null);
+  const [totalClientInquiries, setTotalClientInquiries] = useState(null); // New state for client inquiries
+  const [totalAgentResponses, setTotalAgentResponses] = useState(null);   // New state for agent responses
   const [pendingApprovals, setPendingApprovals] = useState(null);
   const [activities, setActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const navigate = useNavigate();
-
-  // Removed the local useEffect for window resize, as useSidebarState handles it.
-  // useEffect(() => {
-  //   const handleResize = () => {
-  //     const mobile = window.innerWidth < 768;
-  //     setIsMobile(mobile);
-  //     setIsSidebarOpen(!mobile);
-  //   };
-
-  //   window.addEventListener('resize', handleResize);
-  //   return () => window.removeEventListener('resize', handleResize);
-  // }, []);
 
   const goToListings = () => navigate('/admin/listings');
   const goToPendingListings = () =>
@@ -43,10 +33,6 @@ const AdminDashboard = () => {
   const goToAgents = () =>
     navigate('/admin/users', {
       state: { roleFilter: 'agent', sortKey: 'date_joined', sortDirection: 'desc' },
-    });
-  const goToInquiries = () =>
-    navigate('/admin/inquiries', {
-      state: { sortKey: 'created_at', sortDirection: 'desc' },
     });
 
   // Effect for fetching Dashboard statistics (agent count, listings, inquiries, pending approvals)
@@ -57,7 +43,8 @@ const AdminDashboard = () => {
         console.log("No token found for fetchStats, skipping API calls.");
         setAgentCount(null);
         setListingCount(null);
-        setInquiriesCount(null);
+        setTotalClientInquiries(null);
+        setTotalAgentResponses(null);
         setPendingApprovals(null);
         return;
       }
@@ -65,15 +52,17 @@ const AdminDashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       try {
-        const [agentRes, listingRes, inquiryRes, pendingRes] = await Promise.all([
+        const [agentRes, listingRes, clientInquiriesRes, agentResponsesRes, pendingRes] = await Promise.all([
           axios.get('/admin/agents/count', { headers }),
           axios.get('/admin/listings/count', { headers }),
-          axios.get('/admin/inquiries/count', { headers }),
+          axios.get('/inquiries/agent/count/all-inquiries', { headers }), // Updated API call path
+          axios.get('/inquiries/agent/count/agent-responses', { headers }),   // Updated API call path
           axios.get('/admin/listings/pending-approvals', { headers }),
         ]);
         setAgentCount(agentRes.data.count);
         setListingCount(listingRes.data.count);
-        setInquiriesCount(inquiryRes.data.count);
+        setTotalClientInquiries(clientInquiriesRes.data.count); // Update new state
+        setTotalAgentResponses(agentResponsesRes.data.count);   // Update new state
         setPendingApprovals(pendingRes.data.count);
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -164,8 +153,7 @@ const AdminDashboard = () => {
   const stats = [
     { label: 'Total Listings', value: listingCount ?? '...', onClick: goToListings },
     { label: 'Total Agents', value: agentCount ?? '...', onClick: goToAgents },
-    { label: 'Total Inquiries', value: inquiriesCount ?? '...', onClick: goToInquiries },
-    { label: 'Pending Approvals', value: pendingApprovals ?? '...', onClick: goToPendingListings },
+    // Removed the old 'Total Inquiries' card
   ];
 
   const visibleActivities = showAllActivities ? activities : activities.slice(0, 5);
@@ -234,6 +222,19 @@ const AdminDashboard = () => {
                 <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{stat.value}</p>
               </Card>
             ))}
+            {/* New StatCard for Inquiries and Responses - Placed before Pending Approvals */}
+            <div className={`p-4 rounded-xl shadow text-center ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
+              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Stats</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <StatCard label="Total Inquiries" value={totalClientInquiries} />
+                <StatCard label="Total Responses" value={totalAgentResponses} />
+              </div>
+            </div>
+            {/* Pending Approvals card - now comes after Inquiry Stats */}
+            <Card onClick={goToPendingListings}>
+              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>Pending Approvals</h3>
+              <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{pendingApprovals ?? '...'}</p>
+            </Card>
           </div>
 
           {/* Activity Feed */}

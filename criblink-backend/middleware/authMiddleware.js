@@ -11,14 +11,17 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1]; // Format: Bearer <token>
 
     if (!token) {
+        console.log('[authenticateToken] Token missing.');
         return res.status(401).json({ message: 'Token missing' });
     }
 
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
+        console.log('[authenticateToken] Token verified. Decoded user payload:', req.user); // <-- ADDED LOG
         next();
     } catch (err) {
+        console.error('[authenticateToken] Invalid or expired token. Error:', err.message); // <-- ADDED LOG
         return res.status(403).json({ message: 'Invalid or expired token' });
     }
 };
@@ -30,9 +33,21 @@ const authenticateToken = (req, res, next) => {
  */
 const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
-        if (!req.user || !allowedRoles.includes(req.user.role)) {
+        console.log('[authorizeRoles] Checking authorization...'); // <-- ADDED LOG
+        console.log('[authorizeRoles] User present in req:', !!req.user); // <-- ADDED LOG
+        console.log('[authorizeRoles] User role from req.user:', req.user ? req.user.role : 'N/A'); // <-- ADDED LOG
+        console.log('[authorizeRoles] Allowed roles for this route:', allowedRoles); // <-- ADDED LOG
+
+        // Fix: Use flat array for includes check if allowedRoles is a nested array
+        // This accounts for both authorizeRoles('role1', 'role2') and authorizeRoles(['role1', 'role2'])
+        const flattenedAllowedRoles = Array.isArray(allowedRoles[0]) ? allowedRoles[0] : allowedRoles;
+        console.log('[authorizeRoles] Flattened allowed roles:', flattenedAllowedRoles); // <-- ADDED LOG
+
+        if (!req.user || !flattenedAllowedRoles.includes(req.user.role)) {
+            console.warn('[authorizeRoles] Access denied: insufficient privileges for user role:', req.user ? req.user.role : 'N/A'); // <-- ADDED LOG
             return res.status(403).json({ message: 'Access denied: insufficient privileges' });
         }
+        console.log('[authorizeRoles] Authorization granted.'); // <-- ADDED LOG
         next();
     };
 };
@@ -49,14 +64,14 @@ const optionalAuthenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        // console.log('[optionalAuthenticateToken] No token provided. Proceeding as guest.');
+        console.log('[optionalAuthenticateToken] No token provided. Proceeding as guest.');
         return next(); // No token, proceed to next middleware/route handler
     }
 
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
-        // console.log('[optionalAuthenticateToken] Token verified. User:', req.user.user_id, 'Role:', req.user.role);
+        console.log('[optionalAuthenticateToken] Token verified. User:', req.user.user_id, 'Role:', req.user.role);
         next(); // Token valid, proceed with user info
     } catch (err) {
         console.warn('[optionalAuthenticateToken] Invalid or expired token. Proceeding as guest. Error:', err.message);
@@ -68,5 +83,5 @@ const optionalAuthenticateToken = (req, res, next) => {
 module.exports = {
     authenticateToken,
     authorizeRoles,
-    optionalAuthenticateToken // Export the new middleware
+    optionalAuthenticateToken
 };

@@ -1,20 +1,52 @@
 const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/clientController');
-const { authenticateToken } = require('../middleware/authMiddleware'); // ✅ fixed import
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware'); // Import authorizeRoles
 
 // Core
-router.get('/agent/:agentId/clients', authenticateToken, clientController.getClientsForAgent);
+router.get('/agent/:agentId/clients', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.getClientsForAgent); // Only agents/admins can get clients for an agent
+router.get('/:clientId', authenticateToken, clientController.getClientProfileDetails); // Auth token required, internal logic handles client-agent relationship
 
-// Actions
-router.post('/agent/:agentId/clients/:clientId/email', authenticateToken, clientController.sendEmailToClient);
-router.post('/agent/:agentId/clients/:clientId/respond', authenticateToken, clientController.respondToInquiry);
-router.post('/agent/:agentId/clients/:clientId/note', authenticateToken, clientController.addNoteToClient);
-router.post('/agent/:agentId/clients/:clientId/message', authenticateToken, clientController.sendMessageToClient);
-router.put('/agent/:agentId/clients/:clientId/vip', authenticateToken, clientController.toggleVipFlag);
-router.delete('/agent/:agentId/clients/:clientId', authenticateToken, clientController.archiveClient);
-router.delete('/agent/:agentId/archived-clients/:clientId', authenticateToken, clientController.deleteArchivedClient);
-router.get('/agent/:agentId/archived-clients', authenticateToken, clientController.getArchivedClients);
-router.post('/agent/:agentId/archived-clients/:clientId/restore', authenticateToken, clientController.restoreClient);
+// Client Property Preferences (requires authentication as a client)
+router.get('/:clientId/preferences', authenticateToken, clientController.getClientPreferences);
+router.put('/:clientId/preferences', authenticateToken, clientController.updateClientPreferences);
+
+// Agent Recommended Listings (requires authentication as an agent)
+router.get('/:clientId/recommendations', authenticateToken, authorizeRoles(['agent']), clientController.getRecommendedListings);
+router.post('/:clientId/recommendations/:propertyId', authenticateToken, authorizeRoles(['agent']), clientController.addRecommendedListing);
+router.delete('/:clientId/recommendations/:propertyId', authenticateToken, authorizeRoles(['agent']), clientController.removeRecommendedListing);
+
+// NEW ROUTE: Get Recommended Listings for a Client from a Specific Agent
+// This route allows a client to see listings recommended to them by a particular agent.
+router.get('/:clientId/recommendations/agent/:agentId', authenticateToken, authorizeRoles(['client', 'admin']), clientController.getRecommendedListingsByAgentForClient);
+
+
+// NEW: Connection Request Features (Client as Sender/Receiver)
+// Client sends a request to an agent - only clients can do this
+router.post('/:clientId/connection-requests/send-to-agent/:agentId', authenticateToken, authorizeRoles(['client']), clientController.sendConnectionRequestToAgent);
+// Get incoming requests for a client - only the client can see their incoming requests
+router.get('/:clientId/connection-requests/incoming', authenticateToken, authorizeRoles(['client']), clientController.getClientIncomingRequests);
+// Get outgoing requests from a client - only the client can see their outgoing requests
+router.get('/:clientId/connection-requests/outgoing', authenticateToken, authorizeRoles(['client']), clientController.getClientOutgoingRequests);
+// Client accepts a request from an agent - only the client can accept requests sent to them
+router.post('/:clientId/connection-requests/:requestId/accept-from-agent', authenticateToken, authorizeRoles(['client']), clientController.acceptConnectionRequestFromAgent);
+// Client rejects a request from an agent - only the client can reject requests sent to them
+router.post('/:clientId/connection-requests/:requestId/reject-from-agent', authenticateToken, authorizeRoles(['client']), clientController.rejectConnectionRequestFromAgent);
+
+// NEW: Get connection status between a client and an agent
+router.get('/:clientId/connection-requests/status/:agentId', authenticateToken, authorizeRoles(['client', 'agent', 'admin']), clientController.getConnectionStatus);
+
+
+// Actions (These are typically agent actions on clients, so require agent role)
+router.post('/agent/:agentId/clients/:clientId/email', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.sendEmailToClient);
+router.post('/agent/:agentId/clients/:clientId/respond', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.respondToInquiry);
+// CHANGED: From router.post to router.put for addNoteToClient
+router.put('/agent/:agentId/clients/:clientId/note', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.addNoteToClient);
+router.post('/agent/:agentId/clients/:clientId/message', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.sendMessageToClient);
+router.put('/agent/:agentId/clients/:clientId/vip', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.toggleVipFlag);
+router.delete('/agent/:agentId/clients/:clientId', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.archiveClient);
+router.delete('/agent/:agentId/archived-clients/:clientId', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.deleteArchivedClient);
+router.get('/agent/:agentId/archived-clients', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.getArchivedClients);
+router.post('/agent/:agentId/archived-clients/:clientId/restore', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.restoreClient);
 
 module.exports = router;

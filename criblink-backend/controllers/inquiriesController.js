@@ -1,55 +1,381 @@
-// controllers/inquiriesController.js
+// inquiriesController.js
 const pool = require('../db');
 const { query } = require('../db');
 const logActivity = require('../utils/logActivity');
+const { v4: uuidv4 } = require('uuid');
 
-// POST /inquiries
+// POST /inquiries (for clients/guests to create a new initial inquiry with property_id)
 const createInquiry = async (req, res) => {
-  const { client_id, agent_id, property_id, name, email, phone, message } = req.body;
+  const { client_id, agent_id, property_id, name, email, phone, message_content } = req.body;
+  const io = req.app.get('io'); // Get the Socket.IO instance
 
-  if (!property_id || !name || !email || !message) { // agent_id and client_id can be null now
-    return res.status(400).json({ error: 'Missing required inquiry fields (property, name, email, message).' });
+  const sender_id = req.user ? req.user.user_id : null;
+
+  if (!message_content) {
+    return res.status(400).json({ error: 'Message content is required for property inquiries.' });
   }
+  // Removed the property_id validation to allow general inquiries
+  // if (!property_id) {
+  //   return res.status(400).json({ error: 'Property ID is required for property inquiries.' });
+  // }
 
   try {
-    // Determine initial status based on agent_id presence
-    const initialStatus = agent_id ? 'assigned' : 'new';
-    // Use agent_id for assigned_agent if present, otherwise null
-    const assignedAgentId = agent_id || null;
+    const finalClientId = req.user?.role === 'client' ? req.user.user_id : client_id || null;
+    const finalAgentId = agent_id || null;
+    const finalSenderId = sender_id || finalClientId; // If client_id is null (guest), sender_id will be null, so use finalClientId
 
     const result = await query(
-      'INSERT INTO inquiries (client_id, agent_id, property_id, name, email, phone, message, status, assigned_agent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-      [client_id, agent_id, property_id, name, email, phone, message, initialStatus, assignedAgentId] // Set status and assigned_agent
+      `INSERT INTO inquiries
+      (client_id, agent_id, property_id, sender_id, recipient_id, message_content, message_type, status, read_by_agent, name, email, phone, is_agent_responded, is_opened, read_by_client)
+      VALUES ($1, $2, $3, $4, $5, $6, 'initial_inquiry', 'new', false, $7, $8, $9, false, false, true)
+      RETURNING *`,
+      [
+        finalClientId, finalAgentId, property_id || null, finalSenderId, finalAgentId, // recipient_id is agentId for initial inquiry
+        message_content, name || null, email || null, phone || null
+      ]
     );
 
-    // Log the activity of a new inquiry being created
-    await logActivity(`Client ${client_id || 'Guest'} sent an inquiry for property ${property_id} to agent ${agent_id || 'N/A'}. Status: ${initialStatus}.`, req.user, 'inquiry');
+    const newInquiry = result.rows[0];
 
-    res.status(201).json(result.rows[0]);
+    await logActivity(
+      `Client ${newInquiry.client_id || 'Guest'} sent a new inquiry (ID: ${newInquiry.inquiry_id}) for property ${property_id || 'N/A'}.`,
+      req.user,
+      'inquiry'
+    );
+
+    // ✨ REAL-TIME: Emit event for the new inquiry
+    if (io) {
+        const eventData = {
+            conversationId: newInquiry.conversation_id,
+            inquiryId: newInquiry.inquiry_id,
+            clientId: newInquiry.client_id,
+            agentId: newInquiry.agent_id,
+            propertyId: newInquiry.property_id,
+            message: newInquiry.message_content,
+            timestamp: newInquiry.created_at,
+            senderId: newInquiry.sender_id,
+            messageType: newInquiry.message_type,
+            status: newInquiry.status,
+            read: newInquiry.read_by_client // Read status for the sender (client/guest)
+        };
+
+        if (newInquiry.agent_id) {
+            // This event is for an agent's list to update when a new inquiry is assigned to them
+            io.emit('new_inquiry_for_agent', eventData);
+        } else {
+            // This is for a general pool of unassigned inquiries (if applicable)
+            io.emit('new_general_inquiry', eventData);
+        }
+        // Also emit to the conversation room itself for real-time chat updates
+        io.to(newInquiry.conversation_id).emit('new_message', eventData);
+        // Also emit a general list change event to prompt re-fetch if needed for other dashboards/lists
+        io.emit('inquiry_list_changed', { reason: 'new_inquiry', conversationId: newInquiry.conversation_id });
+    }
+
+    res.status(201).json(newInquiry);
   } catch (err) {
     console.error('Error creating inquiry:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// GET /agent/inquiries (for agents/admins to see all their inquiries)
-const getAllInquiries = async (req, res) => {
+// POST /inquiries/general (for agents to create a new general inquiry without property_id)
+const createGeneralInquiry = async (req, res) => {
+  const { client_id, agent_id, message_content } = req.body;
+  const io = req.app.get('io');
+  const sender_id = req.user.user_id;
+
+  if (!client_id || !agent_id) {
+    return res.status(400).json({ error: 'Client ID and Agent ID are required for general inquiry.' });
+  }
+
+  const trimmedContent = typeof message_content === 'string' ? message_content.trim() : '';
+  const isMessageEmpty = trimmedContent === '';
+  const generatedConversationId = uuidv4();
+
+  if (isMessageEmpty) {
+    const generatedConversationId = uuidv4();
+  
+    return res.status(200).json({
+      conversation: {
+        id: generatedConversationId,
+        client_id,
+        agent_id,
+        property_id: null,
+        client_full_name: req.user.full_name,
+        client_email: req.user.email,
+        client_phone: req.user.phone,
+        property_title: null,
+        messages: [],
+        last_message: null,
+        last_message_timestamp: null,
+        is_agent_responded: false,
+        unread_messages_count: 0
+      }
+    });
+  }
+  
+
+  try {
+    const result = await query(
+      `INSERT INTO inquiries
+        (conversation_id, client_id, agent_id, property_id, sender_id, recipient_id, message_content, message_type, status, read_by_agent, is_agent_responded, is_opened, read_by_client)
+       VALUES ($1, $2, $3, NULL, $4, $5, $6, 'general_inquiry', 'open', true, true, true, false)
+       RETURNING *`,
+      [generatedConversationId, client_id, agent_id, sender_id, client_id, trimmedContent]
+    );
+
+    const newInquiry = result.rows[0];
+
+    await logActivity(
+      `Agent (ID: ${newInquiry.agent_id}) started a new general inquiry (ID: ${newInquiry.inquiry_id}) with client (ID: ${newInquiry.client_id}).`,
+      req.user,
+      'inquiry'
+    );
+
+    if (io && trimmedContent !== '::shell::') {
+      const eventData = {
+        conversationId: newInquiry.conversation_id,
+        inquiryId: newInquiry.inquiry_id,
+        clientId: newInquiry.client_id,
+        agentId: newInquiry.agent_id,
+        propertyId: newInquiry.property_id,
+        message: newInquiry.message_content,
+        timestamp: newInquiry.created_at,
+        senderId: newInquiry.sender_id,
+        messageType: newInquiry.message_type,
+        status: newInquiry.status,
+        read: newInquiry.read_by_agent
+      };
+
+      if (newInquiry.message_content && newInquiry.message_content.trim() !== '' && newInquiry.message_content !== '::shell::') {
+        io.emit('new_inquiry_for_agent', eventData);
+        io.to(newInquiry.conversation_id).emit('new_message', eventData);
+        io.emit('inquiry_list_changed', {
+          reason: 'new_general_inquiry',
+          conversationId: newInquiry.conversation_id
+        });
+      }      
+    }
+
+    res.status(201).json({
+      conversation: {
+        id: newInquiry.conversation_id,
+        client_id: newInquiry.client_id,
+        agent_id: newInquiry.agent_id,
+        property_id: newInquiry.property_id,
+        client_full_name: req.user.full_name,
+        client_email: req.user.email,
+        client_phone: req.user.phone,
+        property_title: null,
+        messages: [
+          {
+            inquiry_id: newInquiry.inquiry_id,
+            sender_id: newInquiry.sender_id,
+            message: newInquiry.message_content,
+            read: newInquiry.read_by_client,
+            timestamp: newInquiry.created_at
+          }
+        ],
+        last_message: newInquiry.message_content,
+        last_message_timestamp: newInquiry.created_at,
+        is_agent_responded: newInquiry.is_agent_responded,
+        unread_messages_count: 0
+      }
+    });
+
+  } catch (err) {
+    console.error('Error creating general inquiry:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// POST /inquiries/message
+const sendMessageInquiry = async (req, res) => {
+  const { conversation_id, property_id, message_content, recipient_id, message_type } = req.body;
+  const sender_id = req.user.user_id;
+  const io = req.app.get('io');
+
+  if (
+    !conversation_id ||
+    !message_content || // message_content is always required for non-shell messages
+    !recipient_id ||
+    !['client_reply', 'agent_reply'].includes(message_type)
+  ) {
+    return res.status(400).json({ error: 'Missing required message fields.' });
+  }
+
+  try {
+    // Step 1: Check if conversation already exists
+    const existing = await query(
+      'SELECT 1 FROM inquiries WHERE conversation_id = $1 LIMIT 1',
+      [conversation_id]
+    );
+
+    let client_id = null;
+    let agent_id = null;
+
+    // Step 2: If conversation exists, extract client_id and agent_id
+    if (existing.rows.length > 0) {
+      const convDetails = await query(
+        'SELECT client_id, agent_id, property_id FROM inquiries WHERE conversation_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [conversation_id]
+      );
+      const first = convDetails.rows[0];
+      client_id = first.client_id;
+      agent_id = first.agent_id;
+    } else {
+      // Step 3: This is a new conversation — pull values from token/req
+      if (req.user.role === 'agent') {
+        agent_id = req.user.user_id;
+        client_id = recipient_id;
+      } else if (req.user.role === 'client') {
+        client_id = req.user.user_id;
+        agent_id = recipient_id;
+      } else {
+        return res.status(400).json({ error: 'Invalid sender role.' });
+      }
+    }
+
+    // Step 4: Determine read flags
+    const read_by_client = message_type === 'client_reply';
+    const read_by_agent = message_type === 'agent_reply';
+
+    // Step 5: Insert the message into the DB
+    const result = await query(
+      `INSERT INTO inquiries
+        (conversation_id, client_id, agent_id, property_id, sender_id, recipient_id, message_content, message_type, status, read_by_client, read_by_agent)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9, $10)
+       RETURNING *`,
+      [
+        conversation_id,
+        client_id,
+        agent_id,
+        property_id || null,
+        sender_id,
+        recipient_id,
+        message_content.trim(),
+        message_type,
+        read_by_client,
+        read_by_agent
+      ]
+    );
+
+    const newMessage = result.rows[0];
+
+    // Step 6: Update flags/status on conversation
+    if (message_type === 'agent_reply') {
+      await query(
+        `UPDATE inquiries SET is_agent_responded = TRUE, status = 'open' WHERE conversation_id = $1`,
+        [conversation_id]
+      );
+      await query(
+        `UPDATE inquiries SET read_by_agent = TRUE WHERE conversation_id = $1 AND sender_id = $2`,
+        [conversation_id, client_id]
+      );
+    } else if (message_type === 'client_reply') {
+      await query(
+        `UPDATE inquiries SET is_agent_responded = FALSE, status = 'new' WHERE conversation_id = $1`,
+        [conversation_id]
+      );
+      await query(
+        `UPDATE inquiries SET read_by_client = TRUE WHERE conversation_id = $1 AND sender_id = $2`,
+        [conversation_id, agent_id]
+      );
+    }
+
+    await logActivity(
+      `${req.user.role} (ID: ${sender_id}) sent a ${message_type.replace('_', ' ')} in conversation ${conversation_id}.`,
+      req.user,
+      'inquiry'
+    );
+
+    // Step 7: Emit message only after real content is saved
+    if (io) {
+      io.to(conversation_id).emit('new_message', {
+        conversationId: conversation_id,
+        message: newMessage.message_content,
+        senderId: newMessage.sender_id,
+        recipientId: newMessage.recipient_id,
+        messageType: newMessage.message_type,
+        timestamp: newMessage.created_at,
+        inquiryId: newMessage.inquiry_id,
+        // The 'read' flag here should indicate if the RECIPIENT has read it based on message type
+        read: message_type === 'client_reply' ? newMessage.read_by_agent : newMessage.read_by_client,
+        is_agent_responded: message_type === 'agent_reply'
+      });
+
+      io.emit('inquiry_list_changed', {
+        reason: 'new_message',
+        conversationId: conversation_id
+      });
+    }
+
+    res.status(201).json(newMessage);
+  } catch (err) {
+    console.error('Error sending message in inquiry:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+// PUT /[role]/inquiries/mark-read/:conversationId
+const markMessagesAsRead = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id;
+  const role = req.user.role;
+  const io = req.app.get('io'); // Get the Socket.IO instance
+
+  const updateColumn = role === 'client' ? 'read_by_client' : (role === 'agent' || role === 'admin') ? 'read_by_agent' : null;
+  if (!updateColumn) {
+    return res.status(403).json({ error: 'Unauthorized role.' });
+  }
+
+  try {
+    // Mark messages sent by the OTHER party as read by the current user
+    await query(
+      `UPDATE inquiries SET ${updateColumn} = TRUE WHERE conversation_id = $1 AND sender_id != $2`,
+      [conversationId, userId]
+    );
+
+    // ✨ REAL-TIME: Emit read receipt acknowledgment to the conversation room
+    if (io) {
+        io.to(conversationId).emit('message_read_ack', {
+            conversationId: conversationId,
+            readerId: userId, // The user who read the messages
+            role: role // The role of the user who read the messages
+        });
+        // Also emit a general list change event to prompt re-fetch if needed
+        io.emit('inquiry_list_changed', { reason: 'messages_read', conversationId: conversationId });
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error marking messages as read:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+const getAllInquiriesForAgent = async (req, res) => {
   try {
     const { search, page, limit, sort, direction } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
 
-    let orderBy = 'created_at'; // Default sort key
-    let orderDirection = 'DESC'; // Default sort direction
+    let orderBy = 'i.created_at';
+    let orderDirection = 'DESC';
 
-    // Validate and set sort key
-    const validSortKeys = ['inquiry_id', 'name', 'email', 'phone', 'message', 'status', 'assigned_agent', 'created_at'];
-    if (sort && validSortKeys.includes(sort)) {
-      orderBy = sort;
+    const validSortKeys = ['i.created_at', 'u_client.full_name', 'p.title', 'i.status'];
+    if (sort === 'client_name') {
+      orderBy = `COALESCE(u_client.full_name, i.name)`;
+    } else if (sort === 'property_title') {
+      orderBy = 'p.title';
+    } else if (sort && validSortKeys.includes(`i.${sort}`)) {
+      orderBy = `i.${sort}`;
     }
 
-    // Validate and set sort direction
     if (direction && ['asc', 'desc'].includes(direction.toLowerCase())) {
       orderDirection = direction.toUpperCase();
     }
@@ -58,61 +384,277 @@ const getAllInquiries = async (req, res) => {
     const queryParams = [];
     let paramIndex = 1;
 
-    // Filter by assigned agent for agents
     if (req.user.role === 'agent') {
-        whereClause += ` WHERE assigned_agent = $${paramIndex}`;
-        queryParams.push(req.user.user_id); // Use user_id from token
+        whereClause += `
+          WHERE
+            (i.agent_id = $${paramIndex} OR i.recipient_id = $${paramIndex} OR i.sender_id = $${paramIndex})
+            AND i.hidden_from_agent = FALSE
+        `;
+        queryParams.push(req.user.user_id);
         paramIndex++;
-    }
+      }
+
 
     if (search) {
-      if (whereClause === '') {
-        whereClause += ` WHERE (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex} OR message ILIKE $${paramIndex})`;
-      } else {
-        whereClause += ` AND (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex} OR message ILIKE $${paramIndex})`;
-      }
-      queryParams.push(`%${search}%`);
-      paramIndex++;
+      const searchTerm = `%${search}%`;
+      const searchConditions = `(COALESCE(u_client.full_name, i.name) ILIKE $${paramIndex} OR u_agent.full_name ILIKE $${paramIndex + 1} OR p.title ILIKE $${paramIndex + 2} OR i.message_content ILIKE $${paramIndex + 3} OR i.email ILIKE $${paramIndex + 4} OR i.phone ILIKE $${paramIndex + 5})`;
+      whereClause += whereClause ? ` AND ${searchConditions}` : ` WHERE ${searchConditions}`;
+      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      paramIndex += 6;
     }
 
-    // Get total count
-    const totalResult = await query(`SELECT COUNT(*) FROM inquiries ${whereClause}`, queryParams);
+    const totalResult = await query(
+      `SELECT COUNT(DISTINCT i.conversation_id)
+       FROM inquiries i
+       LEFT JOIN users u_client ON i.client_id = u_client.user_id
+       LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN property_listings p ON i.property_id = p.property_id
+       ${whereClause}`,
+      queryParams
+    );
     const total = parseInt(totalResult.rows[0].count, 10);
 
-    // Get inquiries with pagination and sorting
-    const result = await query(
-      `SELECT * FROM inquiries ${whereClause} ORDER BY ${orderBy} ${orderDirection} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...queryParams, limitNum, offset]
+    const allInquiries = await query(
+      `SELECT
+          i.inquiry_id, i.conversation_id, i.client_id, i.agent_id, i.property_id, i.sender_id,
+          i.recipient_id, i.message_content, i.message_type, i.status, i.read_by_client, i.read_by_agent,
+          i.is_agent_responded, i.is_opened, i.created_at, i.updated_at,
+          COALESCE(u_client.full_name, i.name) AS client_name,
+          COALESCE(u_client.email, i.email) AS client_email,
+          COALESCE(u_client.phone, i.phone) AS client_phone,
+          u_agent.full_name AS agent_name, u_agent.email AS agent_email,
+          p.title AS property_title
+       FROM inquiries i
+       LEFT JOIN users u_client ON i.client_id = u_client.user_id
+       LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN property_listings p ON i.property_id = p.property_id
+       ${whereClause}
+       ORDER BY i.conversation_id, i.created_at ASC`,
+      queryParams
     );
 
-    res.json({
-      inquiries: result.rows,
-      total: total,
-      page: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+    const conversationsMap = new Map();
+    allInquiries.rows.forEach(inq => {
+      if (!conversationsMap.has(inq.conversation_id)) {
+        conversationsMap.set(inq.conversation_id, {
+          id: inq.conversation_id, client_id: inq.client_id, agent_id: inq.agent_id, property_id: inq.property_id,
+          clientName: inq.client_name, clientEmail: inq.client_email, clientPhone: inq.client_phone,
+          propertyTitle: inq.property_title || (inq.property_id ? `Property ${inq.property_id}` : 'General Inquiry'),
+          messages: [], lastMessage: null, lastMessageTimestamp: null, lastMessageSenderId: null,
+          unreadCount: 0, is_agent_responded: inq.is_agent_responded, is_opened: inq.is_opened,
+        });
+      }
+      const conversation = conversationsMap.get(inq.conversation_id);
+      const isClientMessage = inq.sender_id === inq.client_id;
+
+      // Filter out messages that are explicitly null or '::shell::' content
+      if (inq.message_content !== null && inq.message_content !== '::shell::') {
+        conversation.messages.push({
+          inquiry_id: inq.inquiry_id, sender_id: inq.sender_id, sender: isClientMessage ? 'Client' : 'Agent',
+          message: inq.message_content, timestamp: inq.created_at,
+          read: isClientMessage ? inq.read_by_agent : inq.read_by_client, // Correct read status based on recipient
+        });
+      }
     });
+
+    const groupedConversations = Array.from(conversationsMap.values());
+
+    groupedConversations.forEach(conv => {
+      conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      if (conv.messages.length > 0) {
+        const lastMsg = conv.messages[conv.messages.length - 1];
+        conv.lastMessage = lastMsg.message;
+        conv.lastMessageTimestamp = lastMsg.timestamp;
+        conv.lastMessageSenderId = lastMsg.sender_id;
+      }
+      // Correct unread count for the AGENT (messages from client that agent hasn't read)
+      conv.unreadCount = conv.messages.filter(msg =>
+        msg.sender_id === conv.client_id && !msg.read
+      ).length;
+
+      const latestStatusInquiry = allInquiries.rows
+        .filter(inq => inq.conversation_id === conv.id)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+      if (latestStatusInquiry) {
+        conv.is_agent_responded = latestStatusInquiry.is_agent_responded;
+        conv.is_opened = latestStatusInquiry.is_opened;
+      }
+    });
+
+    groupedConversations.sort((a, b) => {
+      const dateA = new Date(a.lastMessageTimestamp);
+      const dateB = new Date(b.lastMessageTimestamp);
+      return orderDirection === 'ASC' ? dateA - dateB : dateB - dateA;
+    });
+
+    const paginatedConversations = groupedConversations.slice(offset, offset + limitNum);
+
+    res.json({ inquiries: paginatedConversations, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    console.error('Error fetching inquiries:', err);
+    console.error('Error fetching agent inquiries:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// PUT /agent/inquiries/:id/assign
+const getAllInquiriesForClient = async (req, res) => {
+  try {
+    const { search, page, limit, sort, direction } = req.query;
+    const client_id = req.user.user_id;
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const offset = (pageNum - 1) * limitNum;
+
+    let orderBy = 'i.created_at';
+    let orderDirection = 'DESC';
+
+    if (sort === 'agent_name') orderBy = 'u_agent.full_name';
+    else if (sort === 'property_title') orderBy = 'p.title';
+
+    if (direction && ['asc', 'desc'].includes(direction.toLowerCase())) orderDirection = direction.toUpperCase();
+
+    let whereClause = ` WHERE i.client_id = $1 AND i.hidden_from_client = FALSE`;
+    const queryParams = [client_id];
+    let paramIndex = 2;
+
+    if (search) {
+      const searchTerm = `%${search}%`;
+      const searchConditions = `(u_agent.full_name ILIKE $${paramIndex} OR p.title ILIKE $${paramIndex + 1} OR i.message_content ILIKE $${paramIndex + 2})`;
+      whereClause += ` AND ${searchConditions}`;
+      queryParams.push(searchTerm, searchTerm, searchTerm);
+      paramIndex += 3;
+    }
+
+    const totalResult = await query(
+      `SELECT COUNT(DISTINCT i.conversation_id) FROM inquiries i
+       LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN property_listings p ON i.property_id = p.property_id
+       ${whereClause}`,
+      queryParams
+    );
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const allInquiries = await query(
+      `SELECT
+          i.inquiry_id, i.conversation_id, i.client_id, i.agent_id, i.property_id, i.sender_id,
+          i.recipient_id, i.message_content, i.message_type, i.status, i.read_by_client,
+          i.read_by_agent, i.is_agent_responded, i.is_opened, i.created_at, i.updated_at,
+          u_agent.full_name AS agent_name, u_agent.email AS agent_email,
+          p.title AS property_title
+       FROM inquiries i
+       LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN property_listings p ON i.property_id = p.property_id
+       ${whereClause}
+       ORDER BY i.conversation_id, i.created_at ASC`,
+      queryParams
+    );
+
+    const conversationsMap = new Map();
+    allInquiries.rows.forEach(inq => {
+      if (!conversationsMap.has(inq.conversation_id)) {
+        conversationsMap.set(inq.conversation_id, {
+          id: inq.conversation_id, client_id: inq.client_id, property_id: inq.property_id,
+          agent_id: inq.agent_id, agentName: inq.agent_name || 'Unassigned Agent', agentEmail: inq.agent_email,
+          propertyTitle: inq.property_title || (inq.property_id ? `Property ${inq.property_id}` : 'General Inquiry'),
+          messages: [], lastMessage: null, lastMessageTimestamp: null, lastMessageSenderId: null,
+          unreadCount: 0, is_agent_responded: inq.is_agent_responded, is_opened: inq.is_opened,
+        });
+      }
+
+      const conversation = conversationsMap.get(inq.conversation_id);
+      const isClientMessage = inq.sender_id === inq.client_id;
+
+      // Filter out messages that are explicitly null or '::shell::' content
+      if (inq.message_content !== null && inq.message_content !== '::shell::') {
+        conversation.messages.push({
+          inquiry_id: inq.inquiry_id,
+          sender_id: inq.sender_id,
+          sender: isClientMessage ? 'Client' : 'Agent',
+          read: isClientMessage ? inq.read_by_agent : inq.read_by_client,
+          message: inq.message_content,
+          timestamp: inq.created_at,
+        });
+      }
+
+      // The is_agent_responded status should be based on the latest message or the conversation state.
+      // This logic here might be redundant if the main query is correct.
+      // if (inq.message_type === 'agent_reply') conversation.is_agent_responded = true;
+      // if (inq.is_opened) conversation.is_opened = true;
+    });
+
+    const groupedConversations = Array.from(conversationsMap.values());
+
+    groupedConversations.forEach(conv => {
+      conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      if (conv.messages.length > 0) {
+        const lastMsg = conv.messages[conv.messages.length - 1];
+        conv.lastMessage = lastMsg.message;
+        conv.lastMessageTimestamp = lastMsg.timestamp;
+        conv.lastMessageSenderId = lastMsg.sender_id;
+      }
+      // Correct unread count for the CLIENT (messages from agent that client hasn't read)
+      conv.unreadCount = conv.messages.filter(msg =>
+        msg.sender_id === conv.agent_id && !msg.read
+      ).length;
+    });
+
+    groupedConversations.sort((a, b) => {
+      const dateA = new Date(a.lastMessageTimestamp);
+      const dateB = new Date(b.lastMessageTimestamp);
+      return orderDirection === 'ASC' ? dateA - dateB : dateB - dateA;
+    });
+
+    const paginatedConversations = groupedConversations.slice(offset, offset + limitNum);
+
+    res.json({ inquiries: paginatedConversations, total, page: pageNum, totalPages: Math.ceil(total / limitNum) });
+  } catch (err) {
+    console.error('Error fetching client inquiries:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /inquiries/assign/:inquiryId
 const assignInquiry = async (req, res) => {
-  const { id } = req.params;
-  const { agent_id } = req.body; // Expecting agent_id (numeric user_id)
+  const { inquiryId } = req.params;
+  const { agent_id } = req.body;
+  const io = req.app.get('io'); // Get the Socket.IO instance
 
   if (!agent_id) {
     return res.status(400).json({ error: 'Agent ID is required for assignment.' });
   }
 
   try {
-    await query(
-      'UPDATE inquiries SET status = $1, assigned_agent = $2 WHERE inquiry_id = $3',
-      ['assigned', agent_id, id]
+    const result = await query(
+      `UPDATE inquiries
+       SET agent_id = $1, status = 'assigned', read_by_agent = TRUE
+       WHERE inquiry_id = $2 AND message_type = 'initial_inquiry' RETURNING *`,
+      [agent_id, inquiryId]
     );
 
-    await logActivity(`Assigned inquiry ID ${id} to agent ID ${agent_id}`, req.user, 'inquiry');
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Initial inquiry not found or already assigned.' });
+    }
+
+    const assignedInquiry = result.rows[0];
+
+    await logActivity(`Assigned inquiry ID ${inquiryId} to agent ID ${agent_id}`, req.user, 'inquiry');
+
+    // Emit Socket.IO event for the assignment
+    if (io) {
+      io.emit('inquiry_assigned', {
+        conversationId: assignedInquiry.conversation_id,
+        inquiryId: assignedInquiry.inquiry_id,
+        assignedAgentId: assignedInquiry.agent_id,
+        clientId: assignedInquiry.client_id,
+        propertyId: assignedInquiry.property_id,
+        timestamp: assignedInquiry.updated_at,
+      });
+      io.emit('inquiry_list_changed', {
+        reason: 'inquiry_assigned',
+        conversationId: assignedInquiry.conversation_id
+      });
+    }
 
     res.sendStatus(200);
   } catch (err) {
@@ -121,50 +663,308 @@ const assignInquiry = async (req, res) => {
   }
 };
 
-// PUT /agent/inquiries/:id/resolve
-const resolveInquiry = async (req, res) => {
-  const { id } = req.params;
-  const { agent_response, client_email } = req.body;
-
-  if (!agent_response) {
-    return res.status(400).json({ error: 'Agent response is required to resolve inquiry.' });
-  }
+// PUT /agent/inquiries/mark-opened/:conversationId
+const markConversationOpened = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id;
+  const io = req.app.get('io'); // Get the Socket.IO instance
 
   try {
     await query(
-      'UPDATE inquiries SET status = $1, agent_response = $2, updated_at = NOW() WHERE inquiry_id = $3',
-      ['resolved', agent_response, id]
+      `UPDATE inquiries
+       SET is_opened = TRUE
+       WHERE conversation_id = $1 AND (agent_id = $2 OR recipient_id = $2 OR sender_id = $2)`,
+      [conversationId, userId]
     );
 
-    await logActivity(`Resolved inquiry ID ${id}. Agent message sent to ${client_email}.`, req.user, 'inquiry');
+    // Emit Socket.IO event
+    if (io) {
+      io.to(conversationId).emit('conversation_opened', {
+        conversationId,
+        openerId: userId,
+        timestamp: new Date().toISOString()
+      });
+      io.emit('inquiry_list_changed', { reason: 'conversation_opened', conversationId });
+    }
 
     res.sendStatus(200);
   } catch (err) {
-    console.error('Error resolving inquiry:', err);
+    console.error('Error marking conversation as opened:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// DELETE /agent/inquiries/:id
-const deleteInquiry = async (req, res) => {
-  const { id } = req.params;
+// PUT /agent/inquiries/mark-responded/:conversationId
+const markConversationResponded = async (req, res) => {
+  const { conversationId } = req.params;
+  const io = req.app.get('io'); // Get the Socket.IO instance
 
   try {
-    await query('DELETE FROM inquiries WHERE inquiry_id = $1', [id]);
+    await query(
+      `UPDATE inquiries
+       SET is_agent_responded = TRUE
+       WHERE conversation_id = $1`,
+      [conversationId]
+    );
 
-    await logActivity(`Deleted inquiry ID ${id}`, req.user, 'inquiry');
+    await logActivity(`Agent (ID: ${req.user.user_id}) marked conversation ${conversationId} as responded.`, req.user, 'inquiry');
 
-    res.sendStatus(204); // No Content
+    // Emit Socket.IO event
+    if (io) {
+      io.to(conversationId).emit('conversation_responded', {
+        conversationId,
+        responderId: req.user.user_id,
+        timestamp: new Date().toISOString()
+      });
+      io.emit('inquiry_list_changed', { reason: 'conversation_responded', conversationId });
+    }
+
+    res.sendStatus(200);
   } catch (err) {
-    console.error('Error deleting inquiry:', err);
+    console.error('Error marking conversation as responded:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// DELETE /inquiries/delete-conversation/:conversationId
+const deleteConversation = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id;
+  const role = req.user.role;
+  const io = req.app.get('io'); // Get the Socket.IO instance
+
+  const columnToUpdate =
+    role === 'client' ? 'hidden_from_client'
+    : role === 'agent' || role === 'admin' ? 'hidden_from_agent'
+    : null;
+
+  if (!columnToUpdate) {
+    return res.status(403).json({ error: 'Unauthorized role to delete conversation.' });
+  }
+
+  try {
+    // Soft delete: Mark conversation as hidden from the deleting user's view
+    await query(
+      `UPDATE inquiries
+       SET ${columnToUpdate} = TRUE
+       WHERE conversation_id = $1 AND (sender_id = $2 OR recipient_id = $2 OR client_id = $2 OR agent_id = $2)`,
+      [conversationId, userId]
+    );
+
+    // After soft deleting, check if both client and agent have marked it hidden
+    const checkHiddenStatus = await query(
+      `SELECT hidden_from_client, hidden_from_agent
+       FROM inquiries
+       WHERE conversation_id = $1
+       LIMIT 1`,
+      [conversationId]
+    );
+
+    if (checkHiddenStatus.rows.length > 0) {
+      const { hidden_from_client, hidden_from_agent } = checkHiddenStatus.rows[0];
+
+      // If both client and agent have marked it hidden, then delete it completely
+      if (hidden_from_client && hidden_from_agent) {
+        await query(
+          `DELETE FROM inquiries
+           WHERE conversation_id = $1`,
+          [conversationId]
+        );
+
+        // Emit a specific event for permanent deletion
+        if (io) {
+          io.to(conversationId).emit('conversation_permanently_deleted', {
+            conversationId
+          });
+          io.emit('inquiry_list_changed', {
+            reason: 'conversation_permanently_deleted',
+            conversationId
+          });
+        }
+      } else {
+        // If not permanently deleted, emit the soft-delete event as before
+        if (io) {
+          io.to(conversationId).emit('conversation_deleted', {
+            conversationId,
+            deleterId: userId,
+            role
+          });
+          io.emit('inquiry_list_changed', {
+            reason: 'conversation_deleted',
+            conversationId
+          });
+        }
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error handling conversation deletion:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Count total inquiries (clients + guests)
+const countAllInquiries = async (req, res) => {
+  const userId = req.user.user_id;
+  const role = req.user.role;
+
+  let visibilityClause = '';
+  if (role === 'client') {
+    visibilityClause = 'AND hidden_from_client = FALSE';
+  } else if (role === 'agent' || role === 'admin') {
+    visibilityClause = 'AND hidden_from_agent = FALSE';
+  }
+
+  try {
+    const result = await query(`
+      SELECT COUNT(*)
+      FROM inquiries
+      WHERE (
+        (client_id IS NOT NULL AND sender_id = client_id)
+        OR (client_id IS NULL AND name IS NOT NULL)
+      )
+      ${visibilityClause}
+    `);
+
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error counting inquiries:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Count all agent replies (not distinct conversations)
+const countAgentResponses = async (req, res) => {
+  const role = req.user.role;
+
+  let visibilityClause = '';
+  if (role === 'client') {
+    visibilityClause = 'AND hidden_from_client = FALSE';
+  } else if (role === 'agent' || role === 'admin') {
+    visibilityClause = 'AND hidden_from_agent = FALSE';
+  }
+
+  try {
+    const result = await query(`
+      SELECT COUNT(*)
+      FROM inquiries
+      WHERE message_type = 'agent_reply'
+      ${visibilityClause}
+    `);
+
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error counting agent responses:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get agent-client conversation thread
+const getAgentClientConversation = async (req, res) => {
+  const { agentId, clientId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  try {
+    // Basic authorization check
+    if (currentUserRole === 'client' && parseInt(clientId) !== currentUserId) {
+      return res.status(403).json({ message: 'Forbidden: You can only view your own client conversations.' });
+    }
+    // For agents, they can view conversations they are involved in (either as agent_id or sender/recipient).
+    // An admin can view all.
+    if (currentUserRole === 'agent' && parseInt(agentId) !== currentUserId) {
+         // Also check if the agent is the sender or recipient of any message in this conversation.
+        const isAgentInvolved = await query(
+            `SELECT 1 FROM inquiries
+             WHERE conversation_id = (SELECT conversation_id FROM inquiries WHERE agent_id = $1 AND client_id = $2 LIMIT 1)
+             AND (sender_id = $3 OR recipient_id = $3) LIMIT 1`,
+            [agentId, clientId, currentUserId]
+        );
+        if (!isAgentInvolved.rows.length && currentUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: You can only view conversations you are involved in.' });
+        }
+    }
+
+
+    const conversationResult = await query(
+      `SELECT
+        i.conversation_id AS id,
+        i.client_id,
+        i.agent_id,
+        COALESCE(uc.full_name, i.name) AS clientName,
+        COALESCE(uc.email, i.email) AS clientEmail,
+        COALESCE(uc.phone, i.phone) AS clientPhone,
+        ua.full_name AS agentName,
+        ua.email AS agentEmail,
+        pl.property_id,
+        pl.title AS propertyTitle,
+        i.status,
+        i.is_agent_responded,
+        i.is_opened,
+        (SELECT read_by_client FROM inquiries WHERE conversation_id = i.conversation_id ORDER BY created_at DESC LIMIT 1) AS read_by_client,
+        (SELECT read_by_agent FROM inquiries WHERE conversation_id = i.conversation_id ORDER BY created_at DESC LIMIT 1) AS read_by_agent
+      FROM inquiries i
+      LEFT JOIN users uc ON i.client_id = uc.user_id
+      LEFT JOIN users ua ON i.agent_id = ua.user_id
+      LEFT JOIN property_listings pl ON i.property_id = pl.property_id
+      WHERE i.agent_id = $1 AND i.client_id = $2
+      ORDER BY i.created_at DESC
+      LIMIT 1`,
+      [agentId, clientId]
+    );
+
+    if (conversationResult.rows.length === 0) {
+      return res.status(200).json({ conversation: null });
+    }
+
+    const conversation = conversationResult.rows[0];
+
+    // Determine the visibility column based on the current user's role
+    const visibilityColumn = currentUserRole === 'client' ? 'hidden_from_client' : 'hidden_from_agent';
+
+    const messagesResult = await query(
+      `SELECT
+        inquiry_id, sender_id, message_content AS message,
+        created_at AS timestamp, read_by_client, read_by_agent
+       FROM inquiries
+       WHERE conversation_id = $1
+       AND message_content IS NOT NULL AND message_content != '::shell::' -- Filter out null and '::shell::' messages
+       AND ${visibilityColumn} = FALSE
+       ORDER BY created_at ASC`,
+      [conversation.id]
+    );
+
+    conversation.messages = messagesResult.rows.map(msg => ({
+      inquiry_id: msg.inquiry_id,
+      sender_id: msg.sender_id,
+      message: msg.message,
+      timestamp: msg.timestamp,
+      // Fix: Determine 'read' status based on who sent the message and who the recipient is.
+      // If the sender is the client, 'read' means 'read_by_agent'.
+      // If the sender is the agent, 'read' means 'read_by_client'.
+      read: msg.sender_id === conversation.client_id ? msg.read_by_agent : msg.read_by_client
+    }));
+
+    res.status(200).json({ conversation });
+  } catch (err) {
+    console.error('Error fetching agent-client conversation:', err);
+    res.status(500).json({ message: 'Failed to fetch conversation.', error: err.message });
   }
 };
 
 module.exports = {
   createInquiry,
-  getAllInquiries,
+  createGeneralInquiry, // Export the new function
+  sendMessageInquiry,
+  getAllInquiriesForAgent,
+  getAllInquiriesForClient,
+  markMessagesAsRead,
   assignInquiry,
-  resolveInquiry,
-  deleteInquiry,
+  markConversationOpened,
+  markConversationResponded,
+  deleteConversation,
+  countAllInquiries,
+  countAgentResponses,
+  getAgentClientConversation,
 };

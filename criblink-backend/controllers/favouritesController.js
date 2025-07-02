@@ -82,11 +82,46 @@ exports.removeFavourite = async (req, res) => {
 
 // Get all favourite listings for a user
 exports.getFavourites = async (req, res) => {
-    const user_id = req.user ? req.user.user_id : null;
+    const requestedUserId = req.headers['x-target-user-id']; // Read custom header
+    const currentUserId = req.user ? req.user.user_id : null;
+    const currentUserRole = req.user ? req.user.role : null;
 
-    if (!user_id) {
+    let targetUserId = currentUserId; // Default to current authenticated user
+
+    console.log("Favourites Controller - Incoming Request:");
+    console.log("  requestedUserId (from header):", requestedUserId);
+    console.log("  currentUserId (from token):", currentUserId);
+    console.log("  currentUserRole (from token):", currentUserRole);
+
+    // Logic to allow agents to view client favourites if requestedUserId is present
+    if (requestedUserId && currentUserRole === 'agent') {
+        // First, check if the target client has enabled 'share_favourites_with_agents'
+        try {
+            const clientPrivacyRes = await pool.query(
+                `SELECT share_favourites_with_agents FROM users WHERE user_id = $1`,
+                [requestedUserId]
+            );
+
+            console.log("  Client Privacy Check Result:", clientPrivacyRes.rows);
+
+            if (clientPrivacyRes.rows.length > 0 && clientPrivacyRes.rows[0].share_favourites_with_agents) {
+                targetUserId = requestedUserId; // Client allows sharing, so use their ID
+                console.log("  Client allows sharing. targetUserId set to:", targetUserId);
+            } else {
+                // Client does not allow sharing, or client not found
+                console.log("  Client does NOT allow sharing, or client not found.");
+                return res.status(403).json({ message: 'Client has chosen not to share their favourite listings.' });
+            }
+        } catch (error) {
+            console.error('Error checking client privacy setting:', error);
+            return res.status(500).json({ error: 'Internal server error checking client privacy setting.' });
+        }
+    } else if (!currentUserId) {
+        console.log("  No currentUserId. Authentication required.");
         return res.status(401).json({ message: 'Authentication required to view favourites.' });
     }
+
+    console.log("  Final targetUserId for query:", targetUserId);
 
     try {
         const result = await pool.query(
@@ -117,8 +152,10 @@ exports.getFavourites = async (req, res) => {
             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
             WHERE uf.user_id = $1
             ORDER BY uf.created_at DESC`,
-            [user_id]
+            [targetUserId] // Use the determined targetUserId
         );
+
+        console.log("  SQL Query Result Rows Length:", result.rows.length); // Debugging log
 
         const favouritesWithGallery = await Promise.all(result.rows.map(async (listing) => {
             const galleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1 ORDER BY image_id', [listing.property_id]);

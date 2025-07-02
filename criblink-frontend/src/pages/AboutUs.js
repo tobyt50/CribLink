@@ -2,6 +2,8 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Building2, Users, CheckCircle, Globe2 } from "lucide-react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
+import { useAuth } from "../context/AuthContext"; // Import useAuth hook
+import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
 
 const features = [
   {
@@ -50,6 +52,13 @@ const testimonials = [
 
 const AboutUs = () => {
   const { darkMode } = useTheme(); // Use the dark mode context
+  const { user } = useAuth(); // Get user from AuthContext
+  const navigate = useNavigate(); // Initialize useNavigate hook
+
+  // Function to handle "Get Started" button click
+  const handleGetStarted = () => {
+    navigate("/select-role"); // Route to /select-role
+  };
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-8`}>
@@ -160,26 +169,31 @@ const AboutUs = () => {
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="mt-24 max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="bg-gradient-to-br from-green-600 to-green-400 text-white p-10 rounded-2xl shadow-xl"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Ready to Find or List Your Property?
-          </h2>
-          <p className="mb-6 text-white/90">
-            Join thousands of Nigerians discovering and managing real estate smarter
-            with CribLink.
-          </p>
-          <button className="bg-white text-green-700 font-semibold py-2.5 px-6 rounded-full shadow hover:bg-gray-100 transition">
-            Get Started
-          </button>
-        </motion.div>
-      </div>
+      {/* CTA - Only show for guest users */}
+      {!user && (
+        <div className="mt-24 max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="bg-gradient-to-br from-green-600 to-green-400 text-white p-10 rounded-2xl shadow-xl"
+          >
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
+              Ready to Find or List Your Property?
+            </h2>
+            <p className="mb-6 text-white/90">
+              Join thousands of Nigerians discovering and managing real estate smarter
+              with CribLink.
+            </p>
+            <button
+              onClick={handleGetStarted}
+              className="bg-white text-green-700 font-semibold py-2.5 px-6 rounded-full shadow hover:bg-gray-100 transition"
+            >
+              Get Started
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

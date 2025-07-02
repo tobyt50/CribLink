@@ -1,14 +1,15 @@
-import React from "react";
-import '@fortawesome/fontawesome-free/css/all.min.css';
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect } from 'react'; // Import useEffect
+import socket from './socket'; // Import your socket instance
 
 // Wrappers
-import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
-import ProtectedAgentRoute from "./components/agent/ProtectedAgentRoute";
-import ProtectedClientRoute from "./components/client/ProtectedClientRoute";
+import RoleProtectedRoute from "./components/RoleProtectedRoute";
+import ProtectedBaseRoute from "./components/ProtectedBaseRoute";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 import MainLayout from "./layouts/MainLayout";
 import AppShell from "./layouts/AppShell";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Global Messaging
 import { MessageProvider } from "./context/MessageContext";
@@ -20,6 +21,9 @@ import ConfirmDialog from "./components/ConfirmDialog";
 
 // Axios Interceptor
 import AxiosErrorInterceptor from './components/AxiosErrorInterceptor';
+
+// Authentication Context
+import { AuthProvider } from './context/AuthContext';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -35,15 +39,16 @@ import AgentDashboard from './pages/agent/Dashboard';
 import AgentListings from './pages/agent/Listings';
 import Clients from './pages/agent/Clients';
 import ClientProfile from './pages/agent/ClientProfile';
-import AgentInquiries from './pages/agent/Inquiries';
+import AgentInquiries from './pages/agent/AgentInquiries';
 import ArchivedClients from './pages/agent/ArchivedClients';
 import AgentSettings from './pages/agent/Settings';
 
 // Client Pages
-import ClientInquiries from "./pages/client/Inquiries";
+import ClientInquiries from "./pages/client/ClientInquiries";
 import ClientSettings from "./pages/client/Settings";
+import AgentProfile from "./pages/client/AgentProfile"; // Keep this import for the component
 
-// Pages
+// Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
 import AddListing from "./pages/AddListing";
 import EditListing from './pages/EditListing';
@@ -54,70 +59,149 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import SelectRole from "./pages/SelectRole";
 import ManageProfile from "./pages/ManageProfile";
+import General from './pages/profile/General';
+import Security from './pages/profile/Security';
+import Privacy from './pages/profile/Privacy';
+import Settings from './pages/profile/Settings';
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
+import NotFoundPage from "./pages/NotFoundPage";
+
+// --- Route Config Arrays ---
+const listingRoutes = [
+  { path: "add-listing", element: <AddListing /> },
+  { path: "edit-listing/:id", element: <EditListing /> }
+];
+
+const adminRoutes = [
+  { path: "dashboard", element: <AdminDashboard /> },
+  { path: "listings", element: <AdminListings /> },
+  { path: "staff", element: <AdminStaff /> },
+  { path: "users", element: <AdminUsers /> },
+  { path: "analytics", element: <AdminAnalytics /> },
+  { path: "agent-performance", element: <AgentPerformance /> },
+  { path: "settings", element: <AdminSettings /> },
+  ...listingRoutes
+];
+
+const agentRoutes = [
+  { path: "dashboard", element: <AgentDashboard /> },
+  { path: "listings", element: <AgentListings /> },
+  { path: "clients", element: <Clients /> },
+  { path: "client-profile/:clientId", element: <ClientProfile /> },
+  { path: "inquiries", element: <AgentInquiries /> },
+  { path: "archived-clients", element: <ArchivedClients /> },
+  { path: "settings", element: <AgentSettings /> },
+  ...listingRoutes
+];
+
+const clientRoutes = [
+  { path: "inquiries", element: <ClientInquiries /> },
+  { path: "settings", element: <ClientSettings /> },
+  { path: "agent-profile/:agentId", element: <AgentProfile /> }, // This path now expects an agentId
+  ...listingRoutes
+];
 
 function App() {
+  useEffect(() => {
+    // Connect the socket when the component mounts
+    if (!socket.connected) {
+      socket.connect();
+      console.log('App.js: Socket connecting globally...');
+    }
+
+    // Add listeners for global connection status for debugging
+    socket.on('connect', () => {
+      console.log('App.js: Global Socket connected successfully!');
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('App.js: Global Socket disconnected:', reason);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('App.js: Global Socket connection error:', error);
+    });
+
+    // Clean up the socket connection when the component unmounts
+    return () => {
+      if (socket.connected) {
+        socket.disconnect();
+        console.log('App.js: Global Socket disconnected on App unmount.');
+      }
+      // Remove listeners to prevent memory leaks
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+    };
+  }, []); // Empty dependency array ensures this effect runs only once on mount and cleanup on unmount
+
+
   return (
     <Router>
-      <MessageProvider>
-        <ConfirmDialogProvider>
-          <GlobalMessageToasts />
-          <ConfirmDialog />
-          <AxiosErrorInterceptor>
-            <AppShell>
-              <Header />
-              <main className="pt-[96px] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-                <Routes>
-                  <Route element={<MainLayout />}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/search" element={<SearchPage />} />
-                    <Route path="/about" element={<AboutUs />} />
-                    <Route path="/contact" element={<ContactUs />} />
-                  </Route>
-                  {/* Major Routes */}
-                  <Route path="/add-listing" element={<AddListing />} />
-                  <Route path="/edit-listing/:id" element={<EditListing />} />
-                  <Route path="/listings/:id" element={<ListingDetails />} />
-                  <Route path="/favourites" element={<Favourites />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  <Route path="/select-role" element={<SelectRole />} />
-                  <Route path="/profile" element={<ManageProfile />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
+      <ScrollToTop />
+      <AuthProvider>
+        <MessageProvider>
+          <ConfirmDialogProvider>
+            <GlobalMessageToasts />
+            <ConfirmDialog />
+            <AxiosErrorInterceptor>
+              <AppShell>
+                <Header />
+                <main className="pt-[96px] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+                  <Routes>
+                    {/* Public & shared pages */}
+                    <Route element={<MainLayout />}>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/about" element={<AboutUs />} />
+                      <Route path="/contact" element={<ContactUs />} />
+                      <Route path="/signin" element={<SignIn />} />
+                      <Route path="/signup" element={<SignUp />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/select-role" element={<SelectRole />} />
+                      <Route path="/listings/:id" element={<ListingDetails />} />
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Route>
 
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<ProtectedAdminRoute />}>
-                    <Route path="dashboard" element={<AdminDashboard />} />
-                    <Route path="listings" element={<AdminListings />} />
-                    <Route path="staff" element={<AdminStaff />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="analytics" element={<AdminAnalytics />} />
-                    <Route path="agent-performance" element={<AgentPerformance />} />
-                    <Route path="settings" element={<AdminSettings/> } />
-                  </Route>
-                  {/* Agent Routes */}
-                  <Route path="/agent" element={<ProtectedAgentRoute />}>
-                    <Route path="dashboard" element={<AgentDashboard />} />
-                    <Route path="listings" element={<AgentListings />} />
-                    <Route path="clients" element={<Clients />} />
-                    <Route path="client-profile/:clientId" element={<ClientProfile />} />
-                    <Route path="inquiries" element={<AgentInquiries />} />
-                    <Route path="archived-clients" element={<ArchivedClients />} />
-                    <Route path="settings" element={<AgentSettings />} />
-                  </Route>
-                  {/* Client Routes */}
-                  <Route path="/client" element={<ProtectedClientRoute />}>
-                    <Route path="inquiries" element={<ClientInquiries />} />
-                    <Route path="settings" element={<ClientSettings />} />
-                  </Route>
-                </Routes>
-              </main>
-            </AppShell>
-          </AxiosErrorInterceptor>
-        </ConfirmDialogProvider>
-      </MessageProvider>
+                    {/* Authenticated base user routes */}
+                    <Route element={<ProtectedBaseRoute />}>
+                      <Route path="profile" element={<ManageProfile />}>
+                        <Route index element={<Navigate to="general" replace />} />
+                        <Route path="general" element={<General />} />
+                        <Route path="security" element={<Security />} />
+                        <Route path="privacy" element={<Privacy />} />
+                        <Route path="settings" element={<Settings />} />
+                      </Route>
+                      <Route path="favourites" element={<Favourites />} />
+                    </Route>
+
+                    {/* Role-protected routes */}
+                    <Route path="/admin" element={<RoleProtectedRoute allowedRole="admin" />}>
+                      {adminRoutes.map(({ path, element }) => (
+                        <Route key={path} path={path} element={element} />
+                      ))}
+                    </Route>
+
+                    <Route path="/agent" element={<RoleProtectedRoute allowedRole="agent" />}>
+                      {agentRoutes.map(({ path, element }) => (
+                        <Route key={path} path={path} element={element} />
+                      ))}
+                    </Route>
+
+                    <Route path="/client" element={<RoleProtectedRoute allowedRole="client" />}>
+                      {clientRoutes.map(({ path, element }) => (
+                        <Route key={path} path={path} element={element} />
+                      ))}
+                    </Route>
+                  </Routes>
+                </main>
+              </AppShell>
+            </AxiosErrorInterceptor>
+          </ConfirmDialogProvider>
+        </MessageProvider>
+      </AuthProvider>
     </Router>
   );
 }

@@ -1,20 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react'; // Added useEffect import
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, ChevronLeft, X, User, Shield, Lock, Settings } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
-import { useSidebarState } from '../../hooks/useSidebarState'; // Correct path
+import { useSidebarState } from '../../hooks/useSidebarState';
+import { Link, useLocation } from 'react-router-dom'; // Import Link and useLocation from react-router-dom
 
 // Define menu items for the sidebar
+// Add a 'path' property to each item
 const MENU_ITEMS = [
-  { name: 'General', icon: <User size={24} />, key: 'general' },
-  { name: 'Security', icon: <Shield size={24} />, key: 'security' },
-  { name: 'Privacy', icon: <Lock size={24} />, key: 'privacy' },
-  { name: 'Settings', icon: <Settings size={24} />, key: 'settings' },
+  { name: 'General', icon: <User size={24} />, key: 'general', path: '/profile/general' },
+  { name: 'Security', icon: <Shield size={24} />, key: 'security', path: '/profile/security' },
+  { name: 'Privacy', icon: <Lock size={24} />, key: 'privacy', path: '/profile/privacy' },
+  { name: 'Settings', icon: <Settings size={24} />, key: 'settings', path: '/profile/settings' },
 ];
 
 function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
   const { darkMode } = useTheme();
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+  const location = useLocation(); // Get current location from react-router-dom
 
   // Helper function to get initials from full name
   const getInitials = (name) => {
@@ -23,6 +26,20 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
     if (names.length === 1) return names[0][0]?.toUpperCase() || "";
     return ((names[0]?.[0] || "") + (names[names.length - 1]?.[0] || "")).toUpperCase();
   };
+
+  // Determine active section based on current URL path
+  // This ensures the sidebar highlights correctly when navigating directly to a sub-URL
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const foundItem = MENU_ITEMS.find(item => item.path === currentPath);
+    if (foundItem && activeSection !== foundItem.key) {
+      setActiveSection(foundItem.key);
+    } else if (!foundItem && currentPath.startsWith('/profile') && activeSection !== 'general') {
+      // Default to 'general' if on '/profile' route without specific sub-path
+      setActiveSection('general');
+    }
+  }, [location.pathname, activeSection, setActiveSection]);
+
 
   return (
     <>
@@ -122,14 +139,16 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
         <nav className="flex flex-col w-full">
           {MENU_ITEMS.map((item, idx) => (
             <React.Fragment key={item.key}>
-              <button
+              <Link // Changed from button to Link
+                to={item.path} // Use the defined path for navigation
                 onClick={() => {
-                  setActiveSection(item.key);
+                  setActiveSection(item.key); // Still update activeSection for internal state
                   if (isMobile) setIsSidebarOpen(false); // Close sidebar on mobile after selection
                 }}
+                // Apply active styles if the current path matches the item's path
                 className={`flex items-center gap-4 w-full px-6 py-3 transition-all duration-150 ease-in-out
                   ${
-                    activeSection === item.key
+                    location.pathname === item.path
                       ? `font-semibold border-l-4 border-green-600 ${darkMode ? "bg-gray-900 text-green-200" : "bg-green-100 text-green-800"}`
                       : `${darkMode ? "text-gray-300 hover:bg-gray-700 hover:text-gray-100" : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"}`
                   }`}
@@ -138,7 +157,7 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
                   {React.cloneElement(item.icon, { size: 24, className: `${darkMode ? "text-green-400" : ""}` })}
                 </span>
                 {(isMobile || !isCollapsed) && <span>{item.name}</span>}
-              </button>
+              </Link>
               {/* Divider line */}
               {idx < MENU_ITEMS.length - 1 && (
                 <hr className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`} />

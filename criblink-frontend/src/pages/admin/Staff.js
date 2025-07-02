@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { Menu, X, FileText } from 'lucide-react';
+import { Menu, X, FileText, LayoutGrid, LayoutList } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import axiosInstance from '../../api/axiosInstance';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
+import { useSidebarState } from '../../hooks/useSidebarState';
+import StaffCard from '../../components/admin/StaffCard'; // Import the new StaffCard component
+import API_BASE_URL from '../../config'; // Assuming API_BASE_URL is defined here or imported
 
 // Reusable Dropdown Component (embedded directly in Staff.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -122,6 +124,9 @@ const Staff = () => {
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
 
+  // Initialize viewMode from localStorage, influenced by 'defaultListingsView'
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
+
   // Use the useSidebarState hook
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('staff');
@@ -130,14 +135,39 @@ const Staff = () => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
 
   const exportDropdownRef = useRef(null);
-  const limit = 10;
+  const limit = viewMode === 'simple' ? 10 : 9; // 10 for table, 9 for grid (3x3)
 
-  const fetchStaff = async () => {
+  /**
+   * Formats an ISO date string into a localized date string.
+   * @param {string} isoDate - The ISO date string to format.
+   * @returns {string} The formatted date string or 'Invalid Date' if parsing fails.
+   */
+  const formatDate = (isoDate) => {
+    const date = new Date(isoDate);
+    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+  };
+
+  const fetchStaff = useCallback(async () => {
     const params = new URLSearchParams({ search, page, limit, sort: sortKey, direction: sortDirection });
+    const token = localStorage.getItem('token');
     try {
-        const res = await axiosInstance.get(`http://localhost:5000/admin/staff?${params.toString()}`);
+        const res = await axiosInstance.get(`${API_BASE_URL}/admin/staff?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const data = res.data;
-        setStaffList(data.staff);
+
+        const staffWithProfilePictures = data.staff.map(staff => {
+          let profilePictureUrl = staff.profile_picture_url;
+          // Fallback to a placeholder if profilePictureUrl is null, undefined, or empty
+          if (!profilePictureUrl) {
+            profilePictureUrl = `https://placehold.co/80x80/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${staff.full_name.charAt(0).toUpperCase()}`;
+          }
+          return { ...staff, profile_picture_url: profilePictureUrl };
+        });
+
+        setStaffList(staffWithProfilePictures);
         setTotalStaff(data.total);
     } catch (error) {
         let errorMessage = 'Failed to fetch staff data. Please try again.';
@@ -150,21 +180,9 @@ const Staff = () => {
         setStaffList([]);
         setTotalStaff(0);
     }
-  };
+  }, [search, page, limit, sortKey, sortDirection, showMessage, darkMode]);
 
-  useEffect(() => { fetchStaff(); }, [search, page, sortKey, sortDirection, showMessage]);
-
-  // Removed the local useEffect for window resize, as useSidebarState handles it.
-  // useEffect(() => {
-  //   const handleResize = () => {
-  //     const mobile = window.innerWidth < 768;
-  //     setIsMobile(mobile);
-  //     setIsSidebarOpen(!mobile);
-  //   };
-
-  //   window.addEventListener('resize', handleResize);
-  //   return () => window.removeEventListener('resize', handleResize);
-  // }, []);
+  useEffect(() => { fetchStaff(); }, [fetchStaff]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -207,15 +225,15 @@ const Staff = () => {
     try {
         if (scope === 'all') {
           const params = new URLSearchParams({ search, sort: sortKey, direction: sortDirection });
-          const res = await axiosInstance.get(`http://localhost:5000/admin/staff?${params.toString()}`);
+          const res = await axiosInstance.get(`${API_BASE_URL}/admin/staff?${params.toString()}`);
           const fullData = res.data;
           data = fullData.staff || fullData;
         }
 
-        const headers = ['Staff ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID'];
+        const headers = ['Staff ID', 'Full Name', 'Role', 'Department', 'Email', 'Phone', 'Start Date', 'Status', 'User ID', 'Profile Picture URL'];
         const csvRows = data.map(s => [
           s.employee_id, s.full_name, s.role, s.department, s.email, s.phone,
-          formatDate(s.start_date), s.status || 'N/A', s.user_id || 'N/A'
+          formatDate(s.start_date), s.status || 'N/A', s.user_id || 'N/A', s.profile_picture_url || 'N/A'
         ].map(f => `"${String(f).replace(/"/g, '""')}"`));
 
         const csvContent = [headers.join(','), ...csvRows.map(row => row.join(','))].join('\n');
@@ -248,7 +266,7 @@ const Staff = () => {
       return;
     }
     try {
-        await axiosInstance.delete(`http://localhost:5000/admin/staff/${id}`, {
+        await axiosInstance.delete(`${API_BASE_URL}/admin/staff/${id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         showMessage(`Staff member ${id} deleted successfully.`, 'success');
@@ -282,7 +300,7 @@ const Staff = () => {
       return;
     }
     try {
-        await axiosInstance.put(`http://localhost:5000/admin/staff/${id}/status`, { status: newStatus }, {
+        await axiosInstance.put(`${API_BASE_URL}/admin/staff/${id}/status`, { status: newStatus }, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         showMessage(`Staff member ${id} status changed to ${newStatus}.`, 'success');
@@ -319,7 +337,7 @@ const Staff = () => {
       return;
     }
     try {
-        await axiosInstance.post(`http://localhost:5000/admin/staff/${id}/reset-password`, {}, {
+        await axiosInstance.post(`${API_BASE_URL}/admin/staff/${id}/reset-password`, {}, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         showMessage(`Password reset link sent for staff member ${id}.`, 'success');
@@ -345,8 +363,7 @@ const Staff = () => {
   };
 
 
-  const handleActionApply = (staff) => {
-    const action = actionSelections[staff.employee_id];
+  const handleActionApply = (staff, action) => {
     if (!action) {
         showMessage('Please select an action to apply.', 'info');
         return;
@@ -359,11 +376,6 @@ const Staff = () => {
 
   const totalPages = Math.ceil(totalStaff / limit);
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
-
-  const formatDate = (iso) => {
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleDateString();
-  };
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
@@ -416,9 +428,9 @@ const Staff = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          // Conditionally apply classes based on mobile view
           className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
         >
+          {/* Mobile Controls */}
           {isMobile && (
             <div className="flex justify-between items-center mb-4">
               <div className={`flex items-center flex-grow rounded-xl shadow-sm border overflow-hidden mr-2 ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}>
@@ -431,123 +443,169 @@ const Staff = () => {
                 />
               </div>
 
-              <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                <button
-                  onClick={() => setIsExportDropdownOpen(p => !p)}
-                  className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md"
-                  title="Export"
-                >
-                  <FileText size={20} />
-                </button>
-                {isExportDropdownOpen && (
-                  <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                    <div className="py-1">
-                      <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
-                      <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Staff</button>
+              <div className="flex gap-2 ml-2 items-center">
+                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                  <button
+                    onClick={() => setIsExportDropdownOpen(p => !p)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md"
+                    title="Export"
+                  >
+                    <FileText size={20} />
+                  </button>
+                  {isExportDropdownOpen && (
+                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                      <div className="py-1">
+                        <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
+                        <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Staff</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <button
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
+                  title="List View"
+                >
+                  <LayoutList className="h-5 w-5" />
+                </button>
+                <button
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                </button>
               </div>
             </div>
           )}
 
+          {/* Desktop Filters and Controls */}
           {!isMobile && (
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`} />
-              <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                <button onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10">
-                  Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
-                </button>
-                {isExportDropdownOpen && (
-                  <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                    <div className="py-1">
-                      <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
-                      <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Staff</button>
+              <div className="flex gap-2 items-center">
+                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                  <button onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10">
+                    Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
+                  </button>
+                  {isExportDropdownOpen && (
+                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                      <div className="py-1">
+                        <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
+                        <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Staff</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                  <LayoutList className="h-6 w-6" />
+                </button>
+                <button onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                  <LayoutGrid className="h-6 w-6" />
+                </button>
               </div>
             </div>
           )}
-          <div className="overflow-x-auto">
-            <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              <thead>
-                <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                  {["employee_id", "full_name", "role", "department", "email", "phone", "start_date", "status"].map(key => (
-                    <th
-                      key={key}
-                      onClick={() => handleSortClick(key)}
-                      className={`py-2 px-2 cursor-pointer select-none ${
-                        sortKey === key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''
-                      }`}
-                      style={{
-                        width:
-                          key === 'employee_id' ? '90px' :
-                          key === 'full_name' ? '120px' :
-                          key === 'role' ? '120px' :
-                          key === 'department' ? '90px' :
-                          key === 'email' ? '160px' :
-                          key === 'phone' ? '120px' :
-                          key === 'start_date' ? '120px' :
-                          key === 'status' ? '80px' : 'auto'
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>
-                          {key === 'employee_id' ? 'Staff ID' : key === 'department' ? 'Dept.' : key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                        {key !== 'actions' && renderSortIcon(key)}
-                      </div>
-                    </th>
-                  ))}
-                  <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '150px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                {staffList.length > 0 ? (
-                  staffList.map(staff => (
-                    <tr key={staff.employee_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.employee_id && staff.employee_id.length > 10 ? staff.employee_id : ''}>{staff.employee_id}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={staff.full_name && staff.full_name.length > 15 ? staff.full_name : ''}>{staff.full_name}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={staff.role && staff.role.length > 15 ? staff.role : ''}>{staff.role}</td>
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={staff.department && staff.department.length > 10 ? staff.department : ''}>{staff.department}</td>
-                      <td className="py-2 px-2 max-w-[160px] truncate" title={staff.email && staff.email.length > 20 ? staff.email : ''}>{staff.email}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={staff.phone && staff.phone.length > 15 ? staff.phone : ''}>{staff.phone}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(staff.start_date) && formatDate(staff.start_date).length > 15 ? formatDate(staff.start_date) : ''}>{formatDate(staff.start_date)}</td>
-                      <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
-                          staff.status === 'active'
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                        }`} title={staff.status && staff.status.length > 10 ? staff.status : ''}>{staff.status || 'N/A'}</td>
-                      <td className="py-2 px-2 space-x-2 max-w-[150px]">
-                        <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
-                          <Dropdown
-                            placeholder="Select Action"
-                            options={[
-                              { value: "", label: "Select Action" },
-                              { value: staff.status === 'active' ? 'suspend' : 'activate', label: staff.status === 'active' ? 'Suspend' : 'Activate' },
-                              { value: "reset-password", label: "Reset Password" },
-                              { value: "delete", label: "Delete" },
-                            ]}
-                            value={actionSelections[staff.employee_id] || ''}
-                            onChange={e => setActionSelections(prev => ({ ...prev, [staff.employee_id]: e }))}
-                            className="w-full"
-                          />
-                          <button onClick={() => handleActionApply(staff)} className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5">Apply</button>
-                        </div>
-                      </td>
+
+          {staffList.length === 0 ? (
+            <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              No staff members found matching your criteria.
+            </div>
+          ) : (
+            viewMode === 'graphical' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {staffList.map(staff => (
+                  <StaffCard
+                    key={staff.employee_id}
+                    staff={staff}
+                    onActionApply={(staff, action) => handleActionApply(staff, action)}
+                    actionSelections={actionSelections}
+                    setActionSelections={setActionSelections}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      {["employee_id", "full_name", "role", "department", "email", "phone", "start_date", "status"].map(key => (
+                        <th
+                          key={key}
+                          onClick={() => handleSortClick(key)}
+                          className={`py-2 px-2 cursor-pointer select-none ${
+                            sortKey === key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''
+                          }`}
+                          style={{
+                            width:
+                              key === 'employee_id' ? '90px' :
+                              key === 'full_name' ? '120px' :
+                              key === 'role' ? '120px' :
+                              key === 'department' ? '90px' :
+                              key === 'email' ? '160px' :
+                              key === 'phone' ? '120px' :
+                              key === 'start_date' ? '120px' :
+                              key === 'status' ? '80px' : 'auto'
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>
+                              {key === 'employee_id' ? 'Staff ID' : key === 'department' ? 'Dept.' : key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
+                            {key !== 'actions' && renderSortIcon(key)}
+                          </div>
+                        </th>
+                      ))}
+                      <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '150px' }}>Actions</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                      No staff members found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {staffList.length > 0 ? (
+                      staffList.map(staff => (
+                        <tr key={staff.employee_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                          <td className="py-2 px-2 max-w-[90px] truncate" title={staff.employee_id && staff.employee_id.length > 10 ? staff.employee_id : ''}>{staff.employee_id}</td>
+                          <td className="py-2 px-2 max-w-[120px] truncate" title={staff.full_name && staff.full_name.length > 15 ? staff.full_name : ''}>{staff.full_name}</td>
+                          <td className="py-2 px-2 max-w-[120px] truncate" title={staff.role && staff.role.length > 15 ? staff.role : ''}>{staff.role}</td>
+                          <td className="py-2 px-2 max-w-[90px] truncate" title={staff.department && staff.department.length > 10 ? staff.department : ''}>{staff.department}</td>
+                          <td className="py-2 px-2 max-w-[160px] truncate" title={staff.email && staff.email.length > 20 ? staff.email : ''}>{staff.email}</td>
+                          <td className="py-2 px-2 max-w-[120px] truncate" title={staff.phone && staff.phone.length > 15 ? staff.phone : ''}>{staff.phone}</td>
+                          <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(staff.start_date) && formatDate(staff.start_date).length > 15 ? formatDate(staff.start_date) : ''}>{formatDate(staff.start_date)}</td>
+                          <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
+                              staff.status === 'active'
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`} title={staff.status && staff.status.length > 10 ? staff.status : ''}>{staff.status || 'N/A'}</td>
+                          <td className="py-2 px-2 space-x-2 max-w-[150px]">
+                            <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
+                              <Dropdown
+                                placeholder="Select Action"
+                                options={[
+                                  { value: "", label: "Select Action" },
+                                  { value: staff.status === 'active' ? 'suspend' : 'activate', label: staff.status === 'active' ? 'Suspend' : 'Activate' },
+                                  { value: "reset-password", label: "Reset Password" },
+                                  { value: "delete", label: "Delete" },
+                                ]}
+                                value={actionSelections[staff.employee_id] || ''}
+                                onChange={e => setActionSelections(prev => ({ ...prev, [staff.employee_id]: e }))}
+                                className="w-full"
+                              />
+                              <button onClick={() => handleActionApply(staff, actionSelections[staff.employee_id])} className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5">Apply</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          No staff members found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
 
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button

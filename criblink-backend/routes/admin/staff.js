@@ -48,7 +48,7 @@ router.get('/staff', async (req, res) => {
   const orderByDirection = direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC'; // Use ASC or DESC
 
   // Base query text without LIMIT and OFFSET
-  let queryText = `SELECT employee_id, full_name, role, department, email, phone, start_date, status, user_id
+  let queryText = `SELECT employee_id, full_name, role, department, email, phone, start_date, status, user_id, profile_picture_url
                    FROM staff_directory
                    ${whereSQL}
                    ORDER BY ${orderByColumn} ${orderByDirection}`;

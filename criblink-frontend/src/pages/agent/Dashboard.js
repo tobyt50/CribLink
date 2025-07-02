@@ -7,43 +7,32 @@ import AgentSidebar from '../../components/agent/Sidebar';
 import API_BASE_URL from '../../config';
 import { User, Home, MessageSquare, Menu, X } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-import Card from '../../components/ui/Card'; // Import the Card component from the new path
+import Card from '../../components/ui/Card'; // Import the Card component
+import StatCard from '../../components/StatCard'; // Import Agent StatCard
+import { useSidebarState } from '../../hooks/useSidebarState'; // Import useSidebarState hook
 
 const AgentDashboard = () => {
   const [agent, setAgent] = useState(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
 
-  // State for sidebar collapse/expand, consistent with AdminSidebar usage
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Use the useSidebarState hook to manage sidebar state centrally
+  const { isCollapsed, setIsCollapsed, isMobile, setIsMobile, isSidebarOpen, setIsSidebarOpen } = useSidebarState();
+
   // State for active section in the sidebar, consistent with AdminSidebar usage
   const [activeSection, setActiveSection] = useState('dashboard'); // Default active section for Agent Dashboard
 
-  // State for mobile view and sidebar open/close, consistent with Inquiries.js and Listings.js
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
-
-  const [stats, setStats] = useState([
-    { label: 'Total Listings', value: '--' },
-    { label: 'New Inquiries', value: '--' },
-  ]);
+  const [totalListings, setTotalListings] = useState('--'); // Separate state for total listings
+  const [totalClientInquiries, setTotalClientInquiries] = useState('--'); // New state for client inquiries
+  const [totalAgentResponses, setTotalAgentResponses] = useState('--');   // New state for agent responses
   const [activities, setActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
-  // Effect to handle window resize for mobile responsiveness, consistent with other pages
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Close sidebar on mobile, open on desktop
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Removed the local useEffect for window resize, as useSidebarState already handles this.
+  // This removes the "setIsMobile is not a function" error.
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -51,16 +40,19 @@ const AgentDashboard = () => {
         const { data: profile } = await axios.get(`${API_BASE_URL}/users/profile`, { headers });
         setAgent(profile);
 
-        const [statsRes, activityRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/agent/dashboard/stats`, { headers }),
-          axios.get(`${API_BASE_URL}/agent/dashboard/activity`, { headers }),
+        // Fetch individual stats
+        const [listingsRes, clientInquiriesRes, agentResponsesRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/agent/dashboard/stats`, { headers }), // Assuming totalListings is from here
+          axios.get(`${API_BASE_URL}/inquiries/agent/count/all-inquiries`, { headers }), // New API call
+          axios.get(`${API_BASE_URL}/inquiries/agent/count/agent-responses`, { headers }),   // New API call
         ]);
 
-        setStats([
-          { label: 'Total Listings', value: statsRes.data.totalListings, onClick: () => navigate('/agent/listings') },
-          { label: 'New Inquiries', value: statsRes.data.totalInquiries, onClick: () => navigate('/agent/inquiries') },
-        ]);
+        setTotalListings(listingsRes.data.totalListings);
+        setTotalClientInquiries(clientInquiriesRes.data.count);
+        setTotalAgentResponses(agentResponsesRes.data.count);
 
+        // Fetch activity separately
+        const activityRes = await axios.get(`${API_BASE_URL}/agent/dashboard/activity`, { headers });
         const activityData = activityRes.data.activities.map((a) => {
           let IconComponent = User; // Default: User icon component
           let tag = 'User'; // Default label: User
@@ -102,6 +94,12 @@ const AgentDashboard = () => {
 
     fetchDashboardData();
   }, [navigate]);
+
+  // Define the main stats separately for clearer rendering logic
+  const mainStats = [
+    { label: 'Total Listings', value: totalListings, onClick: () => navigate('/agent/listings') },
+    // You can add other primary stats here if needed, before the combined inquiry card
+  ];
 
   // Adjust contentShift based on isCollapsed and isMobile states, consistent with other pages
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
@@ -168,17 +166,31 @@ const AgentDashboard = () => {
           transition={{ duration: 0.4 }}
         >
           {/* Stats Cards - Adjusted grid layout for desktop responsiveness */}
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-6 mb-10">
-            {stats.map((stat, idx) => (
-              <Card key={idx} onClick={stat.onClick} className="cursor-pointer">
+          {/* Changed lg:grid-cols-4 to lg:grid-cols-2 to make each of the two primary cards equal width */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
+            {/* Main stats */}
+            {mainStats.map((stat, idx) => (
+              <Card key={idx} onClick={stat.onClick} className="cursor-pointer col-span-1"> {/* Each spans 1 column */}
                 <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>
                 <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{stat.value}</p>
               </Card>
             ))}
-          </div>
 
+            {/* Combined Inquiry Stats Card */}
+            {/* Now spans 1 column to match the other main cards, creating a 2-column layout */}
+            <Card
+              onClick={() => navigate('/agent/inquiries')} // Added onClick for navigation
+              className="cursor-pointer col-span-1" // Ensure it's clickable and spans one column
+            >
+              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Stats</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                <StatCard label="Total Inquiries" value={totalClientInquiries} />
+                <StatCard label="Total Responses" value={totalAgentResponses} />
+              </div>
+            </Card>
+          </div>
           {/* Recent Activity */}
-          <Card> {/* Replaced div with Card component */}
+          <Card>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Activity</h2>
             <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               {visibleActivities.map((activity, idx) => (

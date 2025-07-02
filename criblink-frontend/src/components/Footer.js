@@ -1,6 +1,7 @@
 import React from "react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
 import { useMessage } from '../context/MessageContext'; // Import useMessage hook
+import { ArrowUp } from "lucide-react";
 
 function Footer() {
   const currentYear = new Date().getFullYear();
@@ -119,17 +120,20 @@ function Footer() {
           <p>&copy; {currentYear} CribLink. All rights reserved.</p>
           <p>Made with 💚 in Nigeria</p>
         </div>
-
-        {/* Back to Top Button */}
+        {/* Back to Top Floating Button */}
         <div className="flex justify-end mt-6">
           <button
             onClick={scrollToTop}
-            className={`p-2 rounded-full shadow-md transition
-              ${darkMode ? "bg-green-600 text-white hover:bg-green-700" : "bg-green-500 text-white hover:bg-green-600"}`}
+            className={`fixed bottom-6 right-6 z-50 p-1.5 rounded-full shadow-xl border-2 transition-all duration-300 group
+              ${darkMode 
+                ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-green-400" 
+                : "bg-black/10 border-black/20 text-black hover:bg-black/20 hover:text-green-600"}
+              hover:scale-110`}
             title="Back to top"
           >
-            <i className="fas fa-arrow-up"></i>
+            <ArrowUp className="w-6 h-6 transition-all duration-300 group-hover:-translate-y-1" />
           </button>
+
         </div>
       </div>
     </footer>

@@ -5,9 +5,15 @@ exports.getRecentActivity = async (req, res) => {
   try {
     const [inquiries, agents, logs] = await Promise.all([
       pool.query(`
-        SELECT 'inquiry' AS type, name, status, created_at
-        FROM inquiries
-        ORDER BY created_at DESC
+        SELECT
+            'inquiry' AS type,
+            i.message_content AS message,
+            i.status,
+            i.created_at,
+            COALESCE(u.full_name, 'Guest') AS client_name -- Join to get client name, default to 'Guest' if client_id is null
+        FROM inquiries i
+        LEFT JOIN users u ON i.client_id = u.user_id -- Join with users table
+        ORDER BY i.created_at DESC
         LIMIT 10
       `),
       pool.query(`
@@ -28,9 +34,7 @@ exports.getRecentActivity = async (req, res) => {
     // Simplify inquiry activity messages
     const inquiryActivities = inquiries.rows.map(row => ({
       type: 'inquiry',
-      message: `Inquiry: ${row.name} (${row.status})`,
-      // FIX: If created_at is null, default to a very old date (epoch start)
-      // This ensures inquiries with missing timestamps don't dominate the 'recent' list.
+      message: `Inquiry from ${row.client_name}: "${row.message}" (Status: ${row.status})`, // More descriptive message
       timestamp: row.created_at || new Date(0)
     }));
 
@@ -56,6 +60,7 @@ exports.getRecentActivity = async (req, res) => {
 
     res.json({ activities: sorted });
   } catch (err) {
-    res.status(500).json({ error: 'Server error fetching recent activity' });
+    console.error("Error fetching recent activity on server:", err);
+    res.status(500).json({ error: 'Server error fetching recent activity', details: err.message });
   }
 };

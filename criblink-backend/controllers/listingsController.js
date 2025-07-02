@@ -1,39 +1,10 @@
 const { pool } = require('../db');
-const path = require('path');
-const fs = require('fs').promises;
+// Removed fs and path as local storage is no longer used for images
 const logActivity = require('../utils/logActivity');
+// Import Cloudinary utility functions
+const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary');
 
-const uploadDir = path.join(__dirname, '../public/uploads/listings');
-
-const saveFileAndGetUrl = async (file) => {
-    if (!file) return null;
-    try {
-        await fs.mkdir(uploadDir, { recursive: true });
-        const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-        const filePath = path.join(uploadDir, fileName);
-        await fs.writeFile(filePath, file.buffer);
-        return `/uploads/listings/${fileName}`;
-    } catch (error) {
-        console.error('Error saving file:', error);
-        throw new Error('Failed to save image file.');
-    }
-};
-
-const deleteFileByUrl = async (fileUrl) => {
-    if (!fileUrl || !fileUrl.startsWith('/uploads/listings/')) {
-        return;
-    }
-    const fileName = path.basename(fileUrl);
-    const filePath = path.join(uploadDir, fileName);
-    try {
-        await fs.unlink(filePath);
-        // console.log(`Deleted file: ${filePath}`);
-    } catch (error) {
-        if (error.code !== 'ENOENT') {
-            console.error(`Error deleting file ${filePath}:`, error);
-        }
-    }
-};
+// Removed uploadDir, saveFileAndGetUrl, deleteFileByUrl as they are replaced by Cloudinary functions
 
 exports.getAllListings = async (req, res) => {
     // console.log('[getAllListings] Function started.');
@@ -199,8 +170,8 @@ exports.createListing = async (req, res) => {
         bedrooms,
         bathrooms,
         purchase_category,
-        mainImageURL,
-        galleryImageURLs,
+        mainImageURL, // This will be a URL if user provides it directly
+        galleryImageURLs, // This will be an array of URLs if user provides them directly
         description,
         square_footage,
         lot_size,
@@ -211,7 +182,9 @@ exports.createListing = async (req, res) => {
         amenities
     } = req.body;
 
+    // mainImage is from upload.fields({ name: 'mainImage' })
     const mainImageFile = req.files && req.files['mainImage'] ? req.files['mainImage'][0] : null;
+    // galleryImages is from upload.fields({ name: 'galleryImages' })
     const galleryFiles = req.files && req.files['galleryImages'] ? req.files['galleryImages'] : [];
 
     const agent_id = req.user ? req.user.user_id : null;
@@ -220,14 +193,18 @@ exports.createListing = async (req, res) => {
     }
 
     const date_listed = new Date();
-    let mainImageUrlToSave = mainImageURL;
+    let mainImageUrlToSave = null;
     const initialGalleryUrls = Array.isArray(galleryImageURLs) ? galleryImageURLs : (galleryImageURLs ? [galleryImageURLs] : []);
 
     try {
         await pool.query('BEGIN');
 
+        // Handle main image upload (prioritize file upload over URL if both provided)
         if (mainImageFile) {
-            mainImageUrlToSave = await saveFileAndGetUrl(mainImageFile);
+            const uploadResult = await uploadToCloudinary(mainImageFile.buffer, mainImageFile.originalname, 'listings');
+            mainImageUrlToSave = uploadResult.url;
+        } else if (mainImageURL) {
+            mainImageUrlToSave = mainImageURL; // Use provided URL directly
         }
 
         if (!mainImageUrlToSave) {
@@ -252,13 +229,15 @@ exports.createListing = async (req, res) => {
             );
         }
 
+        // Handle gallery image uploads (files)
         for (const file of galleryFiles) {
-            const url = await saveFileAndGetUrl(file);
-            if (url) {
-                await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [newListingId, url]);
+            const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'listings');
+            if (uploadResult.url) {
+                await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [newListingId, uploadResult.url]);
             }
         }
 
+        // Handle gallery image URLs (already provided as URLs)
         for (const url of initialGalleryUrls) {
             if (url) {
                 await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [newListingId, url]);
@@ -342,9 +321,9 @@ exports.updateListing = async (req, res) => {
         bedrooms,
         bathrooms,
         purchase_category,
-        existingImageUrlsToKeep,
-        newImageUrls,
-        mainImageIdentifier,
+        existingImageUrlsToKeep, // Array of URLs to keep
+        newImageUrls, // Array of new URLs provided by user
+        mainImageIdentifier, // The URL or file name of the chosen thumbnail
         description,
         square_footage,
         lot_size,
@@ -358,8 +337,10 @@ exports.updateListing = async (req, res) => {
     const mainImageFile = req.files && req.files['mainImageFile'] ? req.files['mainImageFile'][0] : null;
     const newGalleryFiles = req.files && req.files['newImages'] ? req.files['newImages'] : [];
 
-    const existingUrls = Array.isArray(existingImageUrlsToKeep) ? existingImageUrlsToKeep : (existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : []);
-    const newUrls = Array.isArray(newImageUrls) ? newImageUrls : (newImageUrls ? JSON.parse(newImageUrls) : []);
+    // Parse JSON strings back to arrays
+    const parsedExistingUrlsToKeep = existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : [];
+    const parsedNewImageUrls = newImageUrls ? JSON.parse(newImageUrls) : [];
+
 
     try {
         await pool.query('BEGIN');
@@ -388,65 +369,83 @@ exports.updateListing = async (req, res) => {
         if (bathrooms !== undefined) { updates.push(`bathrooms = $${valueIndex++}`); values.push(bathrooms); }
         if (purchase_category !== undefined) { updates.push(`purchase_category = $${valueIndex++}`); values.push(purchase_category); }
 
-        const imageUpdateRequested = mainImageFile || mainImageIdentifier !== undefined || newGalleryFiles.length > 0 || newUrls.length > 0 || existingUrls !== undefined;
+        let newMainImageUrl = currentMainImageUrl;
+        let oldMainImagePublicIdToDelete = null;
 
-        if (imageUpdateRequested) {
-            let newMainImageUrl = null;
-            let oldMainImageToDelete = null;
+        // Determine the new main image URL and identify old main image for deletion
+        if (mainImageFile) {
+            // A new file is uploaded for the main image
+            const uploadResult = await uploadToCloudinary(mainImageFile.buffer, mainImageFile.originalname, 'listings');
+            newMainImageUrl = uploadResult.url;
+            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com')) {
+                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
+            }
+        } else if (mainImageIdentifier && mainImageIdentifier !== currentMainImageUrl) {
+            // Main image is changed to an existing/new URL (not a new file upload)
+            newMainImageUrl = mainImageIdentifier;
+            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com') && currentMainImageUrl !== newMainImageUrl) {
+                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
+            }
+        } else if (mainImageIdentifier === '' && currentMainImageUrl) {
+            // Main image is explicitly cleared
+            newMainImageUrl = null;
+            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com')) {
+                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
+            }
+        }
+        // If mainImageIdentifier is undefined or same as currentMainImageUrl, newMainImageUrl remains currentMainImageUrl
 
-            if (mainImageFile) {
-                newMainImageUrl = await saveFileAndGetUrl(mainImageFile);
-                if (currentMainImageUrl && currentMainImageUrl.startsWith('/uploads/listings/')) {
-                    oldMainImageToDelete = currentMainImageUrl;
+
+        // Update main image URL in the database if it changed
+        if (newMainImageUrl !== currentMainImageUrl) {
+            updates.push(`image_url = $${valueIndex++}`);
+            values.push(newMainImageUrl);
+        }
+
+        // Identify gallery images to keep and those to delete
+        const allNewGalleryUrls = [...parsedNewImageUrls]; // URLs provided directly by user
+        for (const file of newGalleryFiles) {
+            // Upload new gallery files to Cloudinary
+            const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'listings');
+            if (uploadResult.url) {
+                allNewGalleryUrls.push(uploadResult.url);
+            }
+        }
+
+        // Filter existing gallery images: keep only those explicitly requested by the frontend
+        const galleryUrlsToKeep = currentGalleryImages.filter(url => parsedExistingUrlsToKeep.includes(url));
+
+        // Combine all gallery images to be stored (excluding the new main image if it's part of the gallery)
+        const finalGalleryUrlsToStore = [...new Set([...galleryUrlsToKeep, ...allNewGalleryUrls])].filter(url => url !== newMainImageUrl);
+
+        // Identify images to delete from Cloudinary:
+        // 1. Old main image if it was replaced.
+        // 2. Existing gallery images that are no longer in `finalGalleryUrlsToStore`
+        //    and are not the `newMainImageUrl` (if it was originally a gallery image).
+        const imagesToDeletePublicIds = [];
+
+        if (oldMainImagePublicIdToDelete) {
+            imagesToDeletePublicIds.push(oldMainImagePublicIdToDelete);
+        }
+
+        currentGalleryImages.forEach(url => {
+            if (url.includes('cloudinary.com') && !finalGalleryUrlsToStore.includes(url) && url !== newMainImageUrl) {
+                const publicId = getCloudinaryPublicId(url);
+                if (publicId) {
+                    imagesToDeletePublicIds.push(publicId);
                 }
-            } else if (mainImageIdentifier !== undefined) {
-                newMainImageUrl = mainImageIdentifier === '' ? null : mainImageIdentifier;
-                if (currentMainImageUrl && currentMainImageUrl.startsWith('/uploads/listings/') && currentMainImageUrl !== newMainImageUrl) {
-                    oldMainImageToDelete = currentMainImageUrl;
-                }
-            } else {
-                newMainImageUrl = currentMainImageUrl;
             }
+        });
 
-            if (newMainImageUrl !== currentMainImageUrl || imageUpdateRequested) {
-                updates.push(`image_url = $${valueIndex++}`); values.push(newMainImageUrl);
-            }
+        // Perform deletions from Cloudinary
+        for (const publicId of imagesToDeletePublicIds) {
+            await deleteFromCloudinary(publicId);
+        }
 
-            let updatedGalleryUrls = [];
-            const galleryImagesToDelete = [];
-
-            const potentialNewGalleryUrls = [
-                ...currentGalleryImages.filter(url => existingUrls.includes(url)),
-                ...newUrls
-            ];
-
-            for (const file of newGalleryFiles) {
-                const url = await saveFileAndGetUrl(file);
-                if (url) {
-                    potentialNewGalleryUrls.push(url);
-                }
-            }
-
-            updatedGalleryUrls = potentialNewGalleryUrls.filter(url => url !== newMainImageUrl);
-
-            currentGalleryImages.forEach(url => {
-                if (!updatedGalleryUrls.includes(url) && url && url.startsWith('/uploads/listings/')) {
-                    galleryImagesToDelete.push(url);
-                }
-            });
-
-            if (oldMainImageToDelete) {
-                await deleteFileByUrl(oldMainImageToDelete);
-            }
-            for (const url of galleryImagesToDelete) {
-                await deleteFileByUrl(url);
-            }
-
-            await pool.query('DELETE FROM property_images WHERE property_id = $1', [id]);
-
-            for (const url of updatedGalleryUrls) {
-                await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [id, url]);
-            }
+        // Clear existing gallery images in DB and insert the new set
+        await pool.query('DELETE FROM property_images WHERE property_id = $1', [id]);
+        for (const url of finalGalleryUrlsToStore) {
+            await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [id, url]);
         }
 
         if (updates.length > 0) {
@@ -468,6 +467,7 @@ exports.updateListing = async (req, res) => {
             let detailValueIndex = 1;
 
             for (const key in propertyDetailsFields) {
+                // Check if the value is explicitly provided (not undefined)
                 if (propertyDetailsFields[key] !== undefined) {
                     detailUpdates.push(`${key} = $${detailValueIndex++}`);
                     detailValues.push(propertyDetailsFields[key]);
@@ -480,6 +480,7 @@ exports.updateListing = async (req, res) => {
                 await pool.query(detailQuery, detailValues);
             }
         } else {
+            // If no existing details, but some are provided in the update, insert them
             const providedDetails = Object.keys(propertyDetailsFields).filter(key => propertyDetailsFields[key] !== undefined);
             if (providedDetails.length > 0) {
                 const columns = ['property_id', ...providedDetails];
@@ -493,10 +494,12 @@ exports.updateListing = async (req, res) => {
             }
         }
 
+        // If no updates were made to property_listings and no property_details fields were provided, return error
         if (updates.length === 0 && Object.keys(propertyDetailsFields).every(key => propertyDetailsFields[key] === undefined)) {
             await pool.query('ROLLBACK');
             return res.status(400).json({ message: 'No valid fields provided for update' });
         }
+
 
         await pool.query('COMMIT');
 
@@ -548,18 +551,29 @@ exports.deleteListing = async (req, res) => {
         const galleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1', [id]);
         const galleryImages = galleryResult.rows.map(row => row.image_url);
 
-        const imagesToDelete = [];
-        if (listing.image_url && listing.image_url.startsWith('/uploads/listings/')) {
-            imagesToDelete.push(listing.image_url);
+        const imagesToDeletePublicIds = [];
+
+        // Check main image for Cloudinary deletion
+        if (listing.image_url && listing.image_url.includes('cloudinary.com')) {
+            const publicId = getCloudinaryPublicId(listing.image_url);
+            if (publicId) {
+                imagesToDeletePublicIds.push(publicId);
+            }
         }
+
+        // Check gallery images for Cloudinary deletion
         galleryImages.forEach(url => {
-            if (url && url.startsWith('/uploads/listings/')) {
-                imagesToDelete.push(url);
+            if (url && url.includes('cloudinary.com')) {
+                const publicId = getCloudinaryPublicId(url);
+                if (publicId) {
+                    imagesToDeletePublicIds.push(publicId);
+                }
             }
         });
 
-        for (const url of imagesToDelete) {
-            await deleteFileByUrl(url);
+        // Perform deletions from Cloudinary
+        for (const publicId of imagesToDeletePublicIds) {
+            await deleteFromCloudinary(publicId);
         }
 
         await pool.query('DELETE FROM property_images WHERE property_id = $1', [id]);

@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
 import { useTheme } from '../../layouts/AppShell';
 import { useMessage } from '../../context/MessageContext';
-import { User, Shield, Bell, Settings, Sun, Moon, Monitor, LayoutGrid, LayoutList, ChevronDownIcon, Mail, Home, Tag, MapPin, DollarSign, Search, X, Menu, Globe, CheckCircle, XCircle } from 'lucide-react';
+import {
+  User, Shield, Bell, Settings as SettingsIcon, Sun, Moon, Monitor, LayoutGrid, LayoutList,
+  ChevronDownIcon, Mail, Home, Tag, MapPin, DollarSign, Search, X, Menu, Globe, CheckCircle, XCircle,
+  Bed, Bath // New icons for Property Preferences
+} from 'lucide-react';
 import ClientSidebar from '../../components/client/Sidebar';
 import { useSidebarState } from '../../hooks/useSidebarState';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
 
 // Custom Alert/Message Box Component (instead of alert())
 const MessageBox = ({ message, type, onClose }) => {
@@ -26,7 +31,7 @@ const MessageBox = ({ message, type, onClose }) => {
   );
 };
 
-// Reusable Dropdown Component (copied for consistency)
+// Reusable Dropdown Component
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -128,7 +133,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
-// Reusable Switch component (copied for consistency)
+// Reusable Switch component
 const Switch = ({ isOn, handleToggle, label, description }) => {
     const { darkMode } = useTheme();
     return (
@@ -157,6 +162,7 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
 const ClientSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
     const { showMessage } = useMessage();
+    const { user } = useAuth(); // Get user from AuthContext
 
     // State for client settings
     const [settings, setSettings] = useState(null);
@@ -165,6 +171,31 @@ const ClientSettings = () => {
     // Sidebar State (using useSidebarState for consistency)
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
     const [activeSection, setActiveSection] = useState('client-settings'); // Default active section
+
+    // Property Type Options
+    const propertyTypeOptions = [
+      { value: "any", label: "Any Property Type" },
+      { value: "Duplex", label: "Duplex" },
+      { value: "Bungalow", label: "Bungalow" },
+      { value: "Apartment", label: "Apartment" },
+      { value: "Penthouse", label: "Penthouse" },
+      { value: "Detached House", label: "Detached House" },
+      { value: "Semi-Detached House", label: "Semi-Detached House" },
+      { value: "Condo", label: "Condo" },
+    ];
+
+    // Bedroom Options
+    const bedroomOptions = [
+      { value: 0, label: "Any Bedrooms" },
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => ({ value: num, label: `${num} Bedroom(s)` })),
+    ];
+
+    // Bathroom Options
+    const bathroomOptions = [
+      { value: 0, label: "Any Bathrooms" },
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => ({ value: num, label: `${num} Bathroom(s)` })),
+    ];
+
 
     useEffect(() => {
         const fetchClientSettings = async () => {
@@ -184,14 +215,16 @@ const ClientSettings = () => {
                 const profileData = profileResponse.data;
 
                 let clientSpecificSettings = {};
+                let clientPreferences = {}; // To hold property preferences
+
                 try {
-                    // Fetch client-specific settings from the backend
+                    // Fetch client-specific general settings
                     const clientSettingsResponse = await axios.get(`${API_BASE_URL}/client/settings`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     clientSpecificSettings = clientSettingsResponse.data;
                 } catch (error) {
-                    console.warn("Client specific settings endpoint not found or error fetching. Using defaults.", error);
+                    console.warn("Client general settings endpoint not found or error fetching. Using defaults.", error);
                     // Initialize with defaults if no settings are found for the user
                     clientSpecificSettings = {
                         email_notifications: true,
@@ -199,14 +232,31 @@ const ClientSettings = () => {
                         new_listing_alert: true,
                         price_drop_alert: true,
                         favourite_update_alert: true,
-                        preferred_property_type: 'any',
-                        preferred_location: 'any',
-                        max_price_alert: 100000000,
                         theme: 'system',
                         default_list_view: 'graphical',
                         language: 'en',
                         sidebar_permanently_expanded: false,
                     };
+                }
+
+                if (user?.role === 'client') {
+                    try {
+                        // Fetch client property preferences
+                        const clientPreferencesRes = await axios.get(`${API_BASE_URL}/clients/${user.user_id}/preferences`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        clientPreferences = clientPreferencesRes.data;
+                    } catch (prefError) {
+                        console.warn('No client property preferences found or failed to fetch, using defaults.', prefError);
+                        clientPreferences = {
+                            preferred_property_type: 'any',
+                            preferred_location: '',
+                            min_price: 0,
+                            max_price: 1000000000,
+                            min_bedrooms: 0,
+                            min_bathrooms: 0,
+                        };
+                    }
                 }
 
                 const fetchedSettings = {
@@ -222,9 +272,12 @@ const ClientSettings = () => {
                         favouriteUpdateAlert: clientSpecificSettings.favourite_update_alert,
                     },
                     preferences: {
-                        preferredPropertyType: clientSpecificSettings.preferred_property_type,
-                        preferredLocation: clientSpecificSettings.preferred_location,
-                        maxPriceAlert: clientSpecificSettings.max_price_alert,
+                        preferred_property_type: clientPreferences.preferred_property_type ?? 'any',
+                        preferred_location: clientPreferences.preferred_location ?? '',
+                        min_price: clientPreferences.min_price ?? 0,
+                        max_price: clientPreferences.max_price ?? 1000000000,
+                        min_bedrooms: clientPreferences.min_bedrooms ?? 0,
+                        min_bathrooms: clientPreferences.min_bathrooms ?? 0,
                     },
                     display: {
                         theme: clientSpecificSettings.theme || localStorage.getItem('themePreference') || 'system',
@@ -253,7 +306,7 @@ const ClientSettings = () => {
             }
         };
         fetchClientSettings();
-    }, []);
+    }, [user?.role]); // Re-run effect if user role changes
 
     // Sync display settings to localStorage whenever they change
     useEffect(() => {
@@ -271,7 +324,7 @@ const ClientSettings = () => {
             ...prevSettings,
             [section]: {
                 ...prevSettings[section],
-                [key]: type === 'checkbox' ? checked : value,
+                [key]: type === 'checkbox' ? checked : (type === 'number' ? Number(value) : value),
             },
         }));
     };
@@ -285,7 +338,7 @@ const ClientSettings = () => {
                 [key]: newState,
             },
         }));
-        
+
         try {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -327,13 +380,19 @@ const ClientSettings = () => {
                 return;
             }
             let payload = {};
+            let endpoint = `${API_BASE_URL}/client/settings`; // Default endpoint for general settings
 
             if (sectionToSave === 'preferences') {
                 payload = {
-                    preferred_property_type: settings.preferences.preferredPropertyType,
-                    preferred_location: settings.preferences.preferredLocation,
-                    max_price_alert: settings.preferences.maxPriceAlert,
+                    preferred_property_type: settings.preferences.preferred_property_type,
+                    preferred_location: settings.preferences.preferred_location,
+                    min_price: settings.preferences.min_price,
+                    max_price: settings.preferences.max_price,
+                    min_bedrooms: settings.preferences.min_bedrooms,
+                    min_bathrooms: settings.preferences.min_bathrooms,
                 };
+                // Assuming a separate endpoint for client property preferences
+                endpoint = `${API_BASE_URL}/clients/${user.user_id}/preferences`;
             } else if (sectionToSave === 'display') {
                  payload = {
                     theme: settings.display.theme,
@@ -344,7 +403,7 @@ const ClientSettings = () => {
             }
             // Add other sections here as needed for specific 'Save' buttons
 
-            await axios.put(`${API_BASE_URL}/client/settings`, payload, {
+            await axios.put(endpoint, payload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             showMessage(`${settingName} saved successfully!`, 'success');
@@ -407,14 +466,6 @@ const ClientSettings = () => {
         { value: 'fr', label: 'French', icon: <Globe size={20} /> },
     ];
 
-    const propertyTypeOptions = [
-        { value: 'any', label: 'Any', icon: <Home size={20} /> },
-        { value: 'house', label: 'House', icon: <Home size={20} /> },
-        { value: 'apartment', label: 'Apartment', icon: <Home size={20} /> },
-        { value: 'condo', label: 'Condo', icon: <Home size={20} /> },
-        { value: 'land', label: 'Land', icon: <Home size={20} /> },
-    ];
-
     const [searchTerm, setSearchTerm] = useState('');
 
     const searchableContent = {
@@ -424,8 +475,8 @@ const ClientSettings = () => {
         "Notifications": [
             "Notifications", "Control how you receive alerts.", "Email Notifications", "Receive updates via email.", "In-App Notifications", "See notifications directly in the dashboard.", "New Listing Alert", "Get notified about new property listings matching your criteria.", "Price Drop Alert", "Receive alerts for price reductions on favorite or saved listings.", "Favorite Update Alert", "Get notified when there are updates to your favorited properties."
         ],
-        "Preferences": [
-            "Search Preferences", "Customize your property search experience.", "Preferred Property Type", "Filter listings by your ideal property type.", "Preferred Location", "Set a default location for property searches.", "Maximum Price Alert Threshold", "Set a maximum price for alerts on new listings."
+        "Property Preferences": [ // Updated section name
+            "Property Preferences", "Set your preferences for property recommendations and alerts.", "Property Type", "Any Property Type", "Duplex", "Bungalow", "Apartment", "Penthouse", "Detached House", "Semi-Detached House", "Condo", "Preferred Location", "Min Price", "Max Price", "Min Bedrooms", "Min Bathrooms"
         ]
     };
 
@@ -585,45 +636,110 @@ const ClientSettings = () => {
                         </div>
                     )}
 
-                    {filterSection("Preferences") && (
+                    {user?.role === 'client' && filterSection("Property Preferences") && (
                         <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Search Preferences</h3>
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                                <Home className="mr-3 text-purple-500" size={24} /> Property Preferences
+                            </h3>
+                            <p className={`mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                Set your preferences for property recommendations and alerts.
+                            </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                {/* Property Type */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Preferred Property Type</label>
-                                    <Dropdown placeholder="Select Type" options={propertyTypeOptions} value={settings.preferences.preferredPropertyType} onChange={(value) => setSettings(prev => ({...prev, preferences: {...prev.preferences, preferredPropertyType: value}}))} className="w-full" />
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="preferred_property_type">Property Type</label>
+                                    <Dropdown
+                                        options={propertyTypeOptions}
+                                        value={settings.preferences.preferred_property_type}
+                                        onChange={(value) => setSettings(prev => ({...prev, preferences: {...prev.preferences, preferred_property_type: value}}))}
+                                        placeholder="Any Property Type"
+                                        className="w-full"
+                                    />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Filter listings by your ideal property type.</p>
-                                    <button onClick={() => handleSaveSettings('Preferred Property Type', 'preferences')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save</button>
                                 </div>
-                                <div>
-                                    <label htmlFor="preferredLocation" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Preferred Location</label>
+
+                                {/* Location */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label htmlFor="preferred_location" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Preferred Location</label>
                                     <input
-                                        id="preferredLocation"
+                                        id="preferred_location"
                                         type="text"
-                                        value={settings.preferences.preferredLocation}
-                                        onChange={(e) => handleInputChange(e, 'preferences', 'preferredLocation')}
+                                        value={settings.preferences.preferred_location}
+                                        onChange={(e) => handleInputChange(e, 'preferences', 'preferred_location')}
                                         className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
                                         placeholder="e.g., Lagos, Lekki"
                                     />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a default location for property searches.</p>
-                                    <button onClick={() => handleSaveSettings('Preferred Location', 'preferences')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save</button>
                                 </div>
-                                <div>
-                                    <label htmlFor="maxPriceAlert" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Maximum Price Alert Threshold</label>
+
+                                {/* Min Price */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label htmlFor="min_price" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Min Price (₦)</label>
                                     <div className="relative">
                                         <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
                                         <input
-                                            id="maxPriceAlert"
+                                            id="min_price"
                                             type="number"
-                                            value={settings.preferences.maxPriceAlert}
-                                            onChange={(e) => handleInputChange(e, 'preferences', 'maxPriceAlert')}
+                                            value={settings.preferences.min_price}
+                                            onChange={(e) => handleInputChange(e, 'preferences', 'min_price')}
                                             className={`w-full py-2.5 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
-                                            placeholder="e.g., 100000000"
+                                            placeholder="0"
                                         />
                                     </div>
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a maximum price for alerts on new listings.</p>
-                                    <button onClick={() => handleSaveSettings('Maximum Price Alert Threshold', 'preferences')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save</button>
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a minimum price for property recommendations.</p>
                                 </div>
+
+                                {/* Max Price */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label htmlFor="max_price" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Max Price (₦)</label>
+                                    <div className="relative">
+                                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                        <input
+                                            id="max_price"
+                                            type="number"
+                                            value={settings.preferences.max_price}
+                                            onChange={(e) => handleInputChange(e, 'preferences', 'max_price')}
+                                            className={`w-full py-2.5 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
+                                            placeholder="1000000000"
+                                        />
+                                    </div>
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a maximum price for property recommendations.</p>
+                                </div>
+
+                                {/* Min Bedrooms */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="min_bedrooms">Min Bedrooms</label>
+                                    <Dropdown
+                                        options={bedroomOptions}
+                                        value={settings.preferences.min_bedrooms}
+                                        onChange={(value) => setSettings(prev => ({...prev, preferences: {...prev.preferences, min_bedrooms: value}}))}
+                                        placeholder="Any"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum number of bedrooms.</p>
+                                </div>
+
+                                {/* Min Bathrooms */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="min_bathrooms">Min Bathrooms</label>
+                                    <Dropdown
+                                        options={bathroomOptions}
+                                        value={settings.preferences.min_bathrooms}
+                                        onChange={(value) => setSettings(prev => ({...prev, preferences: {...prev.preferences, min_bathrooms: value}}))}
+                                        placeholder="Any"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum number of bathrooms.</p>
+                                </div>
+                            </div>
+                            {/* Single Save Button for Property Preferences */}
+                            <div className="flex justify-center mt-6">
+                                <button
+                                    onClick={() => handleSaveSettings('Property Preferences', 'preferences')}
+                                    className="py-2.5 px-8 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors"
+                                >
+                                    Save Property Preferences
+                                </button>
                             </div>
                         </div>
                     )}

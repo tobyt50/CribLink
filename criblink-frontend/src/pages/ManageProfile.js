@@ -7,6 +7,7 @@ import { useTheme } from "../layouts/AppShell";
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
 import { useSidebarState } from '../hooks/useSidebarState';
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 
 import Sidebar from '../components/profile/Sidebar';
 import DisplayPicture from '../components/profile/DisplayPicture';
@@ -20,12 +21,15 @@ function ManageProfile() {
     full_name: "", username: "", email: "", bio: "",
     location: "", phone: "", agency: "", current_password: "",
     new_password: "", confirm_password: "",
+    social_links: [] // Initialize social_links in the form state
   });
 
   const [userInfo, setUserInfo] = useState({
     full_name: "", username: "", email: "", role: "",
     profile_picture_url: "", bio: "", location: "",
     phone: "", agency: "",
+    social_links: [], // Initialize social_links in userInfo
+    default_landing_page: "", // Ensure default_landing_page is initialized here
   });
 
   const [loading, setLoading] = useState(true);
@@ -33,12 +37,15 @@ function ManageProfile() {
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [deletingPicture, setDeletingPicture] = useState(false);
   const [activeSection, setActiveSection] = useState("general");
+  const [currentSessionIdFromToken, setCurrentSessionIdFromToken] = useState(null);
+
 
   const token = localStorage.getItem("token");
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
   const { isMobile, isCollapsed } = useSidebarState();
+  const { updateUser } = useAuth(); // Get the updateUser function from AuthContext
 
   const fetchProfile = async () => {
     try {
@@ -54,6 +61,7 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
+        social_links: res.data.social_links || [], // Populate social_links from fetched data
       }));
       setUserInfo({
         full_name: res.data.full_name || "",
@@ -65,6 +73,8 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
+        social_links: res.data.social_links || [], // Populate social_links in userInfo as well
+        default_landing_page: res.data.default_landing_page || "", // Ensure default_landing_page is included here
       });
       setLoading(false);
     } catch (error) {
@@ -75,82 +85,104 @@ function ManageProfile() {
   };
 
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+    const { name, value, files } = e.target;
+  
+    // Handle file upload (profile picture)
+    if (name === 'profile_picture' && files && files.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        profile_picture: files[0], // Store actual File object
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };  
 
-  const handleUpdate = async () => {
-    setUpdating(true);
+  const handleUpdate = async (updatedSettings) => { // Accept updatedSettings from child components
+    const token = localStorage.getItem("token");
+  
     try {
-      let updateData = {};
-      if (activeSection === "general") {
-        updateData = {
-          full_name: form.full_name,
-          username: form.username,
-          bio: form.bio,
-          location: form.location,
-          phone: form.phone,
-        };
-        if (userInfo.role === 'agent') {
-          updateData.agency = form.agency;
-        }
-      } else if (activeSection === "security") {
-        if (form.new_password || form.current_password || form.confirm_password) {
-          if (form.new_password !== form.confirm_password) {
-            showMessage("New password and confirm password do not match.", 'error');
-            setUpdating(false);
-            return;
+      setUpdating(true);
+  
+      // 1. Upload profile picture if a new file is selected
+      if (form.profile_picture instanceof File) {
+        const formData = new FormData();
+        formData.append("profile_picture", form.profile_picture);
+  
+        setUploadingPicture(true);
+  
+        const uploadRes = await axiosInstance.put(
+          `${API_BASE_URL}/users/profile/picture/upload`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
           }
-          if (!form.current_password) {
-            showMessage("Please enter your current password to change it.", 'error');
-            setUpdating(false);
-            return;
-          }
-          updateData = {
-            password: form.new_password,
-            current_password_check: form.current_password
-          };
-        } else {
-          showMessage("No changes to save in Security section.", 'info');
-          setUpdating(false);
-          return;
-        }
-      }
-
-      await axiosInstance.put(`${API_BASE_URL}/users/update`, updateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      showMessage(
-        activeSection === "general"
-          ? "General profile updated successfully"
-          : "Password updated successfully",
-        'success'
-      );
-
-      if (activeSection === "general") fetchProfile();
-      if (activeSection === "security") {
-        setForm((prev) => ({
-          ...prev, current_password: "", new_password: "", confirm_password: ""
+        );
+  
+        showMessage("Profile picture uploaded successfully", "success");
+  
+        // Update the userInfo state with new picture URL
+        setUserInfo((prev) => ({
+          ...prev,
+          profile_picture_url: uploadRes.data.profile_picture_url,
         }));
+  
+        // Reset file field in form
+        setForm((prev) => ({ ...prev, profile_picture: null }));
       }
-    } catch (err) {
-      console.error("Update error:", err);
-      showMessage(err?.response?.data?.message || err.message || 'Failed to update profile.', 'error');
+  
+      // 2. Prepare update data by merging existing form state with updatedSettings
+      // This ensures all relevant fields from different profile sections are included.
+      const updateData = { ...form, ...updatedSettings };
+      delete updateData.profile_picture; // Remove file object before sending
+
+      // 3. Send profile update request
+      const updateRes = await axiosInstance.put(
+        `${API_BASE_URL}/users/update`,
+        updateData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+  
+      showMessage("Profile updated successfully!", "success");
+      setUserInfo(updateRes.data.user);
+      // Crucial: Update AuthContext with the latest user data including default_landing_page
+      updateUser(updateRes.data.user); // Call updateUser from AuthContext
+      localStorage.setItem('user', JSON.stringify(updateRes.data.user)); // Also update localStorage for persistence
+    } catch (error) {
+      console.error("Update failed:", error);
+      showMessage(
+        error.response?.data?.message || "Failed to update profile",
+        "error"
+      );
     } finally {
       setUpdating(false);
+      setUploadingPicture(false);
     }
   };
+  
 
   const uploadProfilePicture = async (file) => {
     setUploadingPicture(true);
     try {
-      const res = await axiosInstance.put(`${API_BASE_URL}/users/profile/picture/upload`, file, {
+      const formData = new FormData();
+      formData.append("profile_picture", file); // Ensure the file is appended correctly
+
+      const res = await axiosInstance.put(`${API_BASE_URL}/users/profile/picture/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": file.type,
+          "Content-Type": "multipart/form-data", // Important for FormData
         },
       });
       setUserInfo((prev) => ({ ...prev, profile_picture_url: res.data.profile_picture_url }));
+      updateUser({ ...userInfo, profile_picture_url: res.data.profile_picture_url }); // Update AuthContext
       showMessage("Profile picture updated successfully", 'success');
     } catch (error) {
       console.error("Error uploading profile picture:", error);
@@ -171,6 +203,7 @@ function ManageProfile() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setUserInfo((prev) => ({ ...prev, profile_picture_url: null }));
+          updateUser({ ...userInfo, profile_picture_url: null }); // Update AuthContext
           showMessage("Profile picture deleted successfully", 'success');
         } catch (error) {
           console.error("Error deleting profile picture:", error);
@@ -186,6 +219,14 @@ function ManageProfile() {
 
   useEffect(() => {
     if (token) {
+      try {
+        const decodedToken = JSON.parse(atob(token.split('.')[1]));
+        if (decodedToken && decodedToken.session_id) {
+          setCurrentSessionIdFromToken(decodedToken.session_id);
+        }
+      } catch (e) {
+        console.error("Error decoding token:", e);
+      }
       fetchProfile();
     } else {
       showMessage("Authentication token not found. Please sign in.", 'error');
@@ -240,11 +281,11 @@ function ManageProfile() {
           className={`
             w-full mx-auto space-y-8
             ${isMobile
-              ? "p-4" // mobile: no card styling
+              ? "p-4"
               : `max-w-4xl p-6 md:p-10 rounded-xl shadow-xl
                  ${darkMode ? "bg-gray-800" : "bg-white"}`
             }
-          `}          
+          `}
         >
           <motion.h2
             className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}
@@ -271,15 +312,29 @@ function ManageProfile() {
               handleChange={handleChange}
               handleUpdate={handleUpdate}
               updating={updating}
+              currentSessionIdFromToken={currentSessionIdFromToken}
             />
           )}
 
           {activeSection === "privacy" && (
-            <Privacy activeSection={activeSection} />
+            <Privacy
+              form={form}
+              handleChange={handleChange}
+              handleUpdate={handleUpdate}
+              updating={updating}
+              activeSection={activeSection}
+            />
           )}
 
           {activeSection === "settings" && (
-            <Settings activeSection={activeSection} />
+            <Settings
+              form={form}
+              handleChange={handleChange}
+              handleUpdate={handleUpdate} // Pass handleUpdate to Settings
+              updating={updating}
+              activeSection={activeSection}
+              userInfo={userInfo} // Pass userInfo for consistent access
+            />
           )}
         </motion.div>
       </motion.main>

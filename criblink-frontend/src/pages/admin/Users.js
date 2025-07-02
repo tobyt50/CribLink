@@ -1,21 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { Menu, X, Search, FileText } from 'lucide-react';
+import { Menu, X, Search, FileText, LayoutGrid, LayoutList } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import axiosInstance from '../../api/axiosInstance';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
-
+import { useSidebarState } from '../../hooks/useSidebarState';
+import Card from '../../components/ui/Card'; // Assuming you have a reusable Card component
+import UserCard from '../../components/admin/UserCard'; // Import the new UserCard component
+import API_BASE_URL from '../../config'; // Assuming API_BASE_URL is defined here or imported
 
 // Reusable Dropdown Component (embedded directly in Users.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -123,6 +125,10 @@ const Users = () => {
   const [page, setPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
 
+  // Initialize viewMode from localStorage based on 'defaultListingsView'
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
+
+
   // Theme, message, and confirmation dialog hooks
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
@@ -140,7 +146,7 @@ const Users = () => {
   const exportDropdownRef = useRef(null);
 
   // Pagination limit
-  const limit = 10;
+  const limit = viewMode === 'simple' ? 10 : 9; // 10 for table, 9 for grid (3x3)
 
   // Hook for location object to read route state
   const location = useLocation();
@@ -159,19 +165,32 @@ const Users = () => {
    * Fetches users from the backend API based on current filters, search, sorting, and pagination.
    * Displays success or error messages using the MessageContext.
    */
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     // Construct query parameters
     const params = new URLSearchParams({ search, role: roleFilter, page, limit, sort: sortKey, direction: sortDirection });
     const token = localStorage.getItem('token'); // Retrieve auth token from local storage
 
     try {
-      const res = await axiosInstance.get(`http://localhost:5000/admin/users?${params}`, {
+      const res = await axiosInstance.get(`${API_BASE_URL}/admin/users?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}` // Attach token to request headers
         }
       });
       const data = res.data;
-      setUsers(data.users);
+
+      // The profile_picture_url should already be included in the user object
+      // returned by the /admin/users endpoint if the backend is correctly configured.
+      // If it's not present, the UserCard will use a placeholder.
+      const usersWithProfilePictures = data.users.map(user => {
+        let profilePictureUrl = user.profile_picture_url;
+        // Fallback to a placeholder if profilePictureUrl is null, undefined, or empty
+        if (!profilePictureUrl) {
+          profilePictureUrl = `https://placehold.co/80x80/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${user.full_name.charAt(0).toUpperCase()}`;
+        }
+        return { ...user, profile_picture_url: profilePictureUrl };
+      });
+
+      setUsers(usersWithProfilePictures);
       setTotalUsers(data.total);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -185,7 +204,7 @@ const Users = () => {
       setUsers([]); // Clear users on error
       setTotalUsers(0); // Reset total users on error
     }
-  };
+  }, [search, roleFilter, page, limit, sortKey, sortDirection, showMessage, darkMode]); // Added darkMode to dependencies
 
   // Effect to apply initial filters/sorting from location state
   useEffect(() => {
@@ -203,7 +222,7 @@ const Users = () => {
   // Effect to re-fetch users whenever search, filter, pagination, or sort parameters change
   useEffect(() => {
     fetchUsers();
-  }, [search, roleFilter, page, sortKey, sortDirection]);
+  }, [fetchUsers]); // fetchUsers is now a useCallback, so it's stable
 
   // Effect to handle clicks outside the export dropdown to close it
   useEffect(() => {
@@ -254,7 +273,7 @@ const Users = () => {
       // If exporting all users, fetch all data without pagination
       if (scope === 'all') {
         const params = new URLSearchParams({ search, role: roleFilter, sort: sortKey, direction: sortDirection });
-        const res = await axiosInstance.get(`http://localhost:5000/admin/users?${params}`, {
+        const res = await axiosInstance.get(`${API_BASE_URL}/admin/users?${params}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -266,11 +285,11 @@ const Users = () => {
       setIsExportDropdownOpen(false); // Close dropdown after selection
 
       // Define CSV headers and map user data to CSV format
-      const headers = ['User ID', 'Full Name', 'Email', 'Role', 'Status', 'Date Joined'];
+      const headers = ['User ID', 'Full Name', 'Email', 'Role', 'Status', 'Date Joined', 'Profile Picture URL'];
       const csv = [
         headers.join(','),
         ...dataToExport.map(u =>
-          [u.user_id, u.full_name, u.email, u.role, u.status || 'active', formatDate(u.date_joined)]
+          [u.user_id, u.full_name, u.email, u.role, u.status || 'active', formatDate(u.date_joined), u.profile_picture_url || 'N/A']
             .map(f => `"${String(f).replace(/"/g, '""')}"`) // Escape double quotes and wrap in quotes
             .join(',')
         )
@@ -304,7 +323,7 @@ const Users = () => {
   const performDelete = async (userId) => {
     const token = localStorage.getItem('token');
     try {
-      await axiosInstance.delete(`http://localhost:5000/admin/users/${userId}`, {
+      await axiosInstance.delete(`${API_BASE_URL}/admin/users/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -347,7 +366,7 @@ const Users = () => {
     const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
     const token = localStorage.getItem('token');
     try {
-      await axiosInstance.put(`http://localhost:5000/admin/users/${userId}/status`,
+      await axiosInstance.put(`${API_BASE_URL}/admin/users/${userId}/status`,
         { status: newStatus },
         { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
       );
@@ -384,6 +403,46 @@ const Users = () => {
   };
 
   /**
+   * Performs the reactivate API call for a user.
+   * @param {string} userId - The ID of the user.
+   */
+  const performReactivate = async (userId) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axiosInstance.put(`${API_BASE_URL}/admin/users/${userId}/status`,
+        { status: 'active' }, // Set status to 'active'
+        { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
+      );
+      showMessage(`User reactivated successfully.`, 'success');
+      fetchUsers(); // Refresh user list after status change
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      let errorMessage = `Failed to reactivate user. Please try again.`;
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
+  /**
+   * Triggers the confirmation dialog for reactivating an account.
+   * @param {object} user - The user object whose account is to be reactivated.
+   */
+  const handleReactivate = (user) => {
+    showConfirm({
+      title: `Reactivate User: ${user.full_name}`,
+      message: `Are you sure you want to reactivate ${user.full_name}'s account? They will regain full access to the system.`,
+      onConfirm: () => performReactivate(user.user_id),
+      confirmLabel: "Reactivate",
+      cancelLabel: "Cancel"
+    });
+  };
+
+
+  /**
    * Performs the role change API call for a user.
    * @param {string} userId - The ID of the user.
    * @param {string} newRole - The new role to assign ('admin', 'agent', or 'client').
@@ -391,7 +450,7 @@ const Users = () => {
   const performRoleChange = async (userId, newRole) => {
     const token = localStorage.getItem('token');
     try {
-      await axiosInstance.put(`http://localhost:5000/admin/users/${userId}/role`,
+      await axiosInstance.put(`${API_BASE_URL}/admin/users/${userId}/role`,
         { newRole: newRole }, // Ensure newRole is sent in the body
         { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }
       );
@@ -425,17 +484,18 @@ const Users = () => {
   };
 
   /**
-   * Applies the selected action (ban/unban, delete, role change) for a specific user.
+   * Applies the selected action (ban/unban, reactivate, delete, role change) for a specific user.
    * @param {object} user - The user object on whom the action is to be applied.
+   * @param {string} action - The action value selected from the dropdown or button.
    */
-  const handleActionApply = (user) => {
-    const action = actionSelections[user.user_id];
+  const handleActionApply = (user, action) => {
     if (!action) {
       showMessage('Please select an action to apply.', 'info');
       return;
     }
 
     if (action === 'ban' || action === 'unban') handleBanToggle(user);
+    else if (action === 'reactivate') handleReactivate(user);
     else if (action === 'delete') handleDelete(user);
     else if (action.startsWith('role:')) handleRoleChange(user, action.split(':')[1]);
     setActionSelections(prev => ({ ...prev, [user.user_id]: '' })); // Clear selection after initiating action
@@ -528,23 +588,39 @@ const Users = () => {
                 />
               </div>
 
-              {/* Export Dropdown for Mobile */}
-              <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                <button
-                  onClick={() => setIsExportDropdownOpen(p => !p)}
-                  className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md"
-                  title="Export"
-                >
-                  <FileText size={20} />
-                </button>
-                {isExportDropdownOpen && (
-                  <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                    <div className="py-1">
-                      <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
-                      <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Users</button>
+              {/* Export and View Mode Toggle for Mobile */}
+              <div className="flex gap-2 ml-2 items-center"> {/* Added items-center for alignment */}
+                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                  <button
+                    onClick={() => setIsExportDropdownOpen(p => !p)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-md"
+                    title="Export"
+                  >
+                    <FileText size={20} />
+                  </button>
+                  {isExportDropdownOpen && (
+                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                      <div className="py-1">
+                        <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
+                        <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Users</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <button
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
+                  title="List View"
+                >
+                  <LayoutList className="h-5 w-5" />
+                </button>
+                <button
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
+                  title="Grid View"
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                </button>
               </div>
             </div>
           )}
@@ -561,102 +637,135 @@ const Users = () => {
                 className={`w-full md:w-1/3 py-2 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                   darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`} />
 
-              <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                <button onClick={() => setIsExportDropdownOpen(p => !p)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10">
-                  Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
-                </button>
-                {isExportDropdownOpen && (
-                  <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                    <div className="py-1">
-                      <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
-                      <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Users</button>
+              <div className="flex gap-2 items-center"> {/* Grouped Export and View Mode Toggles */}
+                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                  <button onClick={() => setIsExportDropdownOpen(p => !p)} className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10">
+                    Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
+                  </button>
+                  {isExportDropdownOpen && (
+                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                      <div className="py-1">
+                        <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current Page</button>
+                        <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Users</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                  <LayoutList className="h-6 w-6" />
+                </button>
+                <button onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                  <LayoutGrid className="h-6 w-6" />
+                </button>
               </div>
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              <thead>
-                <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                  {['user_id', 'full_name', 'email', 'status', 'date_joined'].map((k) => (
-                    <th
-                      key={k}
-                      onClick={() => handleSortClick(k)}
-                      className={`py-2 px-2 cursor-pointer select-none ${sortKey === k ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`}
-                      style={{
-                        width:
-                          k === 'user_id' ? '90px' :
-                          k === 'full_name' ? '120px' :
-                          k === 'email' ? '160px' :
-                          k === 'status' ? '80px' :
-                          k === 'date_joined' ? '120px' : 'auto'
-                      }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                        {renderSortIcon(k)}
-                      </div>
-                    </th>
-                  ))}
-                  <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '90px' }}>
-                    <Dropdown
-                      placeholder="All Roles"
-                      options={roleOptions}
-                      value={roleFilter}
-                      onChange={(value) => { setRoleFilter(value); setPage(1); }}
-                      className="w-full"
-                    />
-                  </th>
-                  <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '150px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                {users.length > 0 ? (
-                  users.map(user => (
-                    <tr key={user.user_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={user.user_id && user.user_id.length > 10 ? user.user_id : ''}>{user.user_id}</td>
-                      <td title={user.full_name && user.full_name.length > 15 ? user.full_name : ''} className="py-2 px-2 max-w-[120px] truncate">{user.full_name}</td>
-                      <td title={user.email && user.email.length > 20 ? user.email : ''} className="py-2 px-2 max-w-[160px] truncate">{user.email}</td>
-                      <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
-                          user.status === 'banned'
-                            ? 'text-red-600'
-                            : 'text-green-600'
-                        }`} title={user.status && user.status.length > 10 ? user.status : ''}>{user.status || 'active'}</td>
-                      <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(user.date_joined) && formatDate(user.date_joined).length > 15 ? formatDate(user.date_joined) : ''}>{formatDate(user.date_joined)}</td>
-                      <td className="py-2 px-2 max-w-[90px] truncate" title={user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1) && user.role.length > 10 ? user.role : ''}>{user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
-                      <td className="py-2 px-2 space-x-2 max-w-[150px]">
-                        <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
-                          <Dropdown
-                            placeholder="Select Action"
-                            options={[
-                              { value: "", label: "Select Action" },
-                              ...(user.role === 'client' || user.role === 'agent' ? [{ value: "role:admin", label: "Promote to Admin" }] : []),
-                              ...(user.role === 'client' ? [{ value: "role:agent", label: "Promote to Agent" }] : []),
-                              ...(user.role === 'admin' ? [{ value: "role:agent", label: "Demote to Agent" }] : []),
-                              ...(user.role === 'admin' || user.role === 'agent' ? [{ value: "role:client", label: "Demote to Client" }] : []),
-                              { value: user.status === 'banned' ? 'unban' : 'ban', label: user.status === 'banned' ? 'Unban' : 'Ban' },
-                              { value: "delete", label: "Delete" },
-                            ]}
-                            value={actionSelections[user.user_id] || ''}
-                            onChange={(value) => setActionSelections(prev => ({ ...prev, [user.user_id]: value }))}
-                            className="w-full"
-                          />
-                          <button onClick={() => handleActionApply(user)} className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5">Apply</button>
-                        </div>
-                      </td>
+          {users.length === 0 ? (
+            <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              No users found matching your criteria.
+            </div>
+          ) : (
+            viewMode === 'graphical' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {users.map(user => (
+                  <UserCard
+                    key={user.user_id}
+                    user={user}
+                    onActionApply={(user, action) => handleActionApply(user, action)}
+                    actionSelections={actionSelections}
+                    setActionSelections={setActionSelections}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      {['user_id', 'full_name', 'email', 'status', 'date_joined'].map((k) => (
+                        <th
+                          key={k}
+                          onClick={() => handleSortClick(k)}
+                          className={`py-2 px-2 cursor-pointer select-none ${sortKey === k ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`}
+                          style={{
+                            width:
+                              k === 'user_id' ? '90px' :
+                              k === 'full_name' ? '120px' :
+                              k === 'email' ? '160px' :
+                              k === 'status' ? '80px' :
+                              k === 'date_joined' ? '120px' : 'auto'
+                          }}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>{k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            {renderSortIcon(k)}
+                          </div>
+                        </th>
+                      ))}
+                      <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '90px' }}>
+                        <Dropdown
+                          placeholder="All Roles"
+                          options={roleOptions}
+                          value={roleFilter}
+                          onChange={(value) => { setRoleFilter(value); setPage(1); }}
+                          className="w-full"
+                        />
+                      </th>
+                      <th className={`py-2 px-2 text-left whitespace-nowrap ${darkMode ? "text-gray-400" : "text-gray-500"}`} style={{ width: '150px' }}>Actions</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No users found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {users.length > 0 ? (
+                      users.map(user => (
+                        <tr key={user.user_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                          <td className="py-2 px-2 max-w-[90px] truncate" title={user.user_id && user.user_id.length > 10 ? user.user_id : ''}>{user.user_id}</td>
+                          <td title={user.full_name && user.full_name.length > 15 ? user.full_name : ''} className="py-2 px-2 max-w-[120px] truncate">{user.full_name}</td>
+                          <td title={user.email && user.email.length > 20 ? user.email : ''} className="py-2 px-2 max-w-[160px] truncate">{user.email}</td>
+                          <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
+                              user.status === 'banned'
+                                ? 'text-red-600'
+                                : user.status === 'deactivated'
+                                  ? 'text-yellow-600'
+                                  : 'text-green-600'
+                            }`} title={user.status && user.status.length > 10 ? user.status : ''}>{user.status || 'active'}</td>
+                          <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(user.date_joined) && formatDate(user.date_joined).length > 15 ? formatDate(user.date_joined) : ''}>{formatDate(user.date_joined)}</td>
+                          <td className="py-2 px-2 max-w-[90px] truncate" title={user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1) && user.role.length > 10 ? user.role : ''}>{user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
+                          <td className="py-2 px-2 space-x-2 max-w-[150px]">
+                            <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
+                              <Dropdown
+                                placeholder="Select Action"
+                                options={[
+                                  { value: "", label: "Select Action" },
+                                  // Role change options
+                                  ...(user.role === 'client' || user.role === 'agent' ? [{ value: "role:admin", label: "Promote to Admin" }] : []),
+                                  ...(user.role === 'client' ? [{ value: "role:agent", label: "Promote to Agent" }] : []),
+                                  ...(user.role === 'admin' ? [{ value: "role:agent", label: "Demote to Agent" }] : []),
+                                  ...(user.role === 'admin' || user.role === 'agent' ? [{ value: "role:client", label: "Demote to Client" }] : []),
+                                  // Status change options
+                                  ...(user.status === 'deactivated' ? [{ value: "reactivate", label: "Reactivate" }] : []),
+                                  { value: user.status === 'banned' ? 'unban' : 'ban', label: user.status === 'banned' ? 'Unban' : 'Ban' },
+                                  { value: "delete", label: "Delete" },
+                                ]}
+                                value={actionSelections[user.user_id] || ''}
+                                onChange={(value) => setActionSelections(prev => ({ ...prev, [user.user_id]: value }))}
+                                className="w-full"
+                              />
+                              <button onClick={() => handleActionApply(user, actionSelections[user.user_id])} className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5">Apply</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No users found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button
               onClick={() => setPage(p => Math.max(p - 1, 1))}
