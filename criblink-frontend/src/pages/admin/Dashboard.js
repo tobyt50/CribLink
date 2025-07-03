@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card';
 import StatCard from '../../components/StatCard'; // Import StatCard
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
+import axiosInstance from '../../api/axiosInstance';
 
 const AdminDashboard = () => {
   // Use the useSidebarState hook for sidebar management
@@ -53,12 +54,13 @@ const AdminDashboard = () => {
 
       try {
         const [agentRes, listingRes, clientInquiriesRes, agentResponsesRes, pendingRes] = await Promise.all([
-          axios.get('/admin/agents/count', { headers }),
-          axios.get('/admin/listings/count', { headers }),
-          axios.get('/inquiries/agent/count/all-inquiries', { headers }), // Updated API call path
-          axios.get('/inquiries/agent/count/agent-responses', { headers }),   // Updated API call path
-          axios.get('/admin/listings/pending-approvals', { headers }),
+          axiosInstance.get('/admin/agents/count'),
+          axiosInstance.get('/admin/listings/count'),
+          axiosInstance.get('/inquiries/agent/count/all-inquiries'),
+          axiosInstance.get('/inquiries/agent/count/agent-responses'),
+          axiosInstance.get('/admin/listings/pending-approvals'),
         ]);
+
         setAgentCount(agentRes.data.count);
         setListingCount(listingRes.data.count);
         setTotalClientInquiries(clientInquiriesRes.data.count); // Update new state
@@ -99,11 +101,9 @@ const AdminDashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       try {
-        const response = await axios.get('/admin/activity/recent-activity', { headers });
-        // Safely access response.data.activities and ensure it's an array
-        const rawActivities = response.data?.activities || []; 
+        const response = await axiosInstance.get('/admin/activity/recent-activity');
 
-        const activityData = rawActivities.map(a => {
+        const activityData = response.data.activities.map(a => {
           let IconComponent = User;
           let tag = 'User';
           let color = 'gray';
