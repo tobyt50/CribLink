@@ -14,7 +14,7 @@ import Card from '../../components/ui/Card';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
 
-const API_BASE_URL = 'http://localhost:5000/admin/analytics';
+const API_BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/admin/analytics`;
 
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
