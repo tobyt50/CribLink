@@ -559,27 +559,28 @@ exports.resetPassword = async (req, res) => {
  */
 exports.uploadProfilePicture = async (req, res) => {
     const userId = req.user.user_id;
+    const base64Image = req.body.image; // expecting base64 string
 
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded.' });
+    if (!base64Image) {
+        return res.status(400).json({ message: 'No image provided.' });
     }
 
     try {
-        // Get the current profile picture URL to potentially delete the old one from Cloudinary
+        // Get current profile picture URL (to delete old Cloudinary file if needed)
         const userResult = await db.query('SELECT profile_picture_url FROM users WHERE user_id = $1', [userId]);
         const oldImageUrl = userResult.rows[0]?.profile_picture_url;
 
-        // Upload the new file to Cloudinary
-        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname, 'profile_pictures');
+        // Upload new image to Cloudinary
+        const uploadResult = await uploadToCloudinary(base64Image, `${userId}_profile`, 'profile_pictures');
         const newImageUrl = uploadResult.url;
 
-        // Update the database with the new Cloudinary URL
+        // Update DB
         const updateResult = await db.query(
             `UPDATE users SET profile_picture_url = $1 WHERE user_id = $2 RETURNING profile_picture_url`,
             [newImageUrl, userId]
         );
 
-        // If there was an old Cloudinary image, delete it
+        // Delete old image if needed
         if (oldImageUrl && oldImageUrl.includes('cloudinary.com')) {
             const publicId = getCloudinaryPublicId(oldImageUrl);
             if (publicId) {
@@ -598,6 +599,7 @@ exports.uploadProfilePicture = async (req, res) => {
         res.status(500).json({ message: 'Failed to upload profile picture.', error: error.message });
     }
 };
+
 
 /**
  * Deletes a user's profile picture by setting the URL to NULL and deleting from Cloudinary.

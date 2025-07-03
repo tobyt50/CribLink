@@ -20,7 +20,6 @@ router.post('/reset-password', userController.resetPassword);
 router.put(
   '/profile/picture/upload',
   authenticateToken,
-  upload.single('profile_picture'),
   userController.uploadProfilePicture
 );
 

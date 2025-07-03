@@ -108,34 +108,30 @@ function ManageProfile() {
       setUpdating(true);
   
       // 1. Upload profile picture if a new file is selected
-      if (form.profile_picture instanceof File) {
-        const formData = new FormData();
-        formData.append("profile_picture", form.profile_picture);
-  
+      if (form.profile_picture_base64) {
         setUploadingPicture(true);
-  
+      
         const uploadRes = await axiosInstance.put(
           `${API_BASE_URL}/users/profile/picture/upload`,
-          formData,
+          { image: form.profile_picture_base64 },
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
+              "Content-Type": "application/json",
             },
           }
         );
-  
+      
         showMessage("Profile picture uploaded successfully", "success");
-  
-        // Update the userInfo state with new picture URL
+      
         setUserInfo((prev) => ({
           ...prev,
           profile_picture_url: uploadRes.data.profile_picture_url,
         }));
-  
-        // Reset file field in form
-        setForm((prev) => ({ ...prev, profile_picture: null }));
+      
+        setForm((prev) => ({ ...prev, profile_picture_base64: null }));
       }
+      
   
       // 2. Prepare update data by merging existing form state with updatedSettings
       // This ensures all relevant fields from different profile sections are included.

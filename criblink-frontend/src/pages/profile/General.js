@@ -62,7 +62,11 @@ function General({ form, handleChange, handleUpdate, updating, userInfo }) {
         // Instead, pass the file to `handleChange` so the parent knows a new file is selected.
         handleChange({ target: { name: 'profile_picture', value: file } });
       };
-      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        setProfilePicturePreview(reader.result);
+        // Send base64 to parent
+        handleChange({ target: { name: 'profile_picture_base64', value: reader.result } });
+      };      
     } else {
       setProfilePictureFile(null);
       setProfilePicturePreview('');
