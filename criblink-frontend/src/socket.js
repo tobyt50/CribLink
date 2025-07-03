@@ -1,12 +1,10 @@
 import { io } from 'socket.io-client';
 
-// Adjust this URL depending on your backend setup
-const SOCKET_URL = 'http://localhost:5000'; // Or your production URL
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
-// Connect once and export
 const socket = io(SOCKET_URL, {
-  autoConnect: false, // Optional: delay connection until auth ready
-  transports: ['websocket'], // Optional: skip long polling fallback
+  autoConnect: false,
+  transports: ['websocket'],
 });
 
 export default socket;
