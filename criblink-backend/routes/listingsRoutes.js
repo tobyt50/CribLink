@@ -25,22 +25,14 @@ router.get('/', optionalAuthenticateToken, getAllListings); // <--- MODIFIED LIN
 router.post(
     '/',
     authenticateToken,
-    upload.fields([
-        { name: 'mainImage', maxCount: 1 },
-        { name: 'galleryImages', maxCount: 10 }
-    ]),
     createListing
 );
 
 // Route for updating an existing listing (requires authentication and file upload handling)
 router.put(
-    '/:id', // Listing ID in the URL parameters
-    authenticateToken, // Authenticate the user
-    upload.fields([
-        { name: 'mainImageFile', maxCount: 1 },
-        { name: 'newImages', maxCount: 10 },
-    ]),
-    updateListing // The controller function to handle updating the listing
+    '/:id',
+    authenticateToken,
+    updateListing
 );
 
 // Route for deleting a listing (requires authentication)
