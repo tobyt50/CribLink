@@ -100,7 +100,10 @@ const AdminDashboard = () => {
 
       try {
         const response = await axios.get('/admin/activity/recent-activity', { headers });
-        const activityData = response.data.activities.map(a => {
+        // Safely access response.data.activities and ensure it's an array
+        const rawActivities = response.data?.activities || []; 
+
+        const activityData = rawActivities.map(a => {
           let IconComponent = User;
           let tag = 'User';
           let color = 'gray';
