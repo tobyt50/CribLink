@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-// Assuming upload middleware is correctly configured for multer
-const upload = require('../middleware/uploadMiddleware');
 
 const {
     getAllListings,

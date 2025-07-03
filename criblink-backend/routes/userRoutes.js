@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const upload = require('../middleware/uploadMiddleware');
 const { authenticateToken } = require('../middleware/authMiddleware'); // FIX: Removed authorizeRole from import
 
 // --- Auth & Profile Routes ---
