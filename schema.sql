@@ -40,6 +40,7 @@ CREATE TABLE users (
     bio TEXT,
     location VARCHAR(100),
     profile_picture_url TEXT, -- URL to the profile picture
+    profile_picture_public_id VARCHAR(255), -- NEW: Cloudinary public ID for profile picture
     status VARCHAR(20) DEFAULT 'active', -- 'active', 'deactivated', banned
     reset_token VARCHAR(255), -- For password reset functionality
     reset_token_expires TIMESTAMP WITH TIME ZONE,
@@ -150,14 +151,16 @@ CREATE TABLE property_listings (
     property_type VARCHAR(50),
     bedrooms INT,
     bathrooms INT,
-    image_url TEXT
+    image_url TEXT,
+    image_public_id VARCHAR(255) -- NEW: Cloudinary public ID for the main listing image
 );
 
 -- Property images, linked to listings
 CREATE TABLE property_images (
     image_id SERIAL PRIMARY KEY,
     property_id INTEGER REFERENCES property_listings(property_id) ON DELETE CASCADE,
-    image_url TEXT NOT NULL
+    image_url TEXT NOT NULL,
+    public_id VARCHAR(255) -- NEW: Cloudinary public ID for gallery images
 );
 
 CREATE TABLE user_favourites (

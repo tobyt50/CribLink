@@ -24,36 +24,54 @@ router.get('/staff', async (req, res) => {
   if (search) {
     values.push(`%${search.toLowerCase()}%`);
     // Search in full_name or email (case-insensitive)
-    whereClauses.push(`(LOWER(full_name) LIKE $${values.length} OR LOWER(email) LIKE $${values.length})`);
+    whereClaases.push(`(LOWER(sd.full_name) LIKE $${values.length} OR LOWER(sd.email) LIKE $${values.length})`);
   }
 
   // Add department filter condition if department is provided
   if (department) {
     values.push(department);
-    whereClauses.push(`department = $${values.length}`);
+    whereClauses.push(`sd.department = $${values.length}`);
   }
 
   // Add status filter condition if status is provided
   if (status) {
     values.push(status);
-    whereClauses.push(`status = $${values.length}`);
+    whereClauses.push(`sd.status = $${values.length}`);
   }
 
   // Construct the WHERE clause string
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   // Determine the column to sort by and the sort order
-  const validSortColumns = ['employee_id', 'full_name', 'role', 'department', 'email', 'phone', 'start_date', 'status', 'user_id']; // Added user_id as a valid sort column
-  const orderByColumn = validSortColumns.includes(sort) ? sort : 'start_date'; // Use default if sort column is invalid
-  const orderByDirection = direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC'; // Use ASC or DESC
+  const validSortColumns = ['employee_id', 'full_name', 'role', 'department', 'email', 'phone', 'start_date', 'status', 'user_id'];
+  const orderByColumn = validSortColumns.includes(sort) ? `sd.${sort}` : 'sd.start_date'; // Prefix with sd.
+  const orderByDirection = direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
   // Base query text without LIMIT and OFFSET
-  let queryText = `SELECT employee_id, full_name, role, department, email, phone, start_date, status, user_id, profile_picture_url
-                   FROM staff_directory
+  // JOIN with the users table to get profile_picture_url
+  let queryText = `SELECT
+                     sd.employee_id,
+                     sd.full_name,
+                     sd.role,
+                     sd.department,
+                     sd.email,
+                     sd.phone,
+                     sd.start_date,
+                     sd.status,
+                     sd.user_id,
+                     u.profile_picture_url,
+                     u.profile_picture_public_id
+                   FROM
+                     staff_directory sd
+                   LEFT JOIN
+                     users u ON sd.user_id = u.user_id
                    ${whereSQL}
                    ORDER BY ${orderByColumn} ${orderByDirection}`;
 
-  let countQueryText = `SELECT COUNT(*) FROM staff_directory ${whereSQL}`;
+  let countQueryText = `SELECT COUNT(*)
+                        FROM staff_directory sd
+                        LEFT JOIN users u ON sd.user_id = u.user_id
+                        ${whereSQL}`;
   let totalCount = 0;
 
   try {

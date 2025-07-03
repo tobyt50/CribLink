@@ -61,8 +61,10 @@ io.on('connection', (socket) => {
 
 // 📂 Middleware
 app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Increased payload limit for JSON and URL-encoded bodies to 50MB
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Removed: app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // No longer needed for local storage
 
 // 📦 Route imports
 const clientRoutes = require('./routes/clientRoutes');
@@ -83,7 +85,7 @@ const favouritesRoutes = require('./routes/favouritesRoutes');
 const adminSettingsRoutes = require('./routes/admin/settings');
 const agentSettingsRoutes = require('./routes/agentSettings');
 const clientSettingsRoutes = require('./routes/clientSettings');
-const agentRoutes = require('./routes/agentRoutes'); 
+const agentRoutes = require('./routes/agentRoutes');
 
 // 🚏 Route mounting
 app.use('/clients', clientRoutes);
@@ -95,7 +97,7 @@ app.use('/admin', adminStaffRoutes);
 app.use('/admin/activity', adminActivityRoutes);
 app.use('/admin', adminStatsRoutes);
 app.use('/admin/analytics', adminAnalyticsRoutes);
-app.use('/agent', agentStatsRoutes); 
+app.use('/agent', agentStatsRoutes);
 app.use('/users', userRoutes);
 app.use('/listings', listingsRoutes);
 app.use('/admin/agent', agentPerformanceRoutes);

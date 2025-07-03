@@ -1,77 +1,60 @@
 const { pool } = require('../db');
-// Removed fs and path as local storage is no longer used for images
+// Removed: const path = require('path');
+// Removed: const fs = require('fs').promises;
 const logActivity = require('../utils/logActivity');
-// Import Cloudinary utility functions
-const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary');
+const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
 
-// Removed uploadDir, saveFileAndGetUrl, deleteFileByUrl as they are replaced by Cloudinary functions
+// Removed: const uploadDir = path.join(__dirname, '../public/uploads/listings'); // No longer needed for local storage
+// Removed: saveFileAndGetUrl and deleteFileByUrl functions
 
 exports.getAllListings = async (req, res) => {
-    // console.log('[getAllListings] Function started.');
-    // console.log('[getAllListings] req.user:', req.user);
-
     try {
-        const { purchase_category, search, min_price, max_price, page, limit, status, agent_id, sortBy } = req.query; // Destructure sortBy
-        // console.log('[getAllListings] Query parameters:', { purchase_category, search, min_price, max_price, page, limit, status, agent_id, sortBy });
+        const { purchase_category, search, min_price, max_price, page, limit, status, agent_id, sortBy } = req.query;
 
         const userRole = req.user ? req.user.role : 'guest';
         const userId = req.user ? req.user.user_id : null;
-
-        // console.log(`[getAllListings] Determined userRole: ${userRole}, userId: ${userId}`);
 
         let baseQuery = 'FROM property_listings pl';
         let conditions = [];
         let values = [];
         let valueIndex = 1;
 
-        // Apply role-based filtering
         if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
             conditions.push(`pl.status ILIKE $${valueIndex++}`);
             values.push('available');
-            // console.log('[getAllListings] Condition: Filtering for available listings (client/visitor/guest) using ILIKE.');
         } else if (userRole === 'agent') {
             if (agent_id && String(agent_id) === String(userId)) {
                 conditions.push(`pl.agent_id = $${valueIndex++}`);
                 values.push(agent_id);
-                // console.log(`[getAllListings] Condition: Filtering for agent (${agent_id}): only agent's own listings.`);
 
                 if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
                     conditions.push(`pl.status ILIKE $${valueIndex++}`);
                     values.push(status);
-                    // console.log(`[getAllListings] Filter: Agent-specific status filter: ${status}.`);
                 }
             } else {
                 conditions.push(`(pl.status ILIKE $${valueIndex++} OR pl.agent_id = $${valueIndex++})`);
                 values.push('available', userId);
-                // console.log(`[getAllListings] Condition: Filtering for agent (${userId}): available OR agent's own listings (for Home.js).`);
             }
         } else if (userRole === 'admin') {
             if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
                 conditions.push(`pl.status ILIKE $${valueIndex++}`);
                 values.push(status);
-                // console.log(`[getAllListings] Condition: Admin user with explicit status filter: ${status}.`);
-            } else {
-                // console.log('[getAllListings] Condition: Admin user, showing all listings (no status filter applied).');
             }
         }
 
-        // Add other filters (purchase_category, search, min_price, max_price)
         if (purchase_category && purchase_category.toLowerCase() !== 'all') {
             conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
             values.push(purchase_category);
-            // console.log(`[getAllListings] Filter: Added purchase_category: ${purchase_category}`);
         }
 
         if (min_price) {
             conditions.push(`pl.price >= $${valueIndex++}`);
             values.push(min_price);
-            // console.log(`[getAllListings] Filter: Added min_price: ${min_price}`);
         }
 
         if (max_price) {
             conditions.push(`pl.price <= $${valueIndex++}`);
             values.push(max_price);
-            // console.log(`[getAllListings] Filter: Added max_price: ${max_price}`);
         }
 
         if (search && search.trim() !== '') {
@@ -84,27 +67,21 @@ exports.getAllListings = async (req, res) => {
             )`);
             values.push(keyword, keyword, keyword, keyword);
             valueIndex += 4;
-            // console.log(`[getAllListings] Filter: Added search term: ${search}`);
         }
 
         let whereClause = '';
         if (conditions.length > 0) {
             whereClause = ' WHERE ' + conditions.join(' AND ');
-            // console.log('[getAllListings] Conditions applied to main and count queries.');
-        } else {
-            // console.log('[getAllListings] No specific conditions applied, fetching all based on role.');
         }
 
         const pageNum = parseInt(page) || 1;
         const limitNum = parseInt(limit) || 10;
         const offset = (pageNum - 1) * limitNum;
 
-        // Determine sorting order
-        let orderByClause = 'ORDER BY pl.date_listed DESC'; // Default sort
+        let orderByClause = 'ORDER BY pl.date_listed DESC';
         if (sortBy === 'date_listed_asc') {
             orderByClause = 'ORDER BY pl.date_listed ASC';
         }
-        // console.log(`[getAllListings] Sorting order: ${orderByClause}`);
 
         let query = `SELECT pl.* ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
         values.push(limitNum, offset);
@@ -112,18 +89,12 @@ exports.getAllListings = async (req, res) => {
         const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
         const countValues = values.slice(0, values.length - 2);
 
-        // console.log('[getAllListings] Final SQL Query:', query);
-        // console.log('[getAllListings] Query Values:', values);
-        // console.log('[getAllListings] Final Count Query:', countQuery);
-        // console.log('[getAllListings] Count Query Values:', countValues);
-
         const [listingsResult, countResult] = await Promise.all([
             pool.query(query, values),
             pool.query(countQuery, countValues)
         ]);
 
         const totalListings = parseInt(countResult.rows[0].count);
-        // console.log(`[getAllListings] Database query executed. Total rows: ${totalListings}, Fetched rows: ${listingsResult.rows.length}`);
 
         const listingsWithGallery = await Promise.all(listingsResult.rows.map(async (listing) => {
             const galleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1 ORDER BY image_id', [listing.property_id]);
@@ -131,19 +102,16 @@ exports.getAllListings = async (req, res) => {
             return listing;
         }));
 
-        // console.log(`[getAllListings] Fetched ${listingsWithGallery.length} listings with gallery images.`);
         res.status(200).json({
             listings: listingsWithGallery,
             total: totalListings,
             totalPages: Math.ceil(totalListings / limitNum),
             currentPage: pageNum
         });
-        // console.log('[getAllListings] Response sent successfully.');
 
     } catch (err) {
         console.error('Error fetching listings:', err);
         res.status(500).json({ error: 'Internal server error fetching listings', details: err.message });
-        // console.log('[getAllListings] Error response sent.');
     }
 };
 
@@ -170,8 +138,6 @@ exports.createListing = async (req, res) => {
         bedrooms,
         bathrooms,
         purchase_category,
-        mainImageURL, // This will be a URL if user provides it directly
-        galleryImageURLs, // This will be an array of URLs if user provides them directly
         description,
         square_footage,
         lot_size,
@@ -179,13 +145,13 @@ exports.createListing = async (req, res) => {
         heating_type,
         cooling_type,
         parking,
-        amenities
+        amenities,
+        mainImageBase64, // New: base64 string for main image
+        mainImageOriginalName, // New: original name for main image
+        galleryImagesBase64, // New: array of base64 strings for gallery images
+        galleryImagesOriginalNames, // New: array of original names for gallery images
+        galleryImageURLs // Existing URLs (not new files)
     } = req.body;
-
-    // mainImage is from upload.fields({ name: 'mainImage' })
-    const mainImageFile = req.files && req.files['mainImage'] ? req.files['mainImage'][0] : null;
-    // galleryImages is from upload.fields({ name: 'galleryImages' })
-    const galleryFiles = req.files && req.files['galleryImages'] ? req.files['galleryImages'] : [];
 
     const agent_id = req.user ? req.user.user_id : null;
     if (!agent_id) {
@@ -194,29 +160,28 @@ exports.createListing = async (req, res) => {
 
     const date_listed = new Date();
     let mainImageUrlToSave = null;
+    let mainImagePublicIdToSave = null;
     const initialGalleryUrls = Array.isArray(galleryImageURLs) ? galleryImageURLs : (galleryImageURLs ? [galleryImageURLs] : []);
 
     try {
         await pool.query('BEGIN');
 
-        // Handle main image upload (prioritize file upload over URL if both provided)
-        if (mainImageFile) {
-            const uploadResult = await uploadToCloudinary(mainImageFile.buffer, mainImageFile.originalname, 'listings');
+        // Upload main image to Cloudinary if provided
+        if (mainImageBase64 && mainImageOriginalName) {
+            const uploadResult = await uploadToCloudinary(Buffer.from(mainImageBase64.split(',')[1], 'base64'), mainImageOriginalName, 'listings');
             mainImageUrlToSave = uploadResult.url;
-        } else if (mainImageURL) {
-            mainImageUrlToSave = mainImageURL; // Use provided URL directly
+            mainImagePublicIdToSave = uploadResult.publicId;
+        } else {
+             await pool.query('ROLLBACK');
+             return res.status(400).json({ message: 'Main image is required' });
         }
 
-        if (!mainImageUrlToSave) {
-            await pool.query('ROLLBACK');
-            return res.status(400).json({ message: 'Main image is required' });
-        }
 
         const listingResult = await pool.query(
-            `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              RETURNING property_id`,
-            [title, location, state, price, status || 'pending', agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, mainImageUrlToSave]
+            [title, location, state, price, status || 'pending', agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, mainImageUrlToSave, mainImagePublicIdToSave]
         );
 
         const newListingId = listingResult.rows[0].property_id;
@@ -229,18 +194,23 @@ exports.createListing = async (req, res) => {
             );
         }
 
-        // Handle gallery image uploads (files)
-        for (const file of galleryFiles) {
-            const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'listings');
-            if (uploadResult.url) {
-                await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [newListingId, uploadResult.url]);
+        // Upload new gallery images to Cloudinary
+        if (galleryImagesBase64 && Array.isArray(galleryImagesBase64)) {
+            for (let i = 0; i < galleryImagesBase64.length; i++) {
+                const base64 = galleryImagesBase64[i];
+                const originalname = galleryImagesOriginalNames[i];
+                const uploadResult = await uploadToCloudinary(Buffer.from(base64.split(',')[1], 'base64'), originalname, 'listings');
+                if (uploadResult.url) {
+                    await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, uploadResult.url, uploadResult.publicId]);
+                }
             }
         }
 
-        // Handle gallery image URLs (already provided as URLs)
+        // Insert existing gallery URLs (if any were passed from the frontend)
         for (const url of initialGalleryUrls) {
             if (url) {
-                await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [newListingId, url]);
+                const publicId = getCloudinaryPublicId(url); // Derive public_id from URL
+                await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, url, publicId]);
             }
         }
 
@@ -248,7 +218,7 @@ exports.createListing = async (req, res) => {
 
         const createdListingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
@@ -273,7 +243,7 @@ exports.createListing = async (req, res) => {
     } catch (err) {
         await pool.query('ROLLBACK');
         console.error('Error creating listing:', err);
-        res.status(500).json({ error: 'Internal server error creating listing' });
+        res.status(500).json({ error: 'Internal server error creating listing', details: err.message });
     }
 };
 
@@ -283,7 +253,7 @@ exports.getListingById = async (req, res) => {
     try {
         const listingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
@@ -321,9 +291,9 @@ exports.updateListing = async (req, res) => {
         bedrooms,
         bathrooms,
         purchase_category,
-        existingImageUrlsToKeep, // Array of URLs to keep
-        newImageUrls, // Array of new URLs provided by user
-        mainImageIdentifier, // The URL or file name of the chosen thumbnail
+        existingImageUrlsToKeep, // URLs of existing images to retain
+        newImageUrls, // New URLs added by user
+        mainImageIdentifier, // Identifier for the main image (URL or new base64 temp ID)
         description,
         square_footage,
         lot_size,
@@ -331,29 +301,28 @@ exports.updateListing = async (req, res) => {
         heating_type,
         cooling_type,
         parking,
-        amenities
+        amenities,
+        newImagesBase64, // New: array of base64 strings for new files
+        newImagesOriginalNames // New: array of original names for new files
     } = req.body;
 
-    const mainImageFile = req.files && req.files['mainImageFile'] ? req.files['mainImageFile'][0] : null;
-    const newGalleryFiles = req.files && req.files['newImages'] ? req.files['newImages'] : [];
-
-    // Parse JSON strings back to arrays
-    const parsedExistingUrlsToKeep = existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : [];
-    const parsedNewImageUrls = newImageUrls ? JSON.parse(newImageUrls) : [];
-
+    const existingUrls = Array.isArray(existingImageUrlsToKeep) ? existingImageUrlsToKeep : (existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : []);
+    const newUrls = Array.isArray(newImageUrls) ? newImageUrls : (newImageUrls ? JSON.parse(newImageUrls) : []);
+    const newFilesBase64 = Array.isArray(newImagesBase64) ? newImagesBase64 : [];
+    const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newImagesOriginalNames : [];
 
     try {
         await pool.query('BEGIN');
 
-        const currentListingResult = await pool.query('SELECT image_url FROM property_listings WHERE property_id = $1 FOR UPDATE', [id]);
+        const currentListingResult = await pool.query('SELECT image_url, image_public_id FROM property_listings WHERE property_id = $1 FOR UPDATE', [id]);
         if (currentListingResult.rows.length === 0) {
             await pool.query('ROLLBACK');
             return res.status(404).json({ message: 'Listing not found' });
         }
-        const currentMainImageUrl = currentListingResult.rows[0].image_url;
+        const { image_url: currentMainImageUrl, image_public_id: currentMainImagePublicId } = currentListingResult.rows[0];
 
-        const currentGalleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1', [id]);
-        const currentGalleryImages = currentGalleryResult.rows.map(row => row.image_url);
+        const currentGalleryResult = await pool.query('SELECT image_url, public_id FROM property_images WHERE property_id = $1', [id]);
+        const currentGalleryImages = currentGalleryResult.rows.map(row => ({ url: row.image_url, publicId: row.public_id }));
 
         let updates = [];
         let values = [];
@@ -369,84 +338,91 @@ exports.updateListing = async (req, res) => {
         if (bathrooms !== undefined) { updates.push(`bathrooms = $${valueIndex++}`); values.push(bathrooms); }
         if (purchase_category !== undefined) { updates.push(`purchase_category = $${valueIndex++}`); values.push(purchase_category); }
 
+        // --- Image Handling Logic ---
         let newMainImageUrl = currentMainImageUrl;
-        let oldMainImagePublicIdToDelete = null;
+        let newMainImagePublicId = currentMainImagePublicId;
 
-        // Determine the new main image URL and identify old main image for deletion
-        if (mainImageFile) {
-            // A new file is uploaded for the main image
-            const uploadResult = await uploadToCloudinary(mainImageFile.buffer, mainImageFile.originalname, 'listings');
-            newMainImageUrl = uploadResult.url;
-            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com')) {
-                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
+        // Determine the new main image
+        if (mainImageIdentifier) {
+            // Check if mainImageIdentifier is a new base64 image
+            const newImageFileIndex = newFilesOriginalNames.indexOf(mainImageIdentifier);
+            if (newImageFileIndex !== -1) {
+                const uploadResult = await uploadToCloudinary(Buffer.from(newFilesBase64[newImageFileIndex].split(',')[1], 'base64'), newFilesOriginalNames[newImageFileIndex], 'listings');
+                newMainImageUrl = uploadResult.url;
+                newMainImagePublicId = uploadResult.publicId;
+            } else {
+                // It's an existing URL or a new URL provided directly
+                newMainImageUrl = mainImageIdentifier;
+                newMainImagePublicId = getCloudinaryPublicId(mainImageIdentifier);
             }
-        } else if (mainImageIdentifier && mainImageIdentifier !== currentMainImageUrl) {
-            // Main image is changed to an existing/new URL (not a new file upload)
-            newMainImageUrl = mainImageIdentifier;
-            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com') && currentMainImageUrl !== newMainImageUrl) {
-                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
-            }
-        } else if (mainImageIdentifier === '' && currentMainImageUrl) {
-            // Main image is explicitly cleared
+        } else if (mainImageIdentifier === '') { // Explicitly set to no main image
             newMainImageUrl = null;
-            if (currentMainImageUrl && currentMainImageUrl.includes('cloudinary.com')) {
-                oldMainImagePublicIdToDelete = getCloudinaryPublicId(currentMainImageUrl);
-            }
+            newMainImagePublicId = null;
         }
-        // If mainImageIdentifier is undefined or same as currentMainImageUrl, newMainImageUrl remains currentMainImageUrl
 
 
-        // Update main image URL in the database if it changed
+        // If main image URL changed, update it and delete the old one from Cloudinary
         if (newMainImageUrl !== currentMainImageUrl) {
             updates.push(`image_url = $${valueIndex++}`);
             values.push(newMainImageUrl);
-        }
+            updates.push(`image_public_id = $${valueIndex++}`);
+            values.push(newMainImagePublicId);
 
-        // Identify gallery images to keep and those to delete
-        const allNewGalleryUrls = [...parsedNewImageUrls]; // URLs provided directly by user
-        for (const file of newGalleryFiles) {
-            // Upload new gallery files to Cloudinary
-            const uploadResult = await uploadToCloudinary(file.buffer, file.originalname, 'listings');
-            if (uploadResult.url) {
-                allNewGalleryUrls.push(uploadResult.url);
+            if (currentMainImagePublicId) {
+                await deleteFromCloudinary(currentMainImagePublicId);
             }
         }
 
-        // Filter existing gallery images: keep only those explicitly requested by the frontend
-        const galleryUrlsToKeep = currentGalleryImages.filter(url => parsedExistingUrlsToKeep.includes(url));
+        // Process gallery images
+        let updatedGalleryUrls = [];
+        let updatedGalleryPublicIds = [];
+        const imagesToDeleteFromCloudinary = [];
 
-        // Combine all gallery images to be stored (excluding the new main image if it's part of the gallery)
-        const finalGalleryUrlsToStore = [...new Set([...galleryUrlsToKeep, ...allNewGalleryUrls])].filter(url => url !== newMainImageUrl);
-
-        // Identify images to delete from Cloudinary:
-        // 1. Old main image if it was replaced.
-        // 2. Existing gallery images that are no longer in `finalGalleryUrlsToStore`
-        //    and are not the `newMainImageUrl` (if it was originally a gallery image).
-        const imagesToDeletePublicIds = [];
-
-        if (oldMainImagePublicIdToDelete) {
-            imagesToDeletePublicIds.push(oldMainImagePublicIdToDelete);
-        }
-
-        currentGalleryImages.forEach(url => {
-            if (url.includes('cloudinary.com') && !finalGalleryUrlsToStore.includes(url) && url !== newMainImageUrl) {
-                const publicId = getCloudinaryPublicId(url);
-                if (publicId) {
-                    imagesToDeletePublicIds.push(publicId);
-                }
+        // Add existing images that are kept
+        currentGalleryImages.forEach(img => {
+            if (existingUrls.includes(img.url) && img.url !== newMainImageUrl) { // Ensure it's not the new main image
+                updatedGalleryUrls.push(img.url);
+                updatedGalleryPublicIds.push(img.publicId);
+            } else if (!existingUrls.includes(img.url) && img.publicId) {
+                // If an existing gallery image is NOT in the 'to keep' list, mark for deletion
+                imagesToDeleteFromCloudinary.push(img.publicId);
             }
         });
 
-        // Perform deletions from Cloudinary
-        for (const publicId of imagesToDeletePublicIds) {
+        // Add new URLs
+        newUrls.forEach(url => {
+            if (url !== newMainImageUrl) { // Ensure it's not the new main image
+                updatedGalleryUrls.push(url);
+                updatedGalleryPublicIds.push(getCloudinaryPublicId(url));
+            }
+        });
+
+        // Upload and add new files
+        for (let i = 0; i < newFilesBase64.length; i++) {
+            const base64 = newFilesBase64[i];
+            const originalname = newFilesOriginalNames[i];
+            const uploadResult = await uploadToCloudinary(Buffer.from(base64.split(',')[1], 'base64'), originalname, 'listings');
+            if (uploadResult.url && uploadResult.url !== newMainImageUrl) {
+                updatedGalleryUrls.push(uploadResult.url);
+                updatedGalleryPublicIds.push(uploadResult.publicId);
+            } else if (uploadResult.publicId && uploadResult.url === newMainImageUrl) {
+                // If a newly uploaded image became the main image, ensure it's not added to gallery
+                // and its publicId is not marked for deletion from gallery.
+                // This case is handled by the main image logic.
+            }
+        }
+
+        // Perform deletions from Cloudinary for removed gallery images
+        for (const publicId of imagesToDeleteFromCloudinary) {
             await deleteFromCloudinary(publicId);
         }
 
-        // Clear existing gallery images in DB and insert the new set
+        // Clear existing gallery images from DB and insert the updated set
         await pool.query('DELETE FROM property_images WHERE property_id = $1', [id]);
-        for (const url of finalGalleryUrlsToStore) {
-            await pool.query('INSERT INTO property_images (property_id, image_url) VALUES ($1, $2)', [id, url]);
+        for (let i = 0; i < updatedGalleryUrls.length; i++) {
+            await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [id, updatedGalleryUrls[i], updatedGalleryPublicIds[i]]);
         }
+
 
         if (updates.length > 0) {
             const query = `UPDATE property_listings SET ${updates.join(', ')} WHERE property_id = $${valueIndex++} RETURNING *`;
@@ -467,7 +443,6 @@ exports.updateListing = async (req, res) => {
             let detailValueIndex = 1;
 
             for (const key in propertyDetailsFields) {
-                // Check if the value is explicitly provided (not undefined)
                 if (propertyDetailsFields[key] !== undefined) {
                     detailUpdates.push(`${key} = $${detailValueIndex++}`);
                     detailValues.push(propertyDetailsFields[key]);
@@ -480,7 +455,6 @@ exports.updateListing = async (req, res) => {
                 await pool.query(detailQuery, detailValues);
             }
         } else {
-            // If no existing details, but some are provided in the update, insert them
             const providedDetails = Object.keys(propertyDetailsFields).filter(key => propertyDetailsFields[key] !== undefined);
             if (providedDetails.length > 0) {
                 const columns = ['property_id', ...providedDetails];
@@ -494,12 +468,10 @@ exports.updateListing = async (req, res) => {
             }
         }
 
-        // If no updates were made to property_listings and no property_details fields were provided, return error
-        if (updates.length === 0 && Object.keys(propertyDetailsFields).every(key => propertyDetailsFields[key] === undefined)) {
+        if (updates.length === 0 && Object.keys(propertyDetailsFields).every(key => propertyDetailsFields[key] === undefined) && imagesToDeleteFromCloudinary.length === 0 && newFilesBase64.length === 0 && newUrls.length === 0) {
             await pool.query('ROLLBACK');
             return res.status(400).json({ message: 'No valid fields provided for update' });
         }
-
 
         await pool.query('COMMIT');
 
@@ -511,7 +483,7 @@ exports.updateListing = async (req, res) => {
 
         const updatedListingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
@@ -540,7 +512,7 @@ exports.deleteListing = async (req, res) => {
     try {
         await pool.query('BEGIN');
 
-        const listingResult = await pool.query('SELECT image_url FROM property_listings WHERE property_id = $1', [id]);
+        const listingResult = await pool.query('SELECT image_url, image_public_id FROM property_listings WHERE property_id = $1', [id]);
         const listing = listingResult.rows[0];
 
         if (!listing) {
@@ -548,31 +520,20 @@ exports.deleteListing = async (req, res) => {
             return res.status(404).json({ message: 'Listing not found' });
         }
 
-        const galleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1', [id]);
-        const galleryImages = galleryResult.rows.map(row => row.image_url);
+        const galleryResult = await pool.query('SELECT image_url, public_id FROM property_images WHERE property_id = $1', [id]);
+        const galleryImages = galleryResult.rows.map(row => ({ url: row.image_url, publicId: row.public_id }));
 
-        const imagesToDeletePublicIds = [];
-
-        // Check main image for Cloudinary deletion
-        if (listing.image_url && listing.image_url.includes('cloudinary.com')) {
-            const publicId = getCloudinaryPublicId(listing.image_url);
-            if (publicId) {
-                imagesToDeletePublicIds.push(publicId);
-            }
+        const publicIdsToDelete = [];
+        if (listing.image_public_id) {
+            publicIdsToDelete.push(listing.image_public_id);
         }
-
-        // Check gallery images for Cloudinary deletion
-        galleryImages.forEach(url => {
-            if (url && url.includes('cloudinary.com')) {
-                const publicId = getCloudinaryPublicId(url);
-                if (publicId) {
-                    imagesToDeletePublicIds.push(publicId);
-                }
+        galleryImages.forEach(img => {
+            if (img.publicId) {
+                publicIdsToDelete.push(img.publicId);
             }
         });
 
-        // Perform deletions from Cloudinary
-        for (const publicId of imagesToDeletePublicIds) {
+        for (const publicId of publicIdsToDelete) {
             await deleteFromCloudinary(publicId);
         }
 

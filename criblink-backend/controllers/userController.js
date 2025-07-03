@@ -2,10 +2,14 @@ const db = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logActivity = require('../utils/logActivity');
-const crypto = require('crypto'); // For generating tokens
-const nodemailer = require('nodemailer'); // For sending emails
-// Import Cloudinary utility functions
-const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
+
+// Removed: const multer = require('multer'); // No longer needed
+// Removed: const storage = multer.memoryStorage(); // No longer needed
+// Removed: const upload = multer(...); // No longer needed
+// Removed: exports.uploadMiddleware = upload; // No longer needed
 
 const SECRET_KEY = process.env.JWT_KEY || 'lionel_messi_10_is_the_goat!';
 
@@ -18,14 +22,7 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Multer configuration for userController is no longer needed here
-// as uploadMiddleware.js will handle it for all routes.
-// The `upload` constant and `exports.uploadMiddleware` can be removed.
-
-// NOTE: getAgentProfile function has been moved to agentController.js
-
 exports.signupUser = async (req, res) => {
-    // Destructure all potential fields from req.body, including username
     const { full_name, username, email, password, role, phone, agency, bio, location } = req.body;
 
     try {
@@ -33,13 +30,11 @@ exports.signupUser = async (req, res) => {
         const validRoles = ['client', 'agent'];
         const safeRole = validRoles.includes(role) ? role : 'client';
 
-        // Base query for required fields
         let queryText = `INSERT INTO users (full_name, username, email, password_hash, role`;
         let queryValues = [full_name, username, email, hashedPassword, safeRole];
         let valuePlaceholders = [`$1`, `$2`, `$3`, `$4`, `$5`];
         let paramIndex = 6;
 
-        // Conditionally add optional fields to the query
         if (phone !== undefined) {
             queryText += `, phone`;
             valuePlaceholders.push(`$${paramIndex++}`);
@@ -60,22 +55,18 @@ exports.signupUser = async (req, res) => {
             valuePlaceholders.push(`$${paramIndex++}`);
             queryValues.push(location);
         }
-        // Add new share_favourites_with_agents field
         queryText += `, share_favourites_with_agents`;
         valuePlaceholders.push(`$${paramIndex++}`);
-        queryValues.push(false); // Default to false on signup
-
-        // Add new share_property_preferences_with_agents field
+        queryValues.push(false);
         queryText += `, share_property_preferences_with_agents`;
         valuePlaceholders.push(`$${paramIndex++}`);
-        queryValues.push(false); // Default to false on signup
+        queryValues.push(false);
 
         queryText += `) VALUES (${valuePlaceholders.join(', ')}) RETURNING *`;
 
         const result = await db.query(queryText, queryValues);
         const newUser = result.rows[0];
 
-        // Log activity if agent or admin signs up
         if (newUser.role === 'agent' || newUser.role === 'admin') {
             await logActivity(
                 `New ${newUser.role} "${newUser.full_name}" registered`,
@@ -104,9 +95,8 @@ exports.signupUser = async (req, res) => {
                 username: newUser.username,
                 bio: newUser.bio,
                 location: newUser.location,
-                profile_picture_url: newUser.profile_picture_url, // Include profile picture URL
-                date_joined: newUser.date_joined, // Include date_joined
-                // Include other default/initial privacy and settings fields
+                profile_picture_url: newUser.profile_picture_url,
+                date_joined: newUser.date_joined,
                 is_2fa_enabled: newUser.is_2fa_enabled,
                 data_collection_opt_out: newUser.data_collection_opt_out,
                 personalized_ads: newUser.personalized_ads,
@@ -121,8 +111,8 @@ exports.signupUser = async (req, res) => {
                 notification_email: newUser.notification_email,
                 preferred_communication_channel: newUser.preferred_communication_channel,
                 social_links: newUser.social_links,
-                share_favourites_with_agents: newUser.share_favourites_with_agents, // Include new field
-                share_property_preferences_with_agents: newUser.share_property_preferences_with_agents // Include new field
+                share_favourites_with_agents: newUser.share_favourites_with_agents,
+                share_property_preferences_with_agents: newUser.share_property_preferences_with_agents
             }
         });
     } catch (err) {
@@ -130,26 +120,24 @@ exports.signupUser = async (req, res) => {
             if (err.constraint === 'users_email_key') {
                 return res.status(400).json({ message: 'This email is already registered.' });
             }
-            if (err.constraint === 'users_username_key') { // Added check for username unique constraint
+            if (err.constraint === 'users_username_key') {
                 return res.status(400).json({ message: 'This username is already taken.' });
             }
         }
-        console.error('Registration error:', err); // Log the full error for server-side debugging
+        console.error('Registration error:', err);
         res.status(500).json({ message: 'Registration failed unexpectedly.', error: err.message });
     }
 };
 
-
 exports.signinUser = async (req, res) => {
-    const { email, password, device_info, location_info, ip_address } = req.body; // Added device_info, location_info, ip_address
+    const { email, password, device_info, location_info, ip_address } = req.body;
 
     let loginStatus = 'Failed';
-    let user = null; // Initialize user to null
+    let user = null;
 
     try {
-        // Select all relevant fields for the user profile, including all new settings
         const result = await db.query(
-            `SELECT user_id, full_name, username, email, password_hash, role, date_joined, phone, agency, bio, location, profile_picture_url, status,
+            `SELECT user_id, full_name, username, email, password_hash, role, date_joined, phone, agency, bio, location, profile_picture_url, profile_picture_public_id, status,
                     is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
                     communication_email_updates, communication_marketing, communication_newsletter,
                     notifications_settings, timezone, currency, default_landing_page, notification_email,
@@ -158,23 +146,19 @@ exports.signinUser = async (req, res) => {
              FROM users WHERE email = $1`,
             [email]
         );
-        user = result.rows[0]; // Assign user here
+        user = result.rows[0];
 
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            // Log failed attempt for an existing user or just return if user not found
-            if (user) { // Only log if user exists but password was wrong
+            if (user) {
                 await db.query(
                     `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                      VALUES ($1, $2, $3, $4, $5, $6)`,
                     [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', 'Invalid password']
                 );
             }
-            // If user is null, we cannot log to user_login_history due to NOT NULL constraint on user_id.
-            // So, for non-existent users, we just return the generic message.
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Check if the user is banned or deactivated
         if (user.status === 'banned') {
             loginStatus = 'Failed';
             await logActivity(`Attempted sign-in by banned user: ${user.full_name} (${user.email})`, user, 'auth_banned');
@@ -196,13 +180,11 @@ exports.signinUser = async (req, res) => {
             return res.status(403).json({ message: 'Your account is deactivated. Please reactivate it to sign in.' });
         }
 
-        // If login successful, set previous sessions to is_current = false
         await db.query(
             `UPDATE user_sessions SET is_current = FALSE WHERE user_id = $1`,
             [user.user_id]
         );
 
-        // Create a new active session
         const sessionResult = await db.query(
             `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current)
              VALUES ($1, $2, $3, $4, TRUE) RETURNING session_id`,
@@ -263,19 +245,13 @@ exports.signinUser = async (req, res) => {
         });
     } catch (err) {
         console.error('Login failed:', err);
-        // Ensure a login history entry is made even for unhandled errors
-        // If 'user' is null here, it means the initial SELECT failed or user was not found.
-        // In this case, we cannot log with a NOT NULL user_id.
-        // We will only log if 'user' is defined, meaning an existing user had an issue.
-        if (user && user.user_id) { // Only log if user object exists and has an ID
+        if (user && user.user_id) {
             await db.query(
                 `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
                 [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', `Server error: ${err.message}`]
             );
         } else {
-            // If user is null, we can't log to user_login_history with a user_id.
-            // Log to console for debugging, but don't try to insert into DB.
             console.warn('Attempted to log a failed login for an unknown user or database error without a user_id.');
         }
         res.status(500).json({ message: 'Login failed', error: err.message });
@@ -284,9 +260,8 @@ exports.signinUser = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
     try {
-        // Select all relevant fields for the user profile, including all new settings
         const result = await db.query(
-            `SELECT user_id, full_name, username, email, role, date_joined, phone, agency, bio, location, profile_picture_url, status,
+            `SELECT user_id, full_name, username, email, role, date_joined, phone, agency, bio, location, profile_picture_url, profile_picture_public_id, status,
                     is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
                     communication_email_updates, communication_marketing, communication_newsletter,
                     notifications_settings, timezone, currency, default_landing_page, notification_email,
@@ -302,7 +277,7 @@ exports.getProfile = async (req, res) => {
 
         res.json(result.rows[0]);
     } catch (err) {
-        console.error('Error fetching profile:', err); // Log the full error
+        console.error('Error fetching profile:', err);
         res.status(500).json({ message: 'Error fetching profile', error: err.message });
     }
 };
@@ -313,9 +288,9 @@ exports.updateProfile = async (req, res) => {
         is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
         communication_email_updates, communication_marketing, communication_newsletter,
         notifications_settings, timezone, currency, default_landing_page, notification_email,
-        preferred_communication_channel, social_links, status, // Added status for deactivation
-        share_favourites_with_agents, // Added new field
-        share_property_preferences_with_agents // Added new field
+        preferred_communication_channel, social_links, status,
+        share_favourites_with_agents,
+        share_property_preferences_with_agents
     } = req.body;
     const userId = req.user.user_id;
 
@@ -324,7 +299,7 @@ exports.updateProfile = async (req, res) => {
         const values = [];
         let idx = 1;
 
-        if (full_name !== undefined) { // Check for undefined to allow empty string updates
+        if (full_name !== undefined) {
             fields.push(`full_name = $${idx++}`);
             values.push(full_name);
         }
@@ -362,7 +337,6 @@ exports.updateProfile = async (req, res) => {
         }
         if (cookie_preferences !== undefined) {
             fields.push(`cookie_preferences = $${idx++}`);
-            // Explicitly stringify JSONB objects
             values.push(JSON.stringify(cookie_preferences));
         }
         if (communication_email_updates !== undefined) {
@@ -379,7 +353,6 @@ exports.updateProfile = async (req, res) => {
         }
         if (notifications_settings !== undefined) {
             fields.push(`notifications_settings = $${idx++}`);
-            // Explicitly stringify JSONB objects
             values.push(JSON.stringify(notifications_settings));
         }
         if (timezone !== undefined) {
@@ -404,27 +377,21 @@ exports.updateProfile = async (req, res) => {
         }
         if (social_links !== undefined) {
             fields.push(`social_links = $${idx++}`);
-            // Ensure social_links is stringified for JSONB storage
             values.push(JSON.stringify(social_links));
         }
-         // Handle status update (for deactivation)
         if (status !== undefined) {
             fields.push(`status = $${idx++}`);
             values.push(status);
         }
-        // Handle new share_favourites_with_agents update
         if (share_favourites_with_agents !== undefined) {
             fields.push(`share_favourites_with_agents = $${idx++}`);
             values.push(share_favourites_with_agents);
         }
-        // Handle new share_property_preferences_with_agents update
         if (share_property_preferences_with_agents !== undefined) {
             fields.push(`share_property_preferences_with_agents = $${idx++}`);
             values.push(share_property_preferences_with_agents);
         }
 
-
-        // Password update logic - requires current_password_check
         if (password) {
             if (!current_password_check) {
                 return res.status(400).json({ message: 'Current password is required to change password.' });
@@ -446,7 +413,7 @@ exports.updateProfile = async (req, res) => {
             return res.status(400).json({ message: "No fields to update" });
         }
 
-        values.push(userId); // Add userId for the WHERE clause
+        values.push(userId);
 
         const query = `UPDATE users SET ${fields.join(", ")} WHERE user_id = $${idx} RETURNING *`;
         const updatedUserResult = await db.query(query, values);
@@ -470,7 +437,6 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
-// New function to handle forgot password request
 exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     try {
@@ -478,25 +444,19 @@ exports.forgotPassword = async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            // For security, send a generic success message even if the email isn't found
             return res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
         }
 
-        // Generate a reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
-        // Set token expiry to 1 hour from now
-        const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+        const resetTokenExpires = new Date(Date.now() + 3600000);
 
-        // Store the token and its expiry in the database
         await db.query(
             `UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE user_id = $3`,
             [resetToken, resetTokenExpires, user.user_id]
         );
 
-        // Construct the reset URL (replace with your frontend's reset password page URL)
-        const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`; // Assuming your frontend runs on port 3000
+        const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
 
-        // Send email
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: user.email,
@@ -518,7 +478,6 @@ exports.forgotPassword = async (req, res) => {
     }
 };
 
-// New function to handle password reset
 exports.resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
 
@@ -535,7 +494,6 @@ exports.resetPassword = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update password and clear reset token fields
         await db.query(
             `UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE user_id = $2`,
             [hashedPassword, user.user_id]
@@ -551,78 +509,71 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-// --- Profile Picture Functions ---
-
 /**
- * Handles the upload and update of a user's profile picture using Cloudinary.
- * Assumes multer.single('profile_picture') has processed the file and it's available in req.file.
+ * Handles the upload and update of a user's profile picture URL using Cloudinary.
+ * Expects `profile_picture_base64` (data URI) and `originalname` in `req.body`.
  */
 exports.uploadProfilePicture = async (req, res) => {
     const userId = req.user.user_id;
-    const base64Image = req.body.image; // expecting base64 string
+    const { profile_picture_base64, originalname } = req.body; // Expect base64 data and original filename
 
-    if (!base64Image) {
-        return res.status(400).json({ message: 'No image provided.' });
+    if (!profile_picture_base64 || !originalname) {
+        return res.status(400).json({ message: 'No image data or original name provided.' });
     }
 
     try {
-        // Get current profile picture URL (to delete old Cloudinary file if needed)
-        const userResult = await db.query('SELECT profile_picture_url FROM users WHERE user_id = $1', [userId]);
-        const oldImageUrl = userResult.rows[0]?.profile_picture_url;
+        // Fetch current user's profile picture details to delete the old one from Cloudinary
+        const currentUserResult = await db.query('SELECT profile_picture_url, profile_picture_public_id FROM users WHERE user_id = $1', [userId]);
+        const currentProfile = currentUserResult.rows[0];
+
+        // If an old image exists and has a public_id, delete it from Cloudinary
+        if (currentProfile && currentProfile.profile_picture_public_id) {
+            await deleteFromCloudinary(currentProfile.profile_picture_public_id);
+        }
 
         // Upload new image to Cloudinary
-        const uploadResult = await uploadToCloudinary(base64Image, `${userId}_profile`, 'profile_pictures');
-        const newImageUrl = uploadResult.url;
+        // `Buffer.from(profile_picture_base64.split(',')[1], 'base64')` extracts the base64 data part
+        const uploadResult = await uploadToCloudinary(Buffer.from(profile_picture_base64.split(',')[1], 'base64'), originalname, 'profile_pictures');
+        const { url, publicId } = uploadResult;
 
-        // Update DB
-        const updateResult = await db.query(
-            `UPDATE users SET profile_picture_url = $1 WHERE user_id = $2 RETURNING profile_picture_url`,
-            [newImageUrl, userId]
+        // Update user's profile_picture_url and profile_picture_public_id in the database
+        const result = await db.query(
+            `UPDATE users SET profile_picture_url = $1, profile_picture_public_id = $2 WHERE user_id = $3 RETURNING profile_picture_url, profile_picture_public_id`,
+            [url, publicId, userId]
         );
-
-        // Delete old image if needed
-        if (oldImageUrl && oldImageUrl.includes('cloudinary.com')) {
-            const publicId = getCloudinaryPublicId(oldImageUrl);
-            if (publicId) {
-                await deleteFromCloudinary(publicId);
-            }
-        }
 
         await logActivity(`${req.user.name} uploaded a new profile picture`, req.user, 'user_profile_picture');
 
         res.status(200).json({
             message: 'Profile picture uploaded successfully',
-            profile_picture_url: updateResult.rows[0].profile_picture_url
+            profile_picture_url: result.rows[0].profile_picture_url,
+            profile_picture_public_id: result.rows[0].profile_picture_public_id
         });
     } catch (error) {
-        console.error('Error uploading profile picture:', error);
+        console.error('Error uploading profile picture to Cloudinary:', error);
         res.status(500).json({ message: 'Failed to upload profile picture.', error: error.message });
     }
 };
 
-
 /**
- * Deletes a user's profile picture by setting the URL to NULL and deleting from Cloudinary.
+ * Deletes a user's profile picture from Cloudinary and sets the URL to NULL in the database.
  */
 exports.deleteProfilePicture = async (req, res) => {
     const userId = req.user.user_id;
 
     try {
-        // Get the current profile picture URL from the database
-        const userResult = await db.query('SELECT profile_picture_url FROM users WHERE user_id = $1', [userId]);
-        const imageUrlToDelete = userResult.rows[0]?.profile_picture_url;
+        // Fetch current user's profile picture details to get the public_id
+        const currentUserResult = await db.query('SELECT profile_picture_public_id FROM users WHERE user_id = $1', [userId]);
+        const currentProfile = currentUserResult.rows[0];
 
-        // If it's a Cloudinary URL, delete it from Cloudinary
-        if (imageUrlToDelete && imageUrlToDelete.includes('cloudinary.com')) {
-            const publicId = getCloudinaryPublicId(imageUrlToDelete);
-            if (publicId) {
-                await deleteFromCloudinary(publicId);
-            }
+        // If a public_id exists, delete the image from Cloudinary
+        if (currentProfile && currentProfile.profile_picture_public_id) {
+            await deleteFromCloudinary(currentProfile.profile_picture_public_id);
         }
 
-        // Set the profile_picture_url to NULL in the database
+        // Update the database to set profile_picture_url and public_id to NULL
         await db.query(
-            `UPDATE users SET profile_picture_url = NULL WHERE user_id = $1`,
+            `UPDATE users SET profile_picture_url = NULL, profile_picture_public_id = NULL WHERE user_id = $1`,
             [userId]
         );
 
@@ -630,39 +581,40 @@ exports.deleteProfilePicture = async (req, res) => {
 
         res.status(200).json({ message: 'Profile picture deleted successfully.' });
     } catch (error) {
-        console.error('Error deleting profile picture:', error);
+        console.error('Error deleting profile picture from Cloudinary:', error);
         res.status(500).json({ message: 'Failed to delete profile picture.', error: error.message });
     }
 };
 
 /**
  * Updates a user's profile picture URL directly (e.g., if re-linking to an existing image).
- * This is an an alternative to uploadProfilePicture if no new file is being uploaded.
- * This endpoint will now also handle deleting the old Cloudinary image if a new URL is provided.
+ * This function is for updating the URL without uploading a new file.
+ * It will also attempt to derive and store the public_id from the new URL.
  */
 exports.updateProfilePictureUrl = async (req, res) => {
     const { profile_picture_url } = req.body;
     const userId = req.user.user_id;
 
-    // Allow setting to null if an empty string or null is passed, effectively clearing it
-    const newProfilePictureUrl = profile_picture_url || null;
+    if (!profile_picture_url) {
+        return res.status(400).json({ message: 'Profile picture URL is required.' });
+    }
 
     try {
-        // Get the current profile picture URL to potentially delete the old one from Cloudinary
-        const userResult = await db.query('SELECT profile_picture_url FROM users WHERE user_id = $1', [userId]);
-        const oldImageUrl = userResult.rows[0]?.profile_picture_url;
+        // Fetch current user's profile picture details to delete the old one from Cloudinary
+        const currentUserResult = await db.query('SELECT profile_picture_public_id FROM users WHERE user_id = $1', [userId]);
+        const currentProfile = currentUserResult.rows[0];
 
-        // If the old image was a Cloudinary image and it's different from the new one, delete it
-        if (oldImageUrl && oldImageUrl.includes('cloudinary.com') && oldImageUrl !== newProfilePictureUrl) {
-            const publicId = getCloudinaryPublicId(oldImageUrl);
-            if (publicId) {
-                await deleteFromCloudinary(publicId);
-            }
+        // If an old image exists and has a public_id, delete it from Cloudinary
+        if (currentProfile && currentProfile.profile_picture_public_id) {
+            await deleteFromCloudinary(currentProfile.profile_picture_public_id);
         }
 
+        // Derive the public ID from the new URL
+        const publicId = getCloudinaryPublicId(profile_picture_url);
+
         await db.query(
-            `UPDATE users SET profile_picture_url = $1 WHERE user_id = $2`,
-            [newProfilePictureUrl, userId]
+            `UPDATE users SET profile_picture_url = $1, profile_picture_public_id = $2 WHERE user_id = $3`,
+            [profile_picture_url, publicId, userId]
         );
 
         await logActivity(`${req.user.name} updated their profile picture URL`, req.user, 'user_profile_picture');
@@ -676,9 +628,6 @@ exports.updateProfilePictureUrl = async (req, res) => {
 
 // --- User Session Management ---
 
-/**
- * Gets all active sessions for the authenticated user.
- */
 exports.getActiveSessions = async (req, res) => {
     try {
         const userId = req.user.user_id;
@@ -694,14 +643,10 @@ exports.getActiveSessions = async (req, res) => {
     }
 };
 
-/**
- * Revokes a specific session for the authenticated user.
- * A user cannot revoke their current session via this endpoint.
- */
 exports.revokeSession = async (req, res) => {
     const { sessionId } = req.params;
     const userId = req.user.user_id;
-    const currentSessionId = req.user.session_id; // Session ID from the current JWT token
+    const currentSessionId = req.user.session_id;
 
     if (parseInt(sessionId) === currentSessionId) {
         return res.status(400).json({ message: 'Cannot revoke current session through this endpoint. Please log out instead.' });
@@ -727,15 +672,12 @@ exports.revokeSession = async (req, res) => {
 
 // --- User Login History ---
 
-/**
- * Gets the login history for the authenticated user.
- */
 exports.getLoginHistory = async (req, res) => {
     try {
         const userId = req.user.user_id;
         const result = await db.query(
             `SELECT history_id, device, location, ip_address, login_time, status, message
-             FROM user_login_history WHERE user_id = $1 ORDER BY login_time DESC LIMIT 50`, // Limit for performance
+             FROM user_login_history WHERE user_id = $1 ORDER BY login_time DESC LIMIT 50`,
             [userId]
         );
         res.json(result.rows);

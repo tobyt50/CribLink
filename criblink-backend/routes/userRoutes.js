@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { authenticateToken } = require('../middleware/authMiddleware'); // FIX: Removed authorizeRole from import
+// Removed: const upload = require('../middleware/uploadMiddleware'); // No longer needed
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // --- Auth & Profile Routes ---
 router.post('/signup', userController.signupUser);
@@ -9,13 +10,12 @@ router.post('/signin', userController.signinUser);
 router.get('/profile', authenticateToken, userController.getProfile);
 router.put('/update', authenticateToken, userController.updateProfile);
 
-// NOTE: The route for getting a single agent's profile has been moved to agentRoutes.js
-
 // --- Password Recovery ---
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password', userController.resetPassword);
 
-// --- Profile Picture Management ---
+// --- Profile Picture Management (no multer middleware) ---
+// Expects base64 image data in the request body
 router.put(
   '/profile/picture/upload',
   authenticateToken,

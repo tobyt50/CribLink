@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../api/axiosInstance'; // Use axiosInstance
+import axiosInstance from '../api/axiosInstance';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config';
 import { useTheme } from '../layouts/AppShell';
-import { ChevronDown } from 'lucide-react'; // Import ChevronDown icon for the dropdown
-import { useMessage } from '../context/MessageContext'; // Import useMessage hook
-import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog hook
+import { ChevronDown } from 'lucide-react';
+import { useMessage } from '../context/MessageContext';
+import { useConfirmDialog } from '../context/ConfirmDialogContext';
 
-// Reusable Dropdown Component (embedded directly here for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -106,7 +105,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             >
               {option.label}
             </motion.button>
-            
+
             ))}
           </motion.div>
         )}
@@ -116,17 +115,16 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 
-const EditListing = () => { // Renamed from App to EditListing for clarity
+const EditListing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { darkMode } = useTheme();
-  const { showMessage } = useMessage(); // Initialize useMessage
-  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
-  // Removed: const handleApiError = useApiErrorHandler(); // No longer needed
+  const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Keep local error for initial fetch
+  const [error, setError] = useState(null);
 
   const [purchaseCategory, setPurchaseCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -147,24 +145,24 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
 
-  const [existingImages, setExistingImages] = useState([]); // Images already on Cloudinary
-  const [newFiles, setNewFiles] = useState([]); // New files from dropzone
+  const [existingImages, setExistingImages] = useState([]); // Array of { url: string, publicId: string }
+  const [newImages, setNewImages] = useState([]); // Array of { file: File, base64: string, originalname: string }
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [newImageURLs, setNewImageURLs] = useState([]); // New URLs added via input
+  const [newImageURLs, setNewImageURLs] = useState([]); // Array of string URLs
 
-  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // URL for existing, file.name for new files, URL for new URLs
+  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // Can be a URL or the originalname of a new file
 
   useEffect(() => {
     const fetchListing = async () => {
       setLoading(true);
-      setError(null); // Clear local error state
+      setError(null);
       try {
         const response = await axiosInstance.get(`${API_BASE_URL}/listings/${id}`);
         const fetchedListing = response.data;
 
         if (!fetchedListing) {
-          setError('Listing not found.'); // Set local error
-          showMessage('Listing not found.', 'error'); // Show toast
+          setError('Listing not found.');
+          showMessage('Listing not found.', 'error');
           setLoading(false);
           return;
         }
@@ -192,13 +190,15 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
 
         const initialExistingImages = [];
         if (fetchedListing.image_url) {
-          initialExistingImages.push({ url: fetchedListing.image_url, source: 'existing' });
+          initialExistingImages.push({ url: fetchedListing.image_url, publicId: fetchedListing.image_public_id });
           setThumbnailIdentifier(fetchedListing.image_url);
         }
         if (fetchedListing.gallery_images && Array.isArray(fetchedListing.gallery_images)) {
           fetchedListing.gallery_images.forEach(url => {
+            // Ensure gallery images don't duplicate the main image if it's also in gallery_images
             if (url !== fetchedListing.image_url) {
-              initialExistingImages.push({ url: url, source: 'existing' });
+              // Assuming publicId can be derived or is also returned for gallery images
+              initialExistingImages.push({ url: url, publicId: null }); // Public ID is not directly available from gallery_images in fetchedListing
             }
           });
         }
@@ -213,8 +213,8 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
         } else if (err.message) {
           errorMessage = err.message;
         }
-        setError(errorMessage); // Set local error state
-        showMessage(errorMessage, 'error'); // Show toast
+        setError(errorMessage);
+        showMessage(errorMessage, 'error');
         setLoading(false);
       }
     };
@@ -223,31 +223,33 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
       fetchListing();
     } else {
       setLoading(false);
-      setError('No listing ID provided.'); // Set local error
-      showMessage('No listing ID provided for editing.', 'error'); // Show toast
+      setError('No listing ID provided.');
+      showMessage('No listing ID provided for editing.', 'error');
     }
 
   }, [id, showMessage]);
 
   const onDrop = (acceptedFiles) => {
-    setNewFiles(prev => [...prev, ...acceptedFiles]);
-    // If no thumbnail is set, and this is the first image being added (new or existing)
-    // set the first new file as thumbnail.
-    if (thumbnailIdentifier === null && acceptedFiles.length > 0) {
-      setThumbnailIdentifier(acceptedFiles[0].name);
-    }
+    acceptedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        setNewImages(prev => [...prev, { file, base64: reader.result, originalname: file.name }]);
+        if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
+          setThumbnailIdentifier(file.name);
+        }
+      };
+    });
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } }); // Updated accept syntax
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } });
 
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim()) {
       const newUrl = imageUrlInput.trim();
       setNewImageURLs(prev => [...prev, newUrl]);
       setImageUrlInput('');
-      // If no thumbnail is set, and this is the first image being added (new or existing)
-      // set the first new URL as thumbnail.
-      if (thumbnailIdentifier === null) {
+      if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
         setThumbnailIdentifier(newUrl);
       }
     } else {
@@ -261,27 +263,23 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
     if (type === 'existing') {
       setExistingImages(prev => prev.filter(img => img.url !== identifier));
     } else if (type === 'newFile') {
-      setNewFiles(prev => prev.filter(file => file.name !== identifier));
+      setNewImages(prev => prev.filter(file => file.originalname !== identifier));
     } else if (type === 'newUrl') {
       setNewImageURLs(prev => prev.filter(url => url !== identifier));
     }
 
-    // If the removed image was the thumbnail, clear the thumbnail identifier
     if (updatedThumbnailIdentifier === identifier) {
       updatedThumbnailIdentifier = null;
     }
 
-    // After removal, if no thumbnail is set, try to set the first available image as thumbnail
     const remainingImagesAfterRemoval = [
-      ...existingImages.filter(img => img.url !== identifier), // Filter out the removed existing image
-      ...newFiles.filter(file => file.name !== identifier),    // Filter out the removed new file
-      ...newImageURLs.filter(url => url !== identifier)        // Filter out the removed new URL
+      ...existingImages.filter(img => img.url !== identifier).map(img => ({ url: img.url, identifier: img.url, type: 'existing' })),
+      ...newImages.filter(file => file.originalname !== identifier).map(file => ({ url: file.base64, identifier: file.originalname, type: 'newFile' })),
+      ...newImageURLs.filter(url => url !== identifier).map(url => ({ url: url, identifier: url, type: 'newUrl' }))
     ];
 
     if (updatedThumbnailIdentifier === null && remainingImagesAfterRemoval.length > 0) {
-      // Prioritize existing images, then new URLs, then new files for re-selection
-      // The `getImageIdentifier` function is crucial here to get the correct string identifier
-      updatedThumbnailIdentifier = getImageIdentifier(remainingImagesAfterRemoval[0]);
+      updatedThumbnailIdentifier = remainingImagesAfterRemoval[0].identifier;
     }
     setThumbnailIdentifier(updatedThumbnailIdentifier);
     showMessage('Image removed successfully!', 'info');
@@ -314,19 +312,12 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const allImagesCombined = [
-      ...existingImages.map(img => ({ ...img, source: 'existing' })),
-      ...newFiles.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
-      ...newImageURLs.map(url => ({ url, source: 'newUrl' }))
-    ];
-
-    // Client-side validations
     if (!title || !location || !price || !status || !propertyType || !bedrooms || !bathrooms || !purchaseCategory) {
       showMessage('Please fill in all required fields (Title, Location, Price, Status, Property Type, Bedrooms, Bathrooms, Purchase Category).', 'error');
       return;
     }
 
-    if (allImagesCombined.length < 2) {
+    if (allImagesForDisplay.length < 2) {
       showMessage('Please ensure at least two images are uploaded or provided via URL.', 'error');
       return;
     }
@@ -336,99 +327,67 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
       return;
     }
 
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('location', location);
-    formData.append('state', stateValue);
-    formData.append('property_type', propertyType);
-    formData.append('bedrooms', bedrooms);
-    formData.append('bathrooms', bathrooms);
-    formData.append('price', price);
-    formData.append('status', status);
-    formData.append('purchase_category', purchaseCategory);
+    const payload = {
+      title,
+      location,
+      state: stateValue,
+      property_type: propertyType,
+      bedrooms,
+      bathrooms,
+      price,
+      status,
+      purchase_category: purchaseCategory,
+      description,
+      square_footage: squareFootage,
+      lot_size: lotSize,
+      year_built: yearBuilt,
+      heating_type: heatingType,
+      cooling_type: coolingType,
+      parking,
+      amenities,
+      existingImageUrlsToKeep: [],
+      newImageUrls: [],
+      newImagesBase64: [],
+      newImagesOriginalNames: [],
+      mainImageIdentifier: thumbnailIdentifier, // Send the identifier of the chosen thumbnail
+    };
 
-    if (description) formData.append('description', description);
-    if (squareFootage) formData.append('square_footage', squareFootage);
-    if (lotSize) formData.append('lot_size', lotSize);
-    if (yearBuilt) formData.append('year_built', yearBuilt);
-    if (heatingType) formData.append('heating_type', heatingType);
-    if (coolingType) formData.append('cooling_type', coolingType);
-    if (parking) formData.append('parking', parking);
-    if (amenities) formData.append('amenities', amenities);
-
-    // Identify the main image (thumbnail) based on its identifier
-    let mainImageFile = null;
-    let mainImageURL = null;
-
-    const thumbnailItem = allImagesCombined.find(item => getImageIdentifier(item) === thumbnailIdentifier);
-
-    if (thumbnailItem) {
-      if (thumbnailItem.source === 'newFile') {
-        mainImageFile = thumbnailItem.file;
-      } else { // 'existing' or 'newUrl'
-        mainImageURL = thumbnailItem.url;
-      }
-    }
-
-    // Append the main image to formData
-    if (mainImageFile) {
-      formData.append('mainImageFile', mainImageFile);
-    } else if (mainImageURL) {
-      formData.append('mainImageIdentifier', mainImageURL); // Send the URL as the identifier
-    }
-
-
-    // Prepare gallery images
-    const newGalleryFiles = [];
-    const newGalleryImageURLs = [];
-    const existingImageUrlsToKeep = [];
-
-    allImagesCombined.forEach(item => {
-      const identifier = getImageIdentifier(item);
-      if (identifier === thumbnailIdentifier) return; // Skip the thumbnail
-
-      if (item.source === 'existing') {
-        existingImageUrlsToKeep.push(item.url);
-      } else if (item.source === 'newFile') {
-        newGalleryFiles.push(item.file);
-      } else if (item.source === 'newUrl') {
-        newGalleryImageURLs.push(item.url);
-      }
+    // Populate existingImageUrlsToKeep
+    existingImages.forEach(img => {
+        payload.existingImageUrlsToKeep.push(img.url);
     });
 
-    // Append existing image URLs to keep (as a JSON string)
-    formData.append('existingImageUrlsToKeep', JSON.stringify(existingImageUrlsToKeep));
-
-    // Append new gallery files
-    newGalleryFiles.forEach(file => {
-      formData.append('newImages', file);
+    // Populate newImageUrls
+    newImageURLs.forEach(url => {
+        payload.newImageUrls.push(url);
     });
 
-    // Append new gallery URLs (as a JSON string)
-    formData.append('newImageUrls', JSON.stringify(newGalleryImageURLs));
-
+    // Populate newImagesBase64 and newImagesOriginalNames
+    newImages.forEach(img => {
+      payload.newImagesBase64.push(img.base64);
+      payload.newImagesOriginalNames.push(img.originalname);
+    });
 
     const token = localStorage.getItem('token');
 
     if (!token) {
       showMessage('Authentication token not found. Please sign in to update the listing.', 'error');
-      navigate('/signin'); // Redirect to sign-in page if token is missing
+      navigate('/signin');
       return;
     }
 
     try {
-      const response = await axiosInstance.put(`${API_BASE_URL}/listings/${id}`, formData, {
+      const response = await axiosInstance.put(`${API_BASE_URL}/listings/${id}`, payload, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json', // Sending JSON with base64
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.status === 200) {
         showMessage('Listing updated successfully!', 'success', 3000);
-        navigate('/admin/listings'); // Redirect to listings page on success
+        navigate('/admin/listings');
       } else {
-        // This case might be caught by the general catch block, but explicit check
         showMessage(`Failed to update listing. Server returned status: ${response.status}.`, 'error');
       }
     } catch (error) {
@@ -442,7 +401,6 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
     }
   };
 
-  // Options for Dropdowns
   const purchaseCategoryOptions = [
     { value: "Sale", label: "Sale" },
     { value: "Rent", label: "Rent" },
@@ -509,11 +467,9 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
     );
   }
 
-  // Display error from initial fetch using showMessage
   if (error) {
     return (
       <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        {/* The error message is already shown via toast, so a simple message here */}
         <p className={`text-lg ${darkMode ? "text-red-400" : "text-red-600"}`}>Error loading listing. Please check the URL.</p>
       </div>
     );
@@ -528,20 +484,10 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
   }
 
   const allImagesForDisplay = [
-    ...existingImages.map(img => ({ ...img, source: 'existing' })),
-    ...newFiles.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
-    ...newImageURLs.map(url => ({ url, source: 'newUrl' }))
+    ...existingImages.map(img => ({ url: img.url, identifier: img.url, type: 'existing' })),
+    ...newImages.map(file => ({ url: file.base64, identifier: file.originalname, type: 'newFile' })),
+    ...newImageURLs.map(url => ({ url: url, identifier: url, type: 'newUrl' }))
   ];
-
-  const getImageIdentifier = (item) => {
-    if (item.source === 'existing' || item.source === 'newUrl') {
-      return item.url;
-    } else if (item.source === 'newFile') {
-      return item.file.name;
-    }
-    return null;
-  };
-
 
   return (
     <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}>
@@ -799,11 +745,10 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
               {(allImagesForDisplay.length > 0) && (
                 <div className="grid grid-cols-2 gap-3">
                   {allImagesForDisplay.map((item, index) => {
-                    const identifier = getImageIdentifier(item);
-                    const isThumbnail = identifier === thumbnailIdentifier;
+                    const isThumbnail = item.identifier === thumbnailIdentifier;
                     return (
                       <motion.div
-                        key={identifier || index}
+                        key={item.identifier} // Use the unique identifier as key
                         className={`border p-2 rounded-2xl relative transition-all duration-200 ${isThumbnail ? 'border-green-500 ring-2 ring-green-500' : ''} ${
                           darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
                         }`}
@@ -818,12 +763,12 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
                         />
                         <button
                           type="button"
-                          onClick={() => handleRemoveImage(identifier, item.source)} // Use the confirmation handler
+                          onClick={() => handleRemoveImage(item.identifier, item.type)}
                           className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200"
                         >✕</button>
                         <button
                           type="button"
-                          onClick={() => setAsThumbnail(identifier)}
+                          onClick={() => setAsThumbnail(item.identifier)}
                           className={`text-xs underline mt-1 block transition-all duration-200 ${darkMode ? "text-green-400" : "text-green-700"}`}
                         >{isThumbnail ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
                       </motion.div>

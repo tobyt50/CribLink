@@ -1,20 +1,18 @@
 // src/pages/AddListing.js
 import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../api/axiosInstance'; // Use axiosInstance
+import axiosInstance from '../api/axiosInstance';
 import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion'; // Import AnimatePresence
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
-import API_BASE_URL from '../config'; // Assuming API_BASE_URL is defined here
-import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
-import { ChevronDown } from 'lucide-react'; // Import ChevronDown icon for the dropdown
-import { useMessage } from '../context/MessageContext'; // Import useMessage hook
-// Removed: import { useApiErrorHandler } from '../utils/handleApiError'; // No longer needed
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../config';
+import { useTheme } from '../layouts/AppShell';
+import { ChevronDown } from 'lucide-react';
+import { useMessage } from '../context/MessageContext';
 
-// Reusable Dropdown Component (embedded directly here for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
+  const { darkMode } = useTheme();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -67,7 +65,6 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        // Unified styling for the dropdown button to match input fields
         className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
           ${darkMode
             ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
@@ -90,7 +87,6 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             initial="hidden"
             animate="visible"
             exit="exit"
-            // Added max-h-60 for confined height and overflow-y-auto for scrollability
             className={`absolute left-0 right-0 mt-2 border rounded-xl shadow-xl py-1 z-50 transform origin-top max-h-60 overflow-y-auto
               ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
           >
@@ -117,22 +113,21 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 
-const AddListing = () => { // Renamed from App to AddListing for clarity
-  const navigate = useNavigate(); // Initialize useNavigate
+const AddListing = () => {
+  const navigate = useNavigate();
   const [purchaseCategory, setPurchaseCategory] = useState('Rent');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
-  const [stateValue, setStateValue] = useState(''); // State to hold the selected state
+  const [stateValue, setStateValue] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [price, setPrice] = useState('');
-  const [images, setImages] = useState([]); // Files from dropzone
+  const [images, setImages] = useState([]); // Array of { file: File, base64: string, originalname: string } for new uploads
   const [imageURLs, setImageURLs] = useState([]); // URLs added via input
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [thumbnailIndex, setThumbnailIndex] = useState(null);
+  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // Can be a URL or the originalname of a new file
 
-  // New state variables for property_details - these will be optional
   const [description, setDescription] = useState('');
   const [squareFootage, setSquareFootage] = useState('');
   const [lotSize, setLotSize] = useState('');
@@ -142,24 +137,24 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
 
-  const { darkMode } = useTheme(); // Use the dark mode context
-  const { showMessage } = useMessage(); // Initialize useMessage
-  // Removed: const handleApiError = useApiErrorHandler(); // No longer needed
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
 
-  // Combine all images for easier handling
-  const allImages = [...images, ...imageURLs];
+  // Combine all images for easier handling and display
+  const allImagesForDisplay = [
+    ...images.map(img => ({ url: img.base64, identifier: img.originalname, type: 'file' })),
+    ...imageURLs.map(url => ({ url: url, identifier: url, type: 'url' }))
+  ];
 
-  // Array of Nigerian States including Abuja
   const nigerianStates = [
     "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
     "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
     "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
     "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
     "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
-    "Abuja" // Added Abuja here
-  ].sort(); // Sort alphabetically
+    "Abuja"
+  ].sort();
 
-  // Options for Dropdowns
   const purchaseCategoryOptions = [
     { value: "Rent", label: "Rent" },
     { value: "Sale", label: "Sale" },
@@ -191,216 +186,173 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
     ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bathroom(s)` })),
   ];
 
-
   const onDrop = (acceptedFiles) => {
-    setImages(prev => [...prev, ...acceptedFiles]);
-    // If no thumbnail is set, set the first newly added image as thumbnail
-    if (thumbnailIndex === null && allImages.length === 0 && acceptedFiles.length > 0) {
-      setThumbnailIndex(0); // Index in the combined array
-    }
+    acceptedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = () => {
+        setImages(prev => [...prev, { file, base64: reader.result, originalname: file.name }]);
+        // Set the first new file as thumbnail if no thumbnail is set yet
+        if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
+          setThumbnailIdentifier(file.name);
+        }
+      };
+    });
   };
 
-  // Updated accept syntax for useDropzone
   const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } });
 
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim()) {
-      setImageURLs(prev => [...prev, imageUrlInput.trim()]);
+      const newUrl = imageUrlInput.trim();
+      setImageURLs(prev => [...prev, newUrl]);
       setImageUrlInput('');
-      // If no thumbnail is set, set the first newly added URL as thumbnail
-      if (thumbnailIndex === null && allImages.length === 0 && imageURLs.length === 0) {
-        setThumbnailIndex(images.length); // Index in the combined array
+      // Set the first new URL as thumbnail if no thumbnail is set yet
+      if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
+        setThumbnailIdentifier(newUrl);
       }
     } else {
       showMessage('Please enter a valid image URL.', 'error');
     }
   };
 
-  const handleRemoveImage = (indexToRemove, type) => {
+  const handleRemoveImage = (identifierToRemove, type) => {
     let newImagesArray = [...images];
     let newImageURLsArray = [...imageURLs];
-    let currentThumbnailIndex = thumbnailIndex;
 
     if (type === 'file') {
-      newImagesArray.splice(indexToRemove, 1);
+      newImagesArray = newImagesArray.filter(img => img.originalname !== identifierToRemove);
       setImages(newImagesArray);
-      // If the removed image was the thumbnail and it was a file
-      if (currentThumbnailIndex !== null && currentThumbnailIndex < images.length && currentThumbnailIndex === indexToRemove) {
-        setThumbnailIndex(null); // Clear thumbnail
-      } else if (currentThumbnailIndex !== null && currentThumbnailIndex >= images.length) {
-        // If the removed image was a file and the thumbnail was a URL after it
-        // The URL's index in the combined array shifts left by 1
-        setThumbnailIndex(currentThumbnailIndex - 1);
-      }
     } else { // type === 'url'
-      newImageURLsArray.splice(indexToRemove, 1);
+      newImageURLsArray = newImageURLsArray.filter(url => url !== identifierToRemove);
       setImageURLs(newImageURLsArray);
-      // If the removed image was the thumbnail and it was a URL
-      if (currentThumbnailIndex !== null && currentThumbnailIndex >= images.length && (currentThumbnailIndex - images.length) === indexToRemove) {
-        setThumbnailIndex(null); // Clear thumbnail
-      }
     }
 
-    // After removing, if no thumbnail is set and there are still images, set the first one as thumbnail
-    const remainingImages = [...newImagesArray, ...newImageURLsArray];
-    if (thumbnailIndex === null && remainingImages.length > 0) {
-      setThumbnailIndex(0);
-    } else if (thumbnailIndex !== null && remainingImages.length === 0) {
-      setThumbnailIndex(null); // No images left, clear thumbnail
-    }
-  };
-
-
-  const moveImage = (fromIndex, toIndex) => {
-    const allImagesCombined = [...images, ...imageURLs];
-    // Ensure indices are within bounds
-    if (fromIndex < 0 || fromIndex >= allImagesCombined.length || toIndex < 0 || toIndex >= allImagesCombined.length) {
-      return;
+    // If the removed image was the thumbnail, clear the thumbnail
+    if (thumbnailIdentifier === identifierToRemove) {
+      setThumbnailIdentifier(null);
     }
 
-    const movingImage = allImagesCombined.splice(fromIndex, 1)[0];
-    allImagesCombined.splice(toIndex, 0, movingImage);
+    // Re-evaluate thumbnail if it was cleared and there are still images
+    const remainingImages = [
+      ...newImagesArray.map(img => ({ url: img.base64, identifier: img.originalname, type: 'file' })),
+      ...newImageURLsArray.map(url => ({ url: url, identifier: url, type: 'url' }))
+    ];
 
-    // Separate back into files and URLs
-    const newFiles = allImagesCombined.filter(item => item instanceof File);
-    const newURLs = allImagesCombined.filter(item => typeof item === 'string');
-
-    setImages(newFiles);
-    setImageURLs(newURLs);
-
-    // Update thumbnail index if the thumbnail was moved
-    if (thumbnailIndex === fromIndex) {
-      setThumbnailIndex(toIndex);
-    } else if (thumbnailIndex !== null) {
-      // If the thumbnail was not the image being moved, its index might still change
-      // if the moved image passed its position.
-      // This requires more complex logic to track the thumbnail identity,
-      // not just its index. For simplicity, we'll re-find the thumbnail
-      // in the new combined array if the thumbnail was not the one moved.
-      const currentThumbnail = allImages[thumbnailIndex]; // Get the actual thumbnail item before move
-      const newThumbnailIndex = allImagesCombined.findIndex(item => item === currentThumbnail);
-      setThumbnailIndex(newThumbnailIndex !== -1 ? newThumbnailIndex : null);
+    if (thumbnailIdentifier === null && remainingImages.length > 0) {
+      setThumbnailIdentifier(remainingImages[0].identifier);
     }
   };
 
-  // Helper function to capitalize the first letter of a string
+  const setAsThumbnail = (identifier) => {
+    setThumbnailIdentifier(identifier);
+  };
+
   const capitalizeFirstLetter = (string) => {
     if (!string) return '';
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
   const handleClose = () => {
-    navigate(-1); // Go back to the previous page
+    navigate(-1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Combine all images for final check and sending
-    const allImagesCombined = [...images, ...imageURLs];
-
-    // Validate required fields
     if (!purchaseCategory || !title || !location || !stateValue || !propertyType || !bedrooms || !bathrooms || !price) {
       showMessage('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Bedrooms, Bathrooms, Price).', 'error');
       return;
     }
 
-    // Validate at least two images are uploaded
-    if (allImagesCombined.length < 2) {
+    if (allImagesForDisplay.length < 2) {
       showMessage('Please upload at least two images for your listing.', 'error');
       return;
     }
 
-    // Ensure a thumbnail is selected
-    if (thumbnailIndex === null || thumbnailIndex >= allImagesCombined.length) {
+    if (thumbnailIdentifier === null) {
       showMessage('Please set a thumbnail image for your listing.', 'error');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('purchase_category', purchaseCategory);
-    formData.append('title', title);
-    formData.append('location', location);
-    formData.append('state', stateValue); // Use stateValue from the dropdown
-    formData.append('property_type', propertyType);
-    formData.append('bedrooms', bedrooms);
-    formData.append('bathrooms', bathrooms);
-    formData.append('price', price);
-    formData.append('status', 'Pending'); // Assuming new listings are pending approval
+    const payload = {
+      purchase_category: purchaseCategory,
+      title,
+      location,
+      state: stateValue,
+      property_type: propertyType,
+      bedrooms,
+      bathrooms,
+      price,
+      status: 'Pending',
+      description,
+      square_footage: squareFootage,
+      lot_size: lotSize,
+      year_built: yearBuilt,
+      heating_type: heatingType,
+      cooling_type: coolingType,
+      parking,
+      amenities,
+      mainImageBase64: null,
+      mainImageOriginalName: null,
+      galleryImagesBase64: [],
+      galleryImagesOriginalNames: [],
+      galleryImageURLs: [],
+    };
 
-    // Append property_details to formData (these are now optional)
-    if (description) formData.append('description', description);
-    if (squareFootage) formData.append('square_footage', squareFootage);
-    if (lotSize) formData.append('lot_size', lotSize);
-    if (yearBuilt) formData.append('year_built', yearBuilt);
-    if (heatingType) formData.append('heating_type', heatingType);
-    if (coolingType) formData.append('cooling_type', coolingType);
-    if (parking) formData.append('parking', parking);
-    if (amenities) formData.append('amenities', amenities);
+    // Separate main image from gallery images
+    const thumbnailItem = allImagesForDisplay.find(item => item.identifier === thumbnailIdentifier);
 
-
-    const thumbnail = allImagesCombined[thumbnailIndex];
-
-    // Determine if the thumbnail is a file or a URL and append accordingly
-    if (thumbnail instanceof File) {
-      formData.append('mainImage', thumbnail); // Append the file if it's a new upload
-    } else {
-      formData.append('mainImageURL', thumbnail); // Send the URL if it's an existing or new URL
+    if (thumbnailItem) {
+      if (thumbnailItem.type === 'file') {
+        const fullImageObject = images.find(img => img.originalname === thumbnailItem.identifier);
+        payload.mainImageBase64 = fullImageObject.base64;
+        payload.mainImageOriginalName = fullImageObject.originalname;
+      } else { // type === 'url'
+        payload.mainImageURL = thumbnailItem.url;
+      }
     }
 
-    // Append gallery images, excluding the thumbnail
-    const galleryImagesToUpload = [];
-    const galleryImageURLsToUpload = [];
-
-    allImagesCombined.forEach((img, index) => {
-      if (index === thumbnailIndex) return; // Skip the thumbnail
-      if (img instanceof File) {
-        galleryImagesToUpload.push(img);
-      } else {
-        galleryImageURLsToUpload.push(img);
+    allImagesForDisplay.forEach(item => {
+      if (item.identifier !== thumbnailIdentifier) { // Only add to gallery if not the thumbnail
+        if (item.type === 'file') {
+          const fullImageObject = images.find(img => img.originalname === item.identifier);
+          payload.galleryImagesBase64.push(fullImageObject.base64);
+          payload.galleryImagesOriginalNames.push(fullImageObject.originalname);
+        } else { // type === 'url'
+          payload.galleryImageURLs.push(item.url);
+        }
       }
     });
 
-    // Append all gallery files
-    galleryImagesToUpload.forEach(file => {
-      formData.append('galleryImages', file);
-    });
-
-    // Append all gallery URLs as a JSON string
-    formData.append('galleryImageURLs', JSON.stringify(galleryImageURLsToUpload));
-
-
-    // Retrieve the JWT token from local storage (or wherever you store it after login)
-    const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
+    const token = localStorage.getItem('token');
 
     if (!token) {
       showMessage('Authentication token not found. Please sign in to add a listing.', 'error');
-      navigate('/signin'); // Optionally navigate to login page
+      navigate('/signin');
       return;
     }
 
     try {
-      await axiosInstance.post(`${API_BASE_URL}/listings`, formData, {
+      await axiosInstance.post(`${API_BASE_URL}/listings`, payload, {
         headers: {
-          'Content-Type': 'multipart/form-data', // Important for file uploads
-          'Authorization': `Bearer ${token}` // Include the JWT token
+          'Content-Type': 'application/json', // Sending JSON with base64
+          'Authorization': `Bearer ${token}`
         }
       });
 
-      showMessage('Listing added successfully!', 'success', 3000); // Show success message
-      // Reset form fields after successful submission
+      showMessage('Listing added successfully!', 'success', 3000);
       setPurchaseCategory('Rent');
       setTitle('');
       setLocation('');
-      setStateValue(''); // Reset state dropdown
+      setStateValue('');
       setPropertyType('');
       setBedrooms('');
       setBathrooms('');
       setPrice('');
       setImages([]);
       setImageURLs([]);
-      setThumbnailIndex(null);
-      // Reset property_details fields
+      setThumbnailIdentifier(null);
       setDescription('');
       setSquareFootage('');
       setLotSize('');
@@ -409,7 +361,6 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
       setCoolingType('');
       setParking('');
       setAmenities('');
-      // Optionally navigate to the listings page
       navigate('/admin/listings');
     } catch (error) {
       let errorMessage = 'Failed to add listing. Please try again.';
@@ -422,26 +373,21 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
     }
   };
 
-
-  // Unified styling for input fields to match SearchFilters.js
   const formElementStyles = `py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
     ${darkMode
       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
       : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
     }`;
 
-
   return (
-    // Add overflow-x-hidden to prevent horizontal scrollbars
     <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}>
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className={`rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-6 relative ${darkMode ? "bg-gray-800" : "bg-white"}`} // Added relative for positioning close button
+        className={`rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-6 relative ${darkMode ? "bg-gray-800" : "bg-white"}`}
       >
-        {/* Close Button */}
         <button
           type="button"
           onClick={handleClose}
@@ -460,7 +406,6 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
           Add Listing
         </motion.h2>
 
-        {/* Form Fields */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -483,7 +428,6 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
             <input
               type="text"
               value={title}
-              // Modified onChange handler to capitalize the first letter
               onChange={(e) => setTitle(capitalizeFirstLetter(e.target.value))}
               className={`block w-full ${formElementStyles}`}
               required
@@ -495,14 +439,12 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
             <input
               type="text"
               value={location}
-              // Modified onChange handler to capitalize the first letter
               onChange={(e) => setLocation(capitalizeFirstLetter(e.target.value))}
               className={`block w-full ${formElementStyles}`}
               required
             />
           </div>
 
-          {/* State Dropdown */}
           <div>
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>State</label>
             <Dropdown
@@ -559,7 +501,6 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
             <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={`block w-full ${formElementStyles}`} required />
           </div>
 
-          {/* New fields for property_details (now optional) */}
           <div>
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Description (Optional)</label>
             <textarea
@@ -669,34 +610,33 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
             </div>
           </div>
 
-          {(allImages.length > 0) && (
+          {(allImagesForDisplay.length > 0) && (
             <div className="grid grid-cols-2 gap-3">
-              {allImages.map((item, index) => (
+              {allImagesForDisplay.map((item, index) => (
                 <motion.div
-                  key={item instanceof File ? item.name : item} // Use file name or URL as key
-                  className={`border p-2 rounded-2xl relative transition-all duration-200 ${index === thumbnailIndex ? 'border-green-500 ring-2 ring-green-500' : ''} ${
+                  key={item.identifier}
+                  className={`border p-2 rounded-2xl relative transition-all duration-200 ${item.identifier === thumbnailIdentifier ? 'border-green-500 ring-2 ring-green-500' : ''} ${
                     darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
-                  }`} // Highlight thumbnail
+                  }`}
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
                 >
                   <img
-                    src={item instanceof File ? URL.createObjectURL(item) : item}
+                    src={item.url}
                     alt={`Upload ${index}`}
                     className="w-full h-32 object-cover rounded-xl"
                   />
                   <button
                     type="button"
-                    onClick={() => handleRemoveImage(item instanceof File ? images.findIndex(f => f === item) : imageURLs.findIndex(url => url === item), item instanceof File ? 'file' : 'url')}
-                    className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200" // Styled remove button, added transition
+                    onClick={() => handleRemoveImage(item.identifier, item.type)}
+                    className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200"
                   >✕</button>
                   <button
                     type="button"
-                    onClick={() => setThumbnailIndex(index)}
+                    onClick={() => setAsThumbnail(item.identifier)}
                     className={`text-xs underline mt-1 block transition-all duration-200 ${darkMode ? "text-green-400" : "text-green-700"}`}
-                  >{thumbnailIndex === index ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
-                  {/* Add move buttons if needed - requires more complex state management */}
+                  >{item.identifier === thumbnailIdentifier ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
                 </motion.div>
               ))}
             </div>
@@ -711,4 +651,4 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
   );
 };
 
-export default AddListing; // Export as AddListing
+export default AddListing;

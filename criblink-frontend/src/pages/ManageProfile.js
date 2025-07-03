@@ -7,7 +7,6 @@ import { useTheme } from "../layouts/AppShell";
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
 import { useSidebarState } from '../hooks/useSidebarState';
-import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 
 import Sidebar from '../components/profile/Sidebar';
 import DisplayPicture from '../components/profile/DisplayPicture';
@@ -21,7 +20,9 @@ function ManageProfile() {
     full_name: "", username: "", email: "", bio: "",
     location: "", phone: "", agency: "", current_password: "",
     new_password: "", confirm_password: "",
-    social_links: [] // Initialize social_links in the form state
+    social_links: [], // Initialize social_links in the form state
+    profile_picture_base64: null, // New: to store base64 for upload
+    profile_picture_originalname: null, // New: to store original name for upload
   });
 
   const [userInfo, setUserInfo] = useState({
@@ -45,7 +46,6 @@ function ManageProfile() {
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
   const { isMobile, isCollapsed } = useSidebarState();
-  const { updateUser } = useAuth(); // Get the updateUser function from AuthContext
 
   const fetchProfile = async () => {
     try {
@@ -61,7 +61,9 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
-        social_links: res.data.social_links || [], // Populate social_links from fetched data
+        social_links: res.data.social_links || [],
+        profile_picture_base64: null, // Clear base64 on fetch
+        profile_picture_originalname: null, // Clear originalname on fetch
       }));
       setUserInfo({
         full_name: res.data.full_name || "",
@@ -73,8 +75,8 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
-        social_links: res.data.social_links || [], // Populate social_links in userInfo as well
-        default_landing_page: res.data.default_landing_page || "", // Ensure default_landing_page is included here
+        social_links: res.data.social_links || [],
+        default_landing_page: res.data.default_landing_page || "",
       });
       setLoading(false);
     } catch (error) {
@@ -85,58 +87,63 @@ function ManageProfile() {
   };
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target;
-  
-    // Handle file upload (profile picture)
-    if (name === 'profile_picture' && files && files.length > 0) {
-      setForm((prev) => ({
-        ...prev,
-        profile_picture: files[0], // Store actual File object
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };  
+    const { name, value } = e.target;
+    // This handleChange is now simplified as file handling is more direct in General.js
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-  const handleUpdate = async (updatedSettings) => { // Accept updatedSettings from child components
+  // New handler for profile picture data (base64 and original name)
+  const handleProfilePictureDataChange = (base64, originalname) => {
+    setForm((prev) => ({
+      ...prev,
+      profile_picture_base64: base64,
+      profile_picture_originalname: originalname,
+    }));
+  };
+
+  const handleUpdate = async (updatedSettings) => {
     const token = localStorage.getItem("token");
-  
+
     try {
       setUpdating(true);
-  
-      // 1. Upload profile picture if a new file is selected
-      if (form.profile_picture_base64) {
+
+      // 1. Upload profile picture if new base64 data is present
+      if (form.profile_picture_base64 && form.profile_picture_originalname) {
         setUploadingPicture(true);
-      
         const uploadRes = await axiosInstance.put(
           `${API_BASE_URL}/users/profile/picture/upload`,
-          { image: form.profile_picture_base64 },
+          {
+            profile_picture_base64: form.profile_picture_base64,
+            originalname: form.profile_picture_originalname,
+          },
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+              "Content-Type": "application/json", // Sending JSON with base64
             },
           }
         );
-      
+
         showMessage("Profile picture uploaded successfully", "success");
-      
+
+        // Update the userInfo state with new picture URL
         setUserInfo((prev) => ({
           ...prev,
           profile_picture_url: uploadRes.data.profile_picture_url,
         }));
-      
-        setForm((prev) => ({ ...prev, profile_picture_base64: null }));
+
+        // Clear base64 data from form after successful upload
+        setForm((prev) => ({ ...prev, profile_picture_base64: null, profile_picture_originalname: null }));
       }
-      
-  
+
       // 2. Prepare update data by merging existing form state with updatedSettings
-      // This ensures all relevant fields from different profile sections are included.
       const updateData = { ...form, ...updatedSettings };
-      delete updateData.profile_picture; // Remove file object before sending
+      // Remove profile picture related fields as they are handled separately
+      delete updateData.profile_picture_base64;
+      delete updateData.profile_picture_originalname;
 
       // 3. Send profile update request
       const updateRes = await axiosInstance.put(
@@ -146,12 +153,10 @@ function ManageProfile() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       showMessage("Profile updated successfully!", "success");
       setUserInfo(updateRes.data.user);
-      // Crucial: Update AuthContext with the latest user data including default_landing_page
-      updateUser(updateRes.data.user); // Call updateUser from AuthContext
-      localStorage.setItem('user', JSON.stringify(updateRes.data.user)); // Also update localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(updateRes.data.user));
     } catch (error) {
       console.error("Update failed:", error);
       showMessage(
@@ -163,23 +168,28 @@ function ManageProfile() {
       setUploadingPicture(false);
     }
   };
-  
+
 
   const uploadProfilePicture = async (file) => {
     setUploadingPicture(true);
     try {
-      const formData = new FormData();
-      formData.append("profile_picture", file); // Ensure the file is appended correctly
-
-      const res = await axiosInstance.put(`${API_BASE_URL}/users/profile/picture/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data", // Important for FormData
-        },
-      });
-      setUserInfo((prev) => ({ ...prev, profile_picture_url: res.data.profile_picture_url }));
-      updateUser({ ...userInfo, profile_picture_url: res.data.profile_picture_url }); // Update AuthContext
-      showMessage("Profile picture updated successfully", 'success');
+      // Read file as base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+        const res = await axiosInstance.put(`${API_BASE_URL}/users/profile/picture/upload`,
+          { profile_picture_base64: base64data, originalname: file.name },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json", // Sending JSON with base64
+            },
+          }
+        );
+        setUserInfo((prev) => ({ ...prev, profile_picture_url: res.data.profile_picture_url }));
+        showMessage("Profile picture updated successfully", 'success');
+      };
     } catch (error) {
       console.error("Error uploading profile picture:", error);
       showMessage(error?.response?.data?.message || error.message || 'Failed to upload profile picture.', 'error');
@@ -199,7 +209,6 @@ function ManageProfile() {
             headers: { Authorization: `Bearer ${token}` },
           });
           setUserInfo((prev) => ({ ...prev, profile_picture_url: null }));
-          updateUser({ ...userInfo, profile_picture_url: null }); // Update AuthContext
           showMessage("Profile picture deleted successfully", 'success');
         } catch (error) {
           console.error("Error deleting profile picture:", error);
@@ -299,6 +308,7 @@ function ManageProfile() {
               handleUpdate={handleUpdate}
               updating={updating}
               userInfo={userInfo}
+              onProfilePictureDataChange={handleProfilePictureDataChange} // Pass new handler
             />
           )}
 
@@ -326,10 +336,10 @@ function ManageProfile() {
             <Settings
               form={form}
               handleChange={handleChange}
-              handleUpdate={handleUpdate} // Pass handleUpdate to Settings
+              handleUpdate={handleUpdate}
               updating={updating}
               activeSection={activeSection}
-              userInfo={userInfo} // Pass userInfo for consistent access
+              userInfo={userInfo}
             />
           )}
         </motion.div>

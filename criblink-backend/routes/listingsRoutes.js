@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+// Removed: const upload = require('../middleware/uploadMiddleware'); // No longer needed
 
 const {
     getAllListings,
@@ -9,30 +10,28 @@ const {
     deleteListing,
     getPurchaseCategories,
 } = require('../controllers/listingsController');
-// Import both authenticateToken and optionalAuthenticateToken
-const { authenticateToken, optionalAuthenticateToken } = require('../middleware/authMiddleware'); // <--- MODIFIED LINE
+const { authenticateToken, optionalAuthenticateToken } = require('../middleware/authMiddleware');
 
 // Public Routes
 router.get('/categories', getPurchaseCategories);
 router.get('/:id', getListingById);
 
-// The main listings route now uses optionalAuthenticateToken.
-// This allows guests to view available listings, and logged-in users
-// to have req.user populated for role-based filtering in the controller.
-router.get('/', optionalAuthenticateToken, getAllListings); // <--- MODIFIED LINE
+router.get('/', optionalAuthenticateToken, getAllListings);
 
 // Protected Routes (require authentication)
+// Image data will be sent as base64 in the request body, no multer needed.
 router.post(
     '/',
     authenticateToken,
     createListing
 );
 
-// Route for updating an existing listing (requires authentication and file upload handling)
+// Route for updating an existing listing (requires authentication)
+// Image data will be sent as base64 in the request body, no multer needed.
 router.put(
-    '/:id',
-    authenticateToken,
-    updateListing
+    '/:id', // Listing ID in the URL parameters
+    authenticateToken, // Authenticate the user
+    updateListing // The controller function to handle updating the listing
 );
 
 // Route for deleting a listing (requires authentication)

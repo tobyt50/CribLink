@@ -322,7 +322,7 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
       </div>
 
       {/* Save Changes Button */}
-      <div className="flex justify-center pt-8">
+     <div className="flex justify-center pt-8">
         <button
           onClick={() => handleUpdate({})}
           disabled={updating}
