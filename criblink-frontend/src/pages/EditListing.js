@@ -147,12 +147,12 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
 
-  const [existingImages, setExistingImages] = useState([]);
-  const [newImages, setNewImages] = useState([]);
+  const [existingImages, setExistingImages] = useState([]); // Images already on Cloudinary
+  const [newFiles, setNewFiles] = useState([]); // New files from dropzone
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [newImageURLs, setNewImageURLs] = useState([]);
+  const [newImageURLs, setNewImageURLs] = useState([]); // New URLs added via input
 
-  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null);
+  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // URL for existing, file.name for new files, URL for new URLs
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -230,9 +230,10 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
   }, [id, showMessage]);
 
   const onDrop = (acceptedFiles) => {
-    setNewImages(prev => [...prev, ...acceptedFiles]);
+    setNewFiles(prev => [...prev, ...acceptedFiles]);
+    // If no thumbnail is set, and this is the first image being added (new or existing)
+    // set the first new file as thumbnail.
     if (thumbnailIdentifier === null && acceptedFiles.length > 0) {
-      // Set the first new file as thumbnail if no thumbnail is set yet
       setThumbnailIdentifier(acceptedFiles[0].name);
     }
   };
@@ -244,6 +245,8 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
       const newUrl = imageUrlInput.trim();
       setNewImageURLs(prev => [...prev, newUrl]);
       setImageUrlInput('');
+      // If no thumbnail is set, and this is the first image being added (new or existing)
+      // set the first new URL as thumbnail.
       if (thumbnailIdentifier === null) {
         setThumbnailIdentifier(newUrl);
       }
@@ -258,21 +261,21 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
     if (type === 'existing') {
       setExistingImages(prev => prev.filter(img => img.url !== identifier));
     } else if (type === 'newFile') {
-      setNewImages(prev => prev.filter(file => file.name !== identifier));
+      setNewFiles(prev => prev.filter(file => file.name !== identifier));
     } else if (type === 'newUrl') {
       setNewImageURLs(prev => prev.filter(url => url !== identifier));
     }
 
+    // If the removed image was the thumbnail, clear the thumbnail identifier
     if (updatedThumbnailIdentifier === identifier) {
-      updatedThumbnailIdentifier = null; // Clear thumbnail if the removed image was the thumbnail
+      updatedThumbnailIdentifier = null;
     }
 
-    // Attempt to re-select a thumbnail if the current one was removed
-    // Re-calculating allImagesForDisplay after state updates might be safer
+    // After removal, if no thumbnail is set, try to set the first available image as thumbnail
     const remainingImagesAfterRemoval = [
-      ...existingImages.filter(img => img.url !== identifier),
-      ...newImages.filter(file => file.name !== identifier),
-      ...newImageURLs.filter(url => url !== identifier)
+      ...existingImages.filter(img => img.url !== identifier), // Filter out the removed existing image
+      ...newFiles.filter(file => file.name !== identifier),    // Filter out the removed new file
+      ...newImageURLs.filter(url => url !== identifier)        // Filter out the removed new URL
     ];
 
     if (updatedThumbnailIdentifier === null && remainingImagesAfterRemoval.length > 0) {
@@ -313,7 +316,7 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
 
     const allImagesCombined = [
       ...existingImages.map(img => ({ ...img, source: 'existing' })),
-      ...newImages.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
+      ...newFiles.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
       ...newImageURLs.map(url => ({ url, source: 'newUrl' }))
     ];
 
@@ -353,16 +356,57 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
     if (parking) formData.append('parking', parking);
     if (amenities) formData.append('amenities', amenities);
 
-    const existingImageUrlsToKeep = existingImages.map(img => img.url);
+    // Identify the main image (thumbnail) based on its identifier
+    let mainImageFile = null;
+    let mainImageURL = null;
+
+    const thumbnailItem = allImagesCombined.find(item => getImageIdentifier(item) === thumbnailIdentifier);
+
+    if (thumbnailItem) {
+      if (thumbnailItem.source === 'newFile') {
+        mainImageFile = thumbnailItem.file;
+      } else { // 'existing' or 'newUrl'
+        mainImageURL = thumbnailItem.url;
+      }
+    }
+
+    // Append the main image to formData
+    if (mainImageFile) {
+      formData.append('mainImageFile', mainImageFile);
+    } else if (mainImageURL) {
+      formData.append('mainImageIdentifier', mainImageURL); // Send the URL as the identifier
+    }
+
+
+    // Prepare gallery images
+    const newGalleryFiles = [];
+    const newGalleryImageURLs = [];
+    const existingImageUrlsToKeep = [];
+
+    allImagesCombined.forEach(item => {
+      const identifier = getImageIdentifier(item);
+      if (identifier === thumbnailIdentifier) return; // Skip the thumbnail
+
+      if (item.source === 'existing') {
+        existingImageUrlsToKeep.push(item.url);
+      } else if (item.source === 'newFile') {
+        newGalleryFiles.push(item.file);
+      } else if (item.source === 'newUrl') {
+        newGalleryImageURLs.push(item.url);
+      }
+    });
+
+    // Append existing image URLs to keep (as a JSON string)
     formData.append('existingImageUrlsToKeep', JSON.stringify(existingImageUrlsToKeep));
 
-    formData.append('newImageUrls', JSON.stringify(newImageURLs));
-
-    newImages.forEach(file => {
+    // Append new gallery files
+    newGalleryFiles.forEach(file => {
       formData.append('newImages', file);
     });
 
-    formData.append('mainImageIdentifier', thumbnailIdentifier);
+    // Append new gallery URLs (as a JSON string)
+    formData.append('newImageUrls', JSON.stringify(newGalleryImageURLs));
+
 
     const token = localStorage.getItem('token');
 
@@ -485,7 +529,7 @@ const EditListing = () => { // Renamed from App to EditListing for clarity
 
   const allImagesForDisplay = [
     ...existingImages.map(img => ({ ...img, source: 'existing' })),
-    ...newImages.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
+    ...newFiles.map(file => ({ url: URL.createObjectURL(file), file, source: 'newFile' })),
     ...newImageURLs.map(url => ({ url, source: 'newUrl' }))
   ];
 

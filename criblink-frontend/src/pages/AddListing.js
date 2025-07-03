@@ -341,23 +341,34 @@ const AddListing = () => { // Renamed from App to AddListing for clarity
 
     const thumbnail = allImagesCombined[thumbnailIndex];
 
-
-    // Set the main image (thumbnail)
+    // Determine if the thumbnail is a file or a URL and append accordingly
     if (thumbnail instanceof File) {
       formData.append('mainImage', thumbnail); // Append the file if it's a new upload
     } else {
       formData.append('mainImageURL', thumbnail); // Send the URL if it's an existing or new URL
     }
 
-    // Set gallery images (skip the thumbnail)
+    // Append gallery images, excluding the thumbnail
+    const galleryImagesToUpload = [];
+    const galleryImageURLsToUpload = [];
+
     allImagesCombined.forEach((img, index) => {
       if (index === thumbnailIndex) return; // Skip the thumbnail
       if (img instanceof File) {
-        formData.append('galleryImages', img); // Append files
+        galleryImagesToUpload.push(img);
       } else {
-        formData.append('galleryImageURLs', img); // Send URLs
+        galleryImageURLsToUpload.push(img);
       }
     });
+
+    // Append all gallery files
+    galleryImagesToUpload.forEach(file => {
+      formData.append('galleryImages', file);
+    });
+
+    // Append all gallery URLs as a JSON string
+    formData.append('galleryImageURLs', JSON.stringify(galleryImageURLsToUpload));
+
 
     // Retrieve the JWT token from local storage (or wherever you store it after login)
     const token = localStorage.getItem('token'); // Assuming you store the token in localStorage
