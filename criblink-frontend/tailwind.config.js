@@ -10,4 +10,11 @@ module.exports = {
   plugins: [
     // require('tailwind-scrollbar'),
   ],
+  theme: {
+    extend: {
+      fontFamily: {
+        script: ['"Great Vibes"', 'cursive'],
+      },
+    },
+  },
 }

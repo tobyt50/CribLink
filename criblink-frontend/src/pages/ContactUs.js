@@ -65,7 +65,7 @@ const ContactUs = () => {
         transition={{ duration: 0.6 }}
         className="max-w-4xl mx-auto text-center"
       >
-        <h1 className={`text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Us</h1>
+        <h1 className={`text-2xl md:text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Us</h1>
         <p className={`max-w-2xl mx-auto text-lg ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
           Have questions or need assistance? We're here to help you every step of the
           way. Reach out to the CribLink team today.

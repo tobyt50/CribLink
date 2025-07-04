@@ -436,7 +436,7 @@ const Staff = () => {
               <div className={`flex items-center flex-grow rounded-xl shadow-sm border overflow-hidden mr-2 ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}>
                 <input
                   type="text"
-                  placeholder="Search by name or email..."
+                  placeholder="Search..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className={`flex-grow py-2 px-4 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 rounded-xl ${darkMode ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}

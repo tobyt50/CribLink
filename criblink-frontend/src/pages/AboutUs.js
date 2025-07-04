@@ -69,7 +69,7 @@ const AboutUs = () => {
         transition={{ duration: 0.6 }}
         className="max-w-6xl mx-auto text-center"
       >
-        <h1 className={`text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>About CribLink</h1>
+        <h1 className={`text-2xl md:text-3xl font-extrabold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>About CribLink</h1>
         <p className={`max-w-3xl mx-auto text-lg ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
           CribLink is Nigeria’s modern real estate hub — designed to connect clients,
           agents, and verified property listings into one seamless experience. We
@@ -112,7 +112,7 @@ const AboutUs = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className={`text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
+          className={`text-2xl md:text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
         >
           Why Choose CribLink?
         </motion.h2>
@@ -145,7 +145,7 @@ const AboutUs = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className={`text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
+          className={`text-2xl md:text-3xl font-extrabold text-center mb-12 ${darkMode ? "text-green-400" : "text-green-700"}`}
         >
           What Our Users Say
         </motion.h2>

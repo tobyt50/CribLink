@@ -109,9 +109,14 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className={`text-2xl md:text-3xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-            Find Your Dream Property
-          </h1>
+          <h1
+  className={`font-script text-2xl md:text-3xl  mb-4 ${
+    darkMode ? "text-green-400" : "text-green-700"
+  }`}
+>
+  Find Your Dream Property
+</h1>
+
 
           <div className="w-full max-w-4xl mx-auto">
             {/* Desktop Filter/Search/Sort Controls */}
@@ -189,7 +194,7 @@ function Home() {
                   ref={searchInputRef}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by keyword, location, or type..."
+                  placeholder="Search..."
                   className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
                     darkMode
                       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"

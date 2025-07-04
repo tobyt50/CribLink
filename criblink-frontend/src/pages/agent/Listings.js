@@ -979,7 +979,7 @@ const Listings = () => {
                                 <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
                                 <input
                                     type="text"
-                                    placeholder="Search listings..."
+                                    placeholder="Search..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
                                     className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
