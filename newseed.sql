@@ -1,0 +1,1 @@
+\copy property_images(image_id, property_id, image_url, public_id) FROM 'property_images.csv' DELIMITER ',' CSV HEADER

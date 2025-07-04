@@ -7,6 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 export default function SignIn() {
   const [form, setForm] = useState({ email: '', password: '' });
@@ -18,6 +19,7 @@ export default function SignIn() {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
+  const { isAuthenticated, user, loading } = useAuth(); // Get isAuthenticated, user, and loading from AuthContext
 
   // Function to determine the redirection path
   const getRedirectPath = (userData) => {
@@ -28,9 +30,9 @@ export default function SignIn() {
     if (userData && userData.role) {
       switch (userData.role) {
         case 'admin':
-          return '/admin/dashboard'; //
+          return '/admin/dashboard';
         case 'agent':
-          return '/agent/dashboard'; //
+          return '/agent/dashboard';
         case 'client':
           return '/client/inquiries'; // Specific client dashboard path
         default:
@@ -40,15 +42,15 @@ export default function SignIn() {
     return '/'; // Fallback for unhandled roles or no user data
   };
 
+  // This useEffect now handles ALL redirections for authenticated users,
+  // both on initial load and after a successful sign-in.
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user')); //
-
-    if (token && user) {
-      // If a token and user data exist, redirect based on settings/role
-      navigate(getRedirectPath(user), { replace: true }); // Use replace to prevent back navigation to sign-in
+    // Only attempt redirection if authentication status has been determined
+    if (!loading && isAuthenticated) {
+      // Use the 'user' object from AuthContext for redirection path
+      navigate(getRedirectPath(user), { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, loading, user, navigate]); // Depend on isAuthenticated, loading, and user
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -61,17 +63,23 @@ export default function SignIn() {
         showMessage('Your account has been banned.', 'error', 7000);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        // No need to dispatch authChange here, as it's a ban, not a successful auth.
         return;
       }
 
-      localStorage.setItem('token', data.token); //
+      localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user)); // Store the full user object including default_landing_page
-      window.dispatchEvent(new Event("authChange")); // Notify app of auth state change
+
+      // Dispatch a custom event to notify AuthContext to re-evaluate its state.
+      // This is crucial. AuthContext will now update 'user', 'isAuthenticated', and 'loading'.
+      window.dispatchEvent(new Event("authChange"));
 
       showMessage('Sign-in successful!', 'success', 3000);
 
-      // Redirect after successful login using the new logic
-      navigate(getRedirectPath(data.user)); //
+      // IMPORTANT: Remove the direct navigate call here.
+      // The useEffect above, which watches 'isAuthenticated', 'loading', and 'user',
+      // will handle the navigation once AuthContext has fully updated.
+      // navigate(getRedirectPath(data.user)); // REMOVE THIS LINE
 
     } catch (error) {
       console.error("Sign-in error caught locally:", error);
@@ -107,6 +115,18 @@ export default function SignIn() {
   const handleOpenForgotPasswordModal = () => {
     setShowForgotPasswordModal(true);
   };
+
+  // Render a loading state or nothing if authentication is still being processed
+  // or if the user is already authenticated (and the useEffect will redirect them).
+  if (loading || isAuthenticated) {
+    return (
+      <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+        <p className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+          {loading ? "Checking session..." : "Redirecting..."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
