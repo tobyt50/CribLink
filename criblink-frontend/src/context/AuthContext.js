@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initial loading state is true
 
   // Function to fetch the full user profile from the backend
   const fetchUserProfile = useCallback(async () => {
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("user");
       setUser(null);
     } finally {
-      setLoading(false);
+      setLoading(false); // Set loading to false after profile fetch attempt
     }
   }, []);
 
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
 
     const handleStorageChange = (event) => {
       // Listen for changes to 'token' or any storage clear event
-      if (event.key === 'token' || !event.key) {
+      if (event.key === 'token' || !event.key) { // event.key === null for clear()
         decodeAndSetUser(localStorage.getItem('token'));
       }
     };
@@ -92,6 +92,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user'); // Ensure user is removed on logout
     setUser(null);
+    setLoading(false); // Set loading to false on logout
     window.dispatchEvent(new Event('authChange')); // Dispatch custom event to notify other listeners
   }, []);
 
@@ -105,7 +106,7 @@ export const AuthProvider = ({ children }) => {
   const authContextValue = {
     user,
     isAuthenticated: !!user,
-    loading,
+    loading, // Expose the loading state
     logout,
     updateUser, // Expose updateUser function
   };

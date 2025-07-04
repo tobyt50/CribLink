@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
-import { isTokenValid, signOutUser } from '../utils/authUtils'; // Path: src/components -> src/utils -> authUtils.js
-import { useMessage } from '../context/MessageContext'; // Path: src/components -> src/context -> MessageContext.js
+import { isTokenValid, signOutUser } from '../utils/authUtils';
+import { useMessage } from '../context/MessageContext';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 /**
  * ProtectedBaseRoute Component
@@ -11,27 +12,29 @@ import { useMessage } from '../context/MessageContext'; // Path: src/components 
  */
 const ProtectedBaseRoute = () => {
   const navigate = useNavigate();
-  const { showMessage } = useMessage(); // Changed showError to showMessage
+  const { showMessage } = useMessage();
+  const { isAuthenticated, loading } = useAuth(); // Get isAuthenticated and loading from AuthContext
 
+  // Effect to handle sign-out if token becomes invalid AFTER initial load
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !isTokenValid(token)) {
-      // Token is missing, invalid, or expired
-      showMessage('Your session has expired or is invalid. Please sign in again.'); // Changed showError to showMessage
+    // This effect will only run if the component is already rendered (i.e., not during initial loading phase)
+    // and if isAuthenticated changes to false.
+    if (!loading && !isAuthenticated) {
+      showMessage('Your session has expired or is invalid. Please sign in again.', 'error');
       signOutUser(navigate);
-      // Immediately navigate to prevent rendering children with invalid token
-      return;
     }
-    // If the token is valid, no action needed, children will be rendered by Outlet
-  }, [navigate, showMessage]); // Changed showError to showMessage in dependencies
+  }, [isAuthenticated, loading, navigate, showMessage]);
 
-  // This check is for the initial render. The useEffect above will handle subsequent logic.
-  const token = localStorage.getItem("token");
-  const isAuthenticated = isTokenValid(token);
+  if (loading) {
+    // Show a loading indicator while authentication status is being determined
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-lg text-gray-500 dark:text-gray-400">Loading authentication...</p>
+      </div>
+    );
+  }
 
-  // If not authenticated, redirect to sign-in page immediately.
-  // The useEffect handles the error message and localStorage cleanup.
+  // If not authenticated after loading, redirect to sign-in page
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }

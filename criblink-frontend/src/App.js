@@ -71,7 +71,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 // --- Route Config Arrays ---
 const listingRoutes = [
   { path: "add-listing", element: <AddListing /> },
-  { path: "edit-listing/:id", element: <EditListing /> }
+  // Removed "edit-listing/:id" from here
 ];
 
 const adminRoutes = [
@@ -82,7 +82,7 @@ const adminRoutes = [
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
-  ...listingRoutes
+  ...listingRoutes // AddListing will still be under /admin/add-listing
 ];
 
 const agentRoutes = [
@@ -93,14 +93,14 @@ const agentRoutes = [
   { path: "inquiries", element: <AgentInquiries /> },
   { path: "archived-clients", element: <ArchivedClients /> },
   { path: "settings", element: <AgentSettings /> },
-  ...listingRoutes
+  ...listingRoutes // AddListing will still be under /agent/add-listing
 ];
 
 const clientRoutes = [
   { path: "inquiries", element: <ClientInquiries /> },
   { path: "settings", element: <ClientSettings /> },
-  { path: "agent-profile/:agentId", element: <AgentProfile /> }, // This path now expects an agentId
-  ...listingRoutes
+  { path: "agent-profile/:agentId", element: <AgentProfile /> },
+  // No listingRoutes here as clients don't add/edit listings
 ];
 
 function App() {
@@ -175,6 +175,10 @@ function App() {
                         <Route path="settings" element={<Settings />} />
                       </Route>
                       <Route path="favourites" element={<Favourites />} />
+                      {/* NEW: Top-level route for editing listings, protected by role */}
+                      <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
+                        <Route index element={<EditListing />} />
+                      </Route>
                     </Route>
 
                     {/* Role-protected routes */}

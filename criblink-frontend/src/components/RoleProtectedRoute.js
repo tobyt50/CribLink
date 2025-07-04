@@ -1,43 +1,55 @@
 import React, { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { getUserRoleFromToken, signOutUser } from '../utils/authUtils';
-import { useMessage } from '../context/MessageContext'; // Import useMessage
-import ProtectedBaseRoute from './ProtectedBaseRoute';
+import { useMessage } from '../context/MessageContext';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
+import ProtectedBaseRoute from './ProtectedBaseRoute'; // Keep this for nested routing if needed, but logic is now in parent
 
 /**
  * RoleProtectedRoute
- * Replaces ProtectedAdminRoute, ProtectedAgentRoute, ProtectedClientRoute
  * * Props:
- * - allowedRole: "admin" | "agent" | "client"
+ * - allowedRole: "admin" | "agent" | "client" | string[] (for multiple roles)
  */
 const RoleProtectedRoute = ({ allowedRole }) => {
   const navigate = useNavigate();
-  // Changed showError to showMessage as per MessageContext.js
-  const { showMessage } = useMessage(); 
+  const { showMessage } = useMessage();
+  const { user, loading, isAuthenticated } = useAuth(); // Get user, loading, isAuthenticated from AuthContext
 
-  const token = localStorage.getItem("token");
-  const userRole = getUserRoleFromToken(token);
+  // Determine the user's role from the user object in AuthContext
+  // The user object should contain the role after successful profile fetch
+  const currentUserRole = user?.role;
+
+  // Convert allowedRole to an array if it's a single string for consistent checking
+  const allowedRolesArray = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
 
   useEffect(() => {
-    // Only show error and sign out if user is trying to access a restricted route
-    // while having a token but the wrong role.
-    if (token && userRole !== allowedRole) {
-      // Use showMessage with type 'error'
-      showMessage(`Access denied: You do not have ${allowedRole} privileges.`, 'error');
-      signOutUser(navigate);
+    // This effect runs after authentication is loaded
+    if (!loading) {
+      // If not authenticated at all, ProtectedBaseRoute should handle the redirect.
+      // This component focuses on role-specific access *after* base authentication.
+      if (isAuthenticated && !allowedRolesArray.includes(currentUserRole)) {
+        showMessage(`Access denied: You do not have the required privileges.`, 'error');
+        signOutUser(navigate);
+      }
     }
-  }, [userRole, navigate, token, showMessage, allowedRole]); // Dependency array updated to showMessage
+  }, [currentUserRole, allowedRolesArray, navigate, showMessage, loading, isAuthenticated]);
 
-  // If the user's role does not match the allowed role, redirect to signin
-  if (userRole !== allowedRole) {
+  if (loading) {
+    // Show a loading indicator while authentication status is being determined
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-lg text-gray-500 dark:text-gray-400">Loading permissions...</p>
+      </div>
+    );
+  }
+
+  // If not authenticated (handled by ProtectedBaseRoute) or user role does not match allowed roles, redirect
+  if (!isAuthenticated || !allowedRolesArray.includes(currentUserRole)) {
     return <Navigate to="/signin" replace />;
   }
 
-  return (
-    <ProtectedBaseRoute>
-      <Outlet />
-    </ProtectedBaseRoute>
-  );
+  // If authenticated and role matches, render the child routes
+  return <Outlet />;
 };
 
 export default RoleProtectedRoute;
