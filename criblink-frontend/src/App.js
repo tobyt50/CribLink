@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import React, { useEffect } from 'react'; // Import useEffect
-import socket from './socket'; // Import your socket instance
+import React, { useEffect } from 'react';
+import socket from './socket';
 
 // Wrappers
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
@@ -8,7 +8,7 @@ import ProtectedBaseRoute from "./components/ProtectedBaseRoute";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import MainLayout from "./layouts/MainLayout";
-import AppShell from "./layouts/AppShell";
+import AppShell from "./layouts/AppShell"; // AppShell provides ThemeContext
 import ScrollToTop from "./components/ScrollToTop";
 
 // Global Messaging
@@ -21,9 +21,14 @@ import ConfirmDialog from "./components/ConfirmDialog";
 
 // Axios Interceptor
 import AxiosErrorInterceptor from './components/AxiosErrorInterceptor';
+import { setLoadingFunctions } from './api/axiosInstance'; // Import the function to set loading functions
 
 // Authentication Context
 import { AuthProvider } from './context/AuthContext';
+
+// Loading Context and Spinner
+import { LoadingProvider, useLoading } from './context/LoadingContext'; // Import LoadingProvider and useLoading
+import LoadingSpinner from './components/LoadingSpinner'; // Import LoadingSpinner
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -46,7 +51,7 @@ import AgentSettings from './pages/agent/Settings';
 // Client Pages
 import ClientInquiries from "./pages/client/ClientInquiries";
 import ClientSettings from "./pages/client/Settings";
-import AgentProfile from "./pages/client/AgentProfile"; // Keep this import for the component
+import AgentProfile from "./pages/client/AgentProfile";
 
 // Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
@@ -71,7 +76,6 @@ import NotFoundPage from "./pages/NotFoundPage";
 // --- Route Config Arrays ---
 const listingRoutes = [
   { path: "add-listing", element: <AddListing /> },
-  // Removed "edit-listing/:id" from here
 ];
 
 const adminRoutes = [
@@ -82,7 +86,7 @@ const adminRoutes = [
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
-  ...listingRoutes // AddListing will still be under /admin/add-listing
+  ...listingRoutes
 ];
 
 const agentRoutes = [
@@ -93,18 +97,23 @@ const agentRoutes = [
   { path: "inquiries", element: <AgentInquiries /> },
   { path: "archived-clients", element: <ArchivedClients /> },
   { path: "settings", element: <AgentSettings /> },
-  ...listingRoutes // AddListing will still be under /agent/add-listing
+  ...listingRoutes
 ];
 
 const clientRoutes = [
   { path: "inquiries", element: <ClientInquiries /> },
   { path: "settings", element: <ClientSettings /> },
   { path: "agent-profile/:agentId", element: <AgentProfile /> },
-  // No listingRoutes here as clients don't add/edit listings
 ];
 
-function App() {
+// AppContent is now a component that uses useLoading, and will be rendered inside LoadingProvider
+function AppContent() {
+  const { showLoading, hideLoading } = useLoading();
+
   useEffect(() => {
+    // Set the loading functions for Axios instance
+    setLoadingFunctions(showLoading, hideLoading);
+
     // Connect the socket when the component mounts
     if (!socket.connected) {
       socket.connect();
@@ -135,9 +144,67 @@ function App() {
       socket.off('disconnect');
       socket.off('connect_error');
     };
-  }, []); // Empty dependency array ensures this effect runs only once on mount and cleanup on unmount
+  }, [showLoading, hideLoading]); // Add showLoading and hideLoading to dependencies
 
+  return (
+    <> {/* No AppShell here, as it's now higher up in the App component */}
+      <Header />
+      <main className="pt-[96px] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+        <Routes>
+          {/* Public & shared pages */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/select-role" element={<SelectRole />} />
+            <Route path="/listings/:id" element={<ListingDetails />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
 
+          {/* Authenticated base user routes */}
+          <Route element={<ProtectedBaseRoute />}>
+            <Route path="profile" element={<ManageProfile />}>
+              <Route index element={<Navigate to="general" replace />} />
+              <Route path="general" element={<General />} />
+              <Route path="security" element={<Security />} />
+              <Route path="privacy" element={<Privacy />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            <Route path="favourites" element={<Favourites />} />
+            <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
+              <Route index element={<EditListing />} />
+            </Route>
+          </Route>
+
+          {/* Role-protected routes */}
+          <Route path="/admin" element={<RoleProtectedRoute allowedRole="admin" />}>
+            {adminRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Route>
+
+          <Route path="/agent" element={<RoleProtectedRoute allowedRole="agent" />}>
+            {agentRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Route>
+
+          <Route path="/client" element={<RoleProtectedRoute allowedRole="client" />}>
+            {clientRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Route>
+        </Routes>
+      </main>
+    </>
+  );
+}
+
+function App() {
   return (
     <Router>
       <ScrollToTop />
@@ -147,60 +214,12 @@ function App() {
             <GlobalMessageToasts />
             <ConfirmDialog />
             <AxiosErrorInterceptor>
+              {/* AppShell now wraps LoadingProvider to ensure ThemeContext is available */}
               <AppShell>
-                <Header />
-                <main className="pt-[96px] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-                  <Routes>
-                    {/* Public & shared pages */}
-                    <Route element={<MainLayout />}>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/search" element={<SearchPage />} />
-                      <Route path="/about" element={<AboutUs />} />
-                      <Route path="/contact" element={<ContactUs />} />
-                      <Route path="/signin" element={<SignIn />} />
-                      <Route path="/signup" element={<SignUp />} />
-                      <Route path="/reset-password" element={<ResetPassword />} />
-                      <Route path="/select-role" element={<SelectRole />} />
-                      <Route path="/listings/:id" element={<ListingDetails />} />
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Route>
-
-                    {/* Authenticated base user routes */}
-                    <Route element={<ProtectedBaseRoute />}>
-                      <Route path="profile" element={<ManageProfile />}>
-                        <Route index element={<Navigate to="general" replace />} />
-                        <Route path="general" element={<General />} />
-                        <Route path="security" element={<Security />} />
-                        <Route path="privacy" element={<Privacy />} />
-                        <Route path="settings" element={<Settings />} />
-                      </Route>
-                      <Route path="favourites" element={<Favourites />} />
-                      {/* NEW: Top-level route for editing listings, protected by role */}
-                      <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
-                        <Route index element={<EditListing />} />
-                      </Route>
-                    </Route>
-
-                    {/* Role-protected routes */}
-                    <Route path="/admin" element={<RoleProtectedRoute allowedRole="admin" />}>
-                      {adminRoutes.map(({ path, element }) => (
-                        <Route key={path} path={path} element={element} />
-                      ))}
-                    </Route>
-
-                    <Route path="/agent" element={<RoleProtectedRoute allowedRole="agent" />}>
-                      {agentRoutes.map(({ path, element }) => (
-                        <Route key={path} path={path} element={element} />
-                      ))}
-                    </Route>
-
-                    <Route path="/client" element={<RoleProtectedRoute allowedRole="client" />}>
-                      {clientRoutes.map(({ path, element }) => (
-                        <Route key={path} path={path} element={element} />
-                      ))}
-                    </Route>
-                  </Routes>
-                </main>
+                <LoadingProvider>
+                  <AppContent />
+                  <LoadingSpinner /> {/* LoadingSpinner now has access to ThemeContext */}
+                </LoadingProvider>
               </AppShell>
             </AxiosErrorInterceptor>
           </ConfirmDialogProvider>
