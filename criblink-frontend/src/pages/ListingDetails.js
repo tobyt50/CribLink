@@ -49,7 +49,7 @@ const ListingDetails = () => {
   const optionsMenuRef = useRef(null);
 
   const [similarListingStartIndex, setSimilarListingStartIndex] = useState(0);
-  const listingsPerPage = 3;
+  const listingsPerPage = 3; // Changed to 3 for similar listings to match the grid layout
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [agentClients, setAgentClients] = useState([]);
@@ -300,7 +300,7 @@ const ListingDetails = () => {
       case 'Rent': return '🏠 For Rent';
       case 'Lease': return '📜 For Lease';
       case 'Short Let': return '🏖️ Short Let';
-      case 'Long Let': return '🗓️ Long Let';
+      case 'Long Let': '🗓️ Long Let';
       default: return '';
     }
   };
@@ -374,11 +374,11 @@ const ListingDetails = () => {
   };
 
   const handlePrevSimilar = () => {
-    setSimilarListingStartIndex((prevIndex) => Math.max(0, prevIndex - 1));
+    setSimilarListingStartIndex((prevIndex) => Math.max(0, prevIndex - listingsPerPage));
   };
 
   const handleNextSimilar = () => {
-    setSimilarListingStartIndex((prevIndex) => Math.min(similarListings.length - listingsPerPage, prevIndex + 1));
+    setSimilarListingStartIndex((prevIndex) => Math.min(similarListings.length - listingsPerPage, prevIndex + listingsPerPage));
   };
 
   const handleSendConnectionRequest = async () => {
@@ -1135,32 +1135,36 @@ const ListingDetails = () => {
           transition={{ duration: 0.5, delay: 0.6 }}
         >
           <h2 className={`text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Similar Listings You Might Like</h2>
-          <div className="relative flex items-center justify-center">
-            <button
-              onClick={handlePrevSimilar}
-              disabled={similarListingStartIndex === 0}
-              className={`absolute left-0 z-10 p-2 rounded-full shadow-md transition-all duration-200
-                ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                ${similarListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ArrowLeftCircleIcon className="h-8 w-8" />
-            </button>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden w-full">
+          <div className="flex flex-col items-center w-full"> {/* Added flex-col and items-center */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden w-full p-2 -mx-2"> {/* Added p-2 -mx-2 for consistent padding */}
               {displayedSimilarListings.map((similarListing) => (
-                <ListingCard key={similarListing.property_id} listing={similarListing} />
+                <div key={similarListing.property_id} className="w-full"> {/* Wrap in div for consistent sizing */}
+                  <ListingCard key={similarListing.property_id} listing={similarListing} darkMode={darkMode} />
+                </div>
               ))}
             </div>
 
-            <button
-              onClick={handleNextSimilar}
-              disabled={similarListingStartIndex >= similarListings.length - listingsPerPage}
-              className={`absolute right-0 z-10 p-2 rounded-full shadow-md transition-all duration-200
-                ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                ${similarListingStartIndex >= similarListings.length - listingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ArrowRightCircleIcon className="h-8 w-8" />
-            </button>
+            <div className="flex justify-center mt-4 space-x-4"> {/* Moved buttons here and added spacing */}
+              <button
+                onClick={handlePrevSimilar}
+                disabled={similarListingStartIndex === 0}
+                className={`p-2 rounded-full shadow-md transition-all duration-200
+                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                  ${similarListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <ArrowLeftCircleIcon className="h-8 w-8" />
+              </button>
+
+              <button
+                onClick={handleNextSimilar}
+                disabled={similarListingStartIndex >= similarListings.length - listingsPerPage}
+                className={`p-2 rounded-full shadow-md transition-all duration-200
+                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                  ${similarListingStartIndex >= similarListings.length - listingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <ArrowRightCircleIcon className="h-8 w-8" />
+              </button>
+            </div>
           </div>
         </motion.div>
       )}
