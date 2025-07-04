@@ -109,7 +109,7 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className={`text-3xl md:text-3xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+          <h1 className={`text-3xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
             Find Your Dream Property
           </h1>
 
