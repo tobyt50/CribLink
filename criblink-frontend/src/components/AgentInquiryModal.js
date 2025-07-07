@@ -196,7 +196,8 @@ const AgentInquiryModal = ({ isOpen, onClose, darkMode, conversation, onViewProp
           </div>
         </div>
         {/* Chat History Area */}
-        <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 bg-opacity-30 backdrop-blur-sm h-[200px]" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/clean-gray-paper.png")', backgroundRepeat: 'repeat' }}>
+        <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 h-[200px] backdrop-blur-sm bg-gray-50 dark:bg-gray-800">
+
           {Object.entries(groupedChatHistory).map(([date, messagesForDate]) => (
             <div key={date}>
               <div className="relative text-center my-4"><span className={`px-3 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>{date}</span></div>

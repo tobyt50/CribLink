@@ -5,16 +5,13 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
-    extend: {},
-  },
-  plugins: [
-    // require('tailwind-scrollbar'),
-  ],
-  theme: {
     extend: {
       fontFamily: {
         script: ['"Great Vibes"', 'cursive'],
       },
     },
   },
+  plugins: [
+    require('tailwind-scrollbar'), // <--- Ensure this line is present and uncommented
+  ],
 }
