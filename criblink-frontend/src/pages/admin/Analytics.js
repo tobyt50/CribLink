@@ -480,7 +480,7 @@ const AdminAnalytics = () => {
                           ))}
                         </Pie>
                         <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
-                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
+                        
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -628,7 +628,6 @@ const AdminAnalytics = () => {
                           ))}
                         </Pie>
                         <Tooltip contentStyle={{ backgroundColor: darkMode ? '#374151' : '#fff', border: `1px solid ${darkMode ? '#4B5563' : '#E5E7EB'}`, color: darkMode ? '#D1D5DB' : '#374151' }} />
-                        <Legend wrapperStyle={{ color: darkMode ? '#D1D5DB' : '#374151' }} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
