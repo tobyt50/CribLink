@@ -319,7 +319,7 @@ const AdminAnalytics = () => {
         fill="currentColor"
         textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
-        className={darkMode ? "text-gray-300" : "text-gray-700"}
+        style={{ fontSize: isMobile ? "10px" : "12px" }} className={darkMode ? "text-gray-300" : "text-gray-700"}
       >
         {labelText}
       </text>
@@ -462,14 +462,14 @@ const AdminAnalytics = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listing Status Distribution</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <PieChart>
                         <Pie
                           data={listingStatusPieData}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          outerRadius={100}
+                          outerRadius={isMobile ? 70 : 100}
                           fill="#8884d8"
                           dataKey="count"
                           nameKey="status"
@@ -487,7 +487,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings Added Over Time</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <LineChart
                         data={listingsOverTimeData}
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -504,7 +504,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Property Type Distribution</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={propertyTypeData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -521,7 +521,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Purchase Category</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={purchaseCategoryData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -538,7 +538,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Bedrooms</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={bedroomsDistributionData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -555,7 +555,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listings by Bathrooms</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={bathroomsDistributionData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -573,7 +573,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Listing Price Distribution</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={listingPriceDistribution}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -590,7 +590,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm col-span-1 lg:col-span-2 ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Top Locations by Listings</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={topLocationsData}
                         layout="vertical"
@@ -610,14 +610,14 @@ const AdminAnalytics = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>User Role Distribution</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <PieChart>
                         <Pie
                           data={userRoleDistributionData}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          outerRadius={100}
+                          outerRadius={isMobile ? 70 : 100}
                           fill="#8884d8"
                           dataKey="count"
                           nameKey="role"
@@ -635,7 +635,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>User Registration Trends</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <LineChart
                         data={userRegistrationData}
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -652,7 +652,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Inquiry Trends</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <LineChart
                         data={inquiryTrendsData}
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
@@ -671,7 +671,7 @@ const AdminAnalytics = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Deals Closed by Agent</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={agentPerformanceData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -688,7 +688,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Revenue by Agent</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={agentPerformanceData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -705,7 +705,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Average Rating by Agent</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={agentPerformanceData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -722,7 +722,7 @@ const AdminAnalytics = () => {
 
                   <div className={`rounded-xl p-4 shadow-sm ${darkMode ? "bg-gray-700" : "bg-gray-50"}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Properties Assigned by Agent</h3>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
                       <BarChart
                         data={agentPerformanceData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

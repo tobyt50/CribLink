@@ -49,7 +49,7 @@ const ClientCard = ({
 
   return (
     <Card
-      className="p-4 flex flex-col justify-between min-h-[250px] max-w-md"
+      className="p-4 flex flex-col justify-between min-h-[250px] w-full lg:max-w-md break-words"
       onClick={() => { !isPendingRequestCard && onViewProfile(client.user_id); }}
     >
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
@@ -72,19 +72,22 @@ const ClientCard = ({
           </div>
         </div>
 
-        <div className="flex-grow text-left">
-          <div className="text-lg font-semibold mb-1">{client.full_name}</div>
-          <div className="text-sm mb-1 text-gray-600 dark:text-gray-300">{client.email}</div>
+        <div className="flex-grow text-left min-w-0 break-words">
+          <div className="text-lg font-semibold mb-1 break-words">{client.full_name}</div>
+          <div className="text-sm mb-1 text-gray-600 dark:text-gray-300 break-words">{client.email}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {isPendingRequestCard ? `Requested: ${formatDate(client.date_joined)}` : `Joined: ${formatDate(client.date_joined)}`}
           </div>
 
-          {/* Notes Section */}
           <div className="w-full mt-4 px-2">
             {isPendingRequestCard ? (
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Message:</span>
-                <span className="italic break-words block whitespace-pre-wrap">{client.notes || 'No message provided.'}</span>
+                <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-rounded-md scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 pr-1">
+                  <span className="italic break-words block whitespace-pre-wrap">
+                    {client.notes || 'No message provided.'}
+                  </span>
+                </div>
               </div>
             ) : (
               editingNoteId === client.user_id ? (
@@ -95,11 +98,11 @@ const ClientCard = ({
                   <textarea
                     onClick={(e) => e.stopPropagation()}
                     onFocus={(e) => e.stopPropagation()}
-                    className={`w-full p-2 border rounded-md text-sm ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "border-gray-300 text-gray-800"}`}
+                    className={`w-full p-2 border rounded-md text-sm resize-none scrollbar-thin scrollbar-thumb-rounded-md scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "border-gray-300 text-gray-800"}`}
                     value={editedNoteContent}
                     onChange={(e) => onEditNote(client.user_id, e.target.value)}
-                    rows="2"
-                    style={{ minHeight: '2rem', maxHeight: '5rem', overflowY: 'auto' }}
+                    rows="3"
+                    style={{ minHeight: '3rem', maxHeight: '8rem', overflowY: 'auto' }}
                   />
                   <div className="flex gap-2 mt-2">
                     <button
@@ -119,7 +122,7 @@ const ClientCard = ({
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-500 dark:text-gray-400 relative pr-6" onClick={(e) => e.stopPropagation()}>
+                <div className="text-sm text-gray-500 dark:text-gray-400 relative pr-6 break-words min-w-0" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 mb-1">
                     <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes:</span>
                     <button
@@ -130,7 +133,11 @@ const ClientCard = ({
                       <PencilIcon className="h-4 w-4" />
                     </button>
                   </div>
-                  <span className="italic break-words block whitespace-pre-wrap">{client.notes || 'No notes yet.'}</span>
+                  <div className="max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-rounded-md scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 pr-1">
+                    <span className="italic break-words block whitespace-pre-wrap">
+                      {client.notes || 'No notes yet.'}
+                    </span>
+                  </div>
                 </div>
               )
             )}
@@ -138,8 +145,7 @@ const ClientCard = ({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap justify-center gap-2 w-full pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap justify-center gap-2 w-full pt-4 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
         {isPendingRequestCard ? (
           <>
             <button
@@ -168,16 +174,15 @@ const ClientCard = ({
             >
               Email
             </button>
-            {/* Dynamic Respond/Chat button based on hasUnreadMessagesFromClient */}
             <button
-                onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+              onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
+              className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
                 ${client.hasUnreadMessagesFromClient
-                    ? 'text-red-500 hover:text-red-600' // Respond (new message from client)
-                    : 'text-blue-500 hover:text-blue-600' // Chat (agent initiates or continues chat, or starts new)
-                } border border-transparent ${client.hasUnreadMessagesFromClient ? 'hover:border-red-500' : 'hover:border-blue-500'}`}
+                  ? 'text-red-500 hover:text-red-600'
+                  : 'text-blue-500 hover:text-blue-600'} border border-transparent ${
+                client.hasUnreadMessagesFromClient ? 'hover:border-red-500' : 'hover:border-blue-500'}`}
             >
-                {client.hasUnreadMessagesFromClient ? 'Respond' : 'Chat'}
+              {client.hasUnreadMessagesFromClient ? 'Respond' : 'Chat'}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onToggleStatus(client.user_id, client.client_status); }}
