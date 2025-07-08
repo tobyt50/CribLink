@@ -1,11 +1,6 @@
 const { pool } = require('../db');
-// Removed: const path = require('path');
-// Removed: const fs = require('fs').promises;
 const logActivity = require('../utils/logActivity');
 const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
-
-// Removed: const uploadDir = path.join(__dirname, '../public/uploads/listings'); // No longer needed for local storage
-// Removed: saveFileAndGetUrl and deleteFileByUrl functions
 
 exports.getAllListings = async (req, res) => {
     try {
@@ -146,11 +141,12 @@ exports.createListing = async (req, res) => {
         cooling_type,
         parking,
         amenities,
-        mainImageBase64, // New: base64 string for main image
-        mainImageOriginalName, // New: original name for main image
-        galleryImagesBase64, // New: array of base64 strings for gallery images
-        galleryImagesOriginalNames, // New: array of original names for gallery images
-        galleryImageURLs // Existing URLs (not new files)
+        mainImageBase64, // Base64 string for a new main image upload
+        mainImageOriginalName, // Original name for a new main image upload
+        mainImageURL, // URL for an existing image to be set as main
+        galleryImagesBase64, // Array of base64 strings for new gallery images
+        galleryImagesOriginalNames, // Array of original names for new gallery images
+        galleryImageURLs // Array of existing URLs for gallery images
     } = req.body;
 
     const agent_id = req.user ? req.user.user_id : null;
@@ -166,16 +162,18 @@ exports.createListing = async (req, res) => {
     try {
         await pool.query('BEGIN');
 
-        // Upload main image to Cloudinary if provided
+        // Determine main image URL and public ID
         if (mainImageBase64 && mainImageOriginalName) {
+            // New image uploaded as base64
             const uploadResult = await uploadToCloudinary(Buffer.from(mainImageBase64.split(',')[1], 'base64'), mainImageOriginalName, 'listings');
             mainImageUrlToSave = uploadResult.url;
             mainImagePublicIdToSave = uploadResult.publicId;
-        } else {
-             await pool.query('ROLLBACK');
-             return res.status(400).json({ message: 'Main image is required' });
+        } else if (mainImageURL) {
+            // Existing image URL provided as main image
+            mainImageUrlToSave = mainImageURL;
+            mainImagePublicIdToSave = getCloudinaryPublicId(mainImageURL);
         }
-
+        // If neither is provided, mainImageUrlToSave and mainImagePublicIdToSave remain null, making the main image optional.
 
         const listingResult = await pool.query(
             `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id)
@@ -186,11 +184,27 @@ exports.createListing = async (req, res) => {
 
         const newListingId = listingResult.rows[0].property_id;
 
-        if (description || square_footage || lot_size || year_built || heating_type || cooling_type || parking || amenities) {
+        // Insert into property_details only if any optional detail field is provided and not empty/null
+        const propertyDetailsFields = {
+            description, square_footage, lot_size, year_built,
+            heating_type, cooling_type, parking, amenities
+        };
+
+        // Filter out fields that are undefined, null, or empty strings
+        const providedDetails = Object.keys(propertyDetailsFields).filter(key =>
+            propertyDetailsFields[key] !== undefined &&
+            propertyDetailsFields[key] !== null &&
+            propertyDetailsFields[key] !== '' // Treat empty strings as not provided for optional fields upon creation
+        );
+
+        if (providedDetails.length > 0) {
+            const columns = ['property_id', ...providedDetails];
+            const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+            const valuesToInsert = [newListingId, ...providedDetails.map(key => propertyDetailsFields[key])];
+
             await pool.query(
-                `INSERT INTO property_details (property_id, description, square_footage, lot_size, year_built, heating_type, cooling_type, parking, amenities)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [newListingId, description, square_footage, lot_size, year_built, heating_type, cooling_type, parking, amenities]
+                `INSERT INTO property_details (${columns.join(', ')}) VALUES (${placeholders})`,
+                valuesToInsert
             );
         }
 
@@ -208,7 +222,7 @@ exports.createListing = async (req, res) => {
 
         // Insert existing gallery URLs (if any were passed from the frontend)
         for (const url of initialGalleryUrls) {
-            if (url) {
+            if (url) { // Ensure URL is not empty
                 const publicId = getCloudinaryPublicId(url); // Derive public_id from URL
                 await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, url, publicId]);
             }
@@ -328,6 +342,7 @@ exports.updateListing = async (req, res) => {
         let values = [];
         let valueIndex = 1;
 
+        // Add fields to update if they are explicitly provided in the request body
         if (title !== undefined) { updates.push(`title = $${valueIndex++}`); values.push(title); }
         if (location !== undefined) { updates.push(`location = $${valueIndex++}`); values.push(location); }
         if (state !== undefined) { updates.push(`state = $${valueIndex++}`); values.push(state); }
@@ -343,23 +358,25 @@ exports.updateListing = async (req, res) => {
         let newMainImagePublicId = currentMainImagePublicId;
 
         // Determine the new main image
-        if (mainImageIdentifier) {
-            // Check if mainImageIdentifier is a new base64 image
-            const newImageFileIndex = newFilesOriginalNames.indexOf(mainImageIdentifier);
-            if (newImageFileIndex !== -1) {
-                const uploadResult = await uploadToCloudinary(Buffer.from(newFilesBase64[newImageFileIndex].split(',')[1], 'base64'), newFilesOriginalNames[newImageFileIndex], 'listings');
-                newMainImageUrl = uploadResult.url;
-                newMainImagePublicId = uploadResult.publicId;
+        if (mainImageIdentifier !== undefined) { // Check if identifier was sent at all
+            if (mainImageIdentifier === null || mainImageIdentifier === '') {
+                // Explicitly set to no main image
+                newMainImageUrl = null;
+                newMainImagePublicId = null;
             } else {
-                // It's an existing URL or a new URL provided directly
-                newMainImageUrl = mainImageIdentifier;
-                newMainImagePublicId = getCloudinaryPublicId(mainImageIdentifier);
+                // Check if mainImageIdentifier is a new base64 image
+                const newImageFileIndex = newFilesOriginalNames.indexOf(mainImageIdentifier);
+                if (newImageFileIndex !== -1) {
+                    const uploadResult = await uploadToCloudinary(Buffer.from(newFilesBase64[newImageFileIndex].split(',')[1], 'base64'), newFilesOriginalNames[newImageFileIndex], 'listings');
+                    newMainImageUrl = uploadResult.url;
+                    newMainImagePublicId = uploadResult.publicId;
+                } else {
+                    // It's an existing URL or a new URL provided directly
+                    newMainImageUrl = mainImageIdentifier;
+                    newMainImagePublicId = getCloudinaryPublicId(mainImageIdentifier);
+                }
             }
-        } else if (mainImageIdentifier === '') { // Explicitly set to no main image
-            newMainImageUrl = null;
-            newMainImagePublicId = null;
         }
-
 
         // If main image URL changed, update it and delete the old one from Cloudinary
         if (newMainImageUrl !== currentMainImageUrl) {
@@ -443,6 +460,7 @@ exports.updateListing = async (req, res) => {
             let detailValueIndex = 1;
 
             for (const key in propertyDetailsFields) {
+                // Update if the field is explicitly provided (not undefined)
                 if (propertyDetailsFields[key] !== undefined) {
                     detailUpdates.push(`${key} = $${detailValueIndex++}`);
                     detailValues.push(propertyDetailsFields[key]);
@@ -455,7 +473,12 @@ exports.updateListing = async (req, res) => {
                 await pool.query(detailQuery, detailValues);
             }
         } else {
-            const providedDetails = Object.keys(propertyDetailsFields).filter(key => propertyDetailsFields[key] !== undefined);
+            // If property_details record does not exist, insert it if any optional field is provided and not empty/null
+            const providedDetails = Object.keys(propertyDetailsFields).filter(key =>
+                propertyDetailsFields[key] !== undefined &&
+                propertyDetailsFields[key] !== null &&
+                propertyDetailsFields[key] !== ''
+            );
             if (providedDetails.length > 0) {
                 const columns = ['property_id', ...providedDetails];
                 const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
@@ -468,10 +491,17 @@ exports.updateListing = async (req, res) => {
             }
         }
 
+        // This check needs to be more nuanced if mainImageIdentifier can be null/empty to clear an image
+        // The condition `imagesToDeleteFromCloudinary.length === 0 && newFilesBase64.length === 0 && newUrls.length === 0`
+        // effectively means no image changes. If mainImageIdentifier changes from a URL to null, that's a valid change.
+        // The `updates.length === 0` would catch changes to main image.
+        // So, the original check is mostly fine, but the image part of it might be slightly misleading.
+        // However, if the frontend sends a payload with no changes, this will prevent an empty update.
         if (updates.length === 0 && Object.keys(propertyDetailsFields).every(key => propertyDetailsFields[key] === undefined) && imagesToDeleteFromCloudinary.length === 0 && newFilesBase64.length === 0 && newUrls.length === 0) {
             await pool.query('ROLLBACK');
             return res.status(400).json({ message: 'No valid fields provided for update' });
         }
+
 
         await pool.query('COMMIT');
 
