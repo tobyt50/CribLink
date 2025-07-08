@@ -308,10 +308,10 @@ function Home() {
         {/* Featured Listings Section */}
         {featuredListings.length > 0 && (
           <motion.div
-            className={`mb-12 py-2 px-6 rounded-3xl shadow-xl relative overflow-hidden ${
+            className={`mb-12 py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${ // Removed px-6, rounded-3xl, shadow-xl, border classes for mobile
               darkMode
-                ? "bg-gradient-to-br from-gray-800 to-gray-900 border border-green-700"
-                : "bg-gradient-to-br from-green-50 to-green-100 border border-green-200"
+                ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" // Added sm: prefix to apply only on desktop
+                : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200" // Added sm: prefix to apply only on desktop
             }`}
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}

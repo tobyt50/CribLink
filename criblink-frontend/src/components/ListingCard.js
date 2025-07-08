@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion"; // Import motion
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
@@ -6,6 +6,21 @@ import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
 function ListingCard({ listing: initialListing }) { // Renamed listing to initialListing
   const navigate = useNavigate();
   const { darkMode } = useTheme(); // Use the dark mode context
+
+  // State to track screen width
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+
+  // Effect to update screen width on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Create a new listing object with a dummy rating for demonstration
   const listing = {
@@ -56,18 +71,51 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
     }
   };
 
+  // Function to abbreviate large numbers
+  const formatAbbreviatedPrice = (price) => {
+    if (price === null || price === undefined) return '';
+    if (price >= 1_000_000_000_000) {
+      return (price/1_000_000_000_000).toFixed(1).replace(/\.0$/, '') + 'T';
+    }
+    if (price >= 1_000_000_000) {
+      return (price/1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+    }
+    if (price >= 1_000_000) {
+      return (price/1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (price >= 1_000) {
+      return (price/1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return price.toString();
+  };
+
   const formatPrice = (price, category) => {
     if (price == null) return 'Price not available';
-    const formatted = new Intl.NumberFormat('en-NG', {
+
+    let formattedPrice;
+    const baseFormattedPrice = new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
       minimumFractionDigits: 0
     }).format(price);
-    switch (category) {
-      case 'Rent': return `${formatted} / Year`;
-      case 'Short Let': return `${formatted} / Night`;
-      case 'Long Let': return `${formatted} / Month`;
-      default: return formatted;
+
+    if (screenWidth < 400) {
+      // For screens less than 400px, use abbreviated price and first letter of duration
+      const abbreviatedPrice = `₦${formatAbbreviatedPrice(price)}`;
+      switch (category) {
+        case 'Rent': return `${abbreviatedPrice}/yr`;
+        case 'Short Let': return `${abbreviatedPrice}/n`;
+        case 'Long Let': return `${abbreviatedPrice}/mo`;
+        default: return abbreviatedPrice;
+      }
+    } else {
+      // Full price format for larger screens
+      switch (category) {
+        case 'Rent': return `${baseFormattedPrice}/Year`;
+        case 'Short Let': return `${baseFormattedPrice}/Night`;
+        case 'Long Let': return `${baseFormattedPrice}/Month`;
+        default: return baseFormattedPrice;
+      }
     }
   };
 
@@ -150,8 +198,9 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
                 <p className="truncate" title={`${listing.location}, ${listing.state}`}>
                     📍 {listing.location}, {listing.state}
                 </p>
-                {listing.bedrooms && <p className="ml-2">🛏️ {listing.bedrooms}</p>}
-                {listing.bathrooms && <p className="ml-2">🛁 {listing.bathrooms}</p>}
+                {/* Conditionally hide beds and baths for screenWidth < 300 */}
+                {screenWidth >= 300 && listing.bedrooms && <p className="ml-2">🛏️ {listing.bedrooms}</p>}
+                {screenWidth >= 300 && listing.bathrooms && <p className="ml-2">🛁 {listing.bathrooms}</p>}
             </div>
             {/* Price and Rating at the bottom */}
             <div className="flex justify-between items-center text-sm">
