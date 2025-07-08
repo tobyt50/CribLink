@@ -308,10 +308,14 @@ function Home() {
         {/* Featured Listings Section */}
         {featuredListings.length > 0 && (
           <motion.div
-            className={`mb-12 py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${ // Removed px-6, rounded-3xl, shadow-xl, border classes for mobile
+            // Removed mb-12 for mobile, added sm:mb-12 to keep it for desktop
+            // Removed py-2 for mobile, added sm:py-2 to keep it for desktop
+            // Removed px-6, rounded-3xl, shadow-xl, border classes for mobile
+            // Added -mt-4 for mobile to shift it up, sm:mt-0 to reset for desktop
+            className={`-mt-4 mb-8 sm:mb-12 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
               darkMode
-                ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" // Added sm: prefix to apply only on desktop
-                : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200" // Added sm: prefix to apply only on desktop
+                ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
+                : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"
             }`}
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -322,7 +326,7 @@ function Home() {
             onTouchEnd={handleTouchEnd}
           >
             <h2
-              className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${ // Changed pt-2 mb-4 to py-2 mb-2
+              className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
                 darkMode ? "text-green-400" : "text-green-800"
               }`}
             >
@@ -336,10 +340,10 @@ function Home() {
                   {displayedFeaturedListings.map((listing) => (
                     <motion.div
                       key={`featured-${listing.property_id}`}
-                      initial={{ opacity: 0, x: 100 }} // Changed x: 50 to x: 100 for a more prominent animation
+                      initial={{ opacity: 0, x: 100 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -100 }} // Changed x: -50 to x: -100
-                      transition={{ duration: 0.6, ease: "easeInOut" }} // Adjusted duration and ease for a different animation
+                      exit={{ opacity: 0, x: -100 }}
+                      transition={{ duration: 0.6, ease: "easeInOut" }}
                       whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
                       className={`relative overflow-hidden rounded-2xl shadow-lg transform ${
                         darkMode
@@ -348,9 +352,7 @@ function Home() {
                       }`}
                     >
                       <ListingCard listing={listing} isFeatured={true} />
-                      <div className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                        FEATURED
-                      </div>
+                      {/* Removed the FEATURED badge div */}
                     </motion.div>
                   ))}
                 </AnimatePresence>

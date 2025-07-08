@@ -39,12 +39,15 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
   const extraCount = allImages.length > 6 ? allImages.length - 5 : 0;
 
   const getCategoryIcon = (category) => {
+    // Check screenWidth to determine the prefix
+    const prefix = screenWidth < 400 ? '' : 'For ';
+
     switch (category) {
-      case 'Sale': return '💰 For Sale';
-      case 'Rent': return '🏠 For Rent';
-      case 'Lease': return '📜 For Lease';
-      case 'Short Let': return '🏖️ Short Let';
-      case 'Long Let': return '🗓️ Long Let';
+      case 'Sale': return `💰 ${prefix}Sale`;
+      case 'Rent': return `🏠 ${prefix}Rent`;
+      case 'Lease': return `📜 ${prefix}Lease`;
+      case 'Short Let': return `🏖️ ${prefix}Short Let`;
+      case 'Long Let': return `🗓️ ${prefix}Long Let`;
       default: return '🏡';
     }
   };
