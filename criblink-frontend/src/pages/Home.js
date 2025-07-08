@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import PurchaseCategoryFilter from "../components/PurchaseCategoryFilter";
 import ListingCard from "../components/ListingCard";
@@ -9,7 +9,7 @@ import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
 import axiosInstance from '../api/axiosInstance';
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 12; // Items per page for regular listings
 
 function Home() {
   const [listings, setListings] = useState([]);
@@ -29,7 +29,12 @@ function Home() {
   const [currentFeaturedPage, setCurrentFeaturedPage] = useState(0);
   const featuredCarouselRef = useRef(null);
   const autoSwipeIntervalRef = useRef(null);
+  const [loading, setLoading] = useState(true); // Added loading state
 
+  // Define how many featured listings to display per page (for carousel)
+  const FEATURED_ITEMS_PER_PAGE = 3; // Changed from 4 to 5
+
+  // 1. useEffect for user setup + input focus
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -40,32 +45,14 @@ function Home() {
         localStorage.removeItem("user");
       }
     }
+
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   }, []);
 
-  useEffect(() => {
-    fetchListings();
-  }, [category, searchTerm, user, currentPage, sortBy, darkMode]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [category, searchTerm]);
-
-  // Handle auto-swiping for featured listings
-  useEffect(() => {
-    const totalFeaturedPages = Math.ceil(featuredListings.length / 3); // 3 listings per page
-    if (totalFeaturedPages > 1) {
-      // Increased Auto-swipe to every 7 seconds (from 4 seconds)
-      autoSwipeIntervalRef.current = setInterval(() => {
-        setCurrentFeaturedPage((prevPage) => (prevPage + 1) % totalFeaturedPages);
-      }, 7000); 
-    } else {
-      clearInterval(autoSwipeIntervalRef.current);
-    }
-
-    return () => clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings]);
-
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
+    setLoading(true); // Set loading to true when fetching starts
     const params = new URLSearchParams();
     if (category) params.append("purchase_category", category);
     if (searchTerm) params.append("search", searchTerm);
@@ -74,6 +61,7 @@ function Home() {
     params.append("sortBy", sortBy);
 
     const url = `${API_BASE_URL}/listings?${params.toString()}`;
+    const featuredUrl = `${API_BASE_URL}/listings?status=Featured&limit=12`; // New URL for featured listings
 
     const token = localStorage.getItem("token");
     const headers = {};
@@ -82,15 +70,22 @@ function Home() {
     }
 
     try {
+      // Fetch all listings
       const response = await axiosInstance.get(url, { headers });
-
       const allListings = response.data.listings || [];
-      setListings(allListings);
       setTotalPages(response.data.totalPages || 1);
 
-      // Simulate featured listings: take the first few listings as featured
-      // Ensure there are at least 3 listings for featured section to work well
-      setFeaturedListings(allListings.slice(0, Math.min(12, allListings.length))); // Get up to 12 featured listings
+      // Fetch featured listings separately
+      const featuredResponse = await axiosInstance.get(featuredUrl, { headers });
+      const fetchedFeaturedListings = featuredResponse.data.listings || [];
+      setFeaturedListings(fetchedFeaturedListings);
+
+      // Filter out featured listings from all listings
+      const nonFeaturedListings = allListings.filter(
+        (listing) => !fetchedFeaturedListings.some((fListing) => fListing.property_id === listing.property_id)
+      );
+      setListings(nonFeaturedListings);
+
     } catch (error) {
       let errorMessage = 'Failed to fetch listings. Please try again.';
       if (error.response && error.response.data && error.response.data.message) {
@@ -102,10 +97,35 @@ function Home() {
       setListings([]);
       setFeaturedListings([]); // Clear featured listings on error
       setTotalPages(1);
+    } finally {
+      setLoading(false); // Set loading to false when fetching completes (success or error)
     }
-  };
+  }, [category, searchTerm, currentPage, sortBy, showMessage]);
 
-  const handleSearch = (e) => {
+  // 2. Fixed useEffect fetch trigger
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]); // Depend on fetchListings which is now useCallback
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, searchTerm]);
+
+  // 3. Updated useEffect for Auto Swipe
+  useEffect(() => {
+    clearInterval(autoSwipeIntervalRef.current); // Prevent duplicate intervals
+
+    const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
+    if (totalFeaturedPages > 1) {
+      autoSwipeIntervalRef.current = setInterval(() => {
+        setCurrentFeaturedPage((prevPage) => (prevPage + 1) % totalFeaturedPages);
+      }, 7000);
+    }
+
+    return () => clearInterval(autoSwipeIntervalRef.current);
+  }, [featuredListings]);
+
+  const handleSearch = useCallback((e) => {
     e.preventDefault();
     const trimmed = searchTerm.trim();
     if (trimmed) {
@@ -114,46 +134,48 @@ function Home() {
       setSearchTerm("");
       showMessage('Search term cannot be empty.', 'info');
     }
-  };
+  }, [searchTerm, navigate, showMessage]);
 
-  const handleSortToggle = () => {
+  const handleSortToggle = useCallback(() => {
     setSortBy((prev) => (prev === "date_listed_desc" ? "date_listed_asc" : "date_listed_desc"));
-  };
+  }, []);
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = useCallback((newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
-  };
+  }, [totalPages]);
 
   // Featured listings navigation
-  const handlePrevFeatured = () => {
+  // 7. Optimize with useCallback
+  const handlePrevFeatured = useCallback(() => {
     setCurrentFeaturedPage((prevPage) =>
-      prevPage === 0 ? Math.ceil(featuredListings.length / 3) - 1 : prevPage - 1
+      prevPage === 0 ? Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) - 1 : prevPage - 1
     );
-    clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
-  };
+    clearInterval(autoSwipeIntervalRef.current);
+  }, [featuredListings.length]);
 
-  const handleNextFeatured = () => {
+  const handleNextFeatured = useCallback(() => {
     setCurrentFeaturedPage((prevPage) =>
-      (prevPage + 1) % Math.ceil(featuredListings.length / 3)
+      (prevPage + 1) % Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE)
     );
-    clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
-  };
+    clearInterval(autoSwipeIntervalRef.current);
+  }, [featuredListings.length]);
 
   // Calculate displayed featured listings based on currentFeaturedPage
-  const startIndex = currentFeaturedPage * 3;
-  const displayedFeaturedListings = featuredListings.slice(startIndex, startIndex + 3);
+  const startIndex = currentFeaturedPage * FEATURED_ITEMS_PER_PAGE;
+  const displayedFeaturedListings = featuredListings.slice(startIndex, startIndex + FEATURED_ITEMS_PER_PAGE);
+
 
   // Handle swipe gestures for featured listings
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on touch start
     if (featuredCarouselRef.current) {
       featuredCarouselRef.current.startX = e.touches[0].clientX;
     }
-  };
+  }, []);
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = useCallback((e) => {
     if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
 
     const currentX = e.touches[0].clientX;
@@ -163,9 +185,9 @@ function Home() {
     if (Math.abs(diffX) > 10) {
       e.preventDefault();
     }
-  };
+  }, []);
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = useCallback((e) => {
     if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
 
     const endX = e.changedTouches[0].clientX;
@@ -178,7 +200,7 @@ function Home() {
       handlePrevFeatured();
     }
     featuredCarouselRef.current.startX = undefined; // Reset startX
-  };
+  }, [handleNextFeatured, handlePrevFeatured]);
 
 
   return (
@@ -217,6 +239,7 @@ function Home() {
               <form onSubmit={handleSearch} className="flex-[1.4] relative">
                 <input
                   type="text"
+                  ref={searchInputRef} // Auto-focused the search input on load
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by keyword, location, or type..."
@@ -335,6 +358,7 @@ function Home() {
               <Star size={20} className="text-yellow-400 fill-current" />
             </h2>
             <div className="relative">
+              {/* Changed lg:grid-cols-4 to lg:grid-cols-5 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <AnimatePresence mode="wait">
                   {displayedFeaturedListings.map((listing) => (
@@ -345,35 +369,35 @@ function Home() {
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ duration: 0.6, ease: "easeInOut" }}
                       whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-                      className={`relative overflow-hidden rounded-2xl shadow-lg transform ${
-                        darkMode
-                          ? "bg-gray-800 border border-green-600"
-                          : "bg-white border border-green-100"
-                      }`}
+                      // Removed explicit background, border, and shadow classes from this wrapper
+                      // ListingCard is now responsible for its own styling
+                      className="relative transform"
                     >
                       <ListingCard listing={listing} isFeatured={true} />
-                      {/* Removed the FEATURED badge div */}
                     </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
-              {Math.ceil(featuredListings.length / 3) > 1 && (
+              {/* Updated pagination button disabled logic to use FEATURED_ITEMS_PER_PAGE */}
+              {Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) > 1 && (
                 <div className="flex justify-center mt-6 space-x-4">
                   <button
                     onClick={handlePrevFeatured}
-                    disabled={currentFeaturedPage === 0 && featuredListings.length <= 3}
+                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE} // 4. Fix Button Disable Logic
+                    aria-label="Previous Featured Properties" // Added aria-label for accessibility
                     className={`p-2 rounded-full shadow-md transition-all duration-200
                       ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                      ${currentFeaturedPage === 0 && featuredListings.length <= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <ArrowLeftCircleIcon className="h-8 w-8" />
                   </button>
                   <button
                     onClick={handleNextFeatured}
-                    disabled={currentFeaturedPage === Math.ceil(featuredListings.length / 3) - 1 && featuredListings.length <= 3}
+                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE} // 4. Fix Button Disable Logic
+                    aria-label="Next Featured Properties" // Added aria-label for accessibility
                     className={`p-2 rounded-full shadow-md transition-all duration-200
                       ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                      ${currentFeaturedPage === Math.ceil(featuredListings.length / 3) - 1 && featuredListings.length <= 3 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <ArrowRightCircleIcon className="h-8 w-8" />
                   </button>
@@ -384,11 +408,11 @@ function Home() {
         )}
 
         {/* All Listings */}
-        <h2 className={`text-2xl md:text-3xl font-bold text-center mb-6 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-          All Available Properties
+        <h2 className={`text-1.5xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+          Available Listings
         </h2>
         <motion.div
-          className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
+          className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
           initial="hidden"
           animate="visible"
           variants={{
@@ -399,7 +423,11 @@ function Home() {
             },
           }}
         >
-          {listings.length > 0 ? (
+          {loading ? ( // 6. Display Loading or Fallback UI
+            [...Array(10)].map((_, i) => (
+              <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-xl"></div>
+            ))
+          ) : listings.length > 0 ? (
             listings.map((listing) => (
               <motion.div
                 key={listing.property_id}

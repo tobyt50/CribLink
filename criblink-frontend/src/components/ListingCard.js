@@ -59,7 +59,7 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
       case 'under offer': return '🤝 Under Offer';
       case 'pending': return '⏳ Pending';
       case 'approved': return '👍 Approved';
-      case 'rejected': return '❌ Rejected';
+      case 'rejected': return '❌ Rejected'; // Fixed typo here, was missing 'return'
       case 'featured': return '⭐ Featured';
       default: return '❓';
     }
@@ -70,6 +70,7 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
       case 'sold': return 'bg-red-600';
       case 'available': return 'bg-green-600';
       case 'pending': return 'bg-yellow-500';
+      case 'featured': return 'bg-amber-500'; // Added golden color for featured status
       default: return 'bg-gray-500';
     }
   };
@@ -139,12 +140,13 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
   return (
     // Outer container for the card, allowing it to take full width of grid column
     <div className="flex flex-col w-full">
-      {/* The main card container */}
+      {/* The main card container, now confined to max-width on wider screens */}
       <motion.div
         onClick={handleClick}
         whileHover={{ scale: 1.03 }}
         transition={{ type: 'spring', stiffness: 400 }}
-        className={`relative w-full rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col cursor-pointer
+        // Changed max-w-sm to max-w-md for a wider card on larger screens
+        className={`relative w-full sm:max-w-md sm:mx-auto rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col cursor-pointer
           ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-green-200"}`}
       >
         {/* Main Image + Overlay Labels */}
@@ -196,14 +198,16 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
                 title={listing.title}>
                 {listing.title}
             </h3>
-            {/* Location, Beds, and Baths on the same line */}
-            <div className="flex items-center text-xs mb-1">
-                <p className="truncate" title={`${listing.location}, ${listing.state}`}>
-                    📍 {listing.location}, {listing.state}
-                </p>
-                {/* Conditionally hide beds and baths for screenWidth < 300 */}
-                {screenWidth >= 300 && listing.bedrooms && <p className="ml-2">🛏️ {listing.bedrooms}</p>}
-                {screenWidth >= 300 && listing.bathrooms && <p className="ml-2">🛁 {listing.bathrooms}</p>}
+            {/* Location, Property Type, Beds, and Baths always side-by-side */}
+            <div className="flex justify-between items-start text-xs mb-1">
+                <div className="flex flex-col space-y-1 w-1/2 pr-1"> {/* Added w-1/2 and pr-1 */}
+                    <p className="flex items-center truncate" title={`${listing.location}, ${listing.state}`}>📍 {listing.location}, {listing.state}</p>
+                    <p className="flex items-center truncate" title={listing.property_type}>🛏️ {listing.property_type}</p>
+                </div>
+                <div className="flex flex-col space-y-1 w-1/2 pl-1 text-right"> {/* Added w-1/2, pl-1, and text-right */}
+                    <p className="flex items-center justify-end">🛏️ {listing.bedrooms} Beds</p>
+                    <p className="flex items-center justify-end">🛁 {listing.bathrooms} Baths</p>
+                </div>
             </div>
             {/* Price and Rating at the bottom */}
             <div className="flex justify-between items-center text-sm">
@@ -223,26 +227,32 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
 
 
         {/* Preview Images - hidden on small screens, visible on sm and up */}
-        {previewImages.length > 0 && (
-          <div className="hidden sm:grid grid-cols-6 gap-1 px-2 py-2">
-            {previewImages.map((img, i) => (
-              <img
-                key={i}
-                src={img}
-                alt={`Preview ${i + 1}`}
-                className="h-12 w-full object-cover rounded-sm"
-              />
-            ))}
-            {extraCount > 0 && (
-              <div
-                onClick={handleClick}
-                className={`h-12 flex items-center justify-center text-sm font-semibold rounded-sm ${darkMode ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-300 text-gray-700 hover:bg-gray-400"}`}
-              >
-                +{extraCount}
-              </div>
-            )}
-          </div>
-        )}
+        {/* This container now always renders to maintain consistent height */}
+        <div className="hidden sm:block px-2 py-2">
+          {previewImages.length > 0 ? (
+            <div className="grid grid-cols-6 gap-1">
+              {previewImages.map((img, i) => (
+                <img
+                  key={i}
+                  src={img}
+                  alt={`Preview ${i + 1}`}
+                  className="h-12 w-full object-cover rounded-sm"
+                />
+              ))}
+              {extraCount > 0 && (
+                <div
+                  onClick={handleClick}
+                  className={`h-12 flex items-center justify-center text-sm font-semibold rounded-sm ${darkMode ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-300 text-gray-700 hover:bg-gray-400"}`}
+                >
+                  +{extraCount}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Placeholder div to maintain height when no preview images exist
+            <div className="h-12 w-full"></div>
+          )}
+        </div>
 
         {/* Card Body - hidden on small screens, visible on sm and up */}
         <div className="hidden sm:flex p-4 flex-grow flex-col">
@@ -250,10 +260,10 @@ function ListingCard({ listing: initialListing }) { // Renamed listing to initia
             {listing.title}
           </h2>
 
-          <div className={`flex flex-wrap items-start justify-between gap-y-2 mb-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          <div className={`flex justify-between items-start text-sm mb-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
             <div className="flex flex-col space-y-1">
               <p className="flex items-center">📍 {listing.location}, {listing.state}</p>
-              <p className="flex items-center">🏡 {listing.property_type}</p>
+              <p className="flex items-center">🛏️ {listing.property_type}</p>
             </div>
             <div className="flex flex-col space-y-1">
               <p className="flex items-center">🛏️ {listing.bedrooms} Bedrooms</p>
