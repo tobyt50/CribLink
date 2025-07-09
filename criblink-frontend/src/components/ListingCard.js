@@ -10,6 +10,7 @@ function ListingCard({ listing: initialListing }) {
 
   const [compactMode, setCompactMode] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(5);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -17,6 +18,12 @@ function ListingCard({ listing: initialListing }) {
         const width = entry.contentRect.width;
         setCompactMode(width < 700);
         setIsNarrow(width < 200);
+
+        const padding = 32;
+        const imageWidth = 44;
+        const available = width - padding;
+        const count = Math.floor(available / imageWidth);
+        setVisibleCount(Math.max(1, count));
       }
     });
 
@@ -33,8 +40,8 @@ function ListingCard({ listing: initialListing }) {
     : [];
 
   const [mainIndex, setMainIndex] = useState(0);
-  const previewImages = allImages.slice(1, 6);
-  const extraCount = allImages.length > 6 ? allImages.length - 5 : 0;
+  const previewImages = allImages.slice(1, visibleCount + 1);
+  const extraCount = allImages.length > visibleCount + 1 ? allImages.length - (visibleCount + 1) : 0;
 
   const getCategoryIcon = (category) => {
     switch (category) {
@@ -80,17 +87,21 @@ function ListingCard({ listing: initialListing }) {
 
   const formatPrice = (price, category) => {
     if (price == null) return "price not available";
+
     const abbrev = `₦${formatAbbreviatedPrice(price)}`;
     const full = new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
     }).format(price);
-    const shortSuffix = { Rent: "/yr", "Short Let": "/n", "Long Let": "/mo" };
-    const longSuffix = { Rent: "/year", "Short Let": "/night", "Long Let": "/month" };
-    return compactMode
-      ? abbrev + (shortSuffix[category] || "")
-      : full + (longSuffix[category] || "");
+
+    if (isNarrow) {
+      const shortSuffix = { Rent: "/yr", "Short Let": "/n", "Long Let": "/mo" };
+      return abbrev + (shortSuffix[category] || "");
+    } else {
+      const longSuffix = { Rent: "/year", "Short Let": "/night", "Long Let": "/month" };
+      return full + (longSuffix[category] || "");
+    }
   };
 
   const handleClick = () => navigate(`/listings/${listing.property_id}`);
@@ -121,14 +132,12 @@ function ListingCard({ listing: initialListing }) {
           className="w-full h-full object-cover"
         />
 
-        {/* Category Tag */}
+        {/* Tags */}
         {listing.purchase_category && (
           <div className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-600 max-w-[70%] truncate">
             {getCategoryIcon(listing.purchase_category)}
           </div>
         )}
-
-        {/* Status Tag */}
         {listing.status && (
           <div className={`absolute top-0 right-0 rounded-bl-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs ${getStatusColor(listing.status)} max-w-[70%] truncate`}>
             {getStatusIcon(listing.status)}
@@ -143,21 +152,33 @@ function ListingCard({ listing: initialListing }) {
         )}
       </div>
 
-      {/* Other Images */}
-      <div className="flex px-2 pt-2 pb-0 gap-1 min-h-[44px]">
-        {previewImages.length > 0
-          ? previewImages.map((img, i) => (
-              <img key={i} src={img} alt={`Preview ${i}`} className="h-10 w-full object-cover rounded-sm" />
-            ))
-          : [...Array(5)].map((_, i) => (
-              <div key={i} className={`h-10 w-full rounded-sm ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
-            ))}
-        {extraCount > 0 && (
-          <div className="h-10 flex items-center justify-center text-xs font-bold rounded-sm bg-gray-300 text-gray-700">
-            +{extraCount}
-          </div>
-        )}
-      </div>
+      {/* Preview Images */}
+      {!isNarrow && (
+        <div className="flex px-2 pt-2 pb-0 gap-1 min-h-[44px]">
+          {previewImages.length > 0
+            ? previewImages.map((img, i) => {
+                const isLast = i === previewImages.length - 1 && extraCount > 0;
+                return (
+                  <div key={i} className="relative h-10 w-full rounded-sm overflow-hidden">
+                    <img src={img} alt={`Preview ${i}`} className="h-full w-full object-cover" />
+                    {isLast && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xs font-bold">
+                        +{extraCount}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            : [...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-10 w-full rounded-sm ${
+                    darkMode ? "bg-gray-700" : "bg-gray-200"
+                  }`}
+                />
+              ))}
+        </div>
+      )}
 
       {/* Details */}
       <div className={`px-4 ${compactMode ? "pt-2 pb-3" : "pt-1 pb-5"} flex flex-col gap-2 text-sm`}>
@@ -172,16 +193,10 @@ function ListingCard({ listing: initialListing }) {
           </div>
           <div className="flex flex-col gap-1 text-right min-w-[40%]">
             <p className="whitespace-nowrap">
-              🛏️ {listing.bedrooms}{" "}
-              {isNarrow
-                ? "Beds"
-                : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
+              🛏️ {listing.bedrooms} {isNarrow ? "Beds" : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
             </p>
             <p className="whitespace-nowrap">
-              🛁 {listing.bathrooms}{" "}
-              {isNarrow
-                ? "Baths"
-                : `Bathroom${listing.bathrooms !== 1 ? "s" : ""}`}
+              🛁 {listing.bathrooms} {isNarrow ? "Baths" : `Bathroom${listing.bathrooms !== 1 ? "s" : ""}`}
             </p>
           </div>
         </div>
