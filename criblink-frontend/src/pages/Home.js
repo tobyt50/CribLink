@@ -288,7 +288,6 @@ function Home() {
                   dropdownContentClassName="min-w-[12rem]"
                 />
               </div>
-              //search bar
               <form onSubmit={handleSearch} className="relative flex-grow">
                 <input
                   type="text"
