@@ -15,9 +15,16 @@ exports.getAllListings = async (req, res) => {
         let valueIndex = 1;
 
         if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
-            conditions.push(`pl.status ILIKE $${valueIndex++}`);
-            values.push('available');
-        } else if (userRole === 'agent') {
+    if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
+        conditions.push(`pl.status ILIKE $${valueIndex++}`);
+        values.push(status);
+    } else {
+        // Default visibility if no specific status is requested
+        conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
+        values.push(['available', 'featured', 'sold', 'under offer']);
+    }
+}
+ else if (userRole === 'agent') {
             if (agent_id && String(agent_id) === String(userId)) {
                 conditions.push(`pl.agent_id = $${valueIndex++}`);
                 values.push(agent_id);
@@ -27,8 +34,8 @@ exports.getAllListings = async (req, res) => {
                     values.push(status);
                 }
             } else {
-                conditions.push(`(pl.status ILIKE $${valueIndex++} OR pl.agent_id = $${valueIndex++})`);
-                values.push('available', userId);
+                conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
+                values.push(['available', 'featured', 'sold', 'under offer'], userId);
             }
         } else if (userRole === 'admin') {
             if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {

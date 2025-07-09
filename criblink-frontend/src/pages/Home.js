@@ -80,11 +80,8 @@ function Home() {
       const fetchedFeaturedListings = featuredResponse.data.listings || [];
       setFeaturedListings(fetchedFeaturedListings);
 
-      // Filter out featured listings from all listings
-      const nonFeaturedListings = allListings.filter(
-        (listing) => !fetchedFeaturedListings.some((fListing) => fListing.property_id === listing.property_id)
-      );
-      setListings(nonFeaturedListings);
+      setListings(allListings); // Don't exclude featured listings from general listings
+
 
     } catch (error) {
       let errorMessage = 'Failed to fetch listings. Please try again.';

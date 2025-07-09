@@ -12,6 +12,7 @@ module.exports = {
     },
   },
   plugins: [
-    require('tailwind-scrollbar'), // <--- Ensure this line is present and uncommented
+    require('tailwind-scrollbar'),
+    require('@tailwindcss/aspect-ratio'), // Add this line
   ],
 }
