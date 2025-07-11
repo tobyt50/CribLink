@@ -3,119 +3,133 @@ const logActivity = require('../utils/logActivity');
 const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
 
 exports.getAllListings = async (req, res) => {
-    try {
-        const { purchase_category, search, min_price, max_price, page, limit, status, agent_id, sortBy } = req.query;
+  try {
+    const {
+      purchase_category,
+      search,
+      min_price,
+      max_price,
+      page,
+      limit,
+      status,
+      agent_id,
+      sortBy
+    } = req.query;
 
-        const userRole = req.user ? req.user.role : 'guest';
-        const userId = req.user ? req.user.user_id : null;
+    const userRole = req.user ? req.user.role : 'guest';
+    const userId = req.user ? req.user.user_id : null;
 
-        let baseQuery = 'FROM property_listings pl';
-        let conditions = [];
-        let values = [];
-        let valueIndex = 1;
+    let baseQuery = 'FROM property_listings pl';
+    let conditions = [];
+    let values = [];
+    let valueIndex = 1;
 
-        if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
-    if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
-        conditions.push(`pl.status ILIKE $${valueIndex++}`);
-        values.push(status);
+    const normalizedStatus = status?.toLowerCase();
+
+    // 1. Enforce specific status (e.g. Featured) across all roles if provided
+    if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
+      conditions.push(`pl.status ILIKE $${valueIndex++}`);
+      values.push(status);
     } else {
-        // Default visibility if no specific status is requested
+      // 2. Role-based default filtering
+      if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
         conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
         values.push(['available', 'featured', 'sold', 'under offer']);
+      } else if (userRole === 'agent') {
+        conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
+        values.push(['available', 'featured', 'sold', 'under offer'], userId);
+
+        if (agent_id && String(agent_id) === String(userId)) {
+          conditions.push(`pl.agent_id = $${valueIndex++}`);
+          values.push(agent_id);
+        }
+      }
+      // Admin has full access if no status is specified (no filtering needed)
     }
-}
- else if (userRole === 'agent') {
-            if (agent_id && String(agent_id) === String(userId)) {
-                conditions.push(`pl.agent_id = $${valueIndex++}`);
-                values.push(agent_id);
 
-                if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
-                    conditions.push(`pl.status ILIKE $${valueIndex++}`);
-                    values.push(status);
-                }
-            } else {
-                conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
-                values.push(['available', 'featured', 'sold', 'under offer'], userId);
-            }
-        } else if (userRole === 'admin') {
-            if (status && status.toLowerCase() !== 'all' && status.toLowerCase() !== 'all statuses') {
-                conditions.push(`pl.status ILIKE $${valueIndex++}`);
-                values.push(status);
-            }
-        }
-
-        if (purchase_category && purchase_category.toLowerCase() !== 'all') {
-            conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
-            values.push(purchase_category);
-        }
-
-        if (min_price) {
-            conditions.push(`pl.price >= $${valueIndex++}`);
-            values.push(min_price);
-        }
-
-        if (max_price) {
-            conditions.push(`pl.price <= $${valueIndex++}`);
-            values.push(max_price);
-        }
-
-        if (search && search.trim() !== '') {
-            const keyword = `%${search.trim()}%`;
-            conditions.push(`(\
-                pl.title ILIKE $${valueIndex} OR\
-                pl.location ILIKE $${valueIndex + 1} OR\
-                pl.state ILIKE $${valueIndex + 2} OR\
-                pl.property_type ILIKE $${valueIndex + 3}\
-            )`);
-            values.push(keyword, keyword, keyword, keyword);
-            valueIndex += 4;
-        }
-
-        let whereClause = '';
-        if (conditions.length > 0) {
-            whereClause = ' WHERE ' + conditions.join(' AND ');
-        }
-
-        const pageNum = parseInt(page) || 1;
-        const limitNum = parseInt(limit) || 10;
-        const offset = (pageNum - 1) * limitNum;
-
-        let orderByClause = 'ORDER BY pl.date_listed DESC';
-        if (sortBy === 'date_listed_asc') {
-            orderByClause = 'ORDER BY pl.date_listed ASC';
-        }
-
-        let query = `SELECT pl.* ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
-        values.push(limitNum, offset);
-
-        const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
-        const countValues = values.slice(0, values.length - 2);
-
-        const [listingsResult, countResult] = await Promise.all([
-            pool.query(query, values),
-            pool.query(countQuery, countValues)
-        ]);
-
-        const totalListings = parseInt(countResult.rows[0].count);
-
-        const listingsWithGallery = await Promise.all(listingsResult.rows.map(async (listing) => {
-            const galleryResult = await pool.query('SELECT image_url FROM property_images WHERE property_id = $1 ORDER BY image_id', [listing.property_id]);
-            listing.gallery_images = galleryResult.rows.map(row => row.image_url);
-            return listing;
-        }));
-
-        res.status(200).json({
-            listings: listingsWithGallery,
-            total: totalListings,
-            totalPages: Math.ceil(totalListings / limitNum),
-            currentPage: pageNum
-        });
-
-    } catch (err) {
-        console.error('Error fetching listings:', err);
-        res.status(500).json({ error: 'Internal server error fetching listings', details: err.message });
+    // 3. Additional filters
+    if (purchase_category && purchase_category.toLowerCase() !== 'all') {
+      conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
+      values.push(purchase_category);
     }
+
+    if (min_price) {
+      conditions.push(`pl.price >= $${valueIndex++}`);
+      values.push(min_price);
+    }
+
+    if (max_price) {
+      conditions.push(`pl.price <= $${valueIndex++}`);
+      values.push(max_price);
+    }
+
+    if (search && search.trim() !== '') {
+      const keyword = `%${search.trim()}%`;
+      conditions.push(`(
+        pl.title ILIKE $${valueIndex} OR
+        pl.location ILIKE $${valueIndex + 1} OR
+        pl.state ILIKE $${valueIndex + 2} OR
+        pl.property_type ILIKE $${valueIndex + 3}
+      )`);
+      values.push(keyword, keyword, keyword, keyword);
+      valueIndex += 4;
+    }
+
+    // 4. Where clause
+    let whereClause = '';
+    if (conditions.length > 0) {
+      whereClause = ' WHERE ' + conditions.join(' AND ');
+    }
+
+    // 5. Pagination and Sorting
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const offset = (pageNum - 1) * limitNum;
+
+    let orderByClause = 'ORDER BY pl.date_listed DESC';
+    if (sortBy === 'date_listed_asc') {
+      orderByClause = 'ORDER BY pl.date_listed ASC';
+    }
+
+    // 6. Query building
+    const query = `SELECT pl.* ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
+    values.push(limitNum, offset);
+
+    const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
+    const countValues = values.slice(0, values.length - 2);
+
+    const [listingsResult, countResult] = await Promise.all([
+      pool.query(query, values),
+      pool.query(countQuery, countValues)
+    ]);
+
+    const totalListings = parseInt(countResult.rows[0].count);
+
+    const listingsWithGallery = await Promise.all(
+      listingsResult.rows.map(async (listing) => {
+        const galleryResult = await pool.query(
+          'SELECT image_url FROM property_images WHERE property_id = $1 ORDER BY image_id',
+          [listing.property_id]
+        );
+        listing.gallery_images = galleryResult.rows.map((row) => row.image_url);
+        return listing;
+      })
+    );
+
+    res.status(200).json({
+      listings: listingsWithGallery,
+      total: totalListings,
+      totalPages: Math.ceil(totalListings / limitNum),
+      currentPage: pageNum
+    });
+  } catch (err) {
+    console.error('Error fetching listings:', err);
+    res
+      .status(500)
+      .json({ error: 'Internal server error fetching listings', details: err.message });
+  }
 };
+
 
 exports.getPurchaseCategories = async (req, res) => {
     try {
