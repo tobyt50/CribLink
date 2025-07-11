@@ -9,7 +9,7 @@ import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
 import axiosInstance from '../api/axiosInstance';
 
-const ITEMS_PER_PAGE = 12; // Items per page for regular listings
+const ITEMS_PER_PAGE = 20; // Items per page for regular listings
 
 function Home() {
   const [listings, setListings] = useState([]);
@@ -32,7 +32,7 @@ function Home() {
   const [loading, setLoading] = useState(true); // Added loading state
 
   // Define how many featured listings to display per page (for carousel)
-  const FEATURED_ITEMS_PER_PAGE = 3; // Changed from 4 to 5
+  const FEATURED_ITEMS_PER_PAGE = 4; // Changed to 4 for 4 columns on desktop
 
   // 1. useEffect for user setup + input focus
   useEffect(() => {
@@ -120,7 +120,7 @@ function Home() {
     }
 
     return () => clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings]);
+  }, [featuredListings, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
@@ -150,14 +150,14 @@ function Home() {
       prevPage === 0 ? Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) - 1 : prevPage - 1
     );
     clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings.length]);
+  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
 
   const handleNextFeatured = useCallback(() => {
     setCurrentFeaturedPage((prevPage) =>
       (prevPage + 1) % Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE)
     );
     clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings.length]);
+  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
 
   // Calculate displayed featured listings based on currentFeaturedPage
   const startIndex = currentFeaturedPage * FEATURED_ITEMS_PER_PAGE;
@@ -355,8 +355,8 @@ function Home() {
               <Star size={20} className="text-yellow-400 fill-current" />
             </h2>
             <div className="relative">
-              {/* Changed lg:grid-cols-4 to lg:grid-cols-5 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Changed grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 to grid-cols-2 lg:grid-cols-4 */}
+              <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
                 <AnimatePresence mode="wait">
                   {displayedFeaturedListings.map((listing) => (
                     <motion.div

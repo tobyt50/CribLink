@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Shield, Bell, Settings, Sun, Moon, Monitor, LayoutGrid, LayoutList, ChevronDownIcon, Mail, MessageSquare, Briefcase, Globe, CheckCircle, XCircle, Search, X, Menu } from 'lucide-react'; // Added Menu to the import list
+import { User, Shield, Bell, Settings, Sun, Moon, Monitor, LayoutGrid, LayoutList, ChevronDownIcon, Mail, MessageSquare, Briefcase, Globe, CheckCircle, XCircle, Search, X, Menu, Languages, Palette, Link, Landmark, Loader, Save } from 'lucide-react'; // Added new icons
 import AgentSidebar from '../../components/agent/Sidebar';
 import { useTheme } from '../../layouts/AppShell';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
 import axios from 'axios';
 import API_BASE_URL from '../../config';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
+
 
 // Custom Alert/Message Box Component (instead of alert())
 const MessageBox = ({ message, type, onClose }) => {
@@ -157,24 +159,61 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
 const AgentSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
     const { showMessage } = useMessage(); // Destructure showMessage from useMessage
+    const { user } = useAuth(); // Get user from AuthContext
 
     // State for agent settings
     const [settings, setSettings] = useState(null);
     const [loading, setLoading] = useState(true);
-    // Removed local message state as it will now be handled by MessageContext
-    // const [message, setMessage] = useState('');
-    // const [messageType, setMessageType] = useState('');
+
+    // State for general user settings (moved from ProfileSettings.js)
+    const [userSettings, setUserSettings] = useState({
+        language: 'en',
+        timezone: 'UTC+1',
+        currency: 'NGN',
+        default_landing_page: '/',
+        notification_email: '', // Added for consistency
+        preferred_communication_channel: 'email', // Added for consistency
+    });
+    const [userSettingsLoading, setUserSettingsLoading] = useState(true); // For userSettings fetch
 
     // Sidebar State (from other agent files like Dashboard.js, Listings.js)
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
     const [activeSection, setActiveSection] = useState('settings'); // Default active section for Agent Settings
+
+    const token = localStorage.getItem('token');
+
+    // Fetch User Settings (from ProfileSettings.js)
+    const fetchUserSettings = useCallback(async () => {
+        setUserSettingsLoading(true);
+        try {
+            const response = await axios.get(`${API_BASE_URL}/users/profile`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const userData = response.data;
+
+            setUserSettings(prevSettings => ({
+                ...prevSettings,
+                language: userData.language || prevSettings.language,
+                timezone: userData.timezone || prevSettings.timezone,
+                currency: userData.currency || prevSettings.currency,
+                default_landing_page: userData.default_landing_page || prevSettings.default_landing_page,
+                notification_email: userData.notification_email || '',
+                preferred_communication_channel: userData.preferred_communication_channel || prevSettings.preferred_communication_channel,
+            }));
+
+        } catch (error) {
+            console.error('Error fetching user settings:', error);
+            showMessage(error?.response?.data?.message || 'Failed to load general settings.', 'error');
+        } finally {
+            setUserSettingsLoading(false);
+        }
+    }, [token, showMessage]);
 
 
     useEffect(() => {
         const fetchAgentSettings = async () => {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
                 if (!token) {
                     showMessage('Authentication token not found. Please log in.', 'error'); // Using showMessage
                     setLoading(false);
@@ -195,7 +234,6 @@ const AgentSettings = () => {
                     agentSpecificSettings = agentSettingsResponse.data;
                 } catch (error) {
                     // If agent settings endpoint doesn't exist or returns error (e.g., 404/500)
-                    // If it's a 401, the check above should have caught it.
                     console.warn("Agent specific settings endpoint not found or error fetching. Using defaults.", error);
                     // Initialize with defaults if no settings are found for the user
                     agentSpecificSettings = {
@@ -205,10 +243,8 @@ const AgentSettings = () => {
                         new_inquiry_alert: true,
                         ticket_update_alert: true,
                         is_available: true,
-                        // Ensure default_signature is an empty string, not null
                         default_signature: '',
                         auto_assign_inquiries: false,
-                        // Display settings also default here if not fetched from DB
                         theme: 'system',
                         default_list_view: 'simple',
                         sidebar_permanently_expanded: false,
@@ -234,12 +270,9 @@ const AgentSettings = () => {
                     },
                     agentPreferences: {
                         isAvailable: agentSpecificSettings.is_available,
-                        // Ensure defaultSignature is an empty string for the textarea
                         defaultSignature: agentSpecificSettings.default_signature || '',
                         autoAssignTickets: agentSpecificSettings.auto_assign_inquiries, // Renamed in DB
                     },
-                    // Now, Display Settings are part of the 'General' conceptual section
-                    // And their values are fetched directly from agent_settings, ensuring personalization
                     display: {
                         theme: agentSpecificSettings.theme || localStorage.getItem('themePreference') || 'system',
                         defaultListView: agentSpecificSettings.default_list_view || localStorage.getItem('defaultListingsView') || 'simple',
@@ -257,21 +290,18 @@ const AgentSettings = () => {
 
             } catch (error) {
                 console.error('Error fetching agent settings:', error);
-                // Specific handling for 401 Unauthorized if it bypasses the initial token check (e.g., token expired)
                 if (error.response && error.response.status === 401) {
                     showMessage('Session expired or unauthorized. Please log in again.', 'error');
-                    // navigate('/login'); // Uncomment to redirect on 401
                 } else {
                     showMessage('Failed to load settings. Please try again.', 'error');
                 }
-                // Removed setMessageType here
             } finally {
                 setLoading(false);
-                // Removed setTimeout to clear message as MessageContext handles duration
             }
         };
         fetchAgentSettings();
-    }, []);
+        fetchUserSettings(); // Fetch general user settings
+    }, [token, fetchUserSettings]);
 
     // Sync settings to localStorage whenever they change
     // This is for display settings which might be used globally across the app
@@ -295,6 +325,27 @@ const AgentSettings = () => {
         }));
     };
 
+    // New handler to update user settings and save immediately
+    const handleUserSettingsUpdate = async (name, value) => {
+        setUserSettings(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+        try {
+            // No need for userSettingsLoading state for individual saves as it's quick
+            const payload = { [name]: value }; // Send only the changed setting
+            await axios.put(`${API_BASE_URL}/users/update`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            showMessage(`${name.replace(/_/g, ' ')} updated successfully!`, "success");
+        } catch (error) {
+            console.error(`Failed to save ${name}:`, error);
+            showMessage(`Failed to save ${name.replace(/_/g, ' ')}. Please try again.`, "error");
+            // Optionally revert UI on error if needed, but for simple settings,
+            // it might be better to let the user see the change and try again.
+        }
+    };
+
     const createToggleHandler = (section, key, messageLabel, dbKey = key) => async () => {
         const newState = !settings[section][key]; // Get new state based on current
         setSettings(prevSettings => ({ // Optimistic UI update
@@ -304,9 +355,8 @@ const AgentSettings = () => {
                 [key]: newState,
             },
         }));
-        
+
         try {
-            const token = localStorage.getItem('token');
             if (!token) { // Double check token before sending request
                 showMessage('Authentication token missing. Please log in.', 'error');
                 setSettings(prevSettings => ({ // Revert UI on missing token
@@ -341,7 +391,6 @@ const AgentSettings = () => {
         try {
             if (!settings) return;
             setLoading(true);
-            const token = localStorage.getItem('token');
             if (!token) { // Double check token before sending request
                 showMessage('Authentication token missing. Please log in.', 'error');
                 setLoading(false);
@@ -370,16 +419,14 @@ const AgentSettings = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             showMessage(`${settingName} saved successfully!`, 'success'); // Using showMessage
-            // Removed setMessageType and setMessage here
         } catch (error) {
             console.error(`Error saving ${settingName} settings:`, error);
-            showMessage(`Failed to save ${settingName}. Please try again.`, 'error'); // Using showMessage
-            // Removed setMessageType here
+            showMessage(`Failed to save ${settingName}. Please try again.`, 'error');
         } finally {
             setLoading(false);
-            // Removed setTimeout to clear message as MessageContext handles duration
         }
     };
+
 
     const handleThemeChange = (value) => {
         setThemePreference(value); // Update global theme context
@@ -443,6 +490,86 @@ const AgentSettings = () => {
         { value: 'fr', label: 'French', icon: <Globe size={20} /> },
     ];
 
+    // Timezone options (example for UTC+1, assuming Lagos, Nigeria) (from ProfileSettings.js)
+    const timezoneOptions = [
+        { value: 'UTC-12', label: '(UTC-12:00) International Date Line West' },
+        { value: 'UTC-11', label: '(UTC-11:00) Coordinated Universal Time-11' },
+        { value: 'UTC-10', label: '(UTC-10:00) Hawaii' },
+        { value: 'UTC-09', label: '(UTC-09:00) Alaska' },
+        { value: 'UTC-08', label: '(UTC-08:00) Pacific Time (US & Canada)' },
+        { value: 'UTC-07', label: '(UTC-07:00) Mountain Time (US & Canada)' },
+        { value: 'UTC-06', label: '(UTC-06:00) Central Time (US & Canada)' },
+        { value: 'UTC-05', label: '(UTC-05:00) Eastern Time (US & Canada)' },
+        { value: 'UTC-04', label: '(UTC-04:00) Atlantic Time (Canada)' },
+        { value: 'UTC-03', label: '(UTC-03:00) Buenos Aires, Georgetown' },
+        { value: 'UTC-02', label: '(UTC-02:00) Mid-Atlantic' },
+        { value: 'UTC-01', label: '(UTC-01:00) Azores, Cape Verde Is.' },
+        { value: 'UTC+00', label: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London' },
+        { value: 'UTC+01', label: '(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna (West Central Africa)' }, // Adjusted for Lagos
+        { value: 'UTC+02', label: '(UTC+02:00) Athens, Bucharest, Istanbul' },
+        { value: 'UTC+03', label: '(UTC+03:00) Baghdad, Kuwait, Riyadh' },
+        { value: 'UTC+04', label: '(UTC+04:00) Abu Dhabi, Muscat' },
+        { value: 'UTC+05', label: '(UTC+05:00) Islamabad, Karachi, Tashkent' },
+        { value: 'UTC+05:30', label: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi' },
+        { value: 'UTC+06', label: '(UTC+06:00) Astana, Dhaka' },
+        { value: 'UTC+07', label: '(UTC+07:00) Bangkok, Hanoi, Jakarta' },
+        { value: 'UTC+08', label: '(UTC+08:00) Beijing, Hong Kong, Perth, Singapore, Taipei' },
+        { value: 'UTC+09', label: '(UTC+09:00) Osaka, Sapporo, Tokyo' },
+        { value: 'UTC+10', label: '(UTC+10:00) Canberra, Melbourne, Sydney' },
+        { value: 'UTC+11', label: '(UTC+11:00) Magadan, Solomon Is., New Caledonia' },
+        { value: 'UTC+12', label: '(UTC+12:00) Auckland, Wellington, Fiji' },
+    ];
+
+    // Currency options for the dropdown (from ProfileSettings.js)
+    const currencyOptions = [
+        { value: 'NGN', label: '₦ Nigerian Naira' },
+        { value: 'USD', label: '$ US Dollar' },
+        { value: 'EUR', label: '€ Euro' },
+        { value: 'GBP', label: '£ British Pound' },
+        { value: 'JPY', label: '¥ Japanese Yen' },
+    ];
+
+    // Dynamically generate Default Landing Page options based on user role (from ProfileSettings.js)
+    const defaultLandingPageOptions = useCallback(() => {
+        const options = [
+            { value: '/', label: 'Home' },
+            { value: '/profile/general', label: 'Profile' },
+            // Add other general landing pages if applicable
+        ];
+
+        if (user?.role) {
+            let dashboardPath = '';
+            let inquiriesPath = ''; // New variable for inquiries path
+            switch (user.role) {
+                case 'admin':
+                    dashboardPath = '/admin/dashboard';
+                    inquiriesPath = '/admin/inquiries'; // Assuming admin inquiries path
+                    break;
+                case 'agent':
+                    dashboardPath = '/agent/dashboard';
+                    inquiriesPath = '/agent/inquiries';
+                    break;
+                case 'client':
+                    dashboardPath = '/client/dashboard'; // While SignIn might redirect to /client/inquiries, clients can still have a dashboard
+                    inquiriesPath = '/client/inquiries';
+                    break;
+                default:
+                    dashboardPath = '/'; // Fallback generic dashboard if role is unknown
+                    inquiriesPath = '/'; // Fallback for inquiries
+            }
+
+            // Add Dashboard option
+            options.unshift({ value: dashboardPath, label: 'Dashboard' });
+
+            // Add Inquiries option if a specific path is determined
+            if (inquiriesPath && inquiriesPath !== '/') { // Avoid adding duplicate '/'
+                options.unshift({ value: inquiriesPath, label: 'Inquiries' });
+            }
+        }
+        return options;
+    }, [user?.role]);
+
+
     // Search term for settings
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -450,6 +577,9 @@ const AgentSettings = () => {
     const searchableContent = {
         "General": [ // Renamed from "Display"
             "Display Settings", "Customize the application's appearance.", "Theme", "Choose your preferred theme (Light, Dark, System).", "Default Listings Display", "Select how listings are displayed by default (Table, Grid).", "Permanently Expand Sidebar (Desktop Only)", "Keep the sidebar expanded by default on desktop.", "Language", "Select your preferred language.",
+            "Timezone", "Select Timezone", // Added from ProfileSettings
+            "Default Currency", "Select Currency", "Nigerian Naira", "US Dollar", "Euro", "British Pound", "Japanese Yen", // Added from ProfileSettings
+            "Default Landing Page", "Select Landing Page", "Home", "Profile", "Dashboard", "Inquiries", // Added from ProfileSettings
         ],
         "Security": [
             "Security", "Manage your account security.", "Two-Factor Authentication (2FA)", "Add an extra layer of security to your account.", "Change Password", "Update your account password."
@@ -479,7 +609,7 @@ const AgentSettings = () => {
     // Adjusted contentShift based on isCollapsed and isMobile states, consistent with other agent pages
     const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
-    if (loading) {
+    if (loading || userSettingsLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
                 <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">Loading settings...</div>
@@ -569,7 +699,7 @@ const AgentSettings = () => {
                     </div>
 
                     {filterSection("General") && ( // Filter on the new "General" section
-                        <div className=""> {/* Removed pt-6 and border-t from the first section */}
+                        <div className="space-y-6"> {/* Removed pt-6 and border-t from the first section */}
                             {/* Display Settings (now directly under General, no subheading) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
@@ -588,26 +718,60 @@ const AgentSettings = () => {
                                     <Dropdown placeholder="Select Language" options={languageOptions} value={settings.display.language} onChange={handleLanguageChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select your preferred language.</p>
                                 </div>
-                            </div>
-                        </div>
-                    )}
 
-                    {filterSection("Security") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Switch
-                                    label="Two-Factor Authentication (2FA)"
-                                    description="Add an extra layer of security to your account."
-                                    isOn={settings.security.twoFactorEnabled}
-                                    handleToggle={createToggleHandler('security', 'twoFactorEnabled', '2FA', 'two_factor_enabled')}
-                                />
-                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Change Password</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Update your account password.</p>
-                                    </div>
-                                    <button onClick={() => showMessage('Password change initiated (simulated).', 'info')} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Change</button>
+                                {/* General App Settings from ProfileSettings.js */}
+                                {/* Language */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_language">Language</label>
+                                    <Dropdown
+                                        options={languageOptions}
+                                        value={userSettings.language}
+                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
+                                        placeholder="Select Language"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
+                                </div>
+
+                                {/* Timezone */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_timezone">Timezone</label>
+                                    <Dropdown
+                                        options={timezoneOptions}
+                                        value={userSettings.timezone}
+                                        onChange={(value) => handleUserSettingsUpdate('timezone', value)}
+                                        placeholder="Select Timezone"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
+                                </div>
+
+                                {/* Currency */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_currency">Default Currency</label>
+                                    <Dropdown
+                                        options={currencyOptions}
+                                        value={userSettings.currency}
+                                        onChange={(value) => handleUserSettingsUpdate('currency', value)}
+                                        placeholder="Select Currency"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
+                                </div>
+
+                                {/* Default Landing Page */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_default_landing_page">Default Landing Page</label>
+                                    <Dropdown
+                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                        value={userSettings.default_landing_page}
+                                        onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
+                                        placeholder="Select Landing Page"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
+                                        Choose the page you see after logging in.
+                                    </p>
                                 </div>
                             </div>
                         </div>

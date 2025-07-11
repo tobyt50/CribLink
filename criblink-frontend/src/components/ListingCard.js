@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
 
 function ListingCard({ listing: initialListing }) {
@@ -10,7 +10,6 @@ function ListingCard({ listing: initialListing }) {
 
   const [compactMode, setCompactMode] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(5);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -18,12 +17,6 @@ function ListingCard({ listing: initialListing }) {
         const width = entry.contentRect.width;
         setCompactMode(width < 700);
         setIsNarrow(width < 200);
-
-        const padding = 32;
-        const imageWidth = 44;
-        const available = width - padding;
-        const count = Math.floor(available / imageWidth);
-        setVisibleCount(Math.max(1, count));
       }
     });
 
@@ -40,8 +33,14 @@ function ListingCard({ listing: initialListing }) {
     : [];
 
   const [mainIndex, setMainIndex] = useState(0);
-  const previewImages = allImages.slice(1, visibleCount + 1);
-  const extraCount = allImages.length > visibleCount + 1 ? allImages.length - (visibleCount + 1) : 0;
+  const [direction, setDirection] = useState(0);
+
+  const paginate = (newDirection) => {
+    setDirection(newDirection);
+    setMainIndex((prev) =>
+      (prev + newDirection + allImages.length) % allImages.length
+    );
+  };
 
   const getCategoryIcon = (category) => {
     switch (category) {
@@ -105,14 +104,6 @@ function ListingCard({ listing: initialListing }) {
   };
 
   const handleClick = () => navigate(`/listings/${listing.property_id}`);
-  const handlePrev = (e) => {
-    e.stopPropagation();
-    setMainIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
-  };
-  const handleNext = (e) => {
-    e.stopPropagation();
-    setMainIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
-  };
 
   return (
     <motion.div
@@ -124,13 +115,29 @@ function ListingCard({ listing: initialListing }) {
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-green-200"
       }`}
     >
-      {/* Main Image */}
-      <div className="relative w-full aspect-[3/2] overflow-hidden">
-        <img
-          src={allImages[mainIndex]}
-          alt={listing.title}
-          className="w-full h-full object-cover"
-        />
+      {/* Main Image - swipeable */}
+      <div className={`relative w-full ${compactMode ? "aspect-[3/2.4]" : "aspect-[3/2]"} overflow-hidden`}>
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.img
+            key={mainIndex}
+            src={allImages[mainIndex]}
+            alt={`Main ${mainIndex}`}
+            className="absolute w-full h-full object-cover select-none"
+            custom={direction}
+            initial={{ x: direction > 0 ? 300 : -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction < 0 ? 300 : -300, opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(e, info) => {
+              if (info.offset.x < -50) paginate(1);
+              else if (info.offset.x > 50) paginate(-1);
+            }}
+            style={{ touchAction: "pan-y" }}
+            draggable={false}
+          />
+        </AnimatePresence>
 
         {/* Tags */}
         {listing.purchase_category && (
@@ -143,55 +150,45 @@ function ListingCard({ listing: initialListing }) {
             {getStatusIcon(listing.status)}
           </div>
         )}
-
-        {allImages.length > 1 && (
-          <>
-            <button onClick={handlePrev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-30 text-white p-1 rounded-full hover:bg-opacity-50 z-10">←</button>
-            <button onClick={handleNext} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-30 text-white p-1 rounded-full hover:bg-opacity-50 z-10">→</button>
-          </>
-        )}
       </div>
 
-      {/* Preview Images */}
-      {!isNarrow && (
-        <div className="flex px-2 pt-2 pb-0 gap-1 min-h-[44px]">
-          {previewImages.length > 0
-            ? previewImages.map((img, i) => {
-                const isLast = i === previewImages.length - 1 && extraCount > 0;
-                return (
-                  <div key={i} className="relative h-10 w-full rounded-sm overflow-hidden">
-                    <img src={img} alt={`Preview ${i}`} className="h-full w-full object-cover" />
-                    {isLast && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xs font-bold">
-                        +{extraCount}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            : [...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-10 w-full rounded-sm ${
-                    darkMode ? "bg-gray-700" : "bg-gray-200"
-                  }`}
-                />
-              ))}
+      {/* Thumbnails - scrollable, hidden on narrow */}
+      {!isNarrow && allImages.length > 1 && (
+        <div className="flex overflow-x-auto px-2 pt-2 pb-1 gap-2 no-scrollbar">
+          {allImages.map((img, idx) => (
+            <div
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMainIndex(idx);
+              }}
+              className={`flex-shrink-0 h-10 w-16 rounded overflow-hidden border-2 ${
+                idx === mainIndex ? "border-green-500" : "border-transparent"
+              }`}
+            >
+              <img
+                src={img}
+                alt={`Thumb ${idx}`}
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </div>
+          ))}
         </div>
       )}
 
       {/* Details */}
-      <div className={`px-4 ${compactMode ? "pt-2 pb-3" : "pt-1 pb-5"} flex flex-col gap-2 text-sm`}>
+      <div className={`px-4 ${compactMode ? "pt-1 pb-2 gap-1" : "pt-2 pb-5 gap-2"} flex flex-col text-sm`}>
         <h3 className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={listing.title}>
           {listing.title}
         </h3>
 
         <div className={`flex justify-between text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-          <div className="flex flex-col gap-1 overflow-hidden max-w-[60%]">
+          <div className="flex flex-col gap-0.5 overflow-hidden max-w-[60%]">
             <p className="truncate" title={`${listing.location}, ${listing.state}`}>📍 {listing.location}, {listing.state}</p>
             <p className="truncate" title={listing.property_type}>🏘️ {listing.property_type}</p>
           </div>
-          <div className="flex flex-col gap-1 text-right min-w-[40%]">
+          <div className="flex flex-col gap-0.5 text-right min-w-[40%]">
             <p className="whitespace-nowrap">
               🛏️ {listing.bedrooms} {isNarrow ? "Beds" : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
             </p>

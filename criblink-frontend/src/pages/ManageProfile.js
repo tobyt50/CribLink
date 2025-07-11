@@ -13,7 +13,7 @@ import DisplayPicture from '../components/profile/DisplayPicture';
 import General from './profile/General';
 import Security from './profile/Security';
 import Privacy from './profile/Privacy';
-import Settings from './profile/Settings';
+// import Settings from './profile/ProfileSettings'; // Removed ProfileSettings import
 
 function ManageProfile() {
   const [form, setForm] = useState({
@@ -243,7 +243,7 @@ function ManageProfile() {
     { name: "General", key: "general" },
     { name: "Security", key: "security" },
     { name: "Privacy", key: "privacy" },
-    { name: "Settings", key: "settings" },
+    // { name: "Settings", key: "settings" }, // Removed Settings menu item
   ];
   const activeSectionName = MENU_ITEMS.find(item => item.key === activeSection)?.name || "Manage Profile";
 
@@ -332,6 +332,7 @@ function ManageProfile() {
             />
           )}
 
+          {/* Removed Settings component rendering
           {activeSection === "settings" && (
             <Settings
               form={form}
@@ -342,6 +343,7 @@ function ManageProfile() {
               userInfo={userInfo}
             />
           )}
+          */}
         </motion.div>
       </motion.main>
     </div>

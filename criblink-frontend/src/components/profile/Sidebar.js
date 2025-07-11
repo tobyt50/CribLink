@@ -11,7 +11,6 @@ const MENU_ITEMS = [
   { name: 'General', icon: <User size={24} />, key: 'general', path: '/profile/general' },
   { name: 'Security', icon: <Shield size={24} />, key: 'security', path: '/profile/security' },
   { name: 'Privacy', icon: <Lock size={24} />, key: 'privacy', path: '/profile/privacy' },
-  { name: 'Settings', icon: <Settings size={24} />, key: 'settings', path: '/profile/settings' },
 ];
 
 function Sidebar({ activeSection, setActiveSection, userInfo, children }) {

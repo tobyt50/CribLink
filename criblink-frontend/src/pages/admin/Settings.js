@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search } from 'lucide-react';
+import { Settings as SettingsIcon, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search, Languages, Palette, Link, Landmark, Loader, Save } from 'lucide-react'; // Added new icons
 import AdminSidebar from '../../components/admin/Sidebar.js';
 import { useTheme } from '../../layouts/AppShell.js';
 import { useMessage } from '../../context/MessageContext.js';
 import { useSidebarState } from '../../hooks/useSidebarState';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
+import axiosInstance from '../../api/axiosInstance'; // Import axiosInstance
 
 // Dropdown component from other admin files
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -137,6 +139,7 @@ const AdminSettings = () => {
     // Destructure themePreference and setThemePreference from useTheme
     const { darkMode, themePreference, setThemePreference } = useTheme();
     const { showMessage } = useMessage();
+    const { user } = useAuth(); // Get user from AuthContext
 
     // UI State
     const [defaultListView, setDefaultListView] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
@@ -167,10 +170,77 @@ const AdminSettings = () => {
     const [maintenanceMode, setMaintenanceMode] = useState(() => localStorage.getItem('maintenanceMode') === 'true');
     const [databaseBackupScheduled, setDatabaseBackupScheduled] = useState(() => localStorage.getItem('databaseBackupScheduled') === 'true');
 
+    // State for general user settings (moved from ProfileSettings.js)
+    const [userSettings, setUserSettings] = useState({
+        language: 'en',
+        timezone: 'UTC+1',
+        currency: 'NGN',
+        default_landing_page: '/',
+        notification_email: '', // Added for consistency, though not used in ProfileSettings.js notifications
+        preferred_communication_channel: 'email', // Added for consistency
+    });
+    const [userSettingsLoading, setUserSettingsLoading] = useState(true); // For userSettings fetch
+
     // Search term for settings
     const [searchTerm, setSearchTerm] = useState(() => localStorage.getItem('settingsSearchTerm') || '');
     // State for mobile search bar expansion
     const [isMobileSearchExpanded, setIsMobileSearchExpanded] = useState(false);
+
+    const token = localStorage.getItem("token");
+
+    // Fetch User Settings (from ProfileSettings.js)
+    const fetchUserSettings = useCallback(async () => {
+        setUserSettingsLoading(true);
+        try {
+            const response = await axiosInstance.get(`${process.env.REACT_APP_API_BASE_URL}/users/profile`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const userData = response.data;
+
+            setUserSettings(prevSettings => ({
+                ...prevSettings,
+                language: userData.language || prevSettings.language,
+                timezone: userData.timezone || prevSettings.timezone,
+                currency: userData.currency || prevSettings.currency,
+                default_landing_page: userData.default_landing_page || prevSettings.default_landing_page,
+                notification_email: userData.notification_email || '',
+                preferred_communication_channel: userData.preferred_communication_channel || prevSettings.preferred_communication_channel,
+            }));
+
+        } catch (error) {
+            console.error('Error fetching user settings:', error);
+            showMessage(error?.response?.data?.message || 'Failed to load general settings.', 'error');
+        } finally {
+            setUserSettingsLoading(false);
+        }
+    }, [token, showMessage]);
+
+    useEffect(() => {
+        if (token) {
+            fetchUserSettings();
+        }
+    }, [token, fetchUserSettings]);
+
+    // New handler to update user settings and save immediately
+    const handleUserSettingsUpdate = async (name, value) => {
+        setUserSettings(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+        try {
+            // No need for userSettingsLoading state for individual saves as it's quick
+            const payload = { [name]: value }; // Send only the changed setting
+            await axiosInstance.put(`${process.env.REACT_APP_API_BASE_URL}/users/update`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            showMessage(`${name.replace(/_/g, ' ')} updated successfully!`, "success");
+        } catch (error) {
+            console.error(`Failed to save ${name}:`, error);
+            showMessage(`Failed to save ${name.replace(/_/g, ' ')}. Please try again.`, "error");
+            // Optionally revert UI on error if needed, but for simple settings,
+            // it might be better to let the user see the change and try again.
+        }
+    };
 
 
     // Dark Mode Options
@@ -179,6 +249,94 @@ const AdminSettings = () => {
         { value: 'dark', label: 'Dark', icon: <Moon size={20} /> },
         { value: 'system', label: 'System', icon: <Monitor size={20} /> },
     ];
+
+    // Language options (from ProfileSettings.js)
+    const languageOptions = [
+        { value: 'en', label: 'English' },
+        { value: 'es', label: 'Spanish' },
+        { value: 'fr', label: 'French' },
+        { value: 'de', label: 'German' },
+    ];
+
+    // Timezone options (example for UTC+1, assuming Lagos, Nigeria) (from ProfileSettings.js)
+    const timezoneOptions = [
+        { value: 'UTC-12', label: '(UTC-12:00) International Date Line West' },
+        { value: 'UTC-11', label: '(UTC-11:00) Coordinated Universal Time-11' },
+        { value: 'UTC-10', label: '(UTC-10:00) Hawaii' },
+        { value: 'UTC-09', label: '(UTC-09:00) Alaska' },
+        { value: 'UTC-08', label: '(UTC-08:00) Pacific Time (US & Canada)' },
+        { value: 'UTC-07', label: '(UTC-07:00) Mountain Time (US & Canada)' },
+        { value: 'UTC-06', label: '(UTC-06:00) Central Time (US & Canada)' },
+        { value: 'UTC-05', label: '(UTC-05:00) Eastern Time (US & Canada)' },
+        { value: 'UTC-04', label: '(UTC-04:00) Atlantic Time (Canada)' },
+        { value: 'UTC-03', label: '(UTC-03:00) Buenos Aires, Georgetown' },
+        { value: 'UTC-02', label: '(UTC-02:00) Mid-Atlantic' },
+        { value: 'UTC-01', label: '(UTC-01:00) Azores, Cape Verde Is.' },
+        { value: 'UTC+00', label: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London' },
+        { value: 'UTC+01', label: '(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna (West Central Africa)' }, // Adjusted for Lagos
+        { value: 'UTC+02', label: '(UTC+02:00) Athens, Bucharest, Istanbul' },
+        { value: 'UTC+03', label: '(UTC+03:00) Baghdad, Kuwait, Riyadh' },
+        { value: 'UTC+04', label: '(UTC+04:00) Abu Dhabi, Muscat' },
+        { value: 'UTC+05', label: '(UTC+05:00) Islamabad, Karachi, Tashkent' },
+        { value: 'UTC+05:30', label: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi' },
+        { value: 'UTC+06', label: '(UTC+06:00) Astana, Dhaka' },
+        { value: 'UTC+07', label: '(UTC+07:00) Bangkok, Hanoi, Jakarta' },
+        { value: 'UTC+08', label: '(UTC+08:00) Beijing, Hong Kong, Perth, Singapore, Taipei' },
+        { value: 'UTC+09', label: '(UTC+09:00) Osaka, Sapporo, Tokyo' },
+        { value: 'UTC+10', label: '(UTC+10:00) Canberra, Melbourne, Sydney' },
+        { value: 'UTC+11', label: '(UTC+11:00) Magadan, Solomon Is., New Caledonia' },
+        { value: 'UTC+12', label: '(UTC+12:00) Auckland, Wellington, Fiji' },
+    ];
+
+    // Currency options for the dropdown (from ProfileSettings.js)
+    const currencyOptions = [
+        { value: 'NGN', label: '₦ Nigerian Naira' },
+        { value: 'USD', label: '$ US Dollar' },
+        { value: 'EUR', label: '€ Euro' },
+        { value: 'GBP', label: '£ British Pound' },
+        { value: 'JPY', label: '¥ Japanese Yen' },
+    ];
+
+    // Dynamically generate Default Landing Page options based on user role (from ProfileSettings.js)
+    const defaultLandingPageOptions = useCallback(() => {
+        const options = [
+            { value: '/', label: 'Home' },
+            { value: '/profile/general', label: 'Profile' },
+            // Add other general landing pages if applicable
+        ];
+
+        if (user?.role) {
+            let dashboardPath = '';
+            let inquiriesPath = ''; // New variable for inquiries path
+            switch (user.role) {
+                case 'admin':
+                    dashboardPath = '/admin/dashboard';
+                    inquiriesPath = '/admin/inquiries'; // Assuming admin inquiries path
+                    break;
+                case 'agent':
+                    dashboardPath = '/agent/dashboard';
+                    inquiriesPath = '/agent/inquiries';
+                    break;
+                case 'client':
+                    dashboardPath = '/client/dashboard'; // While SignIn might redirect to /client/inquiries, clients can still have a dashboard
+                    inquiriesPath = '/client/inquiries';
+                    break;
+                default:
+                    dashboardPath = '/'; // Fallback generic dashboard if role is unknown
+                    inquiriesPath = '/'; // Fallback for inquiries
+            }
+
+            // Add Dashboard option
+            options.unshift({ value: dashboardPath, label: 'Dashboard' });
+
+            // Add Inquiries option if a specific path is determined
+            if (inquiriesPath && inquiriesPath !== '/') { // Avoid adding duplicate '/'
+                options.unshift({ value: inquiriesPath, label: 'Inquiries' });
+            }
+        }
+        return options;
+    }, [user?.role]);
+
 
     // Sidebar State
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -232,7 +390,7 @@ const AdminSettings = () => {
             return newState;
         });
     };
-    
+
     const handleEmailNotificationsToggle = createToggleHandler(setEmailNotifications, 'Email notifications');
     const handleSmsNotificationsToggle = createToggleHandler(setSmsNotifications, 'SMS notifications');
     const handleInAppNotificationsToggle = createToggleHandler(setInAppNotifications, 'In-app notifications');
@@ -247,10 +405,21 @@ const AdminSettings = () => {
         showMessage(`${settingName} saved (frontend simulation).`, 'success');
     };
 
+
     const handleClearCache = () => showMessage('Cache cleared successfully!', 'success');
     const handleBackupDatabase = () => showMessage('Database backup initiated.', 'info');
     const handleViewErrorLogs = () => showMessage('Opening error logs (simulated).', 'info');
-    
+
+    const inputFieldStyles =
+        `mt-1 block w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+        darkMode
+            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+        }`;
+    const labelStyles = `block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`;
+    const inputGroupStyles = "flex flex-col";
+
+
     // Comprehensive list of searchable items, grouped by section for robust filtering
     const searchableContent = {
         "General": [
@@ -258,7 +427,11 @@ const AdminSettings = () => {
             "Theme", "Choose your preferred theme.",
             "Default Listings Display", "Select how listings are displayed by default.",
             "Table View", "Grid View",
-            "Permanently Expand Sidebar (Desktop Only)", "Keep the sidebar expanded by default on desktop."
+            "Permanently Expand Sidebar (Desktop Only)", "Keep the sidebar expanded by default on desktop.",
+            "Language", "Select Language", "English", "Spanish", "French", "German", // Added from ProfileSettings
+            "Timezone", "Select Timezone", // Added from ProfileSettings
+            "Default Currency", "Select Currency", "Nigerian Naira", "US Dollar", "Euro", "British Pound", "Japanese Yen", // Added from ProfileSettings
+            "Default Landing Page", "Select Landing Page", "Home", "Profile", "Dashboard", "Inquiries", // Added from ProfileSettings
         ],
         "Notifications": [
             "Notifications", // Section title
@@ -390,19 +563,77 @@ const AdminSettings = () => {
                     {filterSection("General") && (
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Existing Theme Setting */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
                                     {/* Use themePreference for the value, and handleDarkModeChange to set the new preference */}
                                     <Dropdown placeholder="Select Theme" options={darkModeOptions} value={themePreference} onChange={handleDarkModeChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your preferred theme.</p>
                                 </div>
+                                {/* Existing Default Listings Display */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Listings Display</label>
                                     <Dropdown placeholder="Select View Mode" options={[{ value: 'simple', label: 'Table View', icon: <LayoutList size={20} /> }, { value: 'graphical', label: 'Grid View', icon: <LayoutGrid size={20} /> }]} value={defaultListView} onChange={handleDefaultListViewChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
                                 </div>
+                                {/* Existing Sidebar Toggle */}
+                                <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+
+                                {/* General App Settings from ProfileSettings.js */}
+                                {/* Language */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="language">Language</label>
+                                    <Dropdown
+                                        options={languageOptions}
+                                        value={userSettings.language}
+                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
+                                        placeholder="Select Language"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
+                                </div>
+
+                                {/* Timezone */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="timezone">Timezone</label>
+                                    <Dropdown
+                                        options={timezoneOptions}
+                                        value={userSettings.timezone}
+                                        onChange={(value) => handleUserSettingsUpdate('timezone', value)}
+                                        placeholder="Select Timezone"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
+                                </div>
+
+                                {/* Currency */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="currency">Default Currency</label>
+                                    <Dropdown
+                                        options={currencyOptions}
+                                        value={userSettings.currency}
+                                        onChange={(value) => handleUserSettingsUpdate('currency', value)}
+                                        placeholder="Select Currency"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
+                                </div>
+
+                                {/* Default Landing Page */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
+                                    <Dropdown
+                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                        value={userSettings.default_landing_page}
+                                        onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
+                                        placeholder="Select Landing Page"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
+                                        Choose the page you see after logging in.
+                                    </p>
+                                </div>
                             </div>
-                            <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
                         </div>
                     )}
 
@@ -463,7 +694,7 @@ const AdminSettings = () => {
                             </div>
                         </div>
                     )}
-                    
+
                     {filterSection("Content Moderation") && (
                         <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                             <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
