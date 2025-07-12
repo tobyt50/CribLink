@@ -1,1 +1,0 @@
-SELECT setval('users_user_id_seq', (SELECT MAX(user_id) FROM users));
