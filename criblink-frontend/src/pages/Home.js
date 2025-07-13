@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import PurchaseCategoryFilter from "../components/PurchaseCategoryFilter";
 import ListingCard from "../components/ListingCard";
 import API_BASE_URL from "../config";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Clock, ArrowDownUp, Search, Star, ArrowLeftCircleIcon, ArrowRightCircleIcon } from "lucide-react"; // Added Star and Arrow icons
+import { ChevronLeft, ChevronRight, ArrowDownUp, Search, Star, ArrowLeftCircleIcon, ArrowRightCircleIcon, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
 import axiosInstance from '../api/axiosInstance';
+import HomeSearchFilters from "../components/HomeSearchFilters";
 
-const ITEMS_PER_PAGE = 20; // Items per page for regular listings
+const ITEMS_PER_PAGE = 20;
 
 function Home() {
   const [listings, setListings] = useState([]);
-  const [featuredListings, setFeaturedListings] = useState([]); // New state for featured listings
+  const [featuredListings, setFeaturedListings] = useState([]);
   const [category, setCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,20 +21,31 @@ function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("date_listed_desc");
   const searchInputRef = useRef(null);
+  const searchContextRef = useRef(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
 
-  // State for featured listings pagination and auto-swipe
   const [currentFeaturedPage, setCurrentFeaturedPage] = useState(0);
   const featuredCarouselRef = useRef(null);
   const autoSwipeIntervalRef = useRef(null);
-  const [loading, setLoading] = useState(true); // Added loading state
+  const [loading, setLoading] = useState(true);
 
-  // Define how many featured listings to display per page (for carousel)
-  const FEATURED_ITEMS_PER_PAGE = 4; // Changed to 4 for 4 columns on desktop
+  const [showSearchContext, setShowSearchContext] = useState(false);
 
-  // 1. useEffect for user setup + input focus
+  const [advancedFilters, setAdvancedFilters] = useState({
+    location: "",
+    propertyType: "",
+    subtype: "",
+    bedrooms: "",
+    bathrooms: "",
+    minPrice: "",
+    maxPrice: "",
+    purchaseCategory: "",
+  });
+
+  const FEATURED_ITEMS_PER_PAGE = 4;
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -45,24 +56,35 @@ function Home() {
         localStorage.removeItem("user");
       }
     }
-
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   }, []);
 
   const fetchListings = useCallback(async () => {
-    setLoading(true); // Set loading to true when fetching starts
+    setLoading(true);
     const params = new URLSearchParams();
-    if (category) params.append("purchase_category", category);
+
+    if (advancedFilters.purchaseCategory) {
+      params.append("purchase_category", advancedFilters.purchaseCategory);
+    } else if (category) {
+      params.append("purchase_category", category);
+    }
+
     if (searchTerm) params.append("search", searchTerm);
     params.append("page", currentPage);
     params.append("limit", ITEMS_PER_PAGE);
     params.append("sortBy", sortBy);
 
-    const url = `${API_BASE_URL}/listings?${params.toString()}`;
-    const featuredUrl = `${API_BASE_URL}/listings?status=Featured&limit=12`; // New URL for featured listings
+    if (advancedFilters.location) params.append("location", advancedFilters.location);
+    if (advancedFilters.propertyType) params.append("property_type", advancedFilters.propertyType);
+    if (advancedFilters.bedrooms) params.append("bedrooms", advancedFilters.bedrooms);
+    if (advancedFilters.bathrooms) params.append("bathrooms", advancedFilters.bathrooms);
+    if (advancedFilters.minPrice) params.append("min_price", advancedFilters.minPrice);
+    if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
 
+
+    const url = `${API_BASE_URL}/listings?${params.toString()}`;
+    console.log("Fetching listings with URL:", url);
+
+    const featuredUrl = `${API_BASE_URL}/listings?status=Featured&limit=12`;
     const token = localStorage.getItem("token");
     const headers = {};
     if (token) {
@@ -70,18 +92,15 @@ function Home() {
     }
 
     try {
-      // Fetch all listings
       const response = await axiosInstance.get(url, { headers });
       const allListings = response.data.listings || [];
       setTotalPages(response.data.totalPages || 1);
 
-      // Fetch featured listings separately
       const featuredResponse = await axiosInstance.get(featuredUrl, { headers });
       const fetchedFeaturedListings = featuredResponse.data.listings || [];
       setFeaturedListings(fetchedFeaturedListings);
 
-      setListings(allListings); // Don't exclude featured listings from general listings
-
+      setListings(allListings);
 
     } catch (error) {
       let errorMessage = 'Failed to fetch listings. Please try again.';
@@ -92,46 +111,46 @@ function Home() {
       }
       showMessage(errorMessage, 'error');
       setListings([]);
-      setFeaturedListings([]); // Clear featured listings on error
+      setFeaturedListings([]);
       setTotalPages(1);
     } finally {
-      setLoading(false); // Set loading to false when fetching completes (success or error)
+      setLoading(false);
     }
-  }, [category, searchTerm, currentPage, sortBy, showMessage]);
-
-  // 2. Fixed useEffect fetch trigger
-  useEffect(() => {
-    fetchListings();
-  }, [fetchListings]); // Depend on fetchListings which is now useCallback
+  }, [category, searchTerm, currentPage, sortBy, showMessage, advancedFilters]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, searchTerm]);
-
-  // 3. Updated useEffect for Auto Swipe
-  useEffect(() => {
-    clearInterval(autoSwipeIntervalRef.current); // Prevent duplicate intervals
-
-    const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
-    if (totalFeaturedPages > 1) {
-      autoSwipeIntervalRef.current = setInterval(() => {
-        setCurrentFeaturedPage((prevPage) => (prevPage + 1) % totalFeaturedPages);
-      }, 7000);
-    }
-
-    return () => clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
+    fetchListings();
+  }, [category, searchTerm, sortBy, advancedFilters, fetchListings]);
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
-    const trimmed = searchTerm.trim();
-    if (trimmed) {
-      navigate(`/search?query=${encodeURIComponent(trimmed)}`);
-    } else {
-      setSearchTerm("");
-      showMessage('Search term cannot be empty.', 'info');
+    const queryParams = new URLSearchParams();
+
+    if (searchTerm.trim()) {
+      queryParams.append("query", encodeURIComponent(searchTerm.trim()));
     }
-  }, [searchTerm, navigate, showMessage]);
+    if (advancedFilters.purchaseCategory) {
+      queryParams.append("category", encodeURIComponent(advancedFilters.purchaseCategory));
+    } else if (category) {
+      queryParams.append("category", encodeURIComponent(category));
+    }
+
+    if (advancedFilters.location) queryParams.append("location", encodeURIComponent(advancedFilters.location));
+    if (advancedFilters.propertyType) queryParams.append("property_type", encodeURIComponent(advancedFilters.propertyType));
+    if (advancedFilters.subtype) queryParams.append("subtype", encodeURIComponent(advancedFilters.subtype));
+    if (advancedFilters.bedrooms) queryParams.append("bedrooms", encodeURIComponent(advancedFilters.bedrooms));
+    if (advancedFilters.bathrooms) queryParams.append("bathrooms", encodeURIComponent(advancedFilters.bathrooms));
+    if (advancedFilters.minPrice) queryParams.append("min_price", encodeURIComponent(advancedFilters.minPrice));
+    if (advancedFilters.maxPrice) queryParams.append("max_price", encodeURIComponent(advancedFilters.maxPrice));
+
+    if (searchTerm.trim() || advancedFilters.purchaseCategory || Object.values(advancedFilters).some(filter => filter)) {
+      navigate(`/search?${queryParams.toString()}`);
+    } else {
+      showMessage('Please enter a search term or select a category/filter.', 'info');
+    }
+    setShowSearchContext(false);
+  }, [searchTerm, category, advancedFilters, navigate, showMessage]);
 
   const handleSortToggle = useCallback(() => {
     setSortBy((prev) => (prev === "date_listed_desc" ? "date_listed_asc" : "date_listed_desc"));
@@ -143,30 +162,25 @@ function Home() {
     }
   }, [totalPages]);
 
-  // Featured listings navigation
-  // 7. Optimize with useCallback
   const handlePrevFeatured = useCallback(() => {
     setCurrentFeaturedPage((prevPage) =>
       prevPage === 0 ? Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) - 1 : prevPage - 1
     );
     clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
+  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
 
   const handleNextFeatured = useCallback(() => {
     setCurrentFeaturedPage((prevPage) =>
       (prevPage + 1) % Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE)
     );
     clearInterval(autoSwipeIntervalRef.current);
-  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]); // Added FEATURED_ITEMS_PER_PAGE to dependencies
+  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
 
-  // Calculate displayed featured listings based on currentFeaturedPage
   const startIndex = currentFeaturedPage * FEATURED_ITEMS_PER_PAGE;
   const displayedFeaturedListings = featuredListings.slice(startIndex, startIndex + FEATURED_ITEMS_PER_PAGE);
 
-
-  // Handle swipe gestures for featured listings
   const handleTouchStart = useCallback((e) => {
-    clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on touch start
+    clearInterval(autoSwipeIntervalRef.current);
     if (featuredCarouselRef.current) {
       featuredCarouselRef.current.startX = e.touches[0].clientX;
     }
@@ -174,11 +188,8 @@ function Home() {
 
   const handleTouchMove = useCallback((e) => {
     if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
-
     const currentX = e.touches[0].clientX;
     const diffX = featuredCarouselRef.current.startX - currentX;
-
-    // Prevent vertical scrolling interference
     if (Math.abs(diffX) > 10) {
       e.preventDefault();
     }
@@ -186,18 +197,28 @@ function Home() {
 
   const handleTouchEnd = useCallback((e) => {
     if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
-
     const endX = e.changedTouches[0].clientX;
     const diffX = featuredCarouselRef.current.startX - endX;
-    const swipeThreshold = 50; // Minimum pixels for a swipe
-
+    const swipeThreshold = 50;
     if (diffX > swipeThreshold) {
       handleNextFeatured();
     } else if (diffX < -swipeThreshold) {
       handlePrevFeatured();
     }
-    featuredCarouselRef.current.startX = undefined; // Reset startX
+    featuredCarouselRef.current.startX = undefined;
   }, [handleNextFeatured, handlePrevFeatured]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSearchContext && searchContextRef.current && !searchContextRef.current.contains(event.target)) {
+        setShowSearchContext(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSearchContext, advancedFilters]);
 
 
   return (
@@ -218,120 +239,20 @@ function Home() {
           </h1>
 
           <div className="w-full max-w-4xl mx-auto">
-            {/* Desktop Filter/Search/Sort Controls */}
-            <div className="hidden sm:flex items-center gap-4 mt-4 mb-6">
-              <div className="flex-[0.6]">
-                <PurchaseCategoryFilter
-                  selectedCategory={category}
-                  onChange={setCategory}
-                  className="w-full"
-                  buttonClassName={`h-[42px] focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                    darkMode ? "focus:ring-green-400" : "focus:ring-green-600"
-                  }`}
-                  renderInlineLabel
-                  variant="home"
-                />
-              </div>
-
-              <form onSubmit={handleSearch} className="flex-[1.4] relative">
-                <input
-                  type="text"
-                  ref={searchInputRef} // Auto-focused the search input on load
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by keyword, location, or type..."
-                  className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                    darkMode
-                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                  }`}
-                />
-                <button
-                  type="submit"
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${
-                    darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-500 hover:text-green-600"
-                  }`}
-                >
-                  <Search size={18} />
-                </button>
-              </form>
-
-              <button
-                onClick={handleSortToggle}
-                className={`h-[42px] px-4 flex items-center justify-center gap-2 border rounded-xl shadow-sm transition-all duration-200 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
-                  darkMode
-                    ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-400 focus:ring-green-400"
-                    : "bg-white border-gray-300 text-gray-600 hover:border-green-500 focus:ring-green-600"
-                }`}
-                title={sortBy === "date_listed_desc" ? "Sort by Oldest First" : "Sort by Newest First"}
-              >
-                <Clock size={16} />
-                <ArrowDownUp size={16} className={sortBy === "date_listed_desc" ? "rotate-180" : ""} />
-                <span className="text-sm hidden lg:inline">
-                  {sortBy === "date_listed_desc" ? "Newest" : "Oldest"}
-                </span>
-              </button>
-            </div>
-
-            {/* Mobile Filter/Search/Sort Controls */}
-            <div className="sm:hidden mt-4 flex items-center gap-2 mb-6">
-              <div className="flex-none w-12">
-                <PurchaseCategoryFilter
-                  selectedCategory={category}
-                  onChange={setCategory}
-                  className="w-full"
-                  buttonClassName={`h-[42px] flex items-center justify-center focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                    darkMode ? "focus:ring-green-400" : "focus:ring-green-600"
-                  }`}
-                  variant="home"
-                  renderInlineLabel={false}
-                  dropdownContentClassName="min-w-[12rem]"
-                />
-              </div>
-              <form onSubmit={handleSearch} className="relative flex-grow">
-                <input
-                  type="text"
-                  ref={searchInputRef}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search listings..."
-                  className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                    darkMode
-                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                  }`}
-                />
-                <button
-                  type="submit"
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${
-                    darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-500 hover:text-green-600"
-                  }`}
-                >
-                  <Search size={16} />
-                </button>
-              </form>
-              <button
-                onClick={handleSortToggle}
-                className={`flex-none w-12 h-[42px] flex items-center justify-center rounded-xl border shadow-sm transition-all duration-200 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
-                  darkMode
-                    ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-400 focus:ring-green-400"
-                    : "bg-white border-gray-300 text-gray-600 hover:border-green-500 focus:ring-green-600"
-                }`}
-                title="Sort by Date"
-              >
-                <Clock size={18} />
-              </button>
-            </div>
+            <HomeSearchFilters
+              filters={advancedFilters}
+              setFilters={setAdvancedFilters}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              handleSearch={handleSearch}
+            />
           </div>
         </motion.div>
 
-        {/* Featured Listings Section */}
         {featuredListings.length > 0 && (
           <motion.div
-            // Removed mb-12 for mobile, added sm:mb-12 to keep it for desktop
-            // Removed py-2 for mobile, added sm:py-2 to keep it for desktop
-            // Removed px-6, rounded-3xl, shadow-xl, border classes for mobile
-            // Added -mt-4 for mobile to shift it up, sm:mt-0 to reset for desktop
             className={`-mt-4 mb-8 sm:mb-12 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
               darkMode
                 ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
@@ -355,33 +276,29 @@ function Home() {
               <Star size={20} className="text-yellow-400 fill-current" />
             </h2>
             <div className="relative">
-              {/* Changed grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 to grid-cols-2 lg:grid-cols-4 */}
-              <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
-                <AnimatePresence mode="wait">
-                  {displayedFeaturedListings.map((listing) => (
-                    <motion.div
-                      key={`featured-${listing.property_id}`}
-                      initial={{ opacity: 0, x: 100 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ duration: 0.6, ease: "easeInOut" }}
-                      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-                      // Removed explicit background, border, and shadow classes from this wrapper
-                      // ListingCard is now responsible for its own styling
-                      className="relative transform"
-                    >
-                      <ListingCard listing={listing} isFeatured={true} />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-              {/* Updated pagination button disabled logic to use FEATURED_ITEMS_PER_PAGE */}
+            <AnimatePresence mode="wait">
+  <motion.div
+    key={`page-${currentFeaturedPage}`}
+    initial={{ opacity: 0, x: 100 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: -100 }}
+    transition={{ duration: 0.6, ease: "easeInOut" }}
+    className="grid grid-cols-2 gap-6 lg:grid-cols-4"
+  >
+    {displayedFeaturedListings.map((listing) => (
+      <div key={`featured-${listing.property_id}`} className="relative transform hover:scale-[1.03] transition-transform duration-200">
+        <ListingCard listing={listing} />
+      </div>
+    ))}
+  </motion.div>
+</AnimatePresence>
+
               {Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) > 1 && (
                 <div className="flex justify-center mt-6 space-x-4">
                   <button
                     onClick={handlePrevFeatured}
-                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE} // 4. Fix Button Disable Logic
-                    aria-label="Previous Featured Properties" // Added aria-label for accessibility
+                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
+                    aria-label="Previous Featured Properties"
                     className={`p-2 rounded-full shadow-md transition-all duration-200
                       ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
                       ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -390,8 +307,8 @@ function Home() {
                   </button>
                   <button
                     onClick={handleNextFeatured}
-                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE} // 4. Fix Button Disable Logic
-                    aria-label="Next Featured Properties" // Added aria-label for accessibility
+                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
+                    aria-label="Next Featured Properties"
                     className={`p-2 rounded-full shadow-md transition-all duration-200
                       ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
                       ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -404,7 +321,6 @@ function Home() {
           </motion.div>
         )}
 
-        {/* All Listings */}
         <h2 className={`text-1.5xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-800"}`}>
           Available Listings
         </h2>
@@ -420,7 +336,7 @@ function Home() {
             },
           }}
         >
-          {loading ? ( // 6. Display Loading or Fallback UI
+          {loading ? (
             [...Array(10)].map((_, i) => (
               <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-xl"></div>
             ))
@@ -445,7 +361,6 @@ function Home() {
           )}
         </motion.div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mt-10 pb-8">
             <button

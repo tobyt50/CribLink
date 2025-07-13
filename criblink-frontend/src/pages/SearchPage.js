@@ -32,6 +32,10 @@ function SearchPage() {
     purchaseCategory: "",
   });
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20; // 20 items per page
+
   useEffect(() => {
     const queryParam = new URLSearchParams(location.search).get("query") || "";
     setSearchTerm(queryParam);
@@ -42,6 +46,11 @@ function SearchPage() {
       setFilteredResults([]);
     }
   }, [location.search]);
+
+  useEffect(() => {
+    // Reset to first page whenever filters or results change
+    setCurrentPage(1);
+  }, [filters, results]);
 
   const fetchResults = async (term) => {
     try {
@@ -71,10 +80,6 @@ function SearchPage() {
       setFilteredResults([]);
     }
   };
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, results]);
 
   const applyFilters = () => {
     let filtered = [...results];
@@ -133,11 +138,22 @@ function SearchPage() {
     }
   };
 
+  // Get current items for pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredResults.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} px-4 md:px-10 py-2 min-h-screen`}>
       {/* Search Bar + Filter Toggle */}
       <motion.div
-        className="max-w-2xl mx-auto mb-6 flex items-center gap-4" // Changed max-w-4xl to max-w-2xl
+        className="max-w-2xl mx-auto mb-6 flex items-center gap-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
@@ -172,7 +188,7 @@ function SearchPage() {
           onClick={() => setShowFilters(!showFilters)}
           className={`p-2 rounded-xl text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
             darkMode ? "bg-green-700 hover:bg-green-600 focus:ring-green-400" : "bg-green-500 hover:bg-green-600 focus:ring-green-600"
-          }`} // Added flex-shrink-0 to prevent resizing
+          }`}
           title="Open Filters"
         >
           <SlidersHorizontal size={20} />
@@ -187,7 +203,6 @@ function SearchPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            // Removed overflow-hidden to allow dropdown content to render fully
             className="mb-8 max-w-4xl mx-auto"
           >
             <SearchFilters filters={filters} setFilters={setFilters} />
@@ -195,9 +210,21 @@ function SearchPage() {
         )}
       </AnimatePresence>
 
+      {/* Results Count Display */}
+      {searchTerm && (filteredResults.length > 0 || currentPage > 1) && (
+        <motion.div
+          className={`text-center py-1 rounded-xl mb-6 text-green-700 text-2xl font-bold`}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {filteredResults.length} results for "{searchTerm}"
+        </motion.div>
+      )}
+
       {/* Listings */}
       <motion.div
-        className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+        className="grid gap-6 grid-cols-2 lg:grid-cols-5" // 2 columns on mobile, 5 on desktop
         initial="hidden"
         animate="visible"
         variants={{
@@ -208,8 +235,8 @@ function SearchPage() {
           },
         }}
       >
-        {filteredResults.length > 0 ? (
-          filteredResults.map((listing) => (
+        {currentItems.length > 0 ? (
+          currentItems.map((listing) => (
             <motion.div
               key={listing.property_id}
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
@@ -228,6 +255,51 @@ function SearchPage() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center mt-8 space-x-2">
+          <button
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-xl shadow-md ${
+              darkMode
+                ? "bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-50"
+                : "bg-green-500 text-white hover:bg-green-600 disabled:opacity-50"
+            }`}
+          >
+            Previous
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => paginate(page)}
+              className={`px-4 py-2 rounded-xl shadow-md ${
+                currentPage === page
+                  ? darkMode
+                    ? "bg-green-700 text-white"
+                    : "bg-green-600 text-white"
+                  : darkMode
+                  ? "bg-gray-700 text-white hover:bg-gray-600"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-xl shadow-md ${
+              darkMode
+                ? "bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-50"
+                : "bg-green-500 text-white hover:bg-green-600 disabled:opacity-50"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
