@@ -51,7 +51,8 @@ const UserCard = ({ user, onActionApply, actionSelections, setActionSelections }
 
   // Helper to render a vertical separator
   const Separator = () => (
-    <div className="w-px bg-gray-200 dark:bg-gray-700 h-6 self-center mx-0.5"></div>
+    <div className="w-[0.5px] bg-gray-300 dark:bg-gray-600 h-5 self-center"></div>
+
   );
 
   return (
@@ -103,7 +104,9 @@ const UserCard = ({ user, onActionApply, actionSelections, setActionSelections }
 
 
       {/* Action Buttons */}
-      <div className="flex flex-nowrap justify-center gap-0.5 w-full pt-1 pb-1 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex flex-nowrap justify-center w-full border-t border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap px-0">
+
+
         {actionOptions.filter(option => option.value !== "" && option.value !== "delete" && option.value !== "ban" && option.value !== "unban" && option.value !== "reactivate").map((option, index, arr) => (
           <React.Fragment key={option.value}>
             <button

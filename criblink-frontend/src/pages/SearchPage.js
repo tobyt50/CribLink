@@ -214,12 +214,12 @@ function SearchPage() {
       {/* Results Count Display */}
       {searchTerm && (filteredResults.length > 0 || currentPage > 1) && (
         <motion.div
-          className={`text-center mb-2 text-green-700 text-2xl font-bold`} /* Reduced py-0.5 to py-0 and mb-6 to mb-4 */
+          className={`text-center mb-2 text-green-700 text-1xl md:text-2xl font-bold`} /* Reduced py-0.5 to py-0 and mb-6 to mb-4 */
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {filteredResults.length} results for "{searchTerm}"
+          {filteredResults.length} results for "{searchTerm}" 
         </motion.div>
       )}
 
