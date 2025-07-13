@@ -13,7 +13,12 @@ exports.getAllListings = async (req, res) => {
       limit,
       status,
       agent_id,
-      sortBy
+      sortBy,
+      // Add new advanced filter parameters here
+      location,
+      property_type,
+      bedrooms,
+      bathrooms
     } = req.query;
 
     const userRole = req.user ? req.user.role : 'guest';
@@ -63,6 +68,27 @@ exports.getAllListings = async (req, res) => {
       values.push(max_price);
     }
 
+    // Add new conditions for advanced filters
+    if (location) {
+      conditions.push(`pl.location ILIKE $${valueIndex++}`);
+      values.push(`%${location}%`);
+    }
+
+    if (property_type) {
+      conditions.push(`pl.property_type ILIKE $${valueIndex++}`);
+      values.push(`%${property_type}%`);
+    }
+
+    if (bedrooms) {
+      conditions.push(`pl.bedrooms = $${valueIndex++}`);
+      values.push(parseInt(bedrooms)); // Assuming bedrooms is an integer
+    }
+
+    if (bathrooms) {
+      conditions.push(`pl.bathrooms = $${valueIndex++}`);
+      values.push(parseInt(bathrooms)); // Assuming bathrooms is an integer
+    }
+
     if (search && search.trim() !== '') {
       const keyword = `%${search.trim()}%`;
       conditions.push(`(
@@ -89,6 +115,10 @@ exports.getAllListings = async (req, res) => {
     let orderByClause = 'ORDER BY pl.date_listed DESC';
     if (sortBy === 'date_listed_asc') {
       orderByClause = 'ORDER BY pl.date_listed ASC';
+    } else if (sortBy === 'price_desc') {
+      orderByClause = 'ORDER BY pl.price DESC';
+    } else if (sortBy === 'price_asc') {
+      orderByClause = 'ORDER BY pl.price ASC';
     }
 
     // 6. Query building
@@ -344,7 +374,7 @@ exports.updateListing = async (req, res) => {
     const existingUrls = Array.isArray(existingImageUrlsToKeep) ? existingImageUrlsToKeep : (existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : []);
     const newUrls = Array.isArray(newImageUrls) ? newImageUrls : (newImageUrls ? JSON.parse(newImageUrls) : []);
     const newFilesBase64 = Array.isArray(newImagesBase64) ? newImagesBase64 : [];
-    const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newImagesOriginalNames : [];
+    const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newFilesOriginalNames : [];
 
     try {
         await pool.query('BEGIN');
