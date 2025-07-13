@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../api/axiosInstance";
 import { motion } from "framer-motion";
-import { Loader } from "lucide-react";
 import API_BASE_URL from "../config";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from '../context/MessageContext';
@@ -13,24 +12,23 @@ import DisplayPicture from '../components/profile/DisplayPicture';
 import General from './profile/General';
 import Security from './profile/Security';
 import Privacy from './profile/Privacy';
-// import Settings from './profile/ProfileSettings'; // Removed ProfileSettings import
 
 function ManageProfile() {
   const [form, setForm] = useState({
     full_name: "", username: "", email: "", bio: "",
     location: "", phone: "", agency: "", current_password: "",
     new_password: "", confirm_password: "",
-    social_links: [], // Initialize social_links in the form state
-    profile_picture_base64: null, // New: to store base64 for upload
-    profile_picture_originalname: null, // New: to store original name for upload
+    social_links: [],
+    profile_picture_base64: null,
+    profile_picture_originalname: null,
   });
 
   const [userInfo, setUserInfo] = useState({
     full_name: "", username: "", email: "", role: "",
     profile_picture_url: "", bio: "", location: "",
     phone: "", agency: "",
-    social_links: [], // Initialize social_links in userInfo
-    default_landing_page: "", // Ensure default_landing_page is initialized here
+    social_links: [],
+    default_landing_page: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -39,7 +37,6 @@ function ManageProfile() {
   const [deletingPicture, setDeletingPicture] = useState(false);
   const [activeSection, setActiveSection] = useState("general");
   const [currentSessionIdFromToken, setCurrentSessionIdFromToken] = useState(null);
-
 
   const token = localStorage.getItem("token");
   const { darkMode } = useTheme();
@@ -62,8 +59,8 @@ function ManageProfile() {
         phone: res.data.phone || "",
         agency: res.data.agency || "",
         social_links: res.data.social_links || [],
-        profile_picture_base64: null, // Clear base64 on fetch
-        profile_picture_originalname: null, // Clear originalname on fetch
+        profile_picture_base64: null,
+        profile_picture_originalname: null,
       }));
       setUserInfo({
         full_name: res.data.full_name || "",
@@ -88,14 +85,12 @@ function ManageProfile() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // This handleChange is now simplified as file handling is more direct in General.js
     setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // New handler for profile picture data (base64 and original name)
   const handleProfilePictureDataChange = (base64, originalname) => {
     setForm((prev) => ({
       ...prev,
@@ -110,7 +105,6 @@ function ManageProfile() {
     try {
       setUpdating(true);
 
-      // 1. Upload profile picture if new base64 data is present
       if (form.profile_picture_base64 && form.profile_picture_originalname) {
         setUploadingPicture(true);
         const uploadRes = await axiosInstance.put(
@@ -122,30 +116,25 @@ function ManageProfile() {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json", // Sending JSON with base64
+              "Content-Type": "application/json",
             },
           }
         );
 
         showMessage("Profile picture uploaded successfully", "success");
 
-        // Update the userInfo state with new picture URL
         setUserInfo((prev) => ({
           ...prev,
           profile_picture_url: uploadRes.data.profile_picture_url,
         }));
 
-        // Clear base64 data from form after successful upload
         setForm((prev) => ({ ...prev, profile_picture_base64: null, profile_picture_originalname: null }));
       }
 
-      // 2. Prepare update data by merging existing form state with updatedSettings
       const updateData = { ...form, ...updatedSettings };
-      // Remove profile picture related fields as they are handled separately
       delete updateData.profile_picture_base64;
       delete updateData.profile_picture_originalname;
 
-      // 3. Send profile update request
       const updateRes = await axiosInstance.put(
         `${API_BASE_URL}/users/update`,
         updateData,
@@ -169,11 +158,9 @@ function ManageProfile() {
     }
   };
 
-
   const uploadProfilePicture = async (file) => {
     setUploadingPicture(true);
     try {
-      // Read file as base64
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onloadend = async () => {
@@ -183,7 +170,7 @@ function ManageProfile() {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json", // Sending JSON with base64
+              "Content-Type": "application/json",
             },
           }
         );
@@ -243,18 +230,14 @@ function ManageProfile() {
     { name: "General", key: "general" },
     { name: "Security", key: "security" },
     { name: "Privacy", key: "privacy" },
-    // { name: "Settings", key: "settings" }, // Removed Settings menu item
   ];
   const activeSectionName = MENU_ITEMS.find(item => item.key === activeSection)?.name || "Manage Profile";
 
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
+  // Removed the loading spinner rendering logic
   if (loading) {
-    return (
-      <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        <Loader className="animate-spin w-12 h-12 text-green-600 dark:text-green-400" />
-      </div>
-    );
+      return null; // Or render a minimal placeholder if necessary, but not a spinner
   }
 
   return (
@@ -308,7 +291,7 @@ function ManageProfile() {
               handleUpdate={handleUpdate}
               updating={updating}
               userInfo={userInfo}
-              onProfilePictureDataChange={handleProfilePictureDataChange} // Pass new handler
+              onProfilePictureDataChange={handleProfilePictureDataChange}
             />
           )}
 
@@ -331,19 +314,6 @@ function ManageProfile() {
               activeSection={activeSection}
             />
           )}
-
-          {/* Removed Settings component rendering
-          {activeSection === "settings" && (
-            <Settings
-              form={form}
-              handleChange={handleChange}
-              handleUpdate={handleUpdate}
-              updating={updating}
-              activeSection={activeSection}
-              userInfo={userInfo}
-            />
-          )}
-          */}
         </motion.div>
       </motion.main>
     </div>

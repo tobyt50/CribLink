@@ -29,6 +29,7 @@ const ListingDetails = () => {
   const [listing, setListing] = useState(null);
   const [images, setImages] = useState([]);
   const [mainIndex, setMainIndex] = useState(0);
+  const [direction, setDirection] = useState(0); // For image swiping animation
   const [showPreview, setShowPreview] = useState(false);
   const previewRef = useRef(null);
   const navigate = useNavigate();
@@ -49,7 +50,10 @@ const ListingDetails = () => {
   const optionsMenuRef = useRef(null);
 
   const [similarListingStartIndex, setSimilarListingStartIndex] = useState(0);
-  const listingsPerPage = 3; // Changed to 3 for similar listings to match the grid layout
+  // Changed listingsPerPage for similar listings: 5 for desktop, 2 for mobile grid (2x2)
+  const listingsPerPageDesktop = 5;
+  const listingsPerPageMobile = 4; // For 2x2 grid, we need 4 items to show
+  const [currentListingsPerPage, setCurrentListingsPerPage] = useState(listingsPerPageDesktop);
 
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [agentClients, setAgentClients] = useState([]);
@@ -58,6 +62,24 @@ const ListingDetails = () => {
   const [isClientInquiryModalOpen, setIsClientInquiryModalOpen] = useState(false);
   const [conversationForClientModal, setConversationForClientModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null); // To track the conversation opened by the user
+
+  const similarCarouselRef = useRef(null); // Ref for similar listings carousel
+  const autoSwipeSimilarIntervalRef = useRef(null); // Ref for similar listings auto-swipe interval
+
+  // Determine listings per page based on screen width
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) { // md breakpoint is 768px
+        setCurrentListingsPerPage(listingsPerPageMobile);
+      } else {
+        setCurrentListingsPerPage(listingsPerPageDesktop);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Set initial value
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -204,7 +226,7 @@ const ListingDetails = () => {
     }
   }, [userRole, userId, agentInfo, fetchConnectionStatus]);
 
-  // Effect to fetch agent clients (only if current user is an agent)
+  // Effect to fetch agent clients (only if current user is an an agent)
   useEffect(() => {
     if (userRole === 'agent' && userId) {
       fetchAgentClients();
@@ -294,33 +316,54 @@ const ListingDetails = () => {
     }
   };
 
-  const getCategoryLabel = (cat) => {
-    switch (cat) {
-      case 'Sale': return '💰 For Sale';
-      case 'Rent': return '🏠 For Rent';
-      case 'Lease': return '📜 For Lease';
-      case 'Short Let': return '🏖️ Short Let';
-      case 'Long Let': '🗓️ Long Let';
-      default: return '';
+  // Function to get the icon and format the status text
+  const getStatusLabel = (status) => {
+    const statusText = (status || '').toLowerCase();
+    switch (statusText) {
+      case 'available': return '✅ Available';
+      case 'sold': return '🔴 Sold';
+      case 'under offer': return '🤝 Under offer';
+      case 'pending': return '⏳ Pending';
+      case 'approved': return '👍 Approved';
+      case 'rejected': return '❌ Rejected';
+      case 'featured': return '⭐ Featured';
+      default: return '❓ Unknown';
     }
   };
 
+  // Function to get the background color for the status label
   const getStatusColor = (status) => {
-    switch ((status || '').toLowerCase()) {
-      case 'available': return 'bg-green-600';
+    const statusText = (status || '').toLowerCase();
+    switch (statusText) {
       case 'sold': return 'bg-red-600';
-      case 'pending': return 'bg-yellow-500';
-      case 'featured': return 'bg-blue-500';
+      case 'available': return 'bg-green-600';
+      case 'pending': return 'bg-green-400';
+      case 'featured': return 'bg-amber-500';
+      case 'under offer': return 'bg-gray-500';
+      case 'approved': return 'bg-purple-500';
+      case 'rejected': return 'bg-red-800';
       default: return 'bg-gray-500';
     }
   };
 
-  const handlePrev = () => {
-    setMainIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  // Function to get the icon and format the category text
+  const getCategoryLabel = (cat) => {
+    const categoryText = (cat || '').toLowerCase();
+    switch (categoryText) {
+      case 'sale': return '💰 For Sale';
+      case 'rent': return '🏠 For Rent';
+      case 'lease': return '📜 For Lease';
+      case 'short let': return '🏖️ Short Let';
+      case 'long let': return '🗓️ Long Let';
+      default: return '🏡 Property';
+    }
   };
 
-  const handleNext = () => {
-    setMainIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  const paginateImage = (newDirection) => {
+    setDirection(newDirection);
+    setMainIndex((prev) =>
+      (prev + newDirection + images.length) % images.length
+    );
   };
 
   const handleThumbClick = (index) => {
@@ -373,13 +416,76 @@ const ListingDetails = () => {
     }
   };
 
-  const handlePrevSimilar = () => {
-    setSimilarListingStartIndex((prevIndex) => Math.max(0, prevIndex - listingsPerPage));
-  };
+  const handlePrevSimilar = useCallback(() => {
+    setSimilarListingStartIndex((prevIndex) => Math.max(0, prevIndex - currentListingsPerPage));
+    clearInterval(autoSwipeSimilarIntervalRef.current); // Stop auto-swipe on manual interaction
+  }, [currentListingsPerPage]);
 
-  const handleNextSimilar = () => {
-    setSimilarListingStartIndex((prevIndex) => Math.min(similarListings.length - listingsPerPage, prevIndex + listingsPerPage));
-  };
+  const handleNextSimilar = useCallback(() => {
+    setSimilarListingStartIndex((prevIndex) => {
+      const totalPages = Math.ceil(similarListings.length / currentListingsPerPage);
+      const nextPage = (prevIndex / currentListingsPerPage + 1) % totalPages;
+      return nextPage * currentListingsPerPage;
+    });
+    clearInterval(autoSwipeSimilarIntervalRef.current); // Stop auto-swipe on manual interaction
+  }, [similarListings.length, currentListingsPerPage]);
+
+  // Auto-swipe for similar listings (adapted from Home.js)
+  useEffect(() => {
+    // Clear any existing interval before setting a new one
+    if (autoSwipeSimilarIntervalRef.current) {
+      clearInterval(autoSwipeSimilarIntervalRef.current);
+    }
+
+    if (similarListings.length > currentListingsPerPage) {
+      autoSwipeSimilarIntervalRef.current = setInterval(() => {
+        setSimilarListingStartIndex((prevIndex) => {
+          const totalPages = Math.ceil(similarListings.length / currentListingsPerPage);
+          const currentPage = prevIndex / currentListingsPerPage;
+          const nextPage = (currentPage + 1) % totalPages;
+          return nextPage * currentListingsPerPage;
+        });
+      }, 5000); // Change every 5 seconds (adjust as needed)
+    }
+
+    // Cleanup function: clear interval when component unmounts or dependencies change
+    return () => {
+      if (autoSwipeSimilarIntervalRef.current) {
+        clearInterval(autoSwipeSimilarIntervalRef.current);
+      }
+    };
+  }, [similarListings, currentListingsPerPage]);
+
+
+  const handleTouchStartSimilar = useCallback((e) => {
+    clearInterval(autoSwipeSimilarIntervalRef.current);
+    if (similarCarouselRef.current) {
+      similarCarouselRef.current.startX = e.touches[0].clientX;
+    }
+  }, []);
+
+  const handleTouchMoveSimilar = useCallback((e) => {
+    if (!similarCarouselRef.current || similarCarouselRef.current.startX === undefined) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = similarCarouselRef.current.startX - currentX;
+    if (Math.abs(diffX) > 10) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTouchEndSimilar = useCallback((e) => {
+    if (!similarCarouselRef.current || similarCarouselRef.current.startX === undefined) return;
+    const endX = e.changedTouches[0].clientX;
+    const diffX = similarCarouselRef.current.startX - endX;
+    const swipeThreshold = 50;
+    if (diffX > swipeThreshold) {
+      handleNextSimilar();
+    } else if (diffX < -swipeThreshold) {
+      handlePrevSimilar();
+    }
+    similarCarouselRef.current.startX = undefined;
+  }, [handleNextSimilar, handlePrevSimilar]);
+
 
   const handleSendConnectionRequest = async () => {
     if (userRole !== 'client' || !userId || !agentInfo || !agentInfo.id) {
@@ -458,7 +564,7 @@ const ListingDetails = () => {
 
   const displayedSimilarListings = similarListings.slice(
     similarListingStartIndex,
-    similarListingStartIndex + listingsPerPage
+    similarListingStartIndex + currentListingsPerPage
   );
 
 
@@ -794,7 +900,9 @@ const ListingDetails = () => {
 
   return (
     <motion.div
-      className={`min-h-screen py-4 px-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
+      // For mobile mode, set padding to pt-0 and a negative margin-top to pull content up.
+      // For desktop, keep md:p-6
+      className={`min-h-screen pt-0 -mt-6 px-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -815,22 +923,38 @@ const ListingDetails = () => {
           {images.length > 0 && (
             <div>
               <div className={`relative w-full h-80 md:h-96 rounded-xl overflow-hidden mb-4 shadow-md ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-                <img
-                  src={images[mainIndex]}
-                  alt={`Main ${mainIndex}`}
-                  className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
-                  onClick={handleImageClick}
-                />
+                <AnimatePresence initial={false} custom={direction}>
+                  <motion.img
+                    key={mainIndex}
+                    src={images[mainIndex]}
+                    alt={`Main ${mainIndex}`}
+                    className="absolute w-full h-full object-cover cursor-pointer select-none"
+                    onClick={handleImageClick}
+                    custom={direction}
+                    initial={{ x: direction > 0 ? 300 : -300, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: direction < 0 ? 300 : -300, opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(e, info) => {
+                      if (info.offset.x < -50) paginateImage(1);
+                      else if (info.offset.x > 50) paginateImage(-1);
+                    }}
+                    style={{ touchAction: "pan-y" }} // Allow vertical scrolling, but handle horizontal drag
+                    draggable={false} // Prevent default browser drag behavior
+                  />
+                </AnimatePresence>
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={handlePrev}
+                      onClick={() => paginateImage(-1)}
                       className="absolute top-1/2 left-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
                     >
                       <span className="sr-only">Previous image</span>←
                     </button>
                     <button
-                      onClick={handleNext}
+                      onClick={() => paginateImage(1)}
                       className="absolute top-1/2 right-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
                     >
                       <span className="sr-only">Next image</span>→
@@ -858,11 +982,13 @@ const ListingDetails = () => {
 
           <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
             <div className="flex gap-2 items-center flex-wrap">
+              {/* Status Label (styled like ListingCard) */}
+              <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(listing.status)}`}>
+                {getStatusLabel(listing.status)}
+              </span>
+              {/* Category Label (styled like ListingCard) */}
               <span className="bg-green-600 text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm">
                 {getCategoryLabel(listing.purchase_category)}
-              </span>
-              <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(listing.status)}`}>
-                {listing.status?.toUpperCase()}
               </span>
               {userRole !== 'guest' && (
                   <button
@@ -1133,18 +1259,31 @@ const ListingDetails = () => {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
+          ref={similarCarouselRef} // Add ref for touch events
+          onTouchStart={handleTouchStartSimilar} // Add touch start listener
+          onTouchMove={handleTouchMoveSimilar}   // Add touch move listener
+          onTouchEnd={handleTouchEndSimilar}     // Add touch end listener
         >
-          <h2 className={`text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Similar Listings You Might Like</h2>
-          <div className="flex flex-col items-center w-full"> {/* Added flex-col and items-center */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-hidden w-full p-2 -mx-2"> {/* Added p-2 -mx-2 for consistent padding */}
-              {displayedSimilarListings.map((similarListing) => (
-                <div key={similarListing.property_id} className="w-full"> {/* Wrap in div for consistent sizing */}
-                  <ListingCard key={similarListing.property_id} listing={similarListing} darkMode={darkMode} />
-                </div>
-              ))}
-            </div>
+          <h2 className={`text-xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Similar Listings You Might Like</h2>
+          <div className="flex flex-col items-center w-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`similar-page-${similarListingStartIndex}`} // Key for AnimatePresence
+                  initial={{ opacity: 0, x: 100 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full" // Ensure grid applies inside motion.div
+                >
+                  {displayedSimilarListings.map((similarListing) => (
+                    <div key={similarListing.property_id} className="w-full">
+                      <ListingCard key={similarListing.property_id} listing={similarListing} darkMode={darkMode} />
+                    </div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
 
-            <div className="flex justify-center mt-4 space-x-4"> {/* Moved buttons here and added spacing */}
+            <div className="flex justify-center mt-4 space-x-4">
               <button
                 onClick={handlePrevSimilar}
                 disabled={similarListingStartIndex === 0}
@@ -1157,10 +1296,10 @@ const ListingDetails = () => {
 
               <button
                 onClick={handleNextSimilar}
-                disabled={similarListingStartIndex >= similarListings.length - listingsPerPage}
+                disabled={similarListingStartIndex >= similarListings.length - currentListingsPerPage}
                 className={`p-2 rounded-full shadow-md transition-all duration-200
                   ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                  ${similarListingStartIndex >= similarListings.length - listingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ${similarListingStartIndex >= similarListings.length - currentListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <ArrowRightCircleIcon className="h-8 w-8" />
               </button>
@@ -1190,13 +1329,13 @@ const ListingDetails = () => {
               {images.length > 1 && (
                 <>
                   <button
-                    onClick={handlePrev}
+                    onClick={() => paginateImage(-1)}
                     className="absolute left-0 top-0 bottom-0 flex items-center w-12 text-white text-5xl bg-transparent hover:bg-black hover:bg-opacity-30 transition-all duration-200 rounded-lg"
                   >
                     ←
                   </button>
                   <button
-                    onClick={handleNext}
+                    onClick={() => paginateImage(1)}
                     className="absolute right-0 top-0 bottom-0 flex items-center w-12 text-white text-5xl bg-transparent hover:bg-black hover:bg-opacity-30 transition-all duration-200 rounded-lg"
                   >
                     →

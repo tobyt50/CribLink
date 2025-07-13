@@ -153,32 +153,33 @@ function SearchPage() {
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} px-4 md:px-10 py-2 min-h-screen`}>
       {/* Search Bar + Filter Toggle */}
       <motion.div
-        className="max-w-2xl mx-auto mb-6 flex items-center gap-4"
+        className="max-w-2xl mx-auto mb-2 flex items-center gap-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Search bar from Home.js */}
+        {/* Search bar styled like Home.js */}
         <form onSubmit={handleSearchSubmit} className="relative flex-grow">
           <input
             type="text"
             ref={searchInputRef}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by keyword, location, or type..."
-            className={`w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-              darkMode
-                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-            }`}
+            // Removed placeholder text
+            className={`w-full py-2.5 px-3 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+            darkMode
+              ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"
+          }`}
           />
           <button
             type="submit"
-            className={`absolute right-3 top-1/2 -translate-y-1/2 ${
-              darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-500 hover:text-green-600"
+            className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-2xl shadow-md transition-all duration-200 ${
+              darkMode ? "bg-green-700 text-white hover:bg-green-600" : "bg-green-500 text-white hover:bg-green-600"
             }`}
+            title="Search"
           >
-            <Search size={18} />
+            <Search size={20} />
           </button>
         </form>
 
@@ -213,7 +214,7 @@ function SearchPage() {
       {/* Results Count Display */}
       {searchTerm && (filteredResults.length > 0 || currentPage > 1) && (
         <motion.div
-          className={`text-center py-1 rounded-xl mb-6 text-green-700 text-2xl font-bold`}
+          className={`text-center mb-2 text-green-700 text-2xl font-bold`} /* Reduced py-0.5 to py-0 and mb-6 to mb-4 */
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}

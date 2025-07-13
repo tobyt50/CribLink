@@ -15,7 +15,7 @@ import PurchaseCategoryFilter from '../components/PurchaseCategoryFilter'; // Im
 
 // Import necessary icons
 import { ArrowUpIcon, ArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, ChevronDown } from 'lucide-react'; // Added SlidersHorizontal, FileText, ChevronDown for filters/export
+import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'; // Added ChevronLeft, ChevronRight for pagination
 
 // Reusable Dropdown Component (copied and adapted from Listings.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -119,11 +119,11 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 
+const ITEMS_PER_PAGE = 20; // Define items per page
+
 const Favourites = () => {
     const [favouriteListings, setFavouriteListings] = useState([]);
-    // Removed filteredAndSortedListings as filtering is now primarily API-driven
     const [searchTerm, setSearchTerm] = useState('');
-    // Initialize viewMode from localStorage, default to 'graphical'
     const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'graphical');
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
@@ -134,11 +134,11 @@ const Favourites = () => {
     const { showMessage } = useMessage();
     const { showConfirm } = useConfirmDialog();
 
-    // Filter states, similar to Listings.js
+    // Filter states
     const [purchaseCategoryFilter, setPurchaseCategoryFilter] = useState('');
     const [minPriceFilter, setMinPriceFilter] = useState('');
     const [maxPriceFilter, setMaxPriceFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all'); // Add status filter
+    const [statusFilter, setStatusFilter] = useState('all');
 
     // Modal and export dropdown states
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
@@ -146,10 +146,8 @@ const Favourites = () => {
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
 
-
     // Pagination states
-    const [page, setPage] = useState(1);
-    const limit = 12; // Display 12 items per page
+    const [currentPage, setCurrentPage] = useState(1); // Renamed from 'page' to 'currentPage' for consistency with Home.js
     const [totalFavourites, setTotalFavourites] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
 
@@ -213,13 +211,14 @@ const Favourites = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Fetch favorite listings with pagination and filters
+    // Fetch favourite listings with pagination and filters
     const fetchFavouriteListings = useCallback(async () => {
         if (!userId) {
             return;
         }
         const token = localStorage.getItem('token');
-        const params = new URLSearchParams({ page, limit, sort: sortKey, direction: sortDirection });
+        // Use ITEMS_PER_PAGE for limit
+        const params = new URLSearchParams({ page: currentPage, limit: ITEMS_PER_PAGE, sort: sortKey, direction: sortDirection });
 
         if (searchTerm) {
             params.append('search', searchTerm);
@@ -245,7 +244,7 @@ const Favourites = () => {
             setTotalFavourites(response.data.total || 0);
             setTotalPages(response.data.totalPages || 1);
         } catch (error) {
-            let errorMessage = 'Failed to fetch favorite listings. Please try again.';
+            let errorMessage = 'Failed to fetch favourite listings. Please try again.';
             if (error.response && error.response.data && error.response.data.message) {
                 errorMessage = error.response.data.message;
             } else if (error.message) {
@@ -256,7 +255,7 @@ const Favourites = () => {
             setTotalFavourites(0);
             setTotalPages(1);
         }
-    }, [userId, page, limit, sortKey, sortDirection, searchTerm, purchaseCategoryFilter, minPriceFilter, maxPriceFilter, statusFilter, showMessage]);
+    }, [userId, currentPage, sortKey, sortDirection, searchTerm, purchaseCategoryFilter, minPriceFilter, maxPriceFilter, statusFilter, showMessage]);
 
     useEffect(() => {
         fetchFavouriteListings();
@@ -312,8 +311,7 @@ const Favourites = () => {
                 return 0;
             }
         });
-        // setFilteredAndSortedListings(currentData); // This state is no longer strictly necessary if data is fetched pre-sorted/filtered
-    }, [favouriteListings, sortKey, sortDirection]); // Removed searchTerm from dependencies
+    }, [favouriteListings, sortKey, sortDirection]);
 
     // Re-run client-side sort if favouriteListings change or sort params change
     useEffect(() => {
@@ -323,28 +321,28 @@ const Favourites = () => {
 
     const handleSearchChange = (e) => {
         setSearchTerm(e.target.value);
-        setPage(1); // Reset to first page on search
+        setCurrentPage(1); // Reset to first page on search
     };
 
     // Filter handlers
     const handlePurchaseCategoryChange = (value) => {
         setPurchaseCategoryFilter(value);
-        setPage(1); // Reset to first page on filter change
+        setCurrentPage(1); // Reset to first page on filter change
     };
 
     const handleMinPriceChange = (e) => {
         setMinPriceFilter(e.target.value);
-        setPage(1); // Reset to first page on filter change
+        setCurrentPage(1); // Reset to first page on filter change
     };
 
     const handleMaxPriceChange = (e) => {
         setMaxPriceFilter(e.target.value);
-        setPage(1); // Reset to first page on filter change
+        setCurrentPage(1); // Reset to first page on filter change
     };
 
     const handleStatusChange = (value) => {
         setStatusFilter(value);
-        setPage(1); // Reset to first page on filter change
+        setCurrentPage(1); // Reset to first page on filter change
     };
 
 
@@ -358,7 +356,7 @@ const Favourites = () => {
             setSortKey(key);
             setSortDirection('asc');
         }
-        setPage(1); // Reset to first page on sort change
+        setCurrentPage(1); // Reset to first page on sort change
     };
 
     const renderSortIcon = (key) => {
@@ -375,7 +373,7 @@ const Favourites = () => {
         return <ArrowDownIcon className={`h-4 w-4 ml-1 inline ${darkMode ? "text-gray-400" : "text-gray-400"}`} />;
     };
 
-    const performRemoveFavorite = async (propertyId) => {
+    const performRemoveFavourite = async (propertyId) => {
         const token = localStorage.getItem('token');
         if (!token) {
             showMessage("Authentication token not found. Please log in.", 'error');
@@ -386,11 +384,11 @@ const Favourites = () => {
             await axiosInstance.delete(`${API_BASE_URL}/favourites/${propertyId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            showMessage(`Listing ${propertyId} removed from favorites!`, 'info');
+            showMessage(`Listing ${propertyId} removed from favourites!`, 'info');
             // Refetch listings to update pagination and filters
             fetchFavouriteListings();
         } catch (error) {
-            let errorMessage = 'Failed to remove listing from favorites. Please try again.';
+            let errorMessage = 'Failed to remove listing from favourites. Please try again.';
             if (error.response && error.response.data && error.response.data.message) {
                 errorMessage = error.response.data.message;
             } else if (error.message) {
@@ -400,11 +398,11 @@ const Favourites = () => {
         }
     };
 
-    const handleRemoveFavorite = (propertyId) => {
+    const handleRemoveFavourite = (propertyId) => {
         showConfirm({
             title: "Remove from Favourites",
             message: "Are you sure you want to remove this listing from your favourites?",
-            onConfirm: () => performRemoveFavorite(propertyId),
+            onConfirm: () => performRemoveFavourite(propertyId),
             confirmLabel: "Remove",
             cancelLabel: "Cancel"
         });
@@ -454,7 +452,7 @@ const Favourites = () => {
         const dataToExport = scope === 'current' ? favouriteListings : await fetchAllFavouritesForExport();
 
         if (dataToExport.length === 0) {
-            showMessage(`No favorite listing data found for ${scope} export.`, 'info');
+            showMessage(`No favourite listing data found for ${scope} export.`, 'info');
             setIsExportDropdownOpen(false);
             return;
         }
@@ -489,7 +487,7 @@ const Favourites = () => {
         link.click();
         document.body.removeChild(link);
         setIsExportDropdownOpen(false);
-        showMessage('Favorite listing data exported successfully!', 'success');
+        showMessage('Favourite listing data exported successfully!', 'success');
     };
 
     // Function to fetch all favourites for export (without pagination)
@@ -507,7 +505,7 @@ const Favourites = () => {
             });
             return response.data.favourites || [];
         } catch (error) {
-            let errorMessage = 'Failed to fetch all favorite listings for export. Please try again.';
+            let errorMessage = 'Failed to fetch all favourite listings for export. Please try again.';
             if (error.response && error.response.data && error.response.data.message) {
                 errorMessage = error.response.data.message;
             } else if (error.message) {
@@ -517,6 +515,12 @@ const Favourites = () => {
             return [];
         }
     };
+
+    const handlePageChange = useCallback((newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    }, [totalPages]);
 
 
     return (
@@ -565,7 +569,6 @@ const Favourites = () => {
                 </div>
 
                 <main className="space-y-6">
-                    {/* Removed rounded-3xl, p-6, shadow, and background color classes for mobile view */}
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`space-y-4 max-w-full ${!isMobile ? (darkMode ? "bg-gray-800 rounded-3xl p-6 shadow" : "bg-white rounded-3xl p-6 shadow") : ''}`}>
                         {/* Control Menu */}
                         {isMobile ? (
@@ -614,7 +617,7 @@ const Favourites = () => {
                         ) : (
                             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                                 <div className="flex items-center gap-4 w-full">
-                                    <div className="relative w-full md:w-1/3"> {/* Changed from md:w-1/3 to w-full md:w-1/3 */}
+                                    <div className="relative w-full md:w-1/3">
                                         <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
                                         <input
                                             type="text"
@@ -673,22 +676,22 @@ const Favourites = () => {
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                 Loading user data... Please ensure you are logged in to view your favourites.
                             </div>
-                        ) : favouriteListings.length === 0 ? ( // Changed to favouriteListings
-                            <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                No favorite listings found.
+                        ) : favouriteListings.length === 0 ? (
+                            <div className={`col-span-full text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                                No favourite listings found.
                             </div>
                         ) : viewMode === 'graphical' ? (
                             <motion.div
                                 layout
-                                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                                className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5" // 2 columns for mobile, 5 for desktop
                             >
-                                {favouriteListings.map((listing) => ( // Changed to favouriteListings
+                                {favouriteListings.map((listing) => (
                                     <ListingCard
                                         key={listing.property_id}
                                         listing={listing}
                                         userId={userId}
                                         userRole={userRole}
-                                        onFavoriteToggle={handleRemoveFavorite}
+                                        onFavoriteToggle={handleRemoveFavourite}
                                         isFavoritedProp={true}
                                     />
                                 ))}
@@ -734,7 +737,7 @@ const Favourites = () => {
                                         </tr>
                                     </thead>
                                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                                        {favouriteListings.map((listing) => ( // Changed to favouriteListings
+                                        {favouriteListings.map((listing) => (
                                             <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
                                                 <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[80px]" title={listing.property_id || ''}>{listing.property_id}</td>
                                                 <td className="py-2 px-1 truncate whitespace-nowrap overflow-hidden max-w-[120px]" title={listing.title || ''}>{listing.title}</td>
@@ -758,7 +761,7 @@ const Favourites = () => {
                                                 <td className="py-2 px-1 whitespace-nowrap max-w-[80px]">
                                                     <button
                                                         className={`p-1 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
-                                                        onClick={() => handleRemoveFavorite(listing.property_id)}
+                                                        onClick={() => handleRemoveFavourite(listing.property_id)}
                                                         title="Remove from Favourites"
                                                     >
                                                         <TrashIcon className="h-6 w-6" />
@@ -771,25 +774,35 @@ const Favourites = () => {
                             </div>
                         )}
 
-                        <div className="flex justify-center items-center space-x-4 mt-4">
-                            <button
-                                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                                disabled={page === 1}
-                                className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-                            >
-                                Prev
-                            </button>
-                            <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                                Page {page} of {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                                disabled={page === totalPages || totalPages === 0}
-                                className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-                            >
-                                Next
-                            </button>
-                        </div>
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-4 mt-10 pb-8">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+                                        darkMode
+                                            ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
+                                    }`}
+                                >
+                                    <ChevronLeft size={18} /> Prev
+                                </button>
+                                <span className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages || totalPages === 0}
+                                    className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
+                                        darkMode
+                                            ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
+                                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
+                                    }`}
+                                >
+                                    Next <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        )}
                     </motion.div>
                 </main>
             </motion.div>

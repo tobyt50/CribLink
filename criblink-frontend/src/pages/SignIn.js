@@ -129,13 +129,19 @@ export default function SignIn() {
   }
 
   return (
-    <div className={`flex items-start justify-center min-h-screen px-4 pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+    <div className={`flex items-start justify-center min-h-screen pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+        // Conditional styling for the form container:
+        // On mobile (no sm: prefix), it will be transparent (bg-transparent) and have no shadow/padding.
+        // On small screens and up (sm: prefix), it will have the white/gray background, rounded corners, shadow, and padding.
+        className={`w-full max-w-md space-y-6
+          bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
+          ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}
+          px-4 pt-4`}
       >
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Welcome Back</h1>
         <p className={`text-sm text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sign in to continue</p>
@@ -146,11 +152,11 @@ export default function SignIn() {
           placeholder="Email"
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-            darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-          }`}
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
+            ${darkMode
+              ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            }`}
         />
 
         <div className="relative">
@@ -160,11 +166,11 @@ export default function SignIn() {
             placeholder="Password"
             onChange={handleChange}
             required
-            className={`w-full px-4 py-2 border rounded-xl pr-12 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-              darkMode
-                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-            }`}
+            className={`w-full px-4 py-2 border rounded-xl pr-12 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
+              ${darkMode
+                ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+              }`}
           />
           <button
             type="button"

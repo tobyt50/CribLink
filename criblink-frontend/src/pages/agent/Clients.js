@@ -13,7 +13,8 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ChatBubbleLeftRightIcon, // Import for chat icon
+  ChatBubbleLeftRightIcon,
+  ChevronDownIcon, // Import ChevronDownIcon for the Dropdown component
 } from '@heroicons/react/24/outline';
 import AgentSidebar from '../../components/agent/Sidebar';
 import SendEmailModal from '../../components/agent/SendEmailModal';
@@ -24,10 +25,113 @@ import ClientCard from '../../components/agent/ClientCard';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import AgentInquiryModal from '../../components/AgentInquiryModal'; // Import the AgentInquiryModal
-import socket from '../../socket'; // Import socket.io client
+import AgentInquiryModal from '../../components/AgentInquiryModal';
+import socket from '../../socket';
 
 import { v4 as uuidv4 } from 'uuid';
+
+// Reusable Dropdown Component (embedded directly in Clients.js)
+// This component is copied from Listings.js to provide consistent dropdown functionality.
+const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+    const { darkMode } = useTheme();
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, []);
+
+    const menuVariants = {
+        hidden: { opacity: 0, y: -10, scale: 0.95 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: {
+                type: "spring",
+                stiffness: 500,
+                damping: 30,
+                delayChildren: 0.05,
+                staggerChildren: 0.02,
+            },
+        },
+        exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
+    };
+
+    const itemVariants = {
+        hidden: { y: 10, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+    };
+
+    const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
+
+    return (
+        <div className={`relative ${className}`} ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+                  ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
+            >
+                <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
+                <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <ChevronDownIcon className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
+                </motion.div>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        variants={menuVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className={`absolute left-0 right-0 mt-2 border rounded-xl shadow-xl py-1 z-50 overflow-hidden transform origin-top
+                          ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
+                    >
+                        {options.map((option) => (
+                            <motion.button
+                                key={option.value}
+                                variants={itemVariants}
+                                whileHover={{ x: 5 }}
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
+                                  ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                            >
+                                {option.label}
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -39,7 +143,7 @@ const Clients = () => {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [agentId, setAgentId] = useState(null);
-  const [userRole, setUserRole] = useState(''); // To determine if the current user is an agent
+  const [userRole, setUserRole] = useState('');
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -65,6 +169,10 @@ const Clients = () => {
   const [isAgentInquiryModalOpen, setIsAgentInquiryModalOpen] = useState(false);
   const [conversationForModal, setConversationForModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
+
+  // New states for mobile filter modal and client status filter
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false); // State for mobile filter modal
+  const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'vip', 'regular'
 
 
   useEffect(() => {
@@ -105,7 +213,7 @@ const Clients = () => {
         });
         if (data && data.user_id) {
           setAgentId(data.user_id);
-          const { userId, role } = getAuthenticatedUserInfo(); // Get role from token
+          const { userId, role } = getAuthenticatedUserInfo();
           setUserRole(role);
         } else {
           showMessage('Invalid user data. Please sign in again.', 'error');
@@ -132,13 +240,13 @@ const Clients = () => {
       });
 
       setClients(clientsRes.data);
-      setFilteredClients(clientsRes.data);
+      // setFilteredClients(clientsRes.data); // This will be updated by the useEffect below
 
       const requestsRes = await axios.get(`${API_BASE_URL}/agents/${agentId}/connection-requests/incoming`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPendingRequests(requestsRes.data);
-      setFilteredPendingRequests(requestsRes.data);
+      // setFilteredPendingRequests(requestsRes.data); // This will be updated by the useEffect below
 
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -165,14 +273,14 @@ const Clients = () => {
       });
       if (res.ok) {
         const data = await res.json();
-      
+
         if (data && data.conversation) {
           const conv = data.conversation;
-         
+
           const formattedMessages = conv.messages.map(msg => {
             const rawTimestamp = msg.timestamp || msg.created_at;
             const parsed = Date.parse(rawTimestamp);
-    
+
             return {
               ...msg,
               sender: msg.sender_id === conv.client_id ? 'Client' : 'Agent',
@@ -180,7 +288,7 @@ const Clients = () => {
               timestamp: isNaN(parsed) ? null : new Date(parsed).toISOString(),
             };
           });
-      
+
           return {
             id: conv.id,
             client_id: conv.client_id,
@@ -198,9 +306,9 @@ const Clients = () => {
             unreadCount: conv.unread_messages_count,
           };
         }
-      
+
         return null;
-      }      
+      }
        else if (res.status === 404) {
         return null;
       } else {
@@ -213,7 +321,7 @@ const Clients = () => {
     }
   }, [agentId, clients, showMessage]);
 
-
+  // Effect to filter and sort clients
   useEffect(() => {
     if (!showPendingRequests) {
       let currentClients = [...clients];
@@ -223,6 +331,14 @@ const Clients = () => {
           c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           c.email.toLowerCase().includes(searchTerm.toLowerCase())
         );
+      }
+
+      // Apply client status filter
+      if (clientStatusFilter !== 'all') {
+        currentClients = currentClients.filter((client) => {
+          // Ensure client_status exists and matches the filter
+          return client.client_status?.toLowerCase() === clientStatusFilter;
+        });
       }
 
       currentClients.sort((a, b) => {
@@ -235,8 +351,9 @@ const Clients = () => {
       setFilteredClients(currentClients);
       setPage(1);
     }
-  }, [searchTerm, clients, sortKey, sortDirection, showPendingRequests]);
+  }, [searchTerm, clients, sortKey, sortDirection, showPendingRequests, clientStatusFilter]); // Added clientStatusFilter to dependencies
 
+  // Effect to filter and sort pending requests
   useEffect(() => {
     if (showPendingRequests) {
       let currentRequests = [...pendingRequests];
@@ -247,6 +364,7 @@ const Clients = () => {
           r.client_email.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
+      // No status filter for pending requests as per current requirements
 
       currentRequests.sort((a, b) => {
         const aValue = a[sortKey];
@@ -275,9 +393,9 @@ const Clients = () => {
       showMessage('Agent ID not available. Please try again later.', 'info');
       return;
     }
-  
+
     let conversationToOpen = await fetchConversationForClient(clientToChat.user_id);
-  
+
     if (!conversationToOpen) {
       try {
         const token = localStorage.getItem('token');
@@ -293,24 +411,24 @@ const Clients = () => {
             message_content: null // Initial message content can be null for general inquiry
           })
         });
-  
+
         if (createRes.ok) {
           const newConversationData = await createRes.json();
           const conversation = newConversationData.conversation;
-  
+
           if (!conversation) {
             showMessage("No conversation data returned from backend.", "error");
             return;
           }
-  
+
           conversationToOpen = {
             id: conversation.id,
             client_id: conversation.client_id,
             agent_id: conversation.agent_id,
             property_id: conversation.property_id,
-            clientName: clientToChat.full_name,
-            clientEmail: clientToChat.email,
-            clientPhone: clientToChat.phone,
+            clientName: clients.find(c => c.user_id === conv.client_id)?.full_name || conv.client_full_name,
+            clientEmail: clients.find(c => c.user_id === conv.client_id)?.email || conv.client_email,
+            clientPhone: clients.find(c => c.user_id === conv.client_id)?.phone || conv.client_phone,
             propertyTitle: conversation.property_title || 'General Inquiry',
             messages: Array.isArray(conversation.messages)
               ? conversation.messages.map(msg => ({
@@ -328,7 +446,7 @@ const Clients = () => {
             is_opened: conversation.is_opened,
             unreadCount: conversation.unread_messages_count || 0
           };
-  
+
           showMessage('New general conversation started!', 'success');
         } else {
           const errorData = await createRes.json();
@@ -341,13 +459,13 @@ const Clients = () => {
         return;
       }
     }
-  
+
     console.log("🧾 Chat conversation being opened:", conversationToOpen);
-  
+
     setConversationForModal({ ...conversationToOpen });
     setIsAgentInquiryModalOpen(true);
     setOpenedConversationId(conversationToOpen.id);
-  
+
     if (conversationToOpen.unreadCount > 0) {
       const token = localStorage.getItem('token');
       try {
@@ -362,7 +480,7 @@ const Clients = () => {
         showMessage("Failed to mark messages as read.", 'error');
       }
     }
-  
+
     try {
       const token = localStorage.getItem('token');
       await fetch(`${API_BASE_URL}/inquiries/agent/mark-opened/${conversationToOpen.id}`, {
@@ -372,7 +490,7 @@ const Clients = () => {
     } catch (error) {
       console.error("Failed to mark conversation as opened:", error);
     }
-  }, [agentId, fetchConversationForClient, showMessage]);
+  }, [agentId, fetchConversationForClient, showMessage, clients]); // Added clients to dependencies for clientName lookup
 
   const handleDeleteInquiry = useCallback(async () => {
     if (!conversationForModal) return;
@@ -397,7 +515,7 @@ const Clients = () => {
 
   const handleSendMessageToConversation = useCallback(async (conversationId, messageText) => {
     const token = localStorage.getItem('token');
-    
+
     console.log('🚀 Sending message with payload:', {
       conversation_id: conversationId,
       property_id: conversationForModal?.property_id,
@@ -405,7 +523,7 @@ const Clients = () => {
       recipient_id: conversationForModal?.client_id,
       message_type: 'agent_reply',
     });
-    
+
     const response = await fetch(`${API_BASE_URL}/inquiries/message`, {
       method: 'POST',
       headers: {
@@ -420,9 +538,9 @@ const Clients = () => {
         message_type: 'agent_reply',
       }),
     });
-    
+
     console.log('🧾 Message POST response:', response.status, response.statusText);
-    
+
 
     try {
       const token = localStorage.getItem('token');
@@ -449,16 +567,16 @@ const Clients = () => {
 
     const handleNewMessage = async (newMessage) => {
       if (!conversationForModal || newMessage.conversationId !== conversationForModal.id) return;
-    
+
       const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id);
       if (updatedConversation) {
         setConversationForModal(updatedConversation);
       }
-    
+
       const expectedClientId = Number(newMessage.clientId || newMessage.client_id || conversationForModal.client_id);
       const senderId = Number(newMessage.senderId);
       const isFromClient = senderId === expectedClientId;
-    
+
       if (isFromClient && openedConversationId === conversationForModal.id) {
         const token = localStorage.getItem('token');
         if (token && agentId) {
@@ -482,7 +600,7 @@ const Clients = () => {
         }
       }
     };
-    
+
     const handleReadAck = async ({ conversationId, readerId, role }) => {
       if (conversationId === conversationForModal?.id) {
         const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id);
@@ -650,6 +768,7 @@ const Clients = () => {
       setClients((prev) =>
         prev.map((c) => (c.user_id === clientId ? { ...c, notes: editedNoteContent } : c))
       );
+      // Re-filter and sort clients to update the displayed list immediately
       setFilteredClients((prev) =>
         prev.map((c) => (c.user_id === clientId ? { ...c, notes: editedNoteContent } : c))
       );
@@ -712,6 +831,18 @@ const Clients = () => {
     });
   };
 
+  // Handlers for search and status changes (for both desktop and mobile filters)
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1); // Reset page on search
+  };
+
+  const handleClientStatusChange = (value) => {
+    setClientStatusFilter(value);
+    setPage(1); // Reset page on status change
+  };
+
+
   const totalItems = showPendingRequests ? filteredPendingRequests.length : filteredClients.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedData = showPendingRequests
@@ -771,9 +902,10 @@ const Clients = () => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
           {isMobile && (
             <div className="flex justify-between items-center mb-4">
+              {/* Mobile Filter Button */}
               <button
                 className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                onClick={() => { }}
+                onClick={() => setIsFilterModalOpen(true)} // Open filter modal
                 title="Open Filters"
               >
                 <SlidersHorizontal size={20} />
@@ -804,9 +936,8 @@ const Clients = () => {
                   <LayoutList className="h-5 w-5" />
                 </button>
                 <button
-                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                   onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
-                  title="Grid View"
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                 >
                   <Squares2X2Icon className="h-6 w-6" />
                 </button>
@@ -820,9 +951,24 @@ const Clients = () => {
                 type="text"
                 placeholder="Search clients..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange} // Use the new handler
                 className={`w-full md:w-1/3 px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
               />
+
+              {/* Desktop Status Filter - Reduced width */}
+              <div className="w-full md:w-1/6"> {/* Changed from md:w-1/4 to md:w-1/5 */}
+                <Dropdown
+                  options={[
+                    { value: 'all', label: 'All Statuses' },
+                    { value: 'vip', label: 'VIP' },
+                    { value: 'regular', label: 'Regular' },
+                  ]}
+                  value={clientStatusFilter}
+                  onChange={handleClientStatusChange} // Use the new handler
+                  placeholder="Filter by Status"
+                  className="w-full"
+                />
+              </div>
 
               <div className="flex gap-2 items-center">
                 <div className="relative inline-block text-left" ref={exportDropdownRef}>
@@ -897,7 +1043,7 @@ const Clients = () => {
                       }}
                       onViewProfile={() => showMessage('View Client Profile is not available directly from pending requests here.', 'info')}
                       onSendEmail={() => showMessage('Email client directly from here.', 'info')}
-                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null })} // Pass client info for chat
+                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null })}
                       onToggleStatus={() => showMessage('Cannot toggle status for pending requests.', 'info')}
                       onRemoveClient={() => handleRejectRequest(request.request_id)}
                       editingNoteId={null}
@@ -1068,6 +1214,83 @@ const Clients = () => {
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Filter Modal (for small screens) */}
+      <AnimatePresence>
+        {isFilterModalOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            // Changed background to plain white and text to gray-900 for consistency
+            className={`fixed inset-0 z-50 flex flex-col bg-white text-gray-900`}
+          >
+            {/* Modal Header - Removed background and shadow */}
+            <div className={`flex items-center justify-between p-4`}> {/* Removed shadow-md and background classes */}
+              <h2 className="text-xl font-bold">Filter Clients</h2>
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className={`p-2 rounded-full transition-colors duration-200 ${darkMode ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-200 text-gray-700"}`}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body - Filters */}
+            <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+              {/* Search Bar */}
+              <div>
+                <label htmlFor="search" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}> {/* Adjusted text color for light mode */}
+                  Search Clients
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className={`h-5 w-5 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+                  </div>
+                  <input
+                    type="text"
+                    id="search"
+                    placeholder="Search by name or email..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                  />
+                </div>
+              </div>
+
+              {/* Status Dropdown */}
+              <div>
+                <label htmlFor="status-filter" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}> {/* Adjusted text color for light mode */}
+                  Client Status
+                </label>
+                <Dropdown
+                  options={[
+                    { value: 'all', label: 'All Statuses' },
+                    { value: 'vip', label: 'VIP' },
+                    { value: 'regular', label: 'Regular' },
+                  ]}
+                  value={clientStatusFilter}
+                  onChange={handleClientStatusChange}
+                  placeholder="Select Status"
+                  className="w-full"
+                />
+              </div>
+
+            </div>
+
+            {/* Apply Filters Button - Removed background and shadow */}
+            <div className={`p-4`}> {/* Removed shadow-lg and background classes */}
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

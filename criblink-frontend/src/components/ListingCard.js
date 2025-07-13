@@ -70,8 +70,9 @@ function ListingCard({ listing: initialListing }) {
     switch (status?.toLowerCase()) {
       case "sold": return "bg-red-600";
       case "available": return "bg-green-600";
-      case "pending": return "bg-yellow-500";
+      case "pending": return "bg-green-400";
       case "featured": return "bg-amber-500";
+      case "rejected": return "bg-red-800"
       default: return "bg-gray-500";
     }
   };

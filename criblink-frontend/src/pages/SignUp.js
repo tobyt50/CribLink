@@ -162,7 +162,13 @@ export default function SignUp() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`} // Main form space-y-6
+        // Conditional styling for the form container:
+        // On mobile (no sm: prefix), it will be transparent (bg-transparent) and have no shadow/padding.
+        // On small screens and up (sm: prefix), it will have the white/gray background, rounded corners, shadow, and padding.
+        className={`w-full max-w-md space-y-6
+          bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
+          ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}
+          px-4 pt-4`}
       >
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
           Create Account
@@ -197,10 +203,10 @@ export default function SignUp() {
           value={form.full_name} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+              ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -210,10 +216,10 @@ export default function SignUp() {
           value={form.email} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+              ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -223,10 +229,10 @@ export default function SignUp() {
           value={form.password} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+              ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
         <input
@@ -236,10 +242,10 @@ export default function SignUp() {
           value={form.confirm_password} // Bind value to state
           onChange={handleChange}
           required
-          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
             darkMode
-              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+              ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+              : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
           }`}
         />
 
@@ -263,10 +269,10 @@ export default function SignUp() {
               value={form.phone_number} // Bind value to state
               onChange={handleChange}
               required // Make agent-specific fields required for agents
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                  ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+                  : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
               }`}
             />
             <input
@@ -275,10 +281,10 @@ export default function SignUp() {
               placeholder="Agency Name (Optional)"
               value={form.agency_name} // Bind value to state
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
+              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
                 darkMode
-                  ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" // Changed focus:ring-green-700 to focus:ring-green-400
-                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                  ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+                  : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
               }`}
             />
             {/* Add more agent-specific fields here */}

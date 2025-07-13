@@ -17,7 +17,7 @@ export default function SelectRole() {
   ];
 
   return (
-    <div className={`flex flex-col items-center justify-center min-h-screen px-4 ${darkMode ? "bg-gray-900" : "bg-gradient-to-br from-green-50 to-green-100"}`}>
+    <div className={`flex flex-col items-center justify-center min-h-screen px-4`}>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
