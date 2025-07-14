@@ -137,8 +137,16 @@ const AddListing = () => {
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
 
+  // New states for land properties
+  const [landSize, setLandSize] = useState('');
+  const [zoningType, setZoningType] = useState('');
+  const [titleType, setTitleType] = useState(''); // Made non-conditional
+
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
+
+  // Determine if the current property type is 'Land'
+  const isLandProperty = propertyType === 'Land';
 
   // Combine all images for easier handling and display
   const allImagesForDisplay = [
@@ -174,6 +182,7 @@ const AddListing = () => {
     { value: "Detached House", label: "Detached House" },
     { value: "Semi-Detached House", label: "Semi-Detached House" },
     { value: "Condo", label: "Condo" },
+    { value: "Land", label: "Land" }, // Added Land option
   ];
 
   const bedroomOptions = [
@@ -185,6 +194,28 @@ const AddListing = () => {
     { value: "", label: "Any Bathrooms" },
     ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bathroom(s)` })),
   ];
+
+  const zoningTypeOptions = [
+    { value: "", label: "Select Zoning Type" },
+    { value: "Residential", label: "Residential" },
+    { value: "Commercial", label: "Commercial" },
+    { value: "Industrial", label: "Industrial" },
+    { value: "Agricultural", label: "Agricultural" },
+    { value: "Mixed-Use", label: "Mixed-Use" },
+    { value: "Other", label: "Other" },
+  ];
+
+  const titleTypeOptions = [
+    { value: "", label: "Select Title Type" },
+    { value: "C of O", label: "Certificate of Occupancy (C of O)" },
+    { value: "Gazette", label: "Gazette" },
+    { value: "Deed of Assignment", label: "Deed of Assignment" },
+    { value: "Governor's Consent", label: "Governor's Consent" },
+    { value: "Survey Plan", label: "Survey Plan" },
+    { value: "Excision", label: "Excision" },
+    { value: "Other", label: "Other" },
+  ];
+
 
   const onDrop = (acceptedFiles) => {
     acceptedFiles.forEach(file => {
@@ -260,8 +291,15 @@ const AddListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!purchaseCategory || !title || !location || !stateValue || !propertyType || !bedrooms || !bathrooms || !price) {
-      showMessage('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Bedrooms, Bathrooms, Price).', 'error');
+    // Basic validation for common fields
+    if (!purchaseCategory || !title || !location || !stateValue || !propertyType || !price) {
+      showMessage('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Price).', 'error');
+      return;
+    }
+
+    // Conditional validation for bedrooms/bathrooms
+    if (!isLandProperty && (!bedrooms || !bathrooms)) {
+      showMessage('Please fill in Bedrooms and Bathrooms for non-land properties.', 'error');
       return;
     }
 
@@ -281,24 +319,46 @@ const AddListing = () => {
       location,
       state: stateValue,
       property_type: propertyType,
-      bedrooms,
-      bathrooms,
       price,
       status: 'Pending',
       description,
-      square_footage: squareFootage,
-      lot_size: lotSize,
-      year_built: yearBuilt,
-      heating_type: heatingType,
-      cooling_type: coolingType,
-      parking,
-      amenities,
       mainImageBase64: null,
       mainImageOriginalName: null,
       galleryImagesBase64: [],
       galleryImagesOriginalNames: [],
       galleryImageURLs: [],
+      title_type: titleType, // Always include title_type
     };
+
+    // Conditionally add property-specific fields
+    if (!isLandProperty) {
+      payload.bedrooms = bedrooms;
+      payload.bathrooms = bathrooms;
+      payload.square_footage = squareFootage;
+      payload.year_built = yearBuilt;
+      payload.heating_type = heatingType;
+      payload.cooling_type = coolingType;
+      payload.parking = parking;
+      payload.amenities = amenities;
+      // lot_size can apply to both, so it's not conditional here
+      payload.lot_size = lotSize;
+    } else {
+      // For land properties, include land-specific fields
+      payload.land_size = landSize;
+      payload.zoning_type = zoningType;
+      // Ensure non-applicable fields are explicitly null or undefined for land
+      payload.bedrooms = null;
+      payload.bathrooms = null;
+      payload.square_footage = null;
+      payload.year_built = null;
+      payload.heating_type = null;
+      payload.cooling_type = null;
+      payload.parking = null;
+      payload.amenities = null;
+      // lot_size is still relevant for land, so it's included
+      payload.lot_size = lotSize;
+    }
+
 
     // Separate main image from gallery images
     const thumbnailItem = allImagesForDisplay.find(item => item.identifier === thumbnailIdentifier);
@@ -342,6 +402,7 @@ const AddListing = () => {
       });
 
       showMessage('Listing added successfully!', 'success', 3000);
+      // Clear form fields
       setPurchaseCategory('Rent');
       setTitle('');
       setLocation('');
@@ -361,6 +422,10 @@ const AddListing = () => {
       setCoolingType('');
       setParking('');
       setAmenities('');
+      setLandSize('');
+      setZoningType('');
+      setTitleType('');
+
       navigate('/admin/listings');
     } catch (error) {
       let errorMessage = 'Failed to add listing. Please try again.';
@@ -467,28 +532,31 @@ const AddListing = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bedrooms</label>
-              <Dropdown
-                placeholder="Any Bedrooms"
-                options={bedroomOptions}
-                value={bedrooms}
-                onChange={setBedrooms}
-                className="w-full"
-              />
+          {/* Conditional fields for non-land properties */}
+          {!isLandProperty && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bedrooms</label>
+                <Dropdown
+                  placeholder="Any Bedrooms"
+                  options={bedroomOptions}
+                  value={bedrooms}
+                  onChange={setBedrooms}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bathrooms</label>
+                <Dropdown
+                  placeholder="Any Bathrooms"
+                  options={bathroomOptions}
+                  value={bathrooms}
+                  onChange={setBathrooms}
+                  className="w-full"
+                />
+              </div>
             </div>
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bathrooms</label>
-              <Dropdown
-                placeholder="Any Bathrooms"
-                options={bathroomOptions}
-                value={bathrooms}
-                onChange={setBathrooms}
-                className="w-full"
-              />
-            </div>
-          </div>
+          )}
 
           <div>
             <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>
@@ -512,80 +580,127 @@ const AddListing = () => {
             ></textarea>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Square Footage (Optional)</label>
-              <input
-                type="number"
-                value={squareFootage}
-                onChange={(e) => setSquareFootage(e.target.value)}
-                className={`block w-full ${formElementStyles}`}
-              />
+          {/* Conditional fields for non-land properties */}
+          {!isLandProperty && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Square Footage (Optional)</label>
+                <input
+                  type="number"
+                  value={squareFootage}
+                  onChange={(e) => setSquareFootage(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Lot Size (sqft or acres) (Optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={lotSize}
+                  onChange={(e) => setLotSize(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                />
+              </div>
             </div>
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Lot Size (sqft or acres) (Optional)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={lotSize}
-                onChange={(e) => setLotSize(e.target.value)}
-                className={`block w-full ${formElementStyles}`}
-              />
-            </div>
-          </div>
+          )}
 
+          {/* Land-specific fields */}
+          {isLandProperty && (
+            <>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Land Size (sqft or acres) (Optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={landSize}
+                  onChange={(e) => setLandSize(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                  placeholder="e.g., 5000 sqft or 1.5 acres"
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Zoning Type (Optional)</label>
+                <Dropdown
+                  placeholder="Select Zoning Type"
+                  options={zoningTypeOptions}
+                  value={zoningType}
+                  onChange={setZoningType}
+                  className="w-full"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Title Type field - now always visible */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Year Built (Optional)</label>
-            <input
-              type="number"
-              value={yearBuilt}
-              onChange={(e) => setYearBuilt(e.target.value)}
-              className={`block w-full ${formElementStyles}`}
+            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Title Type (Optional)</label>
+            <Dropdown
+              placeholder="Select Title Type"
+              options={titleTypeOptions}
+              value={titleType}
+              onChange={setTitleType}
+              className="w-full"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Heating Type (Optional)</label>
-              <input
-                type="text"
-                value={heatingType}
-                onChange={(e) => setHeatingType(e.target.value)}
-                className={`block w-full ${formElementStyles}`}
-              />
-            </div>
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Cooling Type (Optional)</label>
-              <input
-                type="text"
-                value={coolingType}
-                onChange={(e) => setCoolingType(e.target.value)}
-                className={`block w-full ${formElementStyles}`}
-              />
-            </div>
-          </div>
+          {!isLandProperty && (
+            <>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Year Built (Optional)</label>
+                <input
+                  type="number"
+                  value={yearBuilt}
+                  onChange={(e) => setYearBuilt(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                />
+              </div>
 
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Parking (Optional)</label>
-            <input
-              type="text"
-              value={parking}
-              onChange={(e) => setParking(e.target.value)}
-              className={`block w-full ${formElementStyles}`}
-              placeholder="e.g., Garage, Street, Driveway"
-            />
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Heating Type (Optional)</label>
+                  <input
+                    type="text"
+                    value={heatingType}
+                    onChange={(e) => setHeatingType(e.target.value)}
+                    className={`block w-full ${formElementStyles}`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Cooling Type (Optional)</label>
+                  <input
+                    type="text"
+                    value={coolingType}
+                    onChange={(e) => setCoolingType(e.target.value)}
+                    className={`block w-full ${formElementStyles}`}
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Amenities (comma-separated) (Optional)</label>
-            <textarea
-              value={amenities}
-              onChange={(e) => setAmenities(e.target.value)}
-              className={`block w-full ${formElementStyles}`}
-              rows="3"
-              placeholder="e.g., Pool, Gym, Balcony, Garden"
-            ></textarea>
-          </div>
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Parking (Optional)</label>
+                <input
+                  type="text"
+                  value={parking}
+                  onChange={(e) => setParking(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                  placeholder="e.g., Garage, Street, Driveway"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Amenities (comma-separated) (Optional)</label>
+                <textarea
+                  value={amenities}
+                  onChange={(e) => setAmenities(e.target.value)}
+                  className={`block w-full ${formElementStyles}`}
+                  rows="3"
+                  placeholder="e.g., Pool, Gym, Balcony, Garden"
+                ></textarea>
+              </div>
+            </>
+          )}
+
 
           <div {...getRootProps()} className={`p-6 border-dashed border-2 rounded-2xl cursor-pointer text-center transition-all duration-200 ${
             darkMode
@@ -652,3 +767,4 @@ const AddListing = () => {
 };
 
 export default AddListing;
+

@@ -15,10 +15,11 @@ cloudinary.config({
  * @param {Buffer} fileBuffer - The buffer of the file to upload.
  * @param {string} originalname - The original name of the file (for extension inference).
  * @param {string} folder - The folder name in Cloudinary to store the image.
- * @returns {Promise<{url: string, publicId: string}>} - A promise that resolves to the secure URL and public ID of the uploaded image.
+ * @param {string} [resourceType='image'] - The type of resource to upload ('image', 'video', 'raw', 'auto').
+ * @returns {Promise<{url: string, publicId: string}>} - A promise that resolves to the secure URL and public ID of the uploaded file.
  * @throws {Error} If the upload to Cloudinary fails.
  */
-const uploadToCloudinary = async (fileBuffer, originalname, folder) => {
+const uploadToCloudinary = async (fileBuffer, originalname, folder, resourceType = 'image') => {
     try {
         // Convert buffer to data URI format (e.g., data:image/png;base64,...)
         const fileUri = parser.format(originalname, fileBuffer).content;
@@ -26,14 +27,14 @@ const uploadToCloudinary = async (fileBuffer, originalname, folder) => {
         // Upload the data URI to Cloudinary
         const uploadResult = await cloudinary.uploader.upload(fileUri, {
             folder: folder, // Specify the folder for organization
-            resource_type: 'image' // Ensure it's treated as an image
+            resource_type: resourceType // Use the passed resourceType
         });
 
         // Return the secure URL and public ID from the upload result
         return { url: uploadResult.secure_url, publicId: uploadResult.public_id };
     } catch (error) {
         console.error('Error uploading to Cloudinary:', error);
-        throw new Error('Failed to upload image to cloud storage.');
+        throw new Error('Failed to upload file to cloud storage.');
     }
 };
 

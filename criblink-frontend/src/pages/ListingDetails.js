@@ -66,6 +66,9 @@ const ListingDetails = () => {
   const similarCarouselRef = useRef(null); // Ref for similar listings carousel
   const autoSwipeSimilarIntervalRef = useRef(null); // Ref for similar listings auto-swipe interval
 
+  // Determine if the property is land
+  const isLandProperty = listing?.property_type?.toLowerCase() === 'land';
+
   // Determine listings per page based on screen width
   useEffect(() => {
     const handleResize = () => {
@@ -1020,8 +1023,13 @@ const ListingDetails = () => {
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               <p><strong>📍 Location:</strong> {listing.location}, {listing.state}</p>
               <p><strong>🏡 Property Type:</strong> {listing.property_type}</p>
-              <p><strong>🛏️ Bedrooms:</strong> {listing.bedrooms}</p>
-              <p><strong>🛁 Bathrooms:</strong> {listing.bathrooms}</p>
+              {/* Conditionally display bedrooms and bathrooms */}
+              {!isLandProperty && listing.bedrooms != null && (
+                <p><strong>🛏️ Bedrooms:</strong> {listing.bedrooms}</p>
+              )}
+              {!isLandProperty && listing.bathrooms != null && (
+                <p><strong>🛁 Bathrooms:</strong> {listing.bathrooms}</p>
+              )}
               <p><strong>📅 Listed:</strong> {new Date(listing.date_listed).toLocaleDateString()}</p>
             </div>
 
@@ -1035,7 +1043,8 @@ const ListingDetails = () => {
             )}
           </div>
 
-          {listing.amenities && (
+          {/* Conditionally render amenities section */}
+          {!isLandProperty && listing.amenities && (
             <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
               <h2 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Amenities</h2>
               <div className="flex flex-wrap gap-2">
@@ -1051,23 +1060,35 @@ const ListingDetails = () => {
           <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
             <h2 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Key Features</h2>
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              {listing.square_footage && (
+              {/* Conditionally display square footage, year built, heating, cooling, parking */}
+              {!isLandProperty && listing.square_footage && (
                 <p><strong>📐 Square Footage:</strong> {listing.square_footage} sqft</p>
               )}
+              {/* Lot size can apply to both land and non-land properties */}
               {listing.lot_size && (
                 <p><strong>🌳 Lot Size:</strong> {listing.lot_size} acres</p>
               )}
-              {listing.year_built && (
+              {!isLandProperty && listing.year_built && (
                 <p><strong>🏗️ Year Built:</strong> {listing.year_built}</p>
               )}
-              {listing.heating_type && (
+              {!isLandProperty && listing.heating_type && (
                 <p><strong>🔥 Heating:</strong> {listing.heating_type}</p>
               )}
-              {listing.cooling_type && (
+              {!isLandProperty && listing.cooling_type && (
                 <p><strong>❄️ Cooling:</strong> {listing.cooling_type}</p>
               )}
-              {listing.parking && (
+              {!isLandProperty && listing.parking && (
                 <p><strong>🚗 Parking:</strong> {listing.parking}</p>
+              )}
+              {/* New land-specific fields */}
+              {isLandProperty && listing.land_size && (
+                <p><strong>📐 Land Size:</strong> {listing.land_size} sqft/acres</p>
+              )}
+              {isLandProperty && listing.zoning_type && (
+                <p><strong>🗺️ Zoning:</strong> {listing.zoning_type}</p>
+              )}
+              {isLandProperty && listing.title_type && (
+                <p><strong>📜 Title Type:</strong> {listing.title_type}</p>
               )}
             </div>
           </div>
@@ -1379,3 +1400,4 @@ const ListingDetails = () => {
 };
 
 export default ListingDetails;
+

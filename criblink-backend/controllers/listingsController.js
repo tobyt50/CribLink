@@ -18,13 +18,17 @@ exports.getAllListings = async (req, res) => {
       location,
       property_type,
       bedrooms,
-      bathrooms
+      bathrooms,
+      // New land-specific filters
+      land_size,
+      zoning_type,
+      title_type
     } = req.query;
 
     const userRole = req.user ? req.user.role : 'guest';
     const userId = req.user ? req.user.user_id : null;
 
-    let baseQuery = 'FROM property_listings pl';
+    let baseQuery = 'FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id'; // Join with property_details
     let conditions = [];
     let values = [];
     let valueIndex = 1;
@@ -79,15 +83,31 @@ exports.getAllListings = async (req, res) => {
       values.push(`%${property_type}%`);
     }
 
-    if (bedrooms) {
+    // Bedrooms and bathrooms should only be filtered if property_type is NOT 'Land'
+    if (bedrooms && property_type?.toLowerCase() !== 'land') {
       conditions.push(`pl.bedrooms = $${valueIndex++}`);
-      values.push(parseInt(bedrooms)); // Assuming bedrooms is an integer
+      values.push(parseInt(bedrooms));
     }
 
-    if (bathrooms) {
+    if (bathrooms && property_type?.toLowerCase() !== 'land') {
       conditions.push(`pl.bathrooms = $${valueIndex++}`);
-      values.push(parseInt(bathrooms)); // Assuming bathrooms is an integer
+      values.push(parseInt(bathrooms));
     }
+
+    // New land-specific filters
+    if (land_size) {
+      conditions.push(`pd.land_size >= $${valueIndex++}`); // Assuming min land size
+      values.push(parseFloat(land_size));
+    }
+    if (zoning_type) {
+      conditions.push(`pd.zoning_type ILIKE $${valueIndex++}`);
+      values.push(`%${zoning_type}%`);
+    }
+    if (title_type) {
+      conditions.push(`pd.title_type ILIKE $${valueIndex++}`);
+      values.push(`%${title_type}%`);
+    }
+
 
     if (search && search.trim() !== '') {
       const keyword = `%${search.trim()}%`;
@@ -95,10 +115,11 @@ exports.getAllListings = async (req, res) => {
         pl.title ILIKE $${valueIndex} OR
         pl.location ILIKE $${valueIndex + 1} OR
         pl.state ILIKE $${valueIndex + 2} OR
-        pl.property_type ILIKE $${valueIndex + 3}
+        pl.property_type ILIKE $${valueIndex + 3} OR
+        pd.description ILIKE $${valueIndex + 4}
       )`);
-      values.push(keyword, keyword, keyword, keyword);
-      valueIndex += 4;
+      values.push(keyword, keyword, keyword, keyword, keyword);
+      valueIndex += 5;
     }
 
     // 4. Where clause
@@ -122,11 +143,12 @@ exports.getAllListings = async (req, res) => {
     }
 
     // 6. Query building
-    const query = `SELECT pl.* ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
+    // Select all columns from property_listings (pl.*) and property_details (pd.*)
+    const query = `SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
     values.push(limitNum, offset);
 
-    const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
-    const countValues = values.slice(0, values.length - 2);
+    const countQuery = `SELECT COUNT(*) FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id ${whereClause}`;
+    const countValues = values.slice(0, values.length - 2); // Exclude limit and offset from count query
 
     const [listingsResult, countResult] = await Promise.all([
       pool.query(query, values),
@@ -181,23 +203,26 @@ exports.createListing = async (req, res) => {
         price,
         status,
         property_type,
-        bedrooms,
-        bathrooms,
+        bedrooms, // Can be null for land
+        bathrooms, // Can be null for land
         purchase_category,
         description,
-        square_footage,
+        square_footage, // Can be null for land
         lot_size,
-        year_built,
-        heating_type,
-        cooling_type,
-        parking,
-        amenities,
-        mainImageBase64, // Base64 string for a new main image upload
-        mainImageOriginalName, // Original name for a new main image upload
-        mainImageURL, // URL for an existing image to be set as main
-        galleryImagesBase64, // Array of base64 strings for new gallery images
-        galleryImagesOriginalNames, // Array of original names for new gallery images
-        galleryImageURLs // Array of existing URLs for gallery images
+        year_built, // Can be null for land
+        heating_type, // Can be null for land
+        cooling_type, // Can be null for land
+        parking, // Can be null for land
+        amenities, // Can be null for land
+        land_size, // New field for land
+        zoning_type, // New field for land
+        title_type, // New field for land
+        mainImageBase64,
+        mainImageOriginalName,
+        mainImageURL,
+        galleryImagesBase64,
+        galleryImagesOriginalNames,
+        galleryImageURLs
     } = req.body;
 
     const agent_id = req.user ? req.user.user_id : null;
@@ -215,31 +240,46 @@ exports.createListing = async (req, res) => {
 
         // Determine main image URL and public ID
         if (mainImageBase64 && mainImageOriginalName) {
-            // New image uploaded as base64
             const uploadResult = await uploadToCloudinary(Buffer.from(mainImageBase64.split(',')[1], 'base64'), mainImageOriginalName, 'listings');
             mainImageUrlToSave = uploadResult.url;
             mainImagePublicIdToSave = uploadResult.publicId;
         } else if (mainImageURL) {
-            // Existing image URL provided as main image
             mainImageUrlToSave = mainImageURL;
             mainImagePublicIdToSave = getCloudinaryPublicId(mainImageURL);
         }
-        // If neither is provided, mainImageUrlToSave and mainImagePublicIdToSave remain null, making the main image optional.
 
         const listingResult = await pool.query(
             `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              RETURNING property_id`,
-            [title, location, state, price, status || 'pending', agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, mainImageUrlToSave, mainImagePublicIdToSave]
+            [
+                title, location, state, price, status || 'pending', agent_id, date_listed, property_type,
+                property_type?.toLowerCase() === 'land' ? null : bedrooms, // Set bedrooms to null if land
+                property_type?.toLowerCase() === 'land' ? null : bathrooms, // Set bathrooms to null if land
+                purchase_category, mainImageUrlToSave, mainImagePublicIdToSave
+            ]
         );
 
         const newListingId = listingResult.rows[0].property_id;
 
         // Insert into property_details only if any optional detail field is provided and not empty/null
         const propertyDetailsFields = {
-            description, square_footage, lot_size, year_built,
-            heating_type, cooling_type, parking, amenities
+            description, lot_size, // lot_size applies to both
         };
+
+        // Conditionally add fields based on property_type
+        if (property_type?.toLowerCase() !== 'land') {
+            propertyDetailsFields.square_footage = square_footage;
+            propertyDetailsFields.year_built = year_built;
+            propertyDetailsFields.heating_type = heating_type;
+            propertyDetailsFields.cooling_type = cooling_type;
+            propertyDetailsFields.parking = parking;
+            propertyDetailsFields.amenities = amenities;
+        } else {
+            propertyDetailsFields.land_size = land_size;
+            propertyDetailsFields.zoning_type = zoning_type;
+            propertyDetailsFields.title_type = title_type;
+        }
 
         // Filter out fields that are undefined, null, or empty strings
         const providedDetails = Object.keys(propertyDetailsFields).filter(key =>
@@ -260,7 +300,7 @@ exports.createListing = async (req, res) => {
         }
 
         // Upload new gallery images to Cloudinary
-        if (galleryImagesBase64 && Array.isArray(galleryImagesBase64)) {
+        if (galleryImagesBase664 && Array.isArray(galleryImagesBase64)) {
             for (let i = 0; i < galleryImagesBase64.length; i++) {
                 const base64 = galleryImagesBase64[i];
                 const originalname = galleryImagesOriginalNames[i];
@@ -284,7 +324,7 @@ exports.createListing = async (req, res) => {
         const createdListingResult = await pool.query(
             `SELECT
                 pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
-                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
+                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
@@ -319,7 +359,7 @@ exports.getListingById = async (req, res) => {
         const listingResult = await pool.query(
             `SELECT
                 pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
-                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
+                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
@@ -356,9 +396,9 @@ exports.updateListing = async (req, res) => {
         bedrooms,
         bathrooms,
         purchase_category,
-        existingImageUrlsToKeep, // URLs of existing images to retain
-        newImageUrls, // New URLs added by user
-        mainImageIdentifier, // Identifier for the main image (URL or new base64 temp ID)
+        existingImageUrlsToKeep,
+        newImageUrls,
+        mainImageIdentifier,
         description,
         square_footage,
         lot_size,
@@ -367,24 +407,27 @@ exports.updateListing = async (req, res) => {
         cooling_type,
         parking,
         amenities,
-        newImagesBase64, // New: array of base64 strings for new files
-        newImagesOriginalNames // New: array of original names for new files
+        land_size, // New field for land
+        zoning_type, // New field for land
+        title_type, // New field for land
+        newImagesBase64,
+        newImagesOriginalNames
     } = req.body;
 
     const existingUrls = Array.isArray(existingImageUrlsToKeep) ? existingImageUrlsToKeep : (existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : []);
     const newUrls = Array.isArray(newImageUrls) ? newImageUrls : (newImageUrls ? JSON.parse(newImageUrls) : []);
     const newFilesBase64 = Array.isArray(newImagesBase64) ? newImagesBase64 : [];
-    const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newFilesOriginalNames : [];
+    const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newImagesOriginalNames : [];
 
     try {
         await pool.query('BEGIN');
 
-        const currentListingResult = await pool.query('SELECT image_url, image_public_id FROM property_listings WHERE property_id = $1 FOR UPDATE', [id]);
+        const currentListingResult = await pool.query('SELECT image_url, image_public_id, property_type FROM property_listings WHERE property_id = $1 FOR UPDATE', [id]);
         if (currentListingResult.rows.length === 0) {
             await pool.query('ROLLBACK');
             return res.status(404).json({ message: 'Listing not found' });
         }
-        const { image_url: currentMainImageUrl, image_public_id: currentMainImagePublicId } = currentListingResult.rows[0];
+        const { image_url: currentMainImageUrl, image_public_id: currentMainImagePublicId, property_type: currentPropertyType } = currentListingResult.rows[0];
 
         const currentGalleryResult = await pool.query('SELECT image_url, public_id FROM property_images WHERE property_id = $1', [id]);
         const currentGalleryImages = currentGalleryResult.rows.map(row => ({ url: row.image_url, publicId: row.public_id }));
@@ -400,8 +443,17 @@ exports.updateListing = async (req, res) => {
         if (price !== undefined) { updates.push(`price = $${valueIndex++}`); values.push(price); }
         if (status !== undefined) { updates.push(`status = $${valueIndex++}`); values.push(status); }
         if (property_type !== undefined) { updates.push(`property_type = $${valueIndex++}`); values.push(property_type); }
-        if (bedrooms !== undefined) { updates.push(`bedrooms = $${valueIndex++}`); values.push(bedrooms); }
-        if (bathrooms !== undefined) { updates.push(`bathrooms = $${valueIndex++}`); values.push(bathrooms); }
+
+        // Conditionally update bedrooms and bathrooms based on property_type
+        if (property_type?.toLowerCase() === 'land') {
+            updates.push(`bedrooms = $${valueIndex++}`); values.push(null);
+            updates.push(`bathrooms = $${valueIndex++}`); values.push(null);
+        } else if (bedrooms !== undefined) {
+            updates.push(`bedrooms = $${valueIndex++}`); values.push(bedrooms);
+        } else if (bathrooms !== undefined) {
+            updates.push(`bathrooms = $${valueIndex++}`); values.push(bathrooms);
+        }
+
         if (purchase_category !== undefined) { updates.push(`purchase_category = $${valueIndex++}`); values.push(purchase_category); }
 
         // --- Image Handling Logic ---
@@ -459,7 +511,7 @@ exports.updateListing = async (req, res) => {
 
         // Add new URLs
         newUrls.forEach(url => {
-            if (url !== newMainImageUrl) { // Ensure it's not the new main image
+            if (url && url !== newMainImageUrl) { // Ensure it's not the new main image and not empty
                 updatedGalleryUrls.push(url);
                 updatedGalleryPublicIds.push(getCloudinaryPublicId(url));
             }
@@ -499,9 +551,35 @@ exports.updateListing = async (req, res) => {
         }
 
         const propertyDetailsFields = {
-            description, square_footage, lot_size, year_built,
-            heating_type, cooling_type, parking, amenities
+            description, lot_size, // lot_size applies to both
         };
+
+        // Conditionally add fields based on property_type
+        const isUpdatedPropertyLand = property_type?.toLowerCase() === 'land';
+        if (!isUpdatedPropertyLand) {
+            propertyDetailsFields.square_footage = square_footage;
+            propertyDetailsFields.year_built = year_built;
+            propertyDetailsFields.heating_type = heating_type;
+            propertyDetailsFields.cooling_type = cooling_type;
+            propertyDetailsFields.parking = parking;
+            propertyDetailsFields.amenities = amenities;
+            // Ensure land-specific fields are null if changing from land to non-land
+            propertyDetailsFields.land_size = null;
+            propertyDetailsFields.zoning_type = null;
+            propertyDetailsFields.title_type = null;
+        } else {
+            propertyDetailsFields.land_size = land_size;
+            propertyDetailsFields.zoning_type = zoning_type;
+            propertyDetailsFields.title_type = title_type;
+            // Ensure non-land specific fields are null if changing from non-land to land
+            propertyDetailsFields.square_footage = null;
+            propertyDetailsFields.year_built = null;
+            propertyDetailsFields.heating_type = null;
+            propertyDetailsFields.cooling_type = null;
+            propertyDetailsFields.parking = null;
+            propertyDetailsFields.amenities = null;
+        }
+
 
         const existingPropertyDetails = await pool.query('SELECT property_details_id FROM property_details WHERE property_id = $1', [id]);
 
@@ -512,6 +590,7 @@ exports.updateListing = async (req, res) => {
 
             for (const key in propertyDetailsFields) {
                 // Update if the field is explicitly provided (not undefined)
+                // Also, if a field is being set to null (e.g., bedrooms for land), it should be updated.
                 if (propertyDetailsFields[key] !== undefined) {
                     detailUpdates.push(`${key} = $${detailValueIndex++}`);
                     detailValues.push(propertyDetailsFields[key]);
@@ -565,7 +644,7 @@ exports.updateListing = async (req, res) => {
         const updatedListingResult = await pool.query(
             `SELECT
                 pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
-                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities,
+                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
@@ -618,6 +697,8 @@ exports.deleteListing = async (req, res) => {
             await deleteFromCloudinary(publicId);
         }
 
+        // Delete from property_details first due to foreign key constraint
+        await pool.query('DELETE FROM property_details WHERE property_id = $1', [id]);
         await pool.query('DELETE FROM property_images WHERE property_id = $1', [id]);
         const deleteResult = await pool.query('DELETE FROM property_listings WHERE property_id = $1 RETURNING *', [id]);
 
@@ -641,3 +722,4 @@ exports.deleteListing = async (req, res) => {
         res.status(500).json({ error: 'Internal server error deleting listing' });
     }
 };
+

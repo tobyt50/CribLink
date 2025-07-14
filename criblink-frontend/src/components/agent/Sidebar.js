@@ -12,7 +12,7 @@ import {
   LayoutGrid, // For Listings
   Inbox, // For Inquiries
   BarChart2, // For Analytics
-  FileText, // For Reports
+  FileText, // Added FileText for Legal Docs
   Archive, // For Archive
   Settings, // For Settings
   X,
@@ -25,6 +25,7 @@ const MENU_ITEMS = [
   { name: 'Dashboard', to: '/agent/dashboard', icon: <Home />, key: 'dashboard' },
   { name: 'Clients', to: '/agent/clients', icon: <Users />, key: 'clients' },
   { name: 'Listings', to: '/agent/listings', icon: <LayoutGrid />, key: 'listings' },
+  { name: 'Legal Docs', to: '/agent/documents', icon: <FileText />, key: 'documents' }, // NEW: Legal Documents link for Agents
   { name: 'Inquiries', to: '/agent/inquiries', icon: <Inbox />, key: 'inquiries' },
   { name: 'Analytics', to: '/agent/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },

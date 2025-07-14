@@ -9,7 +9,7 @@ import {
   LayoutGrid,
   Inbox,
   BarChart2,
-  FileText,
+  FileText, // Added FileText icon for legal documents
   Settings,
   X,
   Award,
@@ -22,6 +22,7 @@ const MENU_ITEMS = [
   { name: 'Users', to: '/admin/users', icon: <Users />, key: 'users' },
   { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
   { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
+  { name: 'Legal Docs', to: '/admin/documents', icon: <FileText />, key: 'documents' }, // NEW: Legal Documents link
   { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' },
   { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },

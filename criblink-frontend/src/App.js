@@ -38,6 +38,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
 import AgentPerformance from './pages/admin/AgentPerformance';
 import AdminSettings from "./pages/admin/Settings";
+import LegalDocumentsAdmin from "./pages/admin/LegalDocuments"; // Import Admin's LegalDocuments
 
 // Agent Pages
 import AgentDashboard from './pages/agent/Dashboard';
@@ -47,6 +48,7 @@ import ClientProfile from './pages/agent/ClientProfile';
 import AgentInquiries from './pages/agent/AgentInquiries';
 import ArchivedClients from './pages/agent/ArchivedClients';
 import AgentSettings from './pages/agent/Settings';
+import LegalDocumentsAgent from "./pages/agent/LegalDocuments"; // NEW: Import Agent's LegalDocuments
 
 // Client Pages
 import ClientInquiries from "./pages/client/ClientInquiries";
@@ -73,6 +75,10 @@ import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
 import NotFoundPage from "./pages/NotFoundPage";
 
+// NEW: Import AddLegalDocument component (shared between admin and agent)
+import AddLegalDocument from "./pages/AddLegalDocument";
+
+
 // --- Route Config Arrays ---
 const listingRoutes = [
   { path: "add-listing", element: <AddListing /> },
@@ -86,6 +92,8 @@ const adminRoutes = [
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
+  { path: "add-document", element: <AddLegalDocument /> },
+  { path: "documents", element: <LegalDocumentsAdmin /> }, // Admin's Legal Documents list
   ...listingRoutes
 ];
 
@@ -97,6 +105,8 @@ const agentRoutes = [
   { path: "inquiries", element: <AgentInquiries /> },
   { path: "archived-clients", element: <ArchivedClients /> },
   { path: "settings", element: <AgentSettings /> },
+  { path: "add-document", element: <AddLegalDocument /> },
+  { path: "documents", element: <LegalDocumentsAgent /> }, // NEW: Agent's Legal Documents list
   ...listingRoutes
 ];
 
@@ -171,7 +181,7 @@ function AppContent() {
               <Route index element={<Navigate to="general" replace />} />
               <Route path="general" element={<General />} />
               <Route path="security" element={<Security />} />
-              <Route path="privacy" element={<Privacy />} />
+              <Route path="privacy" element="<Privacy />" />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="favourites" element={<Favourites />} />

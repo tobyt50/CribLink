@@ -24,7 +24,10 @@ function ListingCard({ listing: initialListing }) {
     return () => observer.disconnect();
   }, []);
 
-  const listing = { ...initialListing, rating: 4.27 };
+  const listing = { ...initialListing, rating: 4.27 }; // Assuming rating is always 4.27 for now
+
+  // Determine if the property is land
+  const isLandProperty = listing.property_type?.toLowerCase() === 'land';
 
   const allImages = listing.gallery_images?.length
     ? [listing.image_url, ...listing.gallery_images]
@@ -59,7 +62,7 @@ function ListingCard({ listing: initialListing }) {
       case "sold": return "🔴 Sold";
       case "under offer": return "🤝 Under Offer";
       case "pending": return "⏳ Pending";
-      case "approved": return "👍 Approved";
+      case "approved": "👍 Approved";
       case "rejected": return "❌ Rejected";
       case "featured": return "⭐ Featured";
       default: return "❓";
@@ -190,12 +193,33 @@ function ListingCard({ listing: initialListing }) {
             <p className="truncate" title={listing.property_type}>🏘️ {listing.property_type}</p>
           </div>
           <div className="flex flex-col gap-0.5 text-right min-w-[40%]">
-            <p className="whitespace-nowrap">
-              🛏️ {listing.bedrooms} {isNarrow ? "Beds" : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
-            </p>
-            <p className="whitespace-nowrap">
-              🛁 {listing.bathrooms} {isNarrow ? "Baths" : `Bathroom${listing.bathrooms !== 1 ? "s" : ""}`}
-            </p>
+            {/* Conditionally display bedrooms and bathrooms */}
+            {!isLandProperty && listing.bedrooms != null && (
+              <p className="whitespace-nowrap">
+                🛏️ {listing.bedrooms} {isNarrow ? "Beds" : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
+              </p>
+            )}
+            {!isLandProperty && listing.bathrooms != null && (
+              <p className="whitespace-nowrap">
+                🛁 {listing.bathrooms} {isNarrow ? "Baths" : `Bathroom${listing.bathrooms !== 1 ? "s" : ""}`}
+              </p>
+            )}
+            {/* Display land-specific attributes if available */}
+            {isLandProperty && listing.land_size && (
+              <p className="whitespace-nowrap">
+                📐 {listing.land_size}
+              </p>
+            )}
+            {isLandProperty && listing.zoning_type && (
+              <p className="whitespace-nowrap">
+                 zoning: {listing.zoning_type}
+              </p>
+            )}
+            {isLandProperty && listing.title_type && (
+              <p className="whitespace-nowrap">
+                title: {listing.title_type}
+              </p>
+            )}
           </div>
         </div>
 
@@ -215,3 +239,4 @@ function ListingCard({ listing: initialListing }) {
 }
 
 export default ListingCard;
+

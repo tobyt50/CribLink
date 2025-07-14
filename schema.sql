@@ -60,7 +60,7 @@ CREATE TABLE users (
     share_property_preferences_with_agents BOOLEAN DEFAULT FALSE, -- NEW: Added for client control over property preference sharing
 
     -- General/App Settings (from Settings.js)
-    notifications_settings JSONB DEFAULT '{ "email_alerts": true, "push_notifications": true, "in_app_messages": true }'::jsonb, -- Stores { email_alerts: bool, push_notifications: bool, in_app_messages: bool }
+    notifications_settings JSONB DEFAULT '{ "email_alerts": true, "push_notifications": true, "in_app_messages": true }'::jsonb, -- Stores { email_alerts: bool, push_notifications: bool, in_app_messages: true }
     timezone VARCHAR(50) DEFAULT 'Africa/Lagos', -- Set to Nigeria's timezone
     currency VARCHAR(10) DEFAULT 'NGN', -- Set to Nigerian Naira
     default_landing_page VARCHAR(255) DEFAULT '/dashboard',
@@ -343,6 +343,9 @@ CREATE TABLE property_details (
     cooling_type VARCHAR(50),
     parking VARCHAR(100),
     amenities TEXT, -- Can store a comma-separated list of amenities
+    land_size NUMERIC(10,2), -- NEW: For land properties (e.g., in acres or sqft)
+    zoning_type VARCHAR(50), -- NEW: For land properties (e.g., Residential, Commercial)
+    title_type VARCHAR(50), -- NEW: For land properties (e.g., C of O, Gazette, Deed)
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
