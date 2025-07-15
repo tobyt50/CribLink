@@ -1,8 +1,10 @@
 const db = require('../db');
+const path = require('path');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary'); // Import deleteFromCloudinary
 
 exports.uploadLegalDocument = async (req, res) => {
   try {
+    
     // Destructure all fields from the request body, including fileBase64 and fileName
     const { title, client_name, property_id, document_type, status, completion_date, fileBase64, fileName } = req.body;
 
@@ -20,14 +22,23 @@ exports.uploadLegalDocument = async (req, res) => {
         // Extract the base64 data part (remove "data:mime/type;base64,")
         const base64Data = fileBase64.split(',')[1];
         const fileBuffer = Buffer.from(base64Data, 'base64');
+        const fileExtension = path.extname(fileName); // e.g., '.pdf'
+        const fileBaseName = path.parse(fileName).name; // e.g., 'Lease_Agreement'
+        const slugify = require('slugify');
+const safeFileBaseName = slugify(fileBaseName, { lower: false, strict: true });
+const fullPublicId = `${safeFileBaseName}${fileExtension}`;
+
+
 
         // Upload to Cloudinary, specifying 'raw' resource type for legal documents
         const uploadResult = await uploadToCloudinary(
           fileBuffer,
           fileName,
           'criblink/legal_documents', // Dedicated folder for legal documents
-          'raw' // Important: Treat as a raw file, not an image
+          'raw', // Important: Treat as a raw file, not an image
+          fullPublicId // ✅ now includes extension
         );
+        console.log("✅ Cloudinary saved publicId:", uploadResult.publicId);
         documentUrl = uploadResult.url;
         publicId = uploadResult.publicId;
       } catch (uploadError) {
@@ -121,23 +132,34 @@ exports.getLegalDocuments = async (req, res) => {
 };
 
 exports.deleteLegalDocument = async (req, res) => {
+  
+
   try {
+    console.log("🔥 DELETE request received for doc ID:", req.params.id);
+    console.log("🧾 publicId received:", req.body.publicId);
+
     const { id } = req.params;
-    const { publicId } = req.body; // Expect publicId from frontend for Cloudinary deletion
+    const { publicId } = req.body;
 
-    // First, retrieve the document to ensure it exists and get its public_id if not provided
-    const docResult = await db.query(`SELECT public_id FROM legal_documents WHERE document_id = $1`, [id]);
-    if (docResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Legal document not found.' });
+    // 1. Retrieve public_id from DB if not passed from frontend
+    let documentPublicId = publicId;
+    if (!publicId) {
+      const result = await db.query(
+        `SELECT public_id FROM legal_documents WHERE document_id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Legal document not found.' });
+      }
+      documentPublicId = result.rows[0].public_id;
     }
-    const documentPublicId = publicId || docResult.rows[0].public_id;
 
-    // Delete from Cloudinary if a public ID exists
+    // 2. Delete from Cloudinary
     if (documentPublicId) {
       await deleteFromCloudinary(documentPublicId);
     }
 
-    // Then, delete from the database
+    // 3. Delete from PostgreSQL
     await db.query(`DELETE FROM legal_documents WHERE document_id = $1`, [id]);
 
     res.status(200).json({ message: 'Legal document deleted successfully.' });
@@ -146,3 +168,5 @@ exports.deleteLegalDocument = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete legal document.' });
   }
 };
+
+

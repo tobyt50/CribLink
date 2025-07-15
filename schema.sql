@@ -191,7 +191,9 @@ CREATE TABLE legal_documents (
     document_type VARCHAR(50),
     status VARCHAR(50),
     upload_date DATE,
-    completion_date DATE
+    completion_date DATE,
+    document_url TEXT, -- ADDED: Column to store the Cloudinary URL of the document
+    public_id VARCHAR(255) -- ADDED: Column to store the Cloudinary public ID for deletion
 );
 
 -- Support tickets

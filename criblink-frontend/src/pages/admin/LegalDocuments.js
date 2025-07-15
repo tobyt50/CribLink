@@ -595,15 +595,15 @@ const LegalDocuments = () => {
                                                 }`} title={capitalizeFirstLetter(doc.status)}>{capitalizeFirstLetter(doc.status)}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={doc.upload_date ? new Date(doc.upload_date).toLocaleDateString() : ''}>{doc.upload_date ? new Date(doc.upload_date).toLocaleDateString() : 'N/A'}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={doc.completion_date ? new Date(doc.completion_date).toLocaleDateString() : ''}>{doc.completion_date ? new Date(doc.completion_date).toLocaleDateString() : 'N/A'}</td>
-                                                <td className="py-2 px-2 space-x-2 max-w-[100px]">
+                                                <td className="py-2 px-2 flex items-center space-x-2 max-w-[100px]"> {/* Added flex and items-center */}
                                                     {doc.document_url && (
                                                         <a
-                                                            href={doc.document_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 p-1"
-                                                            title="View Document"
-                                                        >
+                                                        href={`${doc.document_url}?fl_attachment=${encodeURIComponent(doc.title || 'document')}`}
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                      >
+                                                      
                                                             <FileText size={20} />
                                                         </a>
                                                     )}

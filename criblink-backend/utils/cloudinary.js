@@ -19,16 +19,22 @@ cloudinary.config({
  * @returns {Promise<{url: string, publicId: string}>} - A promise that resolves to the secure URL and public ID of the uploaded file.
  * @throws {Error} If the upload to Cloudinary fails.
  */
-const uploadToCloudinary = async (fileBuffer, originalname, folder, resourceType = 'image') => {
+const uploadToCloudinary = async (fileBuffer, originalname, folder, resourceType = 'image', publicId = null) => {
+
     try {
         // Convert buffer to data URI format (e.g., data:image/png;base64,...)
         const fileUri = parser.format(originalname, fileBuffer).content;
 
         // Upload the data URI to Cloudinary
         const uploadResult = await cloudinary.uploader.upload(fileUri, {
-            folder: folder, // Specify the folder for organization
-            resource_type: resourceType // Use the passed resourceType
+            folder,
+            resource_type: resourceType,
+            use_filename: true,
+            unique_filename: false,
+            public_id: publicId ? `${publicId}` : undefined
         });
+                
+        
 
         // Return the secure URL and public ID from the upload result
         return { url: uploadResult.secure_url, publicId: uploadResult.public_id };
@@ -44,21 +50,17 @@ const uploadToCloudinary = async (fileBuffer, originalname, folder, resourceType
  * @returns {Promise<void>} - A promise that resolves when the image is deleted.
  */
 const deleteFromCloudinary = async (publicId) => {
-    if (!publicId) {
-        // If no publicId is provided, there's nothing to delete, so just return.
-        return;
-    }
+    if (!publicId) return;
     try {
-        // Destroy the image on Cloudinary using its public ID
-        await cloudinary.uploader.destroy(publicId);
-        // console.log(`Deleted Cloudinary image: ${publicId}`); // Optional: log successful deletion
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: 'raw' // ✅ Add this line
+      });
+      console.log("✅ Cloudinary deletion result:", result);
     } catch (error) {
-        console.error(`Error deleting Cloudinary image ${publicId}:`, error);
-        // Do not re-throw the error here, as deletion might fail if the image
-        // is already gone from Cloudinary, and we don't want to halt the application
-        // for a non-critical deletion failure. Just log it.
+      console.error(`❌ Error deleting Cloudinary file ${publicId}:`, error);
     }
-};
+  };
+  
 
 /**
  * Extracts the Cloudinary public ID from a Cloudinary image URL.

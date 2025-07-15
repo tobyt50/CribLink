@@ -212,8 +212,8 @@ const AddLegalDocument = () => {
       }
 
       try {
-        // Use the /documents/upload endpoint as defined in documentRoutes.js
-        await axiosInstance.post(`${API_BASE_URL}/documents/upload`, payload, {
+        // Use the /docs/upload endpoint as defined in documentRoutes.js
+        await axiosInstance.post(`${API_BASE_URL}/docs/upload`, payload, {
           headers: {
             'Content-Type': 'application/json', // Sending JSON with base64
             'Authorization': `Bearer ${token}`
@@ -230,8 +230,8 @@ const AddLegalDocument = () => {
         setCompletionDate('');
         setDocumentFile(null);
 
-        // Optionally navigate to a documents list page or dashboard
-        // navigate('/admin/documents'); // Example route
+        // Redirect back to the LegalDocuments page after successful upload
+        navigate(-1); // This will take the user back to the previous page, which should be LegalDocuments
       } catch (error) {
         let errorMessage = 'Failed to add legal document. Please try again.';
         if (error.response && error.response.data && error.response.data.message) {
