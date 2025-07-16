@@ -28,7 +28,7 @@ function Home() {
 
   const [currentFeaturedPage, setCurrentFeaturedPage] = useState(0);
   const featuredCarouselRef = useRef(null);
-  const autoSwipeIntervalRef = useRef(null);
+  const autoSwipeIntervalRef = useRef(null); // Ref to store the interval ID
   const [loading, setLoading] = useState(true);
 
   const [showSearchContext, setShowSearchContext] = useState(false);
@@ -162,25 +162,51 @@ function Home() {
     }
   }, [totalPages]);
 
-  const handlePrevFeatured = useCallback(() => {
-    setCurrentFeaturedPage((prevPage) =>
-      prevPage === 0 ? Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) - 1 : prevPage - 1
-    );
-    clearInterval(autoSwipeIntervalRef.current);
+  const handleNextFeatured = useCallback(() => {
+    setCurrentFeaturedPage((prevPage) => {
+      const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
+      return (prevPage + 1) % totalFeaturedPages;
+    });
   }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
 
-  const handleNextFeatured = useCallback(() => {
-    setCurrentFeaturedPage((prevPage) =>
-      (prevPage + 1) % Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE)
-    );
-    clearInterval(autoSwipeIntervalRef.current);
+  const handlePrevFeatured = useCallback(() => {
+    setCurrentFeaturedPage((prevPage) => {
+      const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
+      return prevPage === 0 ? totalFeaturedPages - 1 : prevPage - 1;
+    });
   }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
+
+  // Effect for auto-swiping featured listings
+  useEffect(() => {
+    // Clear any existing interval to prevent multiple intervals running
+    if (autoSwipeIntervalRef.current) {
+      clearInterval(autoSwipeIntervalRef.current);
+    }
+
+    // Set up the new interval only if there are featured listings to swipe
+    if (featuredListings.length > FEATURED_ITEMS_PER_PAGE) {
+      autoSwipeIntervalRef.current = setInterval(() => {
+        handleNextFeatured();
+      }, 5000); // Auto-swipe every 5 seconds
+    }
+
+    // Cleanup function to clear the interval when the component unmounts
+    // or when featuredListings changes (to reset the interval if data changes)
+    return () => {
+      if (autoSwipeIntervalRef.current) {
+        clearInterval(autoSwipeIntervalRef.current);
+      }
+    };
+  }, [featuredListings.length, handleNextFeatured]); // Re-run effect if featuredListings count changes
 
   const startIndex = currentFeaturedPage * FEATURED_ITEMS_PER_PAGE;
   const displayedFeaturedListings = featuredListings.slice(startIndex, startIndex + FEATURED_ITEMS_PER_PAGE);
 
   const handleTouchStart = useCallback((e) => {
-    clearInterval(autoSwipeIntervalRef.current);
+    // Clear auto-swipe interval on manual touch interaction
+    if (autoSwipeIntervalRef.current) {
+      clearInterval(autoSwipeIntervalRef.current);
+    }
     if (featuredCarouselRef.current) {
       featuredCarouselRef.current.startX = e.touches[0].clientX;
     }
@@ -206,7 +232,14 @@ function Home() {
       handlePrevFeatured();
     }
     featuredCarouselRef.current.startX = undefined;
-  }, [handleNextFeatured, handlePrevFeatured]);
+    // Optionally restart the auto-swipe after a short delay if no further interaction
+    // This is often desired for a better user experience
+    if (featuredListings.length > FEATURED_ITEMS_PER_PAGE) {
+      autoSwipeIntervalRef.current = setInterval(() => {
+        handleNextFeatured();
+      }, 5000);
+    }
+  }, [handleNextFeatured, handlePrevFeatured, featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -296,7 +329,10 @@ function Home() {
               {Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) > 1 && (
                 <div className="flex justify-center mt-6 space-x-4">
                   <button
-                    onClick={handlePrevFeatured}
+                    onClick={() => {
+                      clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
+                      handlePrevFeatured();
+                    }}
                     disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
                     aria-label="Previous Featured Properties"
                     className={`p-2 rounded-full shadow-md transition-all duration-200
@@ -306,7 +342,10 @@ function Home() {
                     <ArrowLeftCircleIcon className="h-8 w-8" />
                   </button>
                   <button
-                    onClick={handleNextFeatured}
+                    onClick={() => {
+                      clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
+                      handleNextFeatured();
+                    }}
                     disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
                     aria-label="Next Featured Properties"
                     className={`p-2 rounded-full shadow-md transition-all duration-200

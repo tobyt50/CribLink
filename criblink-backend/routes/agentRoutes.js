@@ -8,16 +8,16 @@ const { authenticateToken, authorizeRoles } = require('../middleware/authMiddlew
 router.get('/profile/:agentId', authenticateToken, agentController.getAgentProfile);
 
 // NEW: Connection Request Features (Agent as Sender/Receiver)
-// Agent sends a request to a client - only agents can do this
-router.post('/:agentId/connection-requests/send-to-client/:clientId', authenticateToken, authorizeRoles(['agent']), agentController.sendConnectionRequestToClient);
-// Get incoming requests for an agent - only the agent can see their incoming requests
-router.get('/:agentId/connection-requests/incoming', authenticateToken, authorizeRoles(['agent']), agentController.getAgentIncomingRequests);
-// Get outgoing requests from an agent - only the agent can see their outgoing requests
-router.get('/:agentId/connection-requests/outgoing', authenticateToken, authorizeRoles(['agent']), agentController.getAgentOutgoingRequests);
-// Agent accepts a request from a client - only the agent can accept requests sent to them
-router.post('/:agentId/connection-requests/:requestId/accept-from-client', authenticateToken, authorizeRoles(['agent']), agentController.acceptConnectionRequestFromClient);
-// Agent rejects a request from a client - only the agent can reject requests sent to them
-router.post('/:agentId/connection-requests/:requestId/reject-from-client', authenticateToken, authorizeRoles(['agent']), agentController.rejectConnectionRequestFromClient);
+// Agent sends a request to a client - only agents or agency_admins can do this
+router.post('/:agentId/connection-requests/send-to-client/:clientId', authenticateToken, authorizeRoles(['agent', 'agency_admin']), agentController.sendConnectionRequestToClient); // NEW: Added agency_admin
+// Get incoming requests for an agent - only the agent or agency_admin can see their incoming requests
+router.get('/:agentId/connection-requests/incoming', authenticateToken, authorizeRoles(['agent', 'agency_admin']), agentController.getAgentIncomingRequests); // NEW: Added agency_admin
+// Get outgoing requests from an agent - only the agent or agency_admin can see their outgoing requests
+router.get('/:agentId/connection-requests/outgoing', authenticateToken, authorizeRoles(['agent', 'agency_admin']), agentController.getAgentOutgoingRequests); // NEW: Added agency_admin
+// Agent accepts a request from a client - only the agent or agency_admin can accept requests sent to them
+router.post('/:agentId/connection-requests/:requestId/accept-from-client', authenticateToken, authorizeRoles(['agent', 'agency_admin']), agentController.acceptConnectionRequestFromClient); // NEW: Added agency_admin
+// Agent rejects a request from a client - only the agent or agency_admin can reject requests sent to them
+router.post('/:agentId/connection-requests/:requestId/reject-from-client', authenticateToken, authorizeRoles(['agent', 'agency_admin']), agentController.rejectConnectionRequestFromClient); // NEW: Added agency_admin
 
 
 // Add any other existing agent-related routes here, e.g.:

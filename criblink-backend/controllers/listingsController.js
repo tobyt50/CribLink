@@ -240,7 +240,8 @@ exports.createListing = async (req, res) => {
 
         // Determine main image URL and public ID
         if (mainImageBase64 && mainImageOriginalName) {
-            const uploadResult = await uploadToCloudinary(Buffer.from(mainImageBase64.split(',')[1], 'base64'), mainImageOriginalName, 'listings');
+            // Pass mainImageBase64 string directly to uploadToCloudinary
+            const uploadResult = await uploadToCloudinary(mainImageBase64, mainImageOriginalName, 'listings');
             mainImageUrlToSave = uploadResult.url;
             mainImagePublicIdToSave = uploadResult.publicId;
         } else if (mainImageURL) {
@@ -304,7 +305,8 @@ exports.createListing = async (req, res) => {
             for (let i = 0; i < galleryImagesBase64.length; i++) {
                 const base64 = galleryImagesBase64[i];
                 const originalname = galleryImagesOriginalNames[i];
-                const uploadResult = await uploadToCloudinary(Buffer.from(base64.split(',')[1], 'base64'), originalname, 'listings');
+                // Pass base64 string directly to uploadToCloudinary
+                const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
                 if (uploadResult.url) {
                     await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, uploadResult.url, uploadResult.publicId]);
                 }
@@ -470,7 +472,8 @@ exports.updateListing = async (req, res) => {
                 // Check if mainImageIdentifier is a new base64 image
                 const newImageFileIndex = newFilesOriginalNames.indexOf(mainImageIdentifier);
                 if (newImageFileIndex !== -1) {
-                    const uploadResult = await uploadToCloudinary(Buffer.from(newFilesBase64[newImageFileIndex].split(',')[1], 'base64'), newFilesOriginalNames[newImageFileIndex], 'listings');
+                    // Pass the base64 string directly
+                    const uploadResult = await uploadToCloudinary(newFilesBase64[newImageFileIndex], newFilesOriginalNames[newImageFileIndex], 'listings');
                     newMainImageUrl = uploadResult.url;
                     newMainImagePublicId = uploadResult.publicId;
                 } else {
@@ -521,7 +524,8 @@ exports.updateListing = async (req, res) => {
         for (let i = 0; i < newFilesBase64.length; i++) {
             const base64 = newFilesBase64[i];
             const originalname = newFilesOriginalNames[i];
-            const uploadResult = await uploadToCloudinary(Buffer.from(base64.split(',')[1], 'base64'), originalname, 'listings');
+            // Pass the base64 string directly
+            const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
             if (uploadResult.url && uploadResult.url !== newMainImageUrl) {
                 updatedGalleryUrls.push(uploadResult.url);
                 updatedGalleryPublicIds.push(uploadResult.publicId);
@@ -722,4 +726,3 @@ exports.deleteListing = async (req, res) => {
         res.status(500).json({ error: 'Internal server error deleting listing' });
     }
 };
-

@@ -33,7 +33,9 @@ export default function SignIn() {
           return '/admin/dashboard';
         case 'agent':
           return '/agent/dashboard';
-        case 'client':
+        case 'agency_admin': // NEW: Redirect agency_admin to their dashboard
+          return '/agency/dashboard'; // Assuming an agency dashboard route
+        case 'client': // Changed 'user' to 'client'
           return '/client/inquiries'; // Specific client dashboard path
         default:
           return '/profile/general'; // General fallback for authenticated users
@@ -63,7 +65,6 @@ export default function SignIn() {
         showMessage('Your account has been banned.', 'error', 7000);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // No need to dispatch authChange here, as it's a ban, not a successful auth.
         return;
       }
 
@@ -75,11 +76,6 @@ export default function SignIn() {
       window.dispatchEvent(new Event("authChange"));
 
       showMessage('Sign-in successful!', 'success', 3000);
-
-      // IMPORTANT: Remove the direct navigate call here.
-      // The useEffect above, which watches 'isAuthenticated', 'loading', and 'user',
-      // will handle the navigation once AuthContext has fully updated.
-      // navigate(getRedirectPath(data.user)); // REMOVE THIS LINE
 
     } catch (error) {
       console.error("Sign-in error caught locally:", error);
@@ -135,9 +131,6 @@ export default function SignIn() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        // Conditional styling for the form container:
-        // On mobile (no sm: prefix), it will be transparent (bg-transparent) and have no shadow/padding.
-        // On small screens and up (sm: prefix), it will have the white/gray background, rounded corners, shadow, and padding.
         className={`w-full max-w-md space-y-6
           bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
           ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}

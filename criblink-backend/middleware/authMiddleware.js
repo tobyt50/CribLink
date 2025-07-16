@@ -18,36 +18,50 @@ const authenticateToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
-        console.log('[authenticateToken] Token verified. Decoded user payload:', req.user); // <-- ADDED LOG
+        console.log('[authenticateToken] Token verified. Decoded user payload:', req.user);
         next();
     } catch (err) {
-        console.error('[authenticateToken] Invalid or expired token. Error:', err.message); // <-- ADDED LOG
+        console.error('[authenticateToken] Invalid or expired token. Error:', err.message);
         return res.status(403).json({ message: 'Invalid or expired token' });
     }
 };
 
 /**
  * Middleware for role-based access control.
- * Accepts allowed roles as parameters (e.g. 'admin', 'agent').
+ * Accepts allowed roles as parameters (e.g. 'admin', 'agent', 'agency_admin').
  * Rejects the request if the user’s role is not permitted.
+ *
+ * For 'agency_admin', it also checks if the user's agency_id matches the requested agencyId
+ * if the route parameter 'agencyId' is present and the user is an 'agency_admin'.
  */
 const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
-        console.log('[authorizeRoles] Checking authorization...'); // <-- ADDED LOG
-        console.log('[authorizeRoles] User present in req:', !!req.user); // <-- ADDED LOG
-        console.log('[authorizeRoles] User role from req.user:', req.user ? req.user.role : 'N/A'); // <-- ADDED LOG
-        console.log('[authorizeRoles] Allowed roles for this route:', allowedRoles); // <-- ADDED LOG
+        console.log('[authorizeRoles] Checking authorization...');
+        console.log('[authorizeRoles] User present in req:', !!req.user);
+        console.log('[authorizeRoles] User role from req.user:', req.user ? req.user.role : 'N/A');
+        console.log('[authorizeRoles] Allowed roles for this route:', allowedRoles);
 
-        // Fix: Use flat array for includes check if allowedRoles is a nested array
-        // This accounts for both authorizeRoles('role1', 'role2') and authorizeRoles(['role1', 'role2'])
         const flattenedAllowedRoles = Array.isArray(allowedRoles[0]) ? allowedRoles[0] : allowedRoles;
-        console.log('[authorizeRoles] Flattened allowed roles:', flattenedAllowedRoles); // <-- ADDED LOG
+        console.log('[authorizeRoles] Flattened allowed roles:', flattenedAllowedRoles);
 
         if (!req.user || !flattenedAllowedRoles.includes(req.user.role)) {
-            console.warn('[authorizeRoles] Access denied: insufficient privileges for user role:', req.user ? req.user.role : 'N/A'); // <-- ADDED LOG
+            console.warn('[authorizeRoles] Access denied: insufficient privileges for user role:', req.user ? req.user.role : 'N/A');
             return res.status(403).json({ message: 'Access denied: insufficient privileges' });
         }
-        console.log('[authorizeRoles] Authorization granted.'); // <-- ADDED LOG
+
+        // NEW: Specific check for 'agency_admin' role for agency-specific routes
+        // This ensures an agency_admin can only manage their own agency's resources.
+        if (req.user.role === 'agency_admin' && req.params.agencyId) {
+            // Ensure the agency_admin is managing their own agency
+            // req.user.agency_id comes from the JWT payload
+            // req.params.agencyId comes from the URL (e.g., /api/agencies/:agencyId/members)
+            if (parseInt(req.params.agencyId) !== req.user.agency_id) {
+                console.warn(`[authorizeRoles] Agency Admin ${req.user.userId} attempted to access agency ${req.params.agencyId} but belongs to ${req.user.agency_id}.`);
+                return res.status(403).json({ message: 'Access denied: You can only manage your own agency.' });
+            }
+        }
+
+        console.log('[authorizeRoles] Authorization granted.');
         next();
     };
 };

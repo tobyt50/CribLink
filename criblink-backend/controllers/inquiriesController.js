@@ -14,10 +14,6 @@ const createInquiry = async (req, res) => {
   if (!message_content) {
     return res.status(400).json({ error: 'Message content is required for property inquiries.' });
   }
-  // Removed the property_id validation to allow general inquiries
-  // if (!property_id) {
-  //   return res.status(400).json({ error: 'Property ID is required for property inquiries.' });
-  // }
 
   try {
     const finalClientId = req.user?.role === 'client' ? req.user.user_id : client_id || null;
@@ -95,7 +91,7 @@ const createGeneralInquiry = async (req, res) => {
 
   if (isMessageEmpty) {
     const generatedConversationId = uuidv4();
-  
+
     return res.status(200).json({
       conversation: {
         id: generatedConversationId,
@@ -114,7 +110,7 @@ const createGeneralInquiry = async (req, res) => {
       }
     });
   }
-  
+
 
   try {
     const result = await query(
@@ -155,7 +151,7 @@ const createGeneralInquiry = async (req, res) => {
           reason: 'new_general_inquiry',
           conversationId: newInquiry.conversation_id
         });
-      }      
+      }
     }
 
     res.status(201).json({
@@ -226,7 +222,7 @@ const sendMessageInquiry = async (req, res) => {
       agent_id = first.agent_id;
     } else {
       // Step 3: This is a new conversation — pull values from token/req
-      if (req.user.role === 'agent') {
+      if (req.user.role === 'agent' || req.user.role === 'agency_admin') { // NEW: Allow agency_admin
         agent_id = req.user.user_id;
         client_id = recipient_id;
       } else if (req.user.role === 'client') {
@@ -326,7 +322,7 @@ const markMessagesAsRead = async (req, res) => {
   const role = req.user.role;
   const io = req.app.get('io'); // Get the Socket.IO instance
 
-  const updateColumn = role === 'client' ? 'read_by_client' : (role === 'agent' || role === 'admin') ? 'read_by_agent' : null;
+  const updateColumn = role === 'client' ? 'read_by_client' : (role === 'agent' || role === 'admin' || role === 'agency_admin') ? 'read_by_agent' : null; // NEW: Added agency_admin
   if (!updateColumn) {
     return res.status(403).json({ error: 'Unauthorized role.' });
   }
@@ -384,6 +380,7 @@ const getAllInquiriesForAgent = async (req, res) => {
     const queryParams = [];
     let paramIndex = 1;
 
+    // NEW: Adjust query for agent/admin/agency_admin
     if (req.user.role === 'agent') {
         whereClause += `
           WHERE
@@ -392,7 +389,29 @@ const getAllInquiriesForAgent = async (req, res) => {
         `;
         queryParams.push(req.user.user_id);
         paramIndex++;
-      }
+    } else if (req.user.role === 'agency_admin') { // NEW: Agency Admin can see inquiries for their agents
+        // Get all agent_ids belonging to this agency
+        const agencyAgents = await query(
+            `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+            [req.user.agency_id]
+        );
+        const agentIds = agencyAgents.rows.map(row => row.agent_id);
+
+        if (agentIds.length === 0) {
+            return res.json({ inquiries: [], total: 0, page: pageNum, totalPages: 0 });
+        }
+
+        whereClause += `
+            WHERE
+                (i.agent_id = ANY($${paramIndex}::int[]) OR i.recipient_id = ANY($${paramIndex}::int[]) OR i.sender_id = ANY($${paramIndex}::int[]))
+                AND i.hidden_from_agent = FALSE
+        `;
+        queryParams.push(agentIds);
+        paramIndex++;
+    } else if (req.user.role === 'admin') {
+        // Admin can see all inquiries, no specific user ID filter needed initially
+        whereClause += ` WHERE i.hidden_from_agent = FALSE`; // Still hide from agent's perspective if marked
+    }
 
 
     if (search) {
@@ -735,7 +754,7 @@ const deleteConversation = async (req, res) => {
 
   const columnToUpdate =
     role === 'client' ? 'hidden_from_client'
-    : role === 'agent' || role === 'admin' ? 'hidden_from_agent'
+    : role === 'agent' || role === 'admin' || role === 'agency_admin' ? 'hidden_from_agent' // NEW: Added agency_admin
     : null;
 
   if (!columnToUpdate) {
@@ -812,7 +831,7 @@ const countAllInquiries = async (req, res) => {
   let visibilityClause = '';
   if (role === 'client') {
     visibilityClause = 'AND hidden_from_client = FALSE';
-  } else if (role === 'agent' || role === 'admin') {
+  } else if (role === 'agent' || role === 'admin' || role === 'agency_admin') { // NEW: Added agency_admin
     visibilityClause = 'AND hidden_from_agent = FALSE';
   }
 
@@ -841,7 +860,7 @@ const countAgentResponses = async (req, res) => {
   let visibilityClause = '';
   if (role === 'client') {
     visibilityClause = 'AND hidden_from_client = FALSE';
-  } else if (role === 'agent' || role === 'admin') {
+  } else if (role === 'agent' || role === 'admin' || role === 'agency_admin') { // NEW: Added agency_admin
     visibilityClause = 'AND hidden_from_agent = FALSE';
   }
 
@@ -871,10 +890,10 @@ const getAgentClientConversation = async (req, res) => {
     if (currentUserRole === 'client' && parseInt(clientId) !== currentUserId) {
       return res.status(403).json({ message: 'Forbidden: You can only view your own client conversations.' });
     }
-    // For agents, they can view conversations they are involved in (either as agent_id or sender/recipient).
+    // For agents/agency_admins, they can view conversations they are involved in (either as agent_id or sender/recipient).
     // An admin can view all.
-    if (currentUserRole === 'agent' && parseInt(agentId) !== currentUserId) {
-         // Also check if the agent is the sender or recipient of any message in this conversation.
+    if ((currentUserRole === 'agent' || currentUserRole === 'agency_admin') && parseInt(agentId) !== currentUserId) { // NEW: Added agency_admin
+         // Also check if the agent/agency_admin is the sender or recipient of any message in this conversation.
         const isAgentInvolved = await query(
             `SELECT 1 FROM inquiries
              WHERE conversation_id = (SELECT conversation_id FROM inquiries WHERE agent_id = $1 AND client_id = $2 LIMIT 1)
@@ -921,7 +940,7 @@ const getAgentClientConversation = async (req, res) => {
     const conversation = conversationResult.rows[0];
 
     // Determine the visibility column based on the current user's role
-    const visibilityColumn = currentUserRole === 'client' ? 'hidden_from_client' : 'hidden_from_agent';
+    const visibilityColumn = currentUserRole === 'client' ? 'hidden_from_client' : 'hidden_from_agent'; // This is fine, as agency_admin also uses hidden_from_agent
 
     const messagesResult = await query(
       `SELECT

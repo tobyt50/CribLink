@@ -12,21 +12,23 @@ import DisplayPicture from '../components/profile/DisplayPicture';
 import General from './profile/General';
 import Security from './profile/Security';
 import Privacy from './profile/Privacy';
+import Settings from './profile/Settings'; // Ensure Settings is imported
 
 function ManageProfile() {
   const [form, setForm] = useState({
     full_name: "", username: "", email: "", bio: "",
-    location: "", phone: "", agency: "", current_password: "",
-    new_password: "", confirm_password: "",
+    location: "", phone: "", agency: "", agency_id: null, // NEW: Added agency_id
+    current_password: "", new_password: "", confirm_password: "",
     social_links: [],
     profile_picture_base64: null,
     profile_picture_originalname: null,
   });
 
   const [userInfo, setUserInfo] = useState({
+    user_id: null, // ADDED: Initialize user_id here
     full_name: "", username: "", email: "", role: "",
     profile_picture_url: "", bio: "", location: "",
-    phone: "", agency: "",
+    phone: "", agency: "", agency_id: null, // NEW: Added agency_id
     social_links: [],
     default_landing_page: "",
   });
@@ -58,11 +60,13 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
+        agency_id: res.data.agency_id || null, // NEW: Populate agency_id
         social_links: res.data.social_links || [],
         profile_picture_base64: null,
         profile_picture_originalname: null,
       }));
       setUserInfo({
+        user_id: res.data.user_id || null, // ADDED: Populate user_id from response
         full_name: res.data.full_name || "",
         username: res.data.username || "",
         email: res.data.email || "",
@@ -72,6 +76,7 @@ function ManageProfile() {
         location: res.data.location || "",
         phone: res.data.phone || "",
         agency: res.data.agency || "",
+        agency_id: res.data.agency_id || null, // NEW: Populate agency_id
         social_links: res.data.social_links || [],
         default_landing_page: res.data.default_landing_page || "",
       });
@@ -134,6 +139,14 @@ function ManageProfile() {
       const updateData = { ...form, ...updatedSettings };
       delete updateData.profile_picture_base64;
       delete updateData.profile_picture_originalname;
+
+      // Ensure agency_id is sent as a number or null if present
+      if (updateData.agency_id !== undefined && updateData.agency_id !== null) {
+        updateData.agency_id = parseInt(updateData.agency_id);
+      } else if (updateData.agency_id === '') { // Treat empty string as null for backend
+        updateData.agency_id = null;
+      }
+
 
       const updateRes = await axiosInstance.put(
         `${API_BASE_URL}/users/update`,
@@ -230,14 +243,14 @@ function ManageProfile() {
     { name: "General", key: "general" },
     { name: "Security", key: "security" },
     { name: "Privacy", key: "privacy" },
+    { name: "Settings", key: "settings" } // NEW: Added Settings
   ];
   const activeSectionName = MENU_ITEMS.find(item => item.key === activeSection)?.name || "Manage Profile";
 
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
-  // Removed the loading spinner rendering logic
   if (loading) {
-      return null; // Or render a minimal placeholder if necessary, but not a spinner
+      return null;
   }
 
   return (
@@ -246,6 +259,7 @@ function ManageProfile() {
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         userInfo={userInfo}
+        menuItems={MENU_ITEMS} // Pass menu items to Sidebar
       >
         <DisplayPicture
           userInfo={userInfo}
@@ -312,6 +326,16 @@ function ManageProfile() {
               handleUpdate={handleUpdate}
               updating={updating}
               activeSection={activeSection}
+            />
+          )}
+
+          {activeSection === "settings" && ( // NEW: Render Settings component
+            <Settings
+              form={form}
+              handleChange={handleChange}
+              handleUpdate={handleUpdate}
+              updating={updating}
+              userInfo={userInfo}
             />
           )}
         </motion.div>

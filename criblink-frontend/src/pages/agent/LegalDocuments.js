@@ -1,7 +1,7 @@
-// src/pages/admin/LegalDocuments.js
+// src/pages/agent/LegalDocuments.js
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminSidebar from '../../components/admin/Sidebar';
+import AgentSidebar from '../../components/agent/Sidebar';
 import { useLocation } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
@@ -409,7 +409,7 @@ const LegalDocuments = () => {
                 </motion.button>
             )}
 
-            <AdminSidebar
+            <AgentSidebar
                 collapsed={isMobile ? false : isCollapsed}
                 setCollapsed={isMobile ? () => {} : setIsCollapsed}
                 activeSection={activeSection}
@@ -446,7 +446,7 @@ const LegalDocuments = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <button
                                     className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/admin/add-document')}
+                                    onClick={() => navigate('/agent/add-document')}
                                     title="Add New Legal Document"
                                 >
                                     <Plus size={20} />
@@ -505,7 +505,7 @@ const LegalDocuments = () => {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/admin/add-document')}
+                                        onClick={() => navigate('/agent/add-document')}
                                     >
                                         +Add Document
                                     </button>

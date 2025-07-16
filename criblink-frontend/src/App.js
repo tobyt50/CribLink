@@ -37,7 +37,7 @@ import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
 import AgentPerformance from './pages/admin/AgentPerformance';
-import AdminSettings from "./pages/admin/Settings";
+import AdminSettings from './pages/admin/Settings';
 import LegalDocumentsAdmin from "./pages/admin/LegalDocuments"; // Import Admin's LegalDocuments
 
 // Agent Pages
@@ -78,8 +78,15 @@ import NotFoundPage from "./pages/NotFoundPage";
 // NEW: Import AddLegalDocument component (shared between admin and agent)
 import AddLegalDocument from "./pages/AddLegalDocument";
 
+// NEW: Agency Admin Pages
+// import AgencyAdminDashboard from './pages/agencyadmin/Dashboard'; // Assuming this will be created
+// import AgencyAdminListings from './pages/agencyadmin/Listings';
+import Members from './pages/agencyadmin/Members'; // Renamed from Agents
+// import AgencyAdminProperties from './pages/agencyadmin/Properties';
+import AgencyAdminSettings from './pages/agencyadmin/Settings';
 
-// --- Route Config Arrays ---
+
+// Define routes for each role
 const listingRoutes = [
   { path: "add-listing", element: <AddListing /> },
 ];
@@ -115,6 +122,16 @@ const clientRoutes = [
   { path: "settings", element: <ClientSettings /> },
   { path: "agent-profile/:agentId", element: <AgentProfile /> },
 ];
+
+// NEW: Agency Admin Routes
+const agencyAdminRoutes = [
+  // { path: "dashboard", element: <AgencyAdminDashboard /> },
+  // { path: "listings", element: <AgencyAdminListings /> },
+  { path: "members", element: <Members /> }, // Updated to Members
+  // { path: "properties", element: <AgencyAdminProperties /> },
+  { path: "settings", element: <AgencyAdminSettings /> },
+];
+
 
 // AppContent is now a component that uses useLoading, and will be rendered inside LoadingProvider
 function AppContent() {
@@ -181,7 +198,7 @@ function AppContent() {
               <Route index element={<Navigate to="general" replace />} />
               <Route path="general" element={<General />} />
               <Route path="security" element={<Security />} />
-              <Route path="privacy" element="<Privacy />" />
+              <Route path="privacy" element={<Privacy />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="favourites" element={<Favourites />} />
@@ -208,6 +225,14 @@ function AppContent() {
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
+
+          {/* NEW: Agency Admin Routes */}
+          <Route path="/agency" element={<RoleProtectedRoute allowedRole="agency_admin" />}>
+            {agencyAdminRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Route>
+
         </Routes>
       </main>
     </>

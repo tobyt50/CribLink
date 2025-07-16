@@ -19,9 +19,9 @@ exports.uploadLegalDocument = async (req, res) => {
     // If a fileBase64 is provided, upload it to Cloudinary
     if (fileBase64 && fileName) {
       try {
-        // Extract the base64 data part (remove "data:mime/type;base64,")
-        const base64Data = fileBase64.split(',')[1];
-        const fileBuffer = Buffer.from(base64Data, 'base64');
+        // Extract the base64 data part (remove "data:mime/type;base64,") - This is now handled inside uploadToCloudinary
+        // const base64Data = fileBase64.split(',')[1];
+        // const fileBuffer = Buffer.from(base64Data, 'base64');
         const fileExtension = path.extname(fileName); // e.g., '.pdf'
         const fileBaseName = path.parse(fileName).name; // e.g., 'Lease_Agreement'
         const slugify = require('slugify');
@@ -31,8 +31,9 @@ const fullPublicId = `${safeFileBaseName}${fileExtension}`;
 
 
         // Upload to Cloudinary, specifying 'raw' resource type for legal documents
+        // Changed first argument from fileBuffer to fileBase64 string
         const uploadResult = await uploadToCloudinary(
-          fileBuffer,
+          fileBase64, // Pass the base64 string directly
           fileName,
           'criblink/legal_documents', // Dedicated folder for legal documents
           'raw', // Important: Treat as a raw file, not an image
@@ -168,5 +169,3 @@ exports.deleteLegalDocument = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete legal document.' });
   }
 };
-
-
