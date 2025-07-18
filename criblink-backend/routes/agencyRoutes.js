@@ -92,10 +92,15 @@ router.get('/agent/:agentId/pending-requests', authenticateToken, authorizeRoles
 
 /**
  * @route DELETE /api/agencies/:agencyId/members/:agentId
- * @desc Remove an agent from an agency (by agency admin or super admin)
- * @access Private (Agency Admin or Super Admin)
+ * @desc Remove an agent from an agency (by agency admin, super admin, or the agent themselves)
+ * @access Private (Agency Admin, Super Admin, or the Agent themselves)
  */
-router.delete('/:agencyId/members/:agentId', authenticateToken, authorizeRoles(['agency_admin', 'admin']), agencyController.removeAgencyMember);
+router.delete(
+  '/:agencyId/members/:agentId',
+  authenticateToken,
+  authorizeRoles(['agency_admin', 'admin', 'agent']), // Added 'agent' role to allow self-removal
+  agencyController.removeAgencyMember
+);
 
 /**
  * @route DELETE /api/agencies/:agencyId/admin-delete

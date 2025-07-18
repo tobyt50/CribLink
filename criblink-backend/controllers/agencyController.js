@@ -99,14 +99,15 @@ exports.registerAgentAgency = async (req, res) => {
         let logo_url = null;
         let logo_public_id = null;
 
-        if (logoBase64 && logoOriginalname) {
+        if (logoBase64) { // Removed `logoOriginalname` from this condition as it can be defaulted
             // Determine resource type based on file extension
-            const isIco = logoOriginalname.toLowerCase().endsWith('.ico');
+            // Ensure logoOriginalname is a string before calling .toLowerCase()
+            const isIco = logoOriginalname && logoOriginalname.toLowerCase().endsWith('.ico');
             const resourceType = isIco ? 'raw' : 'image';
 
             // Use the directly imported uploadToCloudinary function
-            // Now passes logoBase64 string directly
-            const uploadRes = await uploadToCloudinary(logoBase64, logoOriginalname, 'criblink/agency_logos', resourceType);
+            // Now passes logoBase64 string directly, and defaults logoOriginalname
+            const uploadRes = await uploadToCloudinary(logoBase64, logoOriginalname || 'agency_logo.png', 'criblink/agency_logos', resourceType);
             logo_url = uploadRes.url; // Access 'url' from the returned object
             logo_public_id = uploadRes.publicId; // Access 'publicId' from the returned object
         }
@@ -177,7 +178,18 @@ exports.registerAgentAgency = async (req, res) => {
  */
 exports.getAllAgencies = async (req, res) => {
     try {
-        const result = await db.query('SELECT agency_id, name, email, phone, website, logo_url, description FROM agencies ORDER BY name'); // Corrected: use db.query
+        const { search } = req.query; // Get the search term from query parameters
+        let query = 'SELECT agency_id, name, email, phone, website, logo_url, description FROM agencies';
+        const queryParams = [];
+
+        if (search) {
+            query += ' WHERE name ILIKE $1 OR description ILIKE $1'; // Case-insensitive search
+            queryParams.push(`%${search}%`); // Add wildcard for partial matching
+        }
+
+        query += ' ORDER BY name'; // Always order by name
+
+        const result = await db.query(query, queryParams); // Execute query with parameters
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching all agencies:', error);
@@ -252,8 +264,8 @@ exports.updateAgency = async (req, res) => {
                 const resourceType = isIco ? 'raw' : 'image';
 
                 // Upload new logo
-                // Now passes logoBase64 string directly
-                const uploadRes = await uploadToCloudinary(logoBase64, logoOriginalname, 'criblink/agency_logos', resourceType);
+                // Now passes logoBase64 string directly, and defaults logoOriginalname
+                const uploadRes = await uploadToCloudinary(logoBase64, logoOriginalname || 'agency_logo.png', 'criblink/agency_logos', resourceType);
                 logo_url = uploadRes.url;
                 logo_public_id = uploadRes.publicId;
             } else {
@@ -708,22 +720,28 @@ exports.removeAgencyMember = async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Verify authorization: User must be the agency admin or a super admin
-        const agencyResult = await db.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
-        if (agencyResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ message: 'Agency not found.' });
-        }
-        const owningAgencyAdminId = agencyResult.rows[0].agency_admin_id;
+        // Allow agent to remove themselves OR agency admin/super admin to remove any member
+        const isSelfRemoval = parseInt(agentId) === performingUserId && performingUserRole === 'agent';
 
-        if (performingUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== performingUserId) {
+        if (!isSelfRemoval) {
+            // If not self-removal, then it must be an admin/agency_admin performing the action
+            // Verify authorization: User must be the agency admin or a super admin
+            const agencyResult = await db.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
+            if (agencyResult.rows.length === 0) {
                 await client.query('ROLLBACK');
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to remove members from this agency.' });
+                return res.status(404).json({ message: 'Agency not found.' });
             }
-        } else if (performingUserRole !== 'admin') {
-            await client.query('ROLLBACK');
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+            const owningAgencyAdminId = agencyResult.rows[0].agency_admin_id;
+
+            if (performingUserRole === 'agency_admin') {
+                if (owningAgencyAdminId !== performingUserId) {
+                    await client.query('ROLLBACK');
+                    return res.status(403).json({ message: 'Forbidden: You are not authorized to remove members from this agency.' });
+                }
+            } else if (performingUserRole !== 'admin') {
+                await client.query('ROLLBACK');
+                return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+            }
         }
 
         // Ensure the agent is actually a member of this agency

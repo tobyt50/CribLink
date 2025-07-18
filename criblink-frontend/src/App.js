@@ -74,6 +74,8 @@ import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
 import NotFoundPage from "./pages/NotFoundPage";
+// NEW: Agencies Page
+import Agencies from "./pages/Agencies";
 
 // NEW: Import AddLegalDocument component (shared between admin and agent)
 import AddLegalDocument from "./pages/AddLegalDocument";
@@ -204,6 +206,10 @@ function AppContent() {
             <Route path="favourites" element={<Favourites />} />
             <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
               <Route index element={<EditListing />} />
+            </Route>
+            {/* NEW: Agencies page accessible to admin, agent, agency_admin */}
+            <Route path="/agencies" element={<RoleProtectedRoute allowedRole={["admin", "agent", "agency_admin"]} />}>
+              <Route index element={<Agencies />} />
             </Route>
           </Route>
 

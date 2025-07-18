@@ -142,12 +142,14 @@ exports.signupUser = async (req, res) => {
 };
 
 exports.signinUser = async (req, res) => {
-    const { email, password, device_info, location_info, ip_address } = req.body;
+    // Expect `identifier` which can be either email or username
+    const { identifier, password, device_info, location_info, ip_address } = req.body;
 
     let loginStatus = 'Failed';
     let user = null;
 
     try {
+        // Try to find the user by email or username
         const result = await db.query(
             `SELECT user_id, full_name, username, email, password_hash, role, date_joined, phone, agency, bio, location, profile_picture_url, profile_picture_public_id, status, agency_id,
                     is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
@@ -155,17 +157,25 @@ exports.signinUser = async (req, res) => {
                     notifications_settings, timezone, currency, default_landing_page, notification_email,
                     preferred_communication_channel, social_links, share_favourites_with_agents,
                     share_property_preferences_with_agents
-             FROM users WHERE email = $1`,
-            [email]
+             FROM users WHERE email = $1 OR username = $1`, // Check both email and username
+            [identifier]
         );
         user = result.rows[0];
 
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+            // Log failed attempt if user exists but password is wrong, or if user doesn't exist
             if (user) {
                 await db.query(
                     `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                      VALUES ($1, $2, $3, $4, $5, $6)`,
                     [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', 'Invalid password']
+                );
+            } else {
+                 // Log a generic failed attempt if no user found by identifier
+                 await db.query(
+                    `INSERT INTO user_login_history (device, location, ip_address, status, message)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', `Invalid identifier: ${identifier}`]
                 );
             }
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -192,11 +202,13 @@ exports.signinUser = async (req, res) => {
             return res.status(403).json({ message: 'Your account is deactivated. Please reactivate it to sign in.' });
         }
 
+        // Deactivate previous sessions for this user before creating a new one
         await db.query(
             `UPDATE user_sessions SET is_current = FALSE WHERE user_id = $1`,
             [user.user_id]
         );
 
+        // Create a new session
         const sessionResult = await db.query(
             `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current)
              VALUES ($1, $2, $3, $4, TRUE) RETURNING session_id`,
@@ -265,18 +277,22 @@ exports.signinUser = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
     try {
-        // req.user is populated by authenticateToken middleware
         const userId = req.user.user_id;
 
+        // Query to get user details and their agency_request_status if associated with an agency
         const result = await db.query(
-            `SELECT user_id, full_name, username, email, role, date_joined, last_login, status,
-                    profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page,
-                    is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
-                    communication_email_updates, communication_marketing, communication_newsletter,
-                    notifications_settings, timezone, currency, notification_email,
-                    preferred_communication_channel, share_favourites_with_agents,
-                    share_property_preferences_with_agents
-             FROM users WHERE user_id = $1`,
+            `SELECT
+                u.user_id, u.full_name, u.username, u.email, u.role, u.date_joined, u.last_login, u.status,
+                u.profile_picture_url, u.bio, u.location, u.phone, u.social_links, u.agency, u.agency_id, u.default_landing_page,
+                u.is_2fa_enabled, u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+                u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+                u.notifications_settings, u.timezone, u.currency, u.notification_email,
+                u.preferred_communication_channel, u.share_favourites_with_agents,
+                u.share_property_preferences_with_agents,
+                am.request_status AS agency_request_status -- Fetch agency_request_status
+             FROM users u
+             LEFT JOIN agency_members am ON u.user_id = am.agent_id AND u.agency_id = am.agency_id
+             WHERE u.user_id = $1`,
             [userId]
         );
 

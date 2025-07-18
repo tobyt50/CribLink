@@ -41,20 +41,31 @@ function Header() {
         <nav className="hidden md:flex items-stretch space-x-6 text-sm font-medium h-full">
           {[
             { to: "/", label: "Listings" },
+            // NEW: Agencies Link
+            { to: "/agencies", label: "Agencies", roles: ['admin', 'agent', 'agency_admin'] },
             { to: "/about", label: "About Us" },
             { to: "/contact", label: "Contact Us" },
-          ].map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`relative px-3 group transition-all duration-300 ease-in-out overflow-hidden h-full flex items-center
-                ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white"}`}
-            >
-              {label}
-              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-yellow-300 transition-all duration-300 transform scale-x-0 group-hover:scale-x-100" />
-              <span className={`absolute inset-0 bg-gradient-to-t from-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity ${darkMode ? "from-gray-700" : ""}`} />
-            </Link>
-          ))}
+          ].map(({ to, label, roles }) => {
+            // Conditionally render link based on user role.
+            // If 'roles' are specified, and 'user' is not null AND user's role is NOT in allowedRoles, return null.
+            // If 'user' is null (unauthenticated), 'user && !roles.includes(user.role)' will be false,
+            // so the link will not render if 'roles' is defined.
+            if (roles && (!user || !roles.includes(user.role))) {
+              return null;
+            }
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`relative px-3 group transition-all duration-300 ease-in-out overflow-hidden h-full flex items-center
+                  ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white"}`}
+              >
+                {label}
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-yellow-300 transition-all duration-300 transform scale-x-0 group-hover:scale-x-100" />
+                <span className={`absolute inset-0 bg-gradient-to-t from-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity ${darkMode ? "from-gray-700" : ""}`} />
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Right-side actions */}
@@ -105,6 +116,12 @@ function Header() {
           <Link to="/" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
             Listings
           </Link>
+          {/* NEW: Agencies Link for Mobile - only show if user is authenticated and has allowed role */}
+          {user && ['admin', 'agent', 'agency_admin'].includes(user.role) && (
+            <Link to="/agencies" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
+              Agencies
+            </Link>
+          )}
           <Link to="/about" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
             About Us
           </Link>

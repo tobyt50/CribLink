@@ -28,48 +28,56 @@ DROP TYPE IF EXISTS request_status; -- Drop the ENUM type if it exists
 DROP TABLE IF EXISTS agency_members CASCADE;
 DROP TABLE IF EXISTS agencies CASCADE;
 
+-- Define ENUM for request_status
+CREATE TYPE request_status AS ENUM ('pending', 'accepted', 'rejected');
 
--- NEW: Agencies Table
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Function to update updated_at column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Agencies Table
 CREATE TABLE agencies (
     agency_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE, -- Added UNIQUE constraint
+    name VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20),
     website TEXT,
     logo_url TEXT,
     logo_public_id VARCHAR(255),
     description TEXT,
-    agency_admin_id INT REFERENCES users(user_id) ON DELETE SET NULL, -- Added agency_admin_id
+    agency_admin_id INT REFERENCES users(user_id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Users table to manage all user roles
--- Main Users Table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     username VARCHAR(50) UNIQUE,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) DEFAULT 'client', -- 'client', 'agent', 'admin', 'agency_admin'
-    agency_id INT REFERENCES agencies(agency_id) ON DELETE SET NULL, -- NEW: Link to agency
+    role VARCHAR(50) DEFAULT 'client' CHECK (role IN ('client', 'agent', 'admin', 'agency_admin')),
+    agency_id INT REFERENCES agencies(agency_id) ON DELETE SET NULL,
     date_joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     phone VARCHAR(20),
-    agency VARCHAR(255), -- This column might become redundant if agency_id is used, but kept for now.
+    agency VARCHAR(255),
     bio TEXT,
     location VARCHAR(100),
     profile_picture_url TEXT,
     profile_picture_public_id VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'active',
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'deactivated')),
     reset_token VARCHAR(255),
     reset_token_expires TIMESTAMP WITH TIME ZONE,
     last_login TIMESTAMPTZ,
-
-    -- Security Settings (from Security.js)
     is_2fa_enabled BOOLEAN DEFAULT FALSE,
-
-    -- Privacy Settings (from Privacy.js)
     data_collection_opt_out BOOLEAN DEFAULT FALSE,
     personalized_ads BOOLEAN DEFAULT TRUE,
     cookie_preferences JSONB DEFAULT '{ "essential": true, "analytics": true, "marketing": true, "functional": true }'::jsonb,
@@ -78,41 +86,39 @@ CREATE TABLE users (
     communication_newsletter BOOLEAN DEFAULT FALSE,
     share_favourites_with_agents BOOLEAN DEFAULT FALSE,
     share_property_preferences_with_agents BOOLEAN DEFAULT FALSE,
-
-    -- General/App Settings (from Settings.js)
     notifications_settings JSONB DEFAULT '{ "email_alerts": true, "push_notifications": true, "in_app_messages": true }'::jsonb,
     timezone VARCHAR(50) DEFAULT 'Africa/Lagos',
     currency VARCHAR(10) DEFAULT 'NGN',
     default_landing_page VARCHAR(255) DEFAULT '/dashboard',
     notification_email VARCHAR(100),
     preferred_communication_channel VARCHAR(20) DEFAULT 'email',
-
-    -- Social Links (from General.js) - Stored as JSONB array of objects
     social_links JSONB DEFAULT '[]'::jsonb,
-
-    -- Constraints
-    CONSTRAINT valid_role CHECK (role IN ('client', 'agent', 'admin', 'agency_admin')), -- NEW: Added 'agency_admin'
-    CONSTRAINT valid_status CHECK (status IN ('active', 'deactivated'))
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- NEW: Define ENUM for request_status
-CREATE TYPE request_status AS ENUM ('pending', 'accepted', 'rejected');
+-- Trigger for users table
+CREATE TRIGGER update_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
 
--- NEW: Agency Members Table (UPDATED: Added request_status and agency_member_id as PK)
+-- Agency Members Table
 CREATE TABLE agency_members (
-    agency_member_id SERIAL PRIMARY KEY, -- New primary key
+    agency_member_id SERIAL PRIMARY KEY,
     agency_id INT REFERENCES agencies(agency_id) ON DELETE CASCADE,
     agent_id INT REFERENCES users(user_id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'agent')), -- 'admin' for agency admin, 'agent' for regular agent within agency
-    request_status request_status DEFAULT 'pending', -- Added request_status
+    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'agent')),
+    request_status request_status DEFAULT 'pending',
     joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Added updated_at
-    UNIQUE (agency_id, agent_id) -- Ensure only one entry per agent-agency pair
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    message TEXT,
+    member_status VARCHAR(50) DEFAULT 'regular' NOT NULL,
+    UNIQUE (agency_id, agent_id)
 );
 
--- Table for User Active Sessions (from Security.js)
+-- Table for User Active Sessions
 CREATE TABLE user_sessions (
-    session_id SERIAL PRIMARY KEY,
+    session_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     device VARCHAR(255),
     location VARCHAR(100),
@@ -122,7 +128,7 @@ CREATE TABLE user_sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table for User Login History (from Security.js)
+-- Table for User Login History
 CREATE TABLE user_login_history (
     history_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -168,7 +174,7 @@ CREATE TABLE finance_overview (
     net_profit BIGINT
 );
 
--- Property listings, now referencing users.user_id as agent_id and NEW: agency_id
+-- Property listings, now referencing users.user_id as agent_id and agency_id
 CREATE TABLE property_listings (
     property_id SERIAL PRIMARY KEY,
     purchase_category VARCHAR(50),
@@ -178,7 +184,7 @@ CREATE TABLE property_listings (
     price BIGINT,
     status VARCHAR(50),
     agent_id INT REFERENCES users(user_id),
-    agency_id INT REFERENCES agencies(agency_id) ON DELETE SET NULL, -- NEW: Link to agency
+    agency_id INT REFERENCES agencies(agency_id) ON DELETE SET NULL,
     date_listed DATE,
     property_type VARCHAR(50),
     bedrooms INT,
@@ -270,28 +276,11 @@ CREATE INDEX idx_inquiries_status ON inquiries (status);
 CREATE INDEX idx_inquiries_sender_id ON inquiries (sender_id);
 CREATE INDEX idx_inquiries_recipient_id ON inquiries (recipient_id);
 
--- Create a trigger function to update updated_at on every row update
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Create the trigger
+-- Create the trigger for inquiries
 CREATE TRIGGER update_inquiries_updated_at
 BEFORE UPDATE ON inquiries
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
--- NEW ENUM Type for Request Status
--- This block ensures the ENUM is created only if it doesn't exist
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'request_status') THEN
-        CREATE TYPE request_status AS ENUM ('pending', 'accepted', 'rejected');
-    END IF;
-END $$;
 
 -- New table to relate agents with their clients
 CREATE TABLE agent_clients (
@@ -304,10 +293,7 @@ CREATE TABLE agent_clients (
     PRIMARY KEY (agent_id, client_id)
 );
 
--- NEW: Table for Agent-Client Connection Requests (This table is now redundant with agency_members handling requests, but keeping if it has a different purpose)
--- If this table is intended for agent-client connection requests, it should be kept separate from agency_members.
--- However, the prompt implies agency_members handles agent-agency requests.
--- I will keep it as it was in the uploaded schema, assuming it's for agent-client requests, not agent-agency.
+-- Table for Agent-Client Connection Requests
 CREATE TABLE agent_client_requests (
     request_id SERIAL PRIMARY KEY,
     sender_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -325,8 +311,7 @@ CREATE TABLE agent_client_requests (
 CREATE INDEX idx_acr_receiver_id ON agent_client_requests (receiver_id);
 CREATE INDEX idx_acr_sender_id ON agent_client_requests (sender_id);
 
-
-CREATE TABLE IF NOT EXISTS client_property_preferences (
+CREATE TABLE client_property_preferences (
     user_id INT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     preferred_property_type VARCHAR(50) DEFAULT 'any',
     preferred_location TEXT DEFAULT 'any',
@@ -338,7 +323,7 @@ CREATE TABLE IF NOT EXISTS client_property_preferences (
 );
 
 -- Create a new table for agent-recommended listings for specific clients
-CREATE TABLE IF NOT EXISTS agent_recommended_listings (
+CREATE TABLE agent_recommended_listings (
     agent_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     client_id INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     property_id INT NOT NULL REFERENCES property_listings(property_id) ON DELETE CASCADE,

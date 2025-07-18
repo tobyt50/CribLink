@@ -165,9 +165,47 @@ const AgencyAdminSettings = () => {
     const mainContentRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // UI State for agency admin settings
-    const [defaultListingsView, setDefaultListingsView] = useState('simple'); // Placeholder for a setting
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true); // Placeholder for a setting
+    // UI State for general settings (from AdminSettings)
+    const [defaultListingsView, setDefaultListingsView] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
+    const [sidebarPermanentlyExpanded, setSidebarPermanentlyExpanded] = useState(() => localStorage.getItem('sidebarPermanentlyExpanded') === 'true');
+
+    // Notification Settings State (from AdminSettings)
+    const [emailNotifications, setEmailNotifications] = useState(true);
+    const [smsNotifications, setSmsNotifications] = useState(false);
+    const [inAppNotifications, setInAppNotifications] = useState(true);
+
+    // Email Settings State (from AdminSettings)
+    const [senderEmail, setSenderEmail] = useState('admin@example.com');
+    const [smtpHost, setSmtpHost] = useState('smtp.example.com');
+
+    // Security Settings State (from AdminSettings)
+    const [require2FA, setRequire2FA] = useState(false);
+    const [minPasswordLength, setMinPasswordLength] = useState(() => parseInt(localStorage.getItem('minPasswordLength')) || 8);
+
+    // Integrations Settings State (from AdminSettings)
+    const [crmIntegrationEnabled, setCrmIntegrationEnabled] = useState(false);
+    const [analyticsId, setAnalyticsId] = useState(() => localStorage.getItem('analyticsId') || '');
+
+    // Content Moderation (from AdminSettings)
+    const [autoApproveListings, setAutoApproveListings] = useState(() => localStorage.getItem('autoApproveListings') === 'true');
+    const [enableComments, setEnableComments] = useState(() => localStorage.getItem('enableComments') === 'true');
+
+    // System Maintenance (from AdminSettings)
+    const [maintenanceMode, setMaintenanceMode] = useState(() => localStorage.getItem('maintenanceMode') === 'true');
+    const [databaseBackupScheduled, setDatabaseBackupScheduled] = useState(() => localStorage.getItem('databaseBackupScheduled') === 'true');
+
+    // State for general user settings (from AdminSettings, originally ProfileSettings.js)
+    const [userSettings, setUserSettings] = useState({
+        language: 'en',
+        timezone: 'UTC+1',
+        currency: 'NGN',
+        default_landing_page: '/',
+        notification_email: '',
+        preferred_communication_channel: 'email',
+    });
+    const [userSettingsLoading, setUserSettingsLoading] = useState(true);
+
+    const token = localStorage.getItem("token"); // Assuming token is available here
 
     // Dynamic section titles
     const getSectionTitle = (section) => {
@@ -177,6 +215,11 @@ const AgencyAdminSettings = () => {
             case 'requests': return 'Pending Join Requests';
             case 'general': return 'General Settings';
             case 'notifications': return 'Notification Settings';
+            case 'email': return 'Email Settings';
+            case 'security': return 'Security';
+            case 'integrations': return 'Integrations';
+            case 'contentModeration': return 'Content Moderation';
+            case 'system': return 'System & Maintenance';
             case 'dangerZone': return 'Danger Zone';
             default: return 'Settings';
         }
@@ -202,6 +245,94 @@ const AgencyAdminSettings = () => {
         { value: 'simple', label: 'Table View', icon: <LayoutList size={20} /> },
         { value: 'graphical', label: 'Grid View', icon: <LayoutGrid size={20} /> }
     ];
+
+    // Language options (from AdminSettings, originally ProfileSettings.js)
+    const languageOptions = [
+        { value: 'en', label: 'English' },
+        { value: 'es', label: 'Spanish' },
+        { value: 'fr', label: 'French' },
+        { value: 'de', label: 'German' },
+    ];
+
+    // Timezone options (from AdminSettings, originally ProfileSettings.js)
+    const timezoneOptions = [
+        { value: 'UTC-12', label: '(UTC-12:00) International Date Line West' },
+        { value: 'UTC-11', label: '(UTC-11:00) Coordinated Universal Time-11' },
+        { value: 'UTC-10', label: '(UTC-10:00) Hawaii' },
+        { value: 'UTC-09', label: '(UTC-09:00) Alaska' },
+        { value: 'UTC-08', label: '(UTC-08:00) Pacific Time (US & Canada)' },
+        { value: 'UTC-07', label: '(UTC-07:00) Mountain Time (US & Canada)' },
+        { value: 'UTC-06', label: '(UTC-06:00) Central Time (US & Canada)' },
+        { value: 'UTC-05', label: '(UTC-05:00) Eastern Time (US & Canada)' },
+        { value: 'UTC-04', label: '(UTC-04:00) Atlantic Time (Canada)' },
+        { value: 'UTC-03', label: '(UTC-03:00) Buenos Aires, Georgetown' },
+        { value: 'UTC-02', label: '(UTC-02:00) Mid-Atlantic' },
+        { value: 'UTC-01', label: '(UTC-01:00) Azores, Cape Verde Is.' },
+        { value: 'UTC+00', label: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London' },
+        { value: 'UTC+01', label: '(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna (West Central Africa)' },
+        { value: 'UTC+02', label: '(UTC+02:00) Athens, Bucharest, Istanbul' },
+        { value: 'UTC+03', label: '(UTC+03:00) Baghdad, Kuwait, Riyadh' },
+        { value: 'UTC+04', label: '(UTC+04:00) Abu Dhabi, Muscat' },
+        { value: 'UTC+05', label: '(UTC+05:00) Islamabad, Karachi, Tashkent' },
+        { value: 'UTC+05:30', label: '(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi' },
+        { value: 'UTC+06', label: '(UTC+06:00) Astana, Dhaka' },
+        { value: 'UTC+07', label: '(UTC+07:00) Bangkok, Hanoi, Jakarta' },
+        { value: 'UTC+08', label: '(UTC+08:00) Beijing, Hong Kong, Perth, Singapore, Taipei' },
+        { value: 'UTC+09', label: '(UTC+09:00) Osaka, Sapporo, Tokyo' },
+        { value: 'UTC+10', label: '(UTC+10:00) Canberra, Melbourne, Sydney' },
+        { value: 'UTC+11', label: '(UTC+11:00) Magadan, Solomon Is., New Caledonia' },
+        { value: 'UTC+12', label: '(UTC+12:00) Auckland, Wellington, Fiji' },
+    ];
+
+    // Currency options (from AdminSettings, originally ProfileSettings.js)
+    const currencyOptions = [
+        { value: 'NGN', label: '₦ Nigerian Naira' },
+        { value: 'USD', label: '$ US Dollar' },
+        { value: 'EUR', label: '€ Euro' },
+        { value: 'GBP', label: '£ British Pound' },
+        { value: 'JPY', label: '¥ Japanese Yen' },
+    ];
+
+    // Dynamically generate Default Landing Page options based on user role (from AdminSettings, originally ProfileSettings.js)
+    const defaultLandingPageOptions = useCallback(() => {
+        const options = [
+            { value: '/', label: 'Home' },
+            { value: '/profile/general', label: 'Profile' },
+        ];
+
+        if (user?.role) {
+            let dashboardPath = '';
+            let inquiriesPath = '';
+            switch (user.role) {
+                case 'admin':
+                    dashboardPath = '/admin/dashboard';
+                    inquiriesPath = '/admin/inquiries';
+                    break;
+                case 'agent':
+                    dashboardPath = '/agent/dashboard';
+                    inquiriesPath = '/agent/inquiries';
+                    break;
+                case 'client':
+                    dashboardPath = '/client/dashboard';
+                    inquiriesPath = '/client/inquiries';
+                    break;
+                case 'agency_admin': // Added for agency_admin
+                    dashboardPath = '/agency-admin/dashboard';
+                    inquiriesPath = '/agency-admin/inquiries';
+                    break;
+                default:
+                    dashboardPath = '/';
+                    inquiriesPath = '/';
+            }
+
+            options.unshift({ value: dashboardPath, label: 'Dashboard' });
+
+            if (inquiriesPath && inquiriesPath !== '/') {
+                options.unshift({ value: inquiriesPath, label: 'Inquiries' });
+            }
+        }
+        return options;
+    }, [user?.role]);
 
     // Fetch Agency Information
     const fetchAgencyInfo = useCallback(async () => {
@@ -256,13 +387,64 @@ const AgencyAdminSettings = () => {
         }
     }, [user, showMessage]);
 
+    // Fetch User Settings (from AdminSettings.js)
+    const fetchUserSettings = useCallback(async () => {
+        setUserSettingsLoading(true);
+        try {
+            const response = await axiosInstance.get(`${API_BASE_URL}/users/profile`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const userData = response.data;
+
+            setUserSettings(prevSettings => ({
+                ...prevSettings,
+                language: userData.language || prevSettings.language,
+                timezone: userData.timezone || prevSettings.timezone,
+                currency: userData.currency || prevSettings.currency,
+                default_landing_page: userData.default_landing_page || prevSettings.default_landing_page,
+                notification_email: userData.notification_email || '',
+                preferred_communication_channel: userData.preferred_communication_channel || prevSettings.preferred_communication_channel,
+            }));
+
+        } catch (error) {
+            console.error('Error fetching user settings:', error);
+            showMessage(error?.response?.data?.message || 'Failed to load general settings.', 'error');
+        } finally {
+            setUserSettingsLoading(false);
+        }
+    }, [token, showMessage]);
+
     useEffect(() => {
         if (user?.agency_id && isAuthenticated && user?.role === 'agency_admin') {
             fetchAgencyInfo();
             fetchAgencyMembers();
             fetchPendingRequests();
+            fetchUserSettings(); // Fetch user settings for general options
         }
-    }, [user, isAuthenticated, fetchAgencyInfo, fetchAgencyMembers, fetchPendingRequests]);
+    }, [user, isAuthenticated, fetchAgencyInfo, fetchAgencyMembers, fetchPendingRequests, fetchUserSettings]);
+
+    // LocalStorage Sync Effect for general settings (from AdminSettings)
+    useEffect(() => {
+        localStorage.setItem('defaultListingsView', defaultListingsView);
+        localStorage.setItem('sidebarPermanentlyExpanded', sidebarPermanentlyExpanded);
+        localStorage.setItem('minPasswordLength', minPasswordLength);
+        localStorage.setItem('analyticsId', analyticsId);
+        localStorage.setItem('autoApproveListings', autoApproveListings);
+        localStorage.setItem('enableComments', enableComments);
+        localStorage.setItem('maintenanceMode', maintenanceMode);
+        localStorage.setItem('databaseBackupScheduled', databaseBackupScheduled);
+        localStorage.setItem('settingsSearchTerm', searchTerm);
+    }, [defaultListingsView, sidebarPermanentlyExpanded, minPasswordLength, analyticsId, autoApproveListings, enableComments, maintenanceMode, databaseBackupScheduled, searchTerm]);
+
+    // This useEffect is updated to prevent the quick collapse issue.
+    // It should only run once on mount or when isMobile changes to set the *initial* collapsed state.
+    // The sidebarPermanentlyExpanded state is now directly controlled by handleSidebarToggle.
+    useEffect(() => {
+        if (!isMobile) {
+            setIsCollapsed(!sidebarPermanentlyExpanded);
+        }
+    }, [isMobile, setIsCollapsed]);
+
 
     const handleAgencyFormChange = (e) => {
         const { name, value } = e.target;
@@ -457,6 +639,7 @@ const AgencyAdminSettings = () => {
         });
     };
 
+    // Handlers for general settings (from AdminSettings)
     const handleThemeChange = (value) => {
         setThemePreference(value);
         showMessage(`Theme set to ${value}.`, 'success');
@@ -467,13 +650,58 @@ const AgencyAdminSettings = () => {
         showMessage('Default listings view updated.', 'success');
     };
 
-    const handleNotificationsToggle = (setter, name) => () => {
+    const handleSidebarToggle = () => {
+        setSidebarPermanentlyExpanded(prev => {
+            const newState = !prev;
+            setIsCollapsed(!newState);
+            showMessage(`Sidebar permanently ${newState ? 'expanded' : 'collapsed'}`, 'success');
+            return newState;
+        });
+    };
+
+    // New handler to update user settings and save immediately (from AdminSettings)
+    const handleUserSettingsUpdate = async (name, value) => {
+        setUserSettings(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+        try {
+            const payload = { [name]: value };
+            await axiosInstance.put(`${API_BASE_URL}/users/update`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            showMessage(`${name.replace(/_/g, ' ')} updated successfully!`, "success");
+        } catch (error) {
+            console.error(`Failed to save ${name}:`, error);
+            showMessage(`Failed to save ${name.replace(/_/g, ' ')}. Please try again.`, "error");
+        }
+    };
+
+    const createToggleHandler = (setter, name) => () => {
         setter(prev => {
             const newState = !prev;
             showMessage(`${name} ${newState ? 'enabled' : 'disabled'}.`, 'success');
             return newState;
         });
     };
+
+    const handleEmailNotificationsToggle = createToggleHandler(setEmailNotifications, 'Email notifications');
+    const handleSmsNotificationsToggle = createToggleHandler(setSmsNotifications, 'SMS notifications');
+    const handleInAppNotificationsToggle = createToggleHandler(setInAppNotifications, 'In-app notifications');
+    const handleRequire2FAToggle = createToggleHandler(setRequire2FA, '2FA requirement');
+    const handleCrmIntegrationToggle = createToggleHandler(setCrmIntegrationEnabled, 'CRM Integration');
+    const handleAutoApproveListingsToggle = createToggleHandler(setAutoApproveListings, 'Auto-approve listings');
+    const handleEnableCommentsToggle = createToggleHandler(setEnableComments, 'Comments');
+    const handleMaintenanceModeToggle = createToggleHandler(setMaintenanceMode, 'Maintenance mode');
+    const handleToggleDatabaseBackupScheduling = createToggleHandler(setDatabaseBackupScheduled, 'Database backup scheduling');
+
+    const handleSaveSettings = (settingName) => () => {
+        showMessage(`${settingName} saved (frontend simulation).`, 'success');
+    };
+
+    const handleClearCache = () => showMessage('Cache cleared successfully!', 'success');
+    const handleBackupDatabase = () => showMessage('Database backup initiated.', 'info');
+    const handleViewErrorLogs = () => showMessage('Opening error logs (simulated).', 'info');
 
 
     const sidebarItems = [
@@ -482,6 +710,11 @@ const AgencyAdminSettings = () => {
         { id: 'requests', label: 'Join Requests', icon: Hourglass },
         { id: 'general', label: 'General Settings', icon: SettingsIcon },
         { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'email', label: 'Email Settings', icon: Mail },
+        { id: 'security', label: 'Security', icon: Key },
+        { id: 'integrations', label: 'Integrations', icon: Link },
+        { id: 'contentModeration', label: 'Content Moderation', icon: ClipboardList },
+        { id: 'system', label: 'System & Maintenance', icon: Server },
         { id: 'dangerZone', label: 'Danger Zone', icon: ShieldAlert },
     ];
 
@@ -498,9 +731,29 @@ const AgencyAdminSettings = () => {
         ],
         "general": [
             "General Settings", "Theme", "Choose your preferred theme.", "Default Listings Display", "Select how listings are displayed by default.", "Table View", "Grid View",
+            "Permanently Expand Sidebar (Desktop Only)", "Keep the sidebar expanded by default on desktop.",
+            "Language", "Select Language", "English", "Spanish", "French", "German",
+            "Timezone", "Select Timezone",
+            "Default Currency", "Select Currency", "Nigerian Naira", "US Dollar", "Euro", "British Pound", "Japanese Yen",
+            "Default Landing Page", "Select Landing Page", "Home", "Profile", "Dashboard", "Inquiries",
         ],
         "notifications": [
             "Notification Settings", "Email Notifications", "Receive updates via email.", "SMS Notifications", "Get alerts on your phone.", "In-App Notifications", "See notifications in the dashboard."
+        ],
+        "email": [
+            "Email Settings", "Sender Email Address", "SMTP Host", "Save Email Settings"
+        ],
+        "security": [
+            "Security", "Require 2FA for Admin Login", "Enhance security for all admin accounts.", "Minimum Password Length", "Set the minimum characters for user passwords.", "Save Policy"
+        ],
+        "integrations": [
+            "Integrations", "Enable CRM Integration", "Sync data with your external CRM.", "Google Analytics ID", "Integrate Google Analytics for traffic monitoring.", "Save Analytics"
+        ],
+        "contentModeration": [
+            "Content Moderation", "Auto-Approve New Listings", "Approve new agent listings automatically.", "Enable User Comments", "Allow comments on property listings."
+        ],
+        "system": [
+            "System & Maintenance", "Enable Maintenance Mode", "Take the site offline for updates.", "Application Cache", "Clear temporary data.", "Clear", "Automated Database Backups", "Schedule regular database backups.", "Manual Backup", "Create an on-demand backup.", "Backup", "View Error Logs", "Access system error logs for debugging.", "View Logs"
         ],
         "dangerZone": [
             "Danger Zone", "Delete Agency", "Permanently delete your agency and all associated data.", "This action cannot be undone.", "Disconnect all associated agents from this agency.", "Revert your role to a regular agent.", "Delete Agency Permanently", "Confirm Agency Deletion", "Final Confirmation", "DELETE MY AGENCY"
@@ -716,13 +969,13 @@ const AgencyAdminSettings = () => {
                                         </>
                                     ) : (
                                         <button
-  onClick={() => setEditingAgencyInfo(true)}
-  className={`px-6 py-2 rounded-full font-semibold transition duration-200 flex items-center
-    ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
->
-  <PencilIcon size={20} className="mr-2" />
-  Edit Info
-</button>
+                                            onClick={() => setEditingAgencyInfo(true)}
+                                            className={`px-6 py-2 rounded-full font-semibold transition duration-200 flex items-center
+                                                ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                                        >
+                                            <PencilIcon size={20} className="mr-2" />
+                                            Edit Info
+                                        </button>
 
                                     )}
                                 </div>
@@ -845,6 +1098,63 @@ const AgencyAdminSettings = () => {
                                     <Dropdown placeholder="Select View Mode" options={defaultListingsViewOptions} value={defaultListingsView} onChange={handleDefaultListingsViewChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
                                 </div>
+                                {/* Sidebar Toggle */}
+                                <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+
+                                {/* General App Settings from ProfileSettings.js */}
+                                {/* Language */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="language">Language</label>
+                                    <Dropdown
+                                        options={languageOptions}
+                                        value={userSettings.language}
+                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
+                                        placeholder="Select Language"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
+                                </div>
+
+                                {/* Timezone */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="timezone">Timezone</label>
+                                    <Dropdown
+                                        options={timezoneOptions}
+                                        value={userSettings.timezone}
+                                        onChange={(value) => handleUserSettingsUpdate('timezone', value)}
+                                        placeholder="Select Timezone"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
+                                </div>
+
+                                {/* Currency */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="currency">Default Currency</label>
+                                    <Dropdown
+                                        options={currencyOptions}
+                                        value={userSettings.currency}
+                                        onChange={(value) => handleUserSettingsUpdate('currency', value)}
+                                        placeholder="Select Currency"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
+                                </div>
+
+                                {/* Default Landing Page */}
+                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
+                                    <Dropdown
+                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                        value={userSettings.default_landing_page}
+                                        onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
+                                        placeholder="Select Landing Page"
+                                        className="w-full"
+                                    />
+                                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
+                                        Choose the page you see after logging in.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -854,8 +1164,97 @@ const AgencyAdminSettings = () => {
                         <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                             <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Notification Settings</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <Switch label="Email Notifications" description="Receive updates via email." isOn={notificationsEnabled} handleToggle={handleNotificationsToggle(setNotificationsEnabled, 'Email notifications')} />
-                                {/* Add more notification types as needed, e.g., SMS, In-App */}
+                                <Switch label="Email Notifications" description="Receive updates via email." isOn={emailNotifications} handleToggle={handleEmailNotificationsToggle} />
+                                <Switch label="SMS Notifications" description="Get alerts on your phone." isOn={smsNotifications} handleToggle={handleSmsNotificationsToggle} />
+                                <Switch label="In-App Notifications" description="See notifications in the dashboard." isOn={inAppNotifications} handleToggle={handleInAppNotificationsToggle} />
+                            </div>
+                        </div>
+                    )}
+
+                    {filterSection("email") && (
+                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Email Settings</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label htmlFor="senderEmail" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Sender Email Address</label>
+                                    <input type="email" id="senderEmail" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., noreply@yourdomain.com" />
+                                </div>
+                                <div>
+                                    <label htmlFor="smtpHost" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>SMTP Host</label>
+                                    <input type="text" id="smtpHost" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., smtp.gmail.com" />
+                                </div>
+                            </div>
+                            <button onClick={handleSaveSettings('Email settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Email Settings</button>
+                        </div>
+                    )}
+
+                    {filterSection("security") && (
+                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <Switch label="Require 2FA for Admin Login" description="Enhance security for all admin accounts." isOn={require2FA} handleToggle={handleRequire2FAToggle} />
+                                <div>
+                                    <label htmlFor="minPasswordLength" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Minimum Password Length</label>
+                                    <input type="number" id="minPasswordLength" value={minPasswordLength} onChange={(e) => setMinPasswordLength(parseInt(e.target.value))} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} min="1" />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum characters for user passwords.</p>
+                                    <button onClick={handleSaveSettings('Password policy')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Policy</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {filterSection("integrations") && (
+                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Integrations</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <Switch label="Enable CRM Integration" description="Sync data with your external CRM." isOn={crmIntegrationEnabled} handleToggle={handleCrmIntegrationToggle} />
+                                <div>
+                                    <label htmlFor="analyticsId" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Google Analytics ID</label>
+                                    <input type="text" id="analyticsId" value={analyticsId} onChange={(e) => setAnalyticsId(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="UA-XXXXX-Y" />
+                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Integrate Google Analytics for traffic monitoring.</p>
+                                    <button onClick={handleSaveSettings('Analytics settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Analytics</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {filterSection("contentModeration") && (
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <Switch label="Auto-Approve New Listings" description="Approve new agent listings automatically." isOn={autoApproveListings} handleToggle={handleAutoApproveListingsToggle} />
+                                <Switch label="Enable User Comments" description="Allow comments on property listings." isOn={enableComments} handleToggle={handleEnableCommentsToggle} />
+                            </div>
+                        </div>
+                    )}
+
+                    {filterSection("system") && (
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>System & Maintenance</h3>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Switch label="Enable Maintenance Mode" description="Take the site offline for updates." isOn={maintenanceMode} handleToggle={handleMaintenanceModeToggle} />
+                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <div>
+                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Application Cache</span>
+                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Clear temporary data.</p>
+                                    </div>
+                                    <button onClick={handleClearCache} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Clear</button>
+                                </div>
+                                <Switch label="Automated Database Backups" description="Schedule regular database backups." isOn={databaseBackupScheduled} handleToggle={handleToggleDatabaseBackupScheduling} />
+                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <div>
+                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Manual Backup</span>
+                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Create an on-demand backup.</p>
+                                    </div>
+                                    <button onClick={handleBackupDatabase} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Backup</button>
+                                </div>
+                                <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                    <div>
+                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>View Error Logs</span>
+                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Access system error logs for debugging.</p>
+                                    </div>
+                                    <button onClick={handleViewErrorLogs} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">View Logs</button>
+                                </div>
                             </div>
                         </div>
                     )}
