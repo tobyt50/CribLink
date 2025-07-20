@@ -69,7 +69,6 @@ import ManageProfile from "./pages/ManageProfile";
 import General from './pages/profile/General';
 import Security from './pages/profile/Security';
 import Privacy from './pages/profile/Privacy';
-import Settings from './pages/profile/Settings';
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
@@ -86,6 +85,7 @@ import AddLegalDocument from "./pages/AddLegalDocument";
 import Members from './pages/agencyadmin/Members'; // Renamed from Agents
 // import AgencyAdminProperties from './pages/agencyadmin/Properties';
 import AgencyAdminSettings from './pages/agencyadmin/Settings';
+import AgencyAdminProfile from './pages/agencyadmin/AgencyAdminProfile'; // Import the new AgencyAdminProfile component
 
 
 // Define routes for each role
@@ -201,7 +201,6 @@ function AppContent() {
               <Route path="general" element={<General />} />
               <Route path="security" element={<Security />} />
               <Route path="privacy" element={<Privacy />} />
-              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="favourites" element={<Favourites />} />
             <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
@@ -210,6 +209,16 @@ function AppContent() {
             {/* NEW: Agencies page accessible to admin, agent, agency_admin */}
             <Route path="/agencies" element={<RoleProtectedRoute allowedRole={["admin", "agent", "agency_admin"]} />}>
               <Route index element={<Agencies />} />
+            </Route>
+
+            {/* Agent Profile page accessible to clients and agency_admins */}
+            <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin"]} />}>
+              <Route index element={<AgentProfile />} />
+            </Route>
+
+            {/* NEW: Agency Admin Profile page accessible to agency_admin themselves */}
+            <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin"]} />}>
+              <Route index element={<AgencyAdminProfile />} />
             </Route>
           </Route>
 

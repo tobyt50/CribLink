@@ -1,0 +1,15 @@
+Render:
+psql "postgres://criblink_db_oxud_user:SE4VvP1Ij0Taqn9k9mN6oLIe6V7llWSZ@dpg-d1js6kvdiees73cg7fo0-a.oregon-postgres.render.com:5432/criblink_db_oxud"
+
+Neon:
+psql 'postgresql://neondb_owner:npg_1XTjFuesK4If@ep-white-cell-a9fivc8d-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require'
+
+Render restore:
+pg_restore --verbose --clean --no-owner `
+  --dbname="postgres://criblink_db_oxud_user:SE4VvP1Ij0Taqn9k9mN6oLIe6V7llWSZ@dpg-d1js6kvdiees73cg7fo0-a.oregon-postgres.render.com:5432/criblink_db_oxud" `
+  "C:\Users\Mattted\Documents\db.backup"
+
+Neon restore:
+pg_restore --verbose --clean --no-owner `
+  --dbname="postgresql://neondb_owner:npg_1XTjFuesK4If@ep-white-cell-a9fivc8d-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require" `
+  "C:\Users\Mattted\Documents\db.backup"

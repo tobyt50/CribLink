@@ -11,7 +11,7 @@ import Card from '../ui/Card';
 
 const MemberCard = ({
   member,
-  onViewProfile,
+  onViewProfile, // This prop will now be used for navigation
   onRemoveMember,
   acceptAction,
   rejectAction,
@@ -41,6 +41,7 @@ const MemberCard = ({
   const nameForInitial = member.full_name;
 
   const isCurrentUser = user && user.user_id === member.user_id;
+  // Reverted: isCurrentUserAdmin now only checks for 'agency_admin' role for the current user.
   const isCurrentUserAdmin = user && user.role === 'agency_admin';
   const isMemberAdmin = member.agency_role === 'agency_admin';
   const isRemoveDisabled = isCurrentUser && isCurrentUserAdmin && member.total_admins === 1;
@@ -57,7 +58,8 @@ const MemberCard = ({
   return (
     <Card
       className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] w-full lg:max-w-md break-words overflow-x-hidden"
-      onClick={() => { !isPendingRequestCard && onViewProfile(member.user_id); }}
+      // Conditionally call onViewProfile when the card is clicked, only if it's not a pending request card
+      onClick={() => { !isPendingRequestCard && onViewProfile(member.user_id, member.agency_role); }}
     >
       {/* Top Section: Avatar + Info */}
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
@@ -130,8 +132,9 @@ const MemberCard = ({
           </>
         ) : (
           <>
+            {/* Call onViewProfile when "View Profile" button is clicked */}
             <button
-              onClick={(e) => { e.stopPropagation(); onViewProfile(member.user_id); }}
+              onClick={(e) => { e.stopPropagation(); onViewProfile(member.user_id, member.agency_role); }}
               className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                 ${currentDarkMode ? "text-blue-400 hover:bg-gray-700 hover:border hover:border-blue-500" : "text-blue-700 hover:bg-gray-100 hover:border hover:border-blue-500"} border-transparent`}
             >
@@ -164,34 +167,29 @@ const MemberCard = ({
               </>
             )}
 
-            {isCurrentUserAdmin && !isCurrentUser && onToggleMemberStatus && (
+            {/* Toggle Member Status Button (only for admins, not self) */}
+            {isCurrentUserAdmin && user?.user_id !== member.user_id && (
               <button
                 onClick={(e) => { e.stopPropagation(); onToggleMemberStatus(member.user_id, member.member_status); }}
+                title={member.member_status === 'vip' ? 'Make Regular' : 'Make VIP'}
                 className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                   ${currentDarkMode ? "text-yellow-400 hover:bg-gray-700 hover:border hover:border-yellow-500" : "text-yellow-700 hover:bg-gray-100 hover:border hover:border-yellow-500"} border-transparent`}
-                title={member.member_status === 'vip' ? 'Make Regular' : 'Make VIP'}
               >
                 {member.member_status === 'vip' ? 'Reg' : 'VIP'}
               </button>
             )}
 
-            {(member.user_id !== user.user_id || member.total_admins > 1) ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRemoveMember(member.user_id); }}
-                className={`h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full
-                  ${currentDarkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
-                title="Remove Member"
-              >
-                <TrashIcon className="h-5 w-5" />
-              </button>
-            ) : (
+            {(user && user.user_id === member.user_id && user.role === 'agency_admin' && member.total_admins === 1) ? (
               <button
                 disabled
-                className={`h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full opacity-50 cursor-not-allowed
-                  ${currentDarkMode ? "text-red-400" : "text-red-700"} border border-transparent`}
-                title="You cannot remove yourself as the last agency admin"
+                className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 opacity-50 cursor-not-allowed border border-transparent`}
+                title="You cannot remove yourself as you are the last agency administrator."
               >
-                <TrashIcon className="h-5 w-5" />
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            ) : (
+              <button onClick={(e) => { e.stopPropagation(); onRemoveMember(member.user_id); }} title="Remove member" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
+                <TrashIcon className="h-4 w-4" />
               </button>
             )}
           </>

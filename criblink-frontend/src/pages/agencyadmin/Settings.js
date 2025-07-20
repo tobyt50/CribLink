@@ -142,7 +142,7 @@ const AgencyAdminSettings = () => {
     const { showMessage } = useMessage();
     const { showConfirm } = useConfirmDialog();
     const { user, isAuthenticated, logout } = useAuth(); // Get user info and logout from AuthContext
-    const { isSidebarOpen, toggleSidebar, isMobile, isCollapsed, setIsCollapsed } = useSidebarState(); // Use useSidebarState
+    const { isSidebarOpen, setIsSidebarOpen, isMobile, isCollapsed, setIsCollapsed } = useSidebarState(); // Use useSidebarState
 
     const [activeSection, setActiveSection] = useState('agencyInfo'); // Default to agency info
     const [agencyInfo, setAgencyInfo] = useState(null);
@@ -795,7 +795,7 @@ const AgencyAdminSettings = () => {
         <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
             {isMobile && (
                 <motion.button
-                    onClick={() => toggleSidebar()} // Use toggleSidebar from useSidebarState
+                    onClick={() => setIsSidebarOpen(prev => !prev)} // Changed this line
                     className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
                     initial={false}
                     animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
@@ -816,7 +816,7 @@ const AgencyAdminSettings = () => {
                 setActiveSection={setActiveSection}
                 isMobile={isMobile}
                 isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={toggleSidebar} // Pass toggleSidebar here
+                setIsSidebarOpen={setIsSidebarOpen} // Keep this as is
             />
 
             <motion.div

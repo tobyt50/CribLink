@@ -10,7 +10,7 @@ exports.getAgentProfile = async (req, res) => {
         // Fetch agent's user details from the 'users' table, including agency_id
         const userResult = await db.query(
             `SELECT user_id, full_name, email, phone, profile_picture_url, date_joined, last_login, status AS user_status,
-                    agency, bio, location, social_links, agency_id -- NEW: Added agency_id
+                    agency, bio, location, social_links, agency_id
              FROM users WHERE user_id = $1 AND (role = 'agent' OR role = 'agency_admin')`, // Allow agency_admin to have a profile
             [agentId]
         );
@@ -30,10 +30,26 @@ exports.getAgentProfile = async (req, res) => {
 
         const agentPerformance = performanceResult.rows.length > 0 ? performanceResult.rows[0] : {};
 
-        // Combine all agent data
+        // Fetch agency details using agency_id if the agent is associated with an agency
+        let agencyDetails = null;
+        if (agentDetails.agency_id) {
+            const agencyRes = await db.query(
+                `SELECT agency_id, name AS agency_name, logo_url, address AS location, created_at AS date_founded
+                 FROM agencies WHERE agency_id = $1`,
+                [agentDetails.agency_id]
+            );
+            if (agencyRes.rows.length > 0) {
+                agencyDetails = agencyRes.rows[0];
+                // Manually add a default status if needed for the frontend display
+                agencyDetails.status = 'active'; // Assuming agencies are active by default if no status column exists
+            }
+        }
+
+        // Combine all agent data, including agency info
         const combinedAgentData = {
             ...agentDetails,
-            ...agentPerformance
+            ...agentPerformance,
+            agency_info: agencyDetails // Add agency details here
         };
 
         res.status(200).json(combinedAgentData);
@@ -134,7 +150,7 @@ exports.getAgentIncomingRequests = async (req, res) => {
                     u.profile_picture_url AS client_profile_picture_url, acr.message, acr.created_at, acr.status
              FROM agent_client_requests acr
              JOIN users u ON acr.sender_id = u.user_id
-             WHERE acr.receiver_id = $1 AND acr.receiver_role IN ('agent', 'agency_admin') AND acr.status = 'pending' -- NEW: receiver_role can be agent or agency_admin
+             WHERE acr.receiver_id = $1 AND acr.receiver_role IN ('agent', 'agency_admin') AND acr.status = 'pending'
              ORDER BY acr.created_at DESC`,
             [agentId]
         );
@@ -163,7 +179,7 @@ exports.getAgentOutgoingRequests = async (req, res) => {
                     u.profile_picture_url AS client_profile_picture_url, acr.message, acr.created_at, acr.status
              FROM agent_client_requests acr
              JOIN users u ON acr.receiver_id = u.user_id
-             WHERE acr.sender_id = $1 AND acr.sender_role IN ('agent', 'agency_admin') -- NEW: sender_role can be agent or agency_admin
+             WHERE acr.sender_id = $1 AND acr.sender_role IN ('agent', 'agency_admin')
              ORDER BY acr.created_at DESC`,
             [agentId]
         );
@@ -194,7 +210,7 @@ exports.acceptConnectionRequestFromClient = async (req, res) => {
         const requestUpdateResult = await db.query(
             `UPDATE agent_client_requests
              SET status = 'accepted', updated_at = NOW()
-             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role IN ('agent', 'agency_admin') AND status = 'pending' -- NEW: receiver_role can be agent or agency_admin
+             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role IN ('agent', 'agency_admin') AND status = 'pending'
              RETURNING sender_id, receiver_id;`,
             [requestId, agentId]
         );
@@ -244,7 +260,7 @@ exports.rejectConnectionRequestFromClient = async (req, res) => {
         const result = await db.query(
             `UPDATE agent_client_requests
              SET status = 'rejected', updated_at = NOW()
-             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role IN ('agent', 'agency_admin') AND status = 'pending' -- NEW: receiver_role can be agent or agency_admin
+             WHERE request_id = $1 AND receiver_id = $2 AND receiver_role IN ('agent', 'agency_admin') AND status = 'pending'
              RETURNING request_id;`,
             [requestId, agentId]
         );

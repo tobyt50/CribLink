@@ -78,15 +78,21 @@ exports.registerAgentAgency = async (req, res) => {
             return res.status(400).json({ message: 'Agency name, email, and phone are required.' });
         }
 
-        // Check if agent is already associated with an agency
-        const userCheck = await client.query('SELECT agency_id, role FROM users WHERE user_id = $1', [userId]);
-        if (userCheck.rows[0]?.agency_id) {
+        // Check if agent is already associated with an agency (accepted or pending)
+        const existingActiveMembership = await client.query(
+            `SELECT agency_id, request_status FROM agency_members WHERE agent_id = $1 AND (request_status = 'accepted' OR request_status = 'pending')`,
+            [userId]
+        );
+
+        if (existingActiveMembership.rows.length > 0) {
+            const existingAgencyId = existingActiveMembership.rows[0].agency_id;
+            const existingStatus = existingActiveMembership.rows[0].request_status;
             await client.query('ROLLBACK');
-            return res.status(400).json({ message: 'You are already associated with an agency. Cannot create a new one.' });
-        }
-        if (userCheck.rows[0]?.role === 'agency_admin') {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ message: 'You are already an agency admin.' });
+            if (existingStatus === 'accepted') {
+                return res.status(400).json({ message: `You are already connected to an agency (Agency ID: ${existingAgencyId}). An agent can only be affiliated with one agency at a time.` });
+            } else if (existingStatus === 'pending') {
+                return res.status(400).json({ message: `You have a pending request to join another agency (Agency ID: ${existingAgencyId}). An agent can only be affiliated with one agency at a time.` });
+            }
         }
 
         // Check for unique agency name and email
@@ -129,7 +135,7 @@ exports.registerAgentAgency = async (req, res) => {
 
         // 4. Add the user as an 'admin' in the agency_members table with 'accepted' status and default member_status
         await client.query(
-            `INSERT INTO agency_members (agency_id, agent_id, role, request_status, member_status) VALUES ($1, $2, $3, 'accepted', 'regular')`, // Added default 'regular'
+            `INSERT INTO agency_members (agency_id, agent_id, role, request_status, member_status) VALUES ($1, $2, $3, 'accepted', 'regular')`, // 'regular' for member_status is fine here
             [newAgencyId, userId, 'admin'] // Role in agency_members for the creator is 'admin'
         );
 
@@ -231,19 +237,20 @@ exports.updateAgency = async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Check if the performing user is the agency_admin for this agency or a super admin
+        // Check if the performing user is an agency_admin for this agency or a super admin
         const agencyResult = await client.query('SELECT agency_admin_id, logo_public_id FROM agencies WHERE agency_id = $1', [id]);
         if (agencyResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const currentAgencyAdminId = agencyResult.rows[0].agency_admin_id;
         const oldLogoPublicId = agencyResult.rows[0].logo_public_id;
 
         if (performingUserRole === 'agency_admin') {
-            if (currentAgencyAdminId !== performingUserId) {
+            // Check if the performing agency admin is indeed associated with the agency in question
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(id)) {
                 await client.query('ROLLBACK');
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to update this agency.' });
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to manage this agency.' });
             }
         } else if (performingUserRole !== 'admin') {
             await client.query('ROLLBACK');
@@ -336,7 +343,7 @@ exports.deleteAgency = async (req, res) => {
         }
 
         // Get logo public ID for Cloudinary deletion
-        const agencyResult = await client.query('SELECT logo_public_id FROM agencies WHERE agency_id = $1', [id]);
+        const agencyResult = await db.query('SELECT logo_public_id FROM agencies WHERE agency_id = $1', [id]);
         const logoPublicId = agencyResult.rows[0]?.logo_public_id;
 
         const result = await db.query('DELETE FROM agencies WHERE agency_id = $1 RETURNING name', [id]);
@@ -369,11 +376,6 @@ exports.deleteAgency = async (req, res) => {
  * @route POST /api/agencies/request-to-join
  * @access Private (Agent only)
  */
-/**
- * @desc Agent requests to join an agency
- * @route POST /api/agencies/request-to-join
- * @access Private (Agent only)
- */
 exports.requestToJoinAgency = async (req, res) => {
     const { agency_id } = req.body;
     const agentId = req.user.user_id;
@@ -389,23 +391,34 @@ exports.requestToJoinAgency = async (req, res) => {
             return res.status(404).json({ message: 'Agency not found.' });
         }
 
-        // Check if agent is already a member or has a pending/rejected/other request
-        const existingMembership = await client.query(
+        // --- NEW: Check for any existing active affiliation (accepted or pending) for the agent ---
+        const existingActiveMembership = await client.query(
+            `SELECT agency_id, request_status FROM agency_members WHERE agent_id = $1 AND (request_status = 'accepted' OR request_status = 'pending')`,
+            [agentId]
+        );
+
+        if (existingActiveMembership.rows.length > 0) {
+            const existingAgencyId = existingActiveMembership.rows[0].agency_id;
+            const existingStatus = existingActiveMembership.rows[0].request_status;
+            await client.query('ROLLBACK');
+            if (existingStatus === 'accepted') {
+                return res.status(400).json({ message: `You are already connected to an agency (Agency ID: ${existingAgencyId}). An agent can only be affiliated with one agency at a time.` });
+            } else if (existingStatus === 'pending') {
+                return res.status(400).json({ message: `You have a pending request to join another agency (Agency ID: ${existingAgencyId}). An agent can only be affiliated with one agency at a time.` });
+            }
+        }
+        // --- END NEW CHECK ---
+
+        // Check if agent has a *rejected* request for this specific agency to allow re-sending
+        const existingMembershipForThisAgency = await client.query(
             `SELECT request_status FROM agency_members WHERE agency_id = $1 AND agent_id = $2`,
             [agency_id, agentId]
         );
 
-        if (existingMembership.rows.length > 0) {
-            const status = existingMembership.rows[0].request_status;
-            if (status === 'pending') {
-                await client.query('ROLLBACK');
-                return res.status(409).json({ message: 'You already have a pending request to join this agency.' });
-            } else if (status === 'accepted') {
-                await client.query('ROLLBACK');
-                return res.status(409).json({ message: 'You are already a member of this agency.' });
-            } else {
-                // If status is 'rejected' or any other non-accepted/non-pending status,
-                // update the existing record to 'pending'
+        if (existingMembershipForThisAgency.rows.length > 0) {
+            const status = existingMembershipForThisAgency.rows[0].request_status;
+            if (status === 'rejected') {
+                // Allow re-sending if rejected
                 await client.query(
                     `UPDATE agency_members SET request_status = 'pending', updated_at = NOW() WHERE agency_id = $1 AND agent_id = $2`,
                     [agency_id, agentId]
@@ -414,12 +427,15 @@ exports.requestToJoinAgency = async (req, res) => {
                 logActivity('Agency Join Request Re-sent', `Agent ${agentId} re-sent request to join agency ${agency_id}`, agentId);
                 return res.status(200).json({ message: 'Your previous agency join request has been re-sent and is now pending approval.' });
             }
+            // If it's any other status (should be caught by the new check above, but as a fallback)
+            await client.query('ROLLBACK');
+            return res.status(409).json({ message: 'You are already affiliated with this agency or have a pending request.' });
         }
 
-        // If no existing membership, insert new pending request with default member_status
+        // If no existing active membership and no prior rejected request for this agency, insert new pending request
         await client.query(
             `INSERT INTO agency_members (agency_id, agent_id, role, request_status, member_status)
-             VALUES ($1, $2, 'agent', 'pending', 'regular')`, // Added default 'regular'
+             VALUES ($1, $2, 'agent', 'pending', 'regular')`, // Default role 'agent', default member_status 'regular'
             [agency_id, agentId]
         );
 
@@ -456,9 +472,8 @@ exports.approveJoinRequest = async (req, res) => {
 
         // Get request details and check authorization
         const requestResult = await client.query(
-            `SELECT am.agency_id, am.agent_id, a.agency_admin_id, am.request_status
+            `SELECT am.agency_id, am.agent_id, am.request_status
              FROM agency_members am
-             JOIN agencies a ON am.agency_id = a.agency_id
              WHERE am.agency_member_id = $1 AND am.request_status = 'pending'`, // Assuming agency_member_id is primary key for agency_members
             [requestId]
         );
@@ -468,11 +483,12 @@ exports.approveJoinRequest = async (req, res) => {
             return res.status(404).json({ message: 'Pending join request not found or already processed.' });
         }
 
-        const { agency_id, agent_id: agentToApprove, agency_admin_id: owningAgencyAdminId } = requestResult.rows[0];
+        const { agency_id, agent_id: agentToApprove } = requestResult.rows[0];
 
-        // Authorization check: Must be the agency's admin or a super admin
+        // Authorization check: Must be an agency admin of this agency or a super admin
         if (performingUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== performingUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agency_id)) {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to approve requests for this agency.' });
             }
@@ -481,9 +497,22 @@ exports.approveJoinRequest = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        // Update request status to 'accepted' and set default member_status
+        // --- NEW: Before approving, check if the agentToApprove is already affiliated with another agency ---
+        const existingActiveMembershipForAgent = await client.query(
+            `SELECT agency_id, request_status FROM agency_members WHERE agent_id = $1 AND (request_status = 'accepted' OR request_status = 'pending') AND agency_id != $2`,
+            [agentToApprove, agency_id] // Exclude the current agency being approved for
+        );
+
+        if (existingActiveMembershipForAgent.rows.length > 0) {
+            const existingAgencyId = existingActiveMembershipForAgent.rows[0].agency_id;
+            await client.query('ROLLBACK');
+            return res.status(400).json({ message: `Agent (ID: ${agentToApprove}) is already affiliated with another agency (ID: ${existingAgencyId}). An agent can only be affiliated with one agency at a time.` });
+        }
+        // --- END NEW CHECK ---
+
+        // Update request status to 'accepted' and set default member_status and role
         await client.query(
-            `UPDATE agency_members SET request_status = 'accepted', joined_at = NOW(), updated_at = NOW(), member_status = 'regular' WHERE agency_member_id = $1`,
+            `UPDATE agency_members SET request_status = 'accepted', joined_at = NOW(), updated_at = NOW(), member_status = 'regular', role = 'agent' WHERE agency_member_id = $1`, // Set role to 'agent'
             [requestId]
         );
 
@@ -525,9 +554,8 @@ exports.rejectJoinRequest = async (req, res) => {
 
         // Get request details and check authorization
         const requestResult = await client.query(
-            `SELECT am.agency_id, am.agent_id, a.agency_admin_id, am.request_status
+            `SELECT am.agency_id, am.agent_id, am.request_status
              FROM agency_members am
-             JOIN agencies a ON am.agency_id = a.agency_id
              WHERE am.agency_member_id = $1 AND am.request_status = 'pending'`,
             [requestId]
         );
@@ -537,11 +565,12 @@ exports.rejectJoinRequest = async (req, res) => {
             return res.status(404).json({ message: 'Pending join request not found or already processed.' });
         }
 
-        const { agency_id, agent_id: agentToReject, agency_admin_id: owningAgencyAdminId } = requestResult.rows[0];
+        const { agency_id, agent_id: agentToReject } = requestResult.rows[0];
 
-        // Authorization check
+        // Authorization check: Must be an agency admin of this agency or a super admin
         if (performingUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== performingUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agency_id)) {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to reject requests for this agency.' });
             }
@@ -587,33 +616,34 @@ exports.getAgentsByAgencyId = async (req, res) => {
     const performingUserRole = req.user.role;
 
     try {
-        // Verify authorization: User must be the agency admin or a super admin
-        const agencyResult = await db.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]); // Corrected: use db.query
-        if (agencyResult.rows.length === 0) {
+        // Verify authorization: User must be an agency admin of this agency or a super admin
+        const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const owningAgencyAdminId = agencyResult.rows[0].agency_admin_id;
 
         if (performingUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== performingUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to view agents for this agency.' });
             }
         } else if (performingUserRole !== 'admin') {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        const result = await db.query( // Corrected: use db.query
+        const result = await db.query(
             `SELECT
                 u.user_id, u.full_name, u.email, u.phone, u.profile_picture_url, u.date_joined, u.status AS user_status,
-                u.role AS agency_role, -- Corrected: Fetch role from users table for 'agency_admin'
+                am.role AS agency_role, -- Use am.role for the role within the agency
                 am.joined_at,
-                am.member_status -- Fetch member_status
+                am.member_status
              FROM users u
              JOIN agency_members am ON u.user_id = am.agent_id
              WHERE am.agency_id = $1 AND am.request_status = 'accepted'
              ORDER BY u.full_name`,
             [agencyId]
         );
+        
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching agents for agency:', error);
@@ -632,28 +662,29 @@ exports.getPendingAgencyJoinRequests = async (req, res) => {
     const performingUserRole = req.user.role;
 
     try {
-        // Verify authorization: User must be the agency admin or a super admin
-        const agencyResult = await db.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]); // Corrected: use db.query
-        if (agencyResult.rows.length === 0) {
+        // Verify authorization: User must be an agency admin of this agency or a super admin
+        const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const owningAgencyAdminId = agencyResult.rows[0].agency_admin_id;
 
         if (performingUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== performingUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to view pending requests for this agency.' });
             }
         } else if (performingUserRole !== 'admin') {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        const result = await db.query( // Corrected: use db.query
+        const result = await db.query(
             `SELECT
-                am.agency_member_id AS request_id, -- Use this as the ID for the request
+                am.agency_member_id AS request_id,
                 u.user_id AS agent_id, u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone,
                 u.profile_picture_url AS agent_profile_picture_url,
                 am.request_status, am.joined_at AS requested_at, am.message,
-                am.member_status -- Fetch member_status
+                am.member_status,
+                am.role AS agency_member_role -- Include the role from agency_members
              FROM agency_members am
              JOIN users u ON am.agent_id = u.user_id
              WHERE am.agency_id = $1 AND am.request_status = 'pending'
@@ -678,8 +709,12 @@ exports.getAgentPendingRequests = async (req, res) => {
     const performingUserRole = req.user.role;
 
     // Authorization: Agent can see their own requests, Agency Admin can see their agents' requests
-    if (parseInt(agentId) !== performingUserId && performingUserRole !== 'agency_admin' && performingUserRole !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: You are not authorized to view these requests.' });
+    // (This endpoint is typically for an agent to see their own requests, the agency admin part is handled by getPendingAgencyJoinRequests)
+    if (parseInt(agentId) !== performingUserId) {
+         // If not self, and not a super admin, deny. Agency admin can only view their own agency's requests, not arbitrary agent's.
+        if (performingUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: You are not authorized to view these requests.' });
+        }
     }
 
     try {
@@ -688,10 +723,12 @@ exports.getAgentPendingRequests = async (req, res) => {
                 am.agency_member_id AS request_id,
                 am.agency_id,
                 a.name AS agency_name,
+                a.logo_url, -- Include logo_url for General.js display
                 am.request_status,
+                am.member_status,
                 am.joined_at AS requested_at,
                 am.message,
-                am.member_status -- Fetch member_status
+                am.role AS agency_member_role -- Fetch agency_member_role
              FROM agency_members am
              JOIN agencies a ON am.agency_id = a.agency_id
              WHERE am.agent_id = $1 AND am.request_status = 'pending'
@@ -725,18 +762,18 @@ exports.removeAgencyMember = async (req, res) => {
 
         if (!isSelfRemoval) {
             // If not self-removal, then it must be an admin/agency_admin performing the action
-            // Verify authorization: User must be the agency admin or a super admin
-            const agencyResult = await db.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
-            if (agencyResult.rows.length === 0) {
+            // Verify authorization: User must be an agency admin of this agency or a super admin
+            const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+            if (agencyExistsCheck.rows.length === 0) {
                 await client.query('ROLLBACK');
                 return res.status(404).json({ message: 'Agency not found.' });
             }
-            const owningAgencyAdminId = agencyResult.rows[0].agency_admin_id;
 
             if (performingUserRole === 'agency_admin') {
-                if (owningAgencyAdminId !== performingUserId) {
-                    await client.query('ROLLBACK');
-                    return res.status(403).json({ message: 'Forbidden: You are not authorized to remove members from this agency.' });
+                const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+                if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
+                     await client.query('ROLLBACK');
+                     return res.status(403).json({ message: 'Forbidden: You are not authorized to remove members from this agency.' });
                 }
             } else if (performingUserRole !== 'admin') {
                 await client.query('ROLLBACK');
@@ -744,15 +781,35 @@ exports.removeAgencyMember = async (req, res) => {
             }
         }
 
-        // Ensure the agent is actually a member of this agency
+        // Safeguard: Prevent an agency admin from removing themselves if they are the last admin
+        // This applies to both self-removal and removal by another admin if the target is the last admin
+        const targetMemberRoleResult = await client.query('SELECT role FROM users WHERE user_id = $1', [agentId]);
+        const targetMemberRole = targetMemberRoleResult.rows[0]?.role;
+
+        if (targetMemberRole === 'agency_admin') {
+            const adminCountResult = await client.query(
+                `SELECT COUNT(*) FROM users WHERE agency_id = $1 AND role = 'agency_admin'`,
+                [agencyId]
+            );
+            if (parseInt(adminCountResult.rows[0].count) <= 1) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ message: 'You cannot remove the last agency administrator.' });
+            }
+        }
+
+
+        // Ensure the agent is actually a member of this agency or has a pending request
+        // MODIFICATION START: Remove request_status = 'accepted' filter
         const memberCheck = await client.query(
-            `SELECT * FROM agency_members WHERE agency_id = $1 AND agent_id = $2 AND request_status = 'accepted'`,
+            `SELECT * FROM agency_members WHERE agency_id = $1 AND agent_id = $2`,
             [agencyId, agentId]
         );
         if (memberCheck.rows.length === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({ message: 'Agent is not an active member of this agency.' });
+            // Changed message to be more general as it can be for pending or accepted
+            return res.status(404).json({ message: 'Agent is not affiliated with this agency or request not found.' });
         }
+        // MODIFICATION END
 
         // Remove the agent from agency_members table
         await client.query(
@@ -760,11 +817,15 @@ exports.removeAgencyMember = async (req, res) => {
             [agencyId, agentId]
         );
 
-        // Update the agent's user record to remove agency affiliation
-        await client.query(
-            `UPDATE users SET agency_id = NULL, agency = NULL WHERE user_id = $1`,
-            [agentId]
-        );
+        // Update the agent's user record to remove agency affiliation if they were accepted
+        // This step should only happen if the status was 'accepted'
+        if (memberCheck.rows[0].request_status === 'accepted') {
+            await client.query(
+                `UPDATE users SET agency_id = NULL, agency = NULL WHERE user_id = $1`,
+                [agentId]
+            );
+        }
+
 
         await client.query('COMMIT');
         logActivity('Agency Member Removed', `${performingUserRole} removed agent ${agentId} from agency ${agencyId}`, performingUserId);
@@ -893,16 +954,16 @@ exports.promoteMemberToAdmin = async (req, res) => {
         client = await db.pool.connect();
         await client.query('BEGIN');
 
-        // 1. Verify the current user is an agency_admin for THIS agency
-        const agencyCheck = await client.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
-        if (agencyCheck.rows.length === 0) {
+        // 1. Verify the current user is an agency_admin for THIS agency or a super admin
+        const agencyExistsCheck = await client.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const owningAgencyAdminId = agencyCheck.rows[0].agency_admin_id;
 
         if (currentUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== currentUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [currentUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to manage members for this agency.' });
             }
@@ -968,16 +1029,16 @@ exports.demoteMemberToAgent = async (req, res) => {
         client = await db.pool.connect();
         await client.query('BEGIN');
 
-        // 1. Verify the current user is an agency_admin for THIS agency
-        const agencyCheck = await client.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
-        if (agencyCheck.rows.length === 0) {
+        // 1. Verify the current user is an agency_admin for THIS agency or a super admin
+        const agencyExistsCheck = await client.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const owningAgencyAdminId = agencyCheck.rows[0].agency_admin_id;
 
         if (currentUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== currentUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [currentUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to manage members for this agency.' });
             }
@@ -1063,15 +1124,15 @@ exports.updateMemberStatus = async (req, res) => {
         }
 
         // 2. Verify the current user is an agency_admin for THIS agency or a super admin
-        const agencyCheck = await client.query('SELECT agency_admin_id FROM agencies WHERE agency_id = $1', [agencyId]);
-        if (agencyCheck.rows.length === 0) {
+        const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Agency not found.' });
         }
-        const owningAgencyAdminId = agencyCheck.rows[0].agency_admin_id;
 
         if (currentUserRole === 'agency_admin') {
-            if (owningAgencyAdminId !== currentUserId) {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [currentUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ message: 'Forbidden: You are not authorized to manage members for this agency.' });
             }
@@ -1119,5 +1180,104 @@ exports.updateMemberStatus = async (req, res) => {
         if (client) {
             client.release();
         }
+    }
+};
+
+/**
+ * @desc Get all agency memberships (connected, pending, rejected) for a specific agent
+ * @route GET /api/users/:agentId/agency-memberships
+ * @access Private (Agent can see their own, Admin/Agency Admin can see others in their agency)
+ */
+exports.getAgentAgencyMemberships = async (req, res) => {
+    const { agentId } = req.params;
+    const performingUserId = req.user.user_id;
+    const performingUserRole = req.user.role;
+
+    try {
+        // Authorization: Agent can see their own memberships
+        // Admin/Agency Admin can see memberships of agents in their agency (if agencyId matches)
+        let query = `
+            SELECT
+                am.agency_member_id,
+                am.agency_id,
+                a.name AS agency_name,
+                a.logo_url,
+                am.request_status,
+                am.member_status,
+                am.role AS agency_member_role, -- Added this to explicitly get the role within the agency
+                am.joined_at,
+                am.updated_at
+            FROM agency_members am
+            JOIN agencies a ON am.agency_id = a.agency_id
+            WHERE am.agent_id = $1
+            ORDER BY am.updated_at DESC
+        `;
+        const queryParams = [agentId];
+
+        const result = await db.query(query, queryParams);
+
+        // Further refine authorization if needed:
+        // If performingUserRole is 'agency_admin', ensure the agentId belongs to their agency
+        if (performingUserRole === 'agency_admin') {
+            const agentAgencyCheck = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [agentId]);
+            if (agentAgencyCheck.rows.length === 0 || agentAgencyCheck.rows[0].agency_id !== req.user.agency_id) {
+                // If the agent is not in the agency_admin's agency, or agent not found
+                if (parseInt(agentId) !== performingUserId) { // Allow agency admin to see their own memberships
+                    return res.status(403).json({ message: 'Forbidden: You are not authorized to view memberships for this agent.' });
+                }
+            }
+        } else if (performingUserRole !== 'admin' && parseInt(agentId) !== performingUserId) {
+            // If not admin and not self, forbid
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching agent agency memberships:', error);
+        res.status(500).json({ message: 'Server error fetching agent agency memberships.', error: error.message });
+    }
+};
+
+/**
+ * @desc Get the count of agency administrators for a specific agency.
+ * @route GET /api/agencies/:agencyId/admin-count
+ * @access Private (Agency Admin or Super Admin for that agency)
+ */
+exports.getAgencyAdminCount = async (req, res) => {
+    const { agencyId } = req.params;
+    const performingUserId = req.user.user_id;
+    const performingUserRole = req.user.role;
+
+    try {
+        // Verify authorization: User must be a super admin OR
+        // an agency_admin who is associated with the agency in the request.
+        if (performingUserRole === 'agency_admin') {
+            // If the user is an agency_admin, they must be an admin of the requested agency.
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to view admin count for this agency.' });
+            }
+        } else if (performingUserRole !== 'admin') { // Super admin can access any agency's admin count
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+        // Ensure the agency actually exists before querying for its admin count
+        const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Agency not found.' });
+        }
+
+        const result = await db.query(
+            `SELECT COUNT(*) AS admin_count
+             FROM users
+             WHERE agency_id = $1 AND role = 'agency_admin'`,
+            [agencyId]
+        );
+
+        res.status(200).json({ admin_count: parseInt(result.rows[0].admin_count) });
+    } catch (error) {
+        console.error('Error fetching agency admin count:', error);
+        res.status(500).json({ message: 'Server error fetching agency admin count.', error: error.message });
     }
 };

@@ -1229,11 +1229,11 @@ const ListingDetails = () => {
 
       {userRole === 'client' && agentInfo.id && userId !== agentInfo.id && (
         <button
-          onClick={() => navigate(`/client/agent-profile/${agentInfo.id}`)}
+          onClick={() => navigate(`/agent-profile/${agentInfo.id}`)}
           className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full
             ${darkMode ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-500 text-white hover:bg-gray-600"}`}
         >
-          👤 View Agent Profile
+          👤 View Agent Profile 
         </button>
       )}
     </div>

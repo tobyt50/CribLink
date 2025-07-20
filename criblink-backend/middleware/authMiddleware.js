@@ -1,12 +1,15 @@
 const jwt = require('jsonwebtoken');
+const db = require('../db'); // Corrected path: Assuming authMiddleware is in a 'middleware' directory
 const SECRET_KEY = process.env.JWT_SECRET || 'lionel_messi_10_is_the_goat!';
 
 /**
  * Middleware to authenticate a user using a JWT token.
  * Attaches the decoded user info to `req.user` if valid.
  * This middleware *requires* a valid token and will respond with 401/403 if not.
+ *
+ * IMPORTANT: This version now also checks the session status in the database.
  */
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => { // Made async to use await
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Format: Bearer <token>
 
@@ -19,6 +22,24 @@ const authenticateToken = (req, res, next) => {
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
         console.log('[authenticateToken] Token verified. Decoded user payload:', req.user);
+
+        // --- NEW: Session Status Check ---
+        if (req.user.session_id && req.user.user_id) {
+            const sessionResult = await db.query(
+                `SELECT status FROM user_sessions WHERE session_id = $1 AND user_id = $2`,
+                [req.user.session_id, req.user.user_id]
+            );
+
+            if (sessionResult.rows.length === 0 || sessionResult.rows[0].status !== 'active') {
+                console.warn(`[authenticateToken] Session ID ${req.user.session_id} for user ${req.user.user_id} is inactive or not found. Forcing logout.`);
+                return res.status(403).json({ message: 'Session revoked or inactive. Please log in again.', code: 'SESSION_REVOKED' });
+            }
+        } else {
+            // This case should ideally not happen if session_id is always in the token
+            console.warn('[authenticateToken] JWT payload missing session_id or user_id. Proceeding without session check.');
+        }
+        // --- END NEW: Session Status Check ---
+
         next();
     } catch (err) {
         console.error('[authenticateToken] Invalid or expired token. Error:', err.message);

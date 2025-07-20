@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import {
   Squares2X2Icon,
   TableCellsIcon,
@@ -141,6 +141,7 @@ const Members = () => {
   const { showConfirm } = useConfirmDialog();
   const { user } = useAuth();
   const agencyId = user?.agency_id;
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('members');
@@ -249,7 +250,7 @@ const Members = () => {
         const aValue = a[sortKey];
         const bValue = b[sortKey];
         if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        return sortDirection === 'asc' ? aValue - bValue : bBValue - aValue;
       });
 
       setFilteredPendingRequests(currentRequests);
@@ -494,6 +495,15 @@ const Members = () => {
     setPage(1); // Reset page on filter change
   };
 
+  // Function to navigate to agent profile
+  const handleViewProfile = (memberId, agencyRole) => {
+    if (agencyRole === 'admin') {
+      navigate(`/agency-admin-profile/${memberId}`);
+    } else {
+      navigate(`/agent-profile/${memberId}`);
+    }
+  };
+
   const totalItems = showPendingRequests ? filteredPendingRequests.length : filteredMembers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedData = showPendingRequests
@@ -689,7 +699,7 @@ const Members = () => {
                         requested_at: request.requested_at,
                         request_status: request.request_status,
                         request_id: request.request_id,
-                        agency_role: 'pending',
+                        agency_role: 'pending', // Pending requests don't have a role yet in the agency
                         user_status: 'pending',
                         member_status: request.member_status || 'regular', // Pass member_status for pending
                       }}
@@ -698,6 +708,7 @@ const Members = () => {
                       isPendingRequestCard={true}
                       darkMode={darkMode}
                       user={user} // Pass user for role checks
+                      onViewProfile={handleViewProfile} // Pass the navigation function
                     />
                   ))}
                 </div>
@@ -751,7 +762,7 @@ const Members = () => {
                         user_status: member.user_status || 'active',
                         member_status: member.member_status || 'regular', // Ensure member_status is passed
                       }}
-                      onViewProfile={() => { /* Implement view member profile logic if needed */ showMessage(`Viewing profile for ${member.full_name}`, 'info'); }}
+                      onViewProfile={handleViewProfile} // Pass the navigation function
                       onRemoveMember={handleRemoveMember}
                       onPromoteMember={handlePromoteMember}
                       onDemoteMember={handleDemoteMember}
@@ -790,7 +801,7 @@ const Members = () => {
                             </span>
                           </td>
                           <td className="px-1 py-2 flex gap-1 items-center">
-                            <button onClick={() => { /* Implement view member profile logic */ showMessage(`Viewing profile for ${member.full_name}`, 'info'); }} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>View</button>
+                            <button onClick={() => handleViewProfile(member.user_id, member.agency_role)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>View</button>
 
                             {member.agency_role === 'agent' && (
                               <button

@@ -3,30 +3,29 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react'; // Added ArrowLeft icon
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
-import { useAuth } from '../context/AuthContext'; // Import useAuth - assuming AuthContext is now in Auth folder
+import { useAuth } from '../context/AuthContext';
 
 export default function SignIn() {
-  // Changed 'email' to 'identifier' to accommodate both email and username
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState(''); // This remains email-specific
-  const [loginStep, setLoginStep] = useState(1); // 1 for identifier/social, 2 for password
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [loginStep, setLoginStep] = useState(0); // 0 for initial choice, 1 for social, 2 for identifier/password
+  const [loadingLogin, setLoadingLogin] = useState(false);
 
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
-  const { isAuthenticated, user, loading } = useAuth(); // Get isAuthenticated, user, and loading from AuthContext
+  const { isAuthenticated, user, loading } = useAuth();
 
-  // Function to determine the redirection path
   const getRedirectPath = (userData) => {
     if (userData && userData.default_landing_page) {
-      return userData.default_landing_page; // Prioritize user's saved landing page
+      return userData.default_landing_page;
     }
 
     if (userData && userData.role) {
@@ -35,51 +34,94 @@ export default function SignIn() {
           return '/admin/dashboard';
         case 'agent':
           return '/agent/dashboard';
-        case 'agency_admin': // Redirect agency_admin to their dashboard
-          return '/agency/dashboard'; // Assuming an agency dashboard route
-        case 'client': // Changed 'user' to 'client'
-          return '/client/inquiries'; // Specific client dashboard path
+        case 'agency_admin':
+          return '/agency/dashboard';
+        case 'client':
+          return '/client/inquiries';
         default:
-          return '/profile/general'; // General fallback for authenticated users
+          return '/profile/general';
       }
     }
-    return '/'; // Fallback for unhandled roles or no user data
+    return '/';
   };
 
-  // This useEffect now handles ALL redirections for authenticated users,
-  // both on initial load and after a successful sign-in.
   useEffect(() => {
-    // Only attempt redirection if authentication status has been determined
     if (!loading && isAuthenticated) {
-      // Use the 'user' object from AuthContext for redirection path
       navigate(getRedirectPath(user), { replace: true });
     }
-  }, [isAuthenticated, loading, user, navigate]); // Depend on isAuthenticated, loading, and user
+  }, [isAuthenticated, loading, user, navigate]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleNextStep = async (e) => {
-    e.preventDefault();
-    if (loginStep === 1) {
-      if (!form.identifier) {
-        showMessage('Please enter your email or username.', 'error');
-        return;
-      }
-      // For now, we'll just proceed to the password step.
-      // In a real application, you might want to make an API call here
-      // to check if the identifier exists and is valid before asking for password.
-      setLoginStep(2);
+  const handleShowEmailPassword = () => {
+    setLoginStep(2); // Directly go to the email/password form
+  };
+
+  const getDeviceInfo = () => {
+    const userAgent = navigator.userAgent;
+    let browser = 'Unknown Browser';
+    let os = 'Unknown OS';
+
+    if (userAgent.includes('Windows NT 10.0')) os = 'Windows 10';
+    else if (userAgent.includes('Windows NT 6.3')) os = 'Windows 8.1';
+    else if (userAgent.includes('Windows NT 6.2')) os = 'Windows 8';
+    else if (userAgent.includes('Windows NT 6.1')) os = 'Windows 7';
+    else if (userAgent.includes('Android')) os = 'Android';
+    else if (userAgent.includes('iPhone')) os = 'iOS (iPhone)';
+    else if (userAgent.includes('iPad')) os = 'iOS (iPad)';
+    else if (userAgent.includes('Mac OS X')) os = 'macOS';
+    else if (userAgent.includes('Linux')) os = 'Linux';
+    else if (userAgent.includes('CrOS')) os = 'Chrome OS';
+
+    if (userAgent.includes('Edg')) browser = 'Edge';
+    else if (userAgent.includes('Chrome')) browser = 'Chrome';
+    else if (userAgent.includes('Firefox')) browser = 'Firefox';
+    else if (userAgent.includes('Safari')) browser = 'Safari';
+    else if (userAgent.includes('Opera') || userAgent.includes('OPR')) browser = 'Opera';
+    else if (userAgent.includes('MSIE') || userAgent.includes('Trident')) browser = 'Internet Explorer';
+
+    let deviceType = '';
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent)) {
+      deviceType = 'Tablet';
+    } else if (/(kindle|webos|hpwos|fennec|blackberry|mobile|iphone|ipod|iemobile|windows phone|android|iemobile|opera mini|opera mobi|palmos|webos|series60|symbianos)/i.test(userAgent)) {
+      deviceType = 'Mobile';
     } else {
-      // This block will be the actual sign-in logic when loginStep is 2
-      handleSubmit(e);
+      deviceType = 'Desktop';
     }
+
+    return `${browser} on ${os} (${deviceType})`;
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission if called from handleNextStep
+    e.preventDefault();
+    setLoadingLogin(true);
+
+    let deviceInfo = getDeviceInfo();
+    let locationInfo = 'Unknown Location';
+
     try {
-      // Send 'identifier' instead of 'email' to the backend
-      const { data } = await axiosInstance.post('/users/signin', form);
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false });
+      });
+      locationInfo = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
+    } catch (err) {
+      console.warn('Could not get location info:', err);
+      if (err.code === err.PERMISSION_DENIED) {
+        locationInfo = 'Location permission denied by user';
+      } else if (err.code === err.TIMEOUT) {
+        locationInfo = 'Location request timed out';
+      } else {
+        locationInfo = `Location error: ${err.message}`;
+      }
+    }
+
+    try {
+      const { data } = await axiosInstance.post('/users/signin', {
+        identifier: form.identifier,
+        password: form.password,
+        device_info: deviceInfo,
+        location_info: locationInfo,
+      });
 
       if (data.user.status === 'banned') {
         showMessage('Your account has been banned.', 'error', 7000);
@@ -89,10 +131,8 @@ export default function SignIn() {
       }
 
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user)); // Store the full user object including default_landing_page
+      localStorage.setItem('user', JSON.stringify(data.user));
 
-      // Dispatch a custom event to notify AuthContext to re-evaluate its state.
-      // This is crucial. AuthContext will now update 'user', 'isAuthenticated', and 'loading'.
       window.dispatchEvent(new Event("authChange"));
 
       showMessage('Sign-in successful!', 'success', 3000);
@@ -106,6 +146,8 @@ export default function SignIn() {
         errorMessage = error.message;
       }
       showMessage(errorMessage, 'error');
+    } finally {
+      setLoadingLogin(false);
     }
   };
 
@@ -132,19 +174,14 @@ export default function SignIn() {
     setShowForgotPasswordModal(true);
   };
 
-  // Placeholder functions for social logins
   const handleGoogleSignIn = () => {
     showMessage('Google Sign-In is not yet implemented.', 'info');
-    // Implement Google OAuth logic here
   };
 
   const handleFacebookSignIn = () => {
     showMessage('Facebook Sign-In is not yet implemented.', 'info');
-    // Implement Facebook OAuth logic here
   };
 
-  // Render a loading state or nothing if authentication is still being processed
-  // or if the user is already authenticated (and the useEffect will redirect them).
   if (loading || isAuthenticated) {
     return (
       <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -157,8 +194,7 @@ export default function SignIn() {
 
   return (
     <div className={`flex items-start justify-center min-h-screen pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>
-      <motion.form
-        onSubmit={handleNextStep} // Submit button now calls handleNextStep
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -170,15 +206,32 @@ export default function SignIn() {
         <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Welcome Back</h1>
         <p className={`text-sm text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sign in to continue</p>
 
-        {loginStep === 1 && (
+        {loginStep === 0 && ( // Initial choice screen
           <motion.div
-            key="step1"
+            key="choice"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
             transition={{ duration: 0.3 }}
-            className="space-y-6"
+            className="space-y-4" // Changed space-y-6 to space-y-4
           >
+            <div class="flex justify-center">
+  <button
+    type="button"
+    onClick={handleShowEmailPassword}
+    className="px-6 py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
+  >
+    Email and Password
+  </button>
+</div>
+
+            {/* OR Divider */}
+            <div className="relative flex items-center py-1"> {/* Changed py-2 to py-1 */}
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+              <span className={`flex-shrink mx-4 text-gray-500 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>OR</span>
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+            </div>
+
             {/* Social Login Buttons */}
             <button
               type="button"
@@ -189,7 +242,6 @@ export default function SignIn() {
                   : "bg-white border-gray-300 text-gray-800 hover:bg-gray-100"
                 }`}
             >
-              {/* Google SVG Icon - More accurate path */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.5-.19-2.22H12v4.26h6.01a5.05 5.05 0 0 1-2.18 3.32v2.79h3.6c2.11-1.94 3.33-4.8 3.33-8.15z"/>
                 <path fill="#34A853" d="M12 23c3.24 0 5.95-1.08 7.93-2.93l-3.6-2.79c-1.01.69-2.31 1.09-4.33 1.09-3.35 0-6.18-2.27-7.2-5.33H1.2v2.86C3.25 20.53 7.31 23 12 23z"/>
@@ -208,25 +260,44 @@ export default function SignIn() {
                   : "bg-white border-gray-300 text-gray-800 hover:bg-gray-100"
                 }`}
             >
-              {/* Facebook SVG Icon - More accurate path */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#1877F2" d="M12 0C5.373 0 0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854V15.42H7.078v-3.413h3.047V9.43c0-3.007 1.792-4.661 4.533-4.661 1.306 0 2.68.235 2.68.235v2.953h-1.519c-1.493 0-1.956.925-1.956 1.879v2.273h3.297l-.527 3.413h-2.77V24C19.612 22.954 24 17.99 24 12c0-6.627-5.373-12-12-12z"/>
               </svg>
               <span>Continue with Facebook</span>
             </button>
 
-            {/* OR Divider */}
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
-              <span className={`flex-shrink mx-4 text-gray-500 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>OR</span>
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+            <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"} pt-1`}> {/* Added pt-1 */}
+              Don’t have an account?{' '}
+              <a href="/signup" className="text-green-600 hover:underline">
+                Sign Up
+              </a>
             </div>
+          </motion.div>
+        )}
+
+        {loginStep === 2 && ( // Email and Password Sign-in Form
+          <motion.form
+            key="email-password-form"
+            onSubmit={handleSubmit}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4" // Changed space-y-6 to space-y-4
+          >
+            <button
+              type="button"
+              onClick={() => setLoginStep(0)} // Go back to the initial choice
+              className={`flex items-center text-sm font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"} transition`}
+            >
+              <ArrowLeft size={16} className="mr-1" /> Back to choices
+            </button>
 
             <input
-              type="text" // Changed type from email to text
-              name="identifier" // Changed name from email to identifier
-              placeholder="Email or Username" // Updated placeholder
-              value={form.identifier} // Bind value to state
+              type="text"
+              name="identifier"
+              placeholder="Email or Username"
+              value={form.identifier}
               onChange={handleChange}
               required
               className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
@@ -236,57 +307,12 @@ export default function SignIn() {
                 }`}
             />
 
-            <button
-              type="submit"
-              className="w-full py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
-            >
-              Continue
-            </button>
-
-            <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-              Don’t have an account?{' '}
-              <a href="/signup" className="text-green-600 hover:underline">
-                Sign Up
-              </a>
-            </div>
-          </motion.div>
-        )}
-
-        {loginStep === 2 && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            <button
-              type="button"
-              onClick={() => setLoginStep(1)}
-              className={`flex items-center text-sm font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"} transition`}
-            >
-              <ArrowLeft size={16} className="mr-1" /> Back
-            </button>
-
-            <input
-              type="text" // Keep as text as it could be username
-              name="identifier"
-              placeholder="Email or Username"
-              value={form.identifier}
-              readOnly // Make identifier read-only on the password step
-              className={`w-full px-4 py-2 border rounded-xl cursor-not-allowed
-                ${darkMode
-                  ? "bg-gray-700 border-gray-600 text-gray-300"
-                  : "bg-gray-200 border-gray-300 text-gray-700"
-                }`}
-            />
-
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 placeholder="Password"
+                value={form.password} // Bind password value to state
                 onChange={handleChange}
                 required
                 className={`w-full px-4 py-2 border rounded-xl pr-12 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
@@ -306,12 +332,13 @@ export default function SignIn() {
 
             <button
               type="submit"
+              disabled={loadingLogin}
               className="w-full py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
             >
-              Sign In
+              {loadingLogin ? 'Signing In...' : 'Sign In'}
             </button>
 
-            <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+            <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"} pt-1`}> {/* Added pt-1 */}
               <button
                 type="button"
                 onClick={handleOpenForgotPasswordModal}
@@ -320,23 +347,30 @@ export default function SignIn() {
                 Forgot password?
               </button>
             </div>
-          </motion.div>
-        )}
-      </motion.form>
 
-      {/* Forgot Password Modal (still rendered conditionally) */}
+            <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"} pt-1`}> {/* Added pt-1 */}
+              Don’t have an account?{' '}
+              <a href="/signup" className="text-green-600 hover:underline">
+                Sign Up
+              </a>
+            </div>
+          </motion.form>
+        )}
+      </motion.div>
+
+      {/* Forgot Password Modal (remains unchanged) */}
       {showForgotPasswordModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+            className={`rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-2 ${darkMode ? "bg-gray-800" : "bg-white"}`} /* Changed space-y-6 to space-y-4 */
           >
             <h2 className={`text-2xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Forgot Password</h2>
             <p className={`text-sm text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Enter your email to receive a password reset link.</p>
 
-            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4"> {/* Changed space-y-4 (children) to space-y-2 */}
               <input
                 type="email"
                 placeholder="Your Email"

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const agencyController = require('../controllers/agencyController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
+const userController = require('../controllers/userController'); // Import userController for user-related routes
 
 /**
  * @route POST /api/agencies
@@ -146,5 +147,22 @@ router.put(
   authorizeRoles(['agency_admin', 'admin']),
   agencyController.updateMemberStatus
 );
+
+// New route for getting all agency memberships for a specific agent
+/**
+ * @route GET /api/users/:agentId/agency-memberships
+ * @desc Get all agency memberships (connected, pending, rejected) for a specific agent
+ * @access Private (Agent can see their own, Admin/Agency Admin can see others in their agency)
+ */
+router.get('/:agentId/agency-memberships', authenticateToken, authorizeRoles(['agent', 'agency_admin', 'admin']), agencyController.getAgentAgencyMemberships);
+
+// NEW Route: Get count of agency administrators for a specific agency
+/**
+ * @route GET /api/agencies/:agencyId/admin-count
+ * @desc Get the count of agency administrators for a specific agency.
+ * @access Private (Agency Admin or Super Admin for that agency)
+ */
+router.get('/:agencyId/admin-count', authenticateToken, authorizeRoles(['agency_admin', 'admin']), agencyController.getAgencyAdminCount);
+
 
 module.exports = router;

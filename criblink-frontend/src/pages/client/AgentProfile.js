@@ -38,6 +38,11 @@ const AgentProfile = () => {
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUserPhone, setCurrentUserPhone] = useState('');
 
+  // State for expanded profile picture
+  const [isProfilePicExpanded, setIsProfilePicExpanded] = useState(false);
+  const profilePicRef = useRef(null);
+
+
   // Set recommendedListingsPerPage to 4 for a 2x2 grid
   const [recommendedListings, setRecommendedListings] = useState([]);
   const [recommendedListingStartIndex, setRecommendedListingStartIndex] = useState(0);
@@ -63,6 +68,25 @@ const AgentProfile = () => {
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Effect to handle clicks outside the expanded profile picture
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profilePicRef.current && !profilePicRef.current.contains(event.target)) {
+        setIsProfilePicExpanded(false);
+      }
+    };
+
+    if (isProfilePicExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfilePicExpanded]);
 
   const contentShift = 0;
 
@@ -101,6 +125,18 @@ const AgentProfile = () => {
   const getInitial = (name) => {
     const safeName = String(name || '');
     return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
+  };
+
+  const formatDate = (isoDate) => {
+    if (!isoDate) return 'N/A';
+    const date = new Date(isoDate);
+    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+  };
+
+  // Function to convert string to sentence case
+  const toSentenceCase = (str) => {
+    if (!str) return 'N/A';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
 
@@ -461,6 +497,7 @@ const AgentProfile = () => {
         <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Profile</h1>
 
         <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
+          {/* Left Column */}
           <div className="w-full lg:w-3/5 space-y-8">
             <motion.div
               className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} space-y-4 ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
@@ -468,34 +505,68 @@ const AgentProfile = () => {
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className={`text-xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+              {/* Agent Name and Status */}
+              <h2 className={`text-xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-800"} flex items-center`}>
                 {agent.full_name}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                  ${agent.user_status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                  ${darkMode ? (agent.user_status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                  {toSentenceCase(agent.user_status) || 'N/A'}
+                </span>
               </h2>
 
-              <div className="flex items-center space-x-4 mb-6">
-                <img
-                  src={agent.profile_picture_url || `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
-                  alt="Agent Profile"
-                  className="w-32 h-32 rounded-full object-cover border-2 border-green-500 shadow-md"
-                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`; }}
-                />
-                <div>
-                  <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agent.full_name}</p>
+              <div className="flex items-start space-x-4 mb-6">
+                {/* Profile Picture */}
+                <div className="relative cursor-pointer" onClick={() => setIsProfilePicExpanded(true)}>
+                  <img
+                    src={agent.profile_picture_url || `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
+                    alt="Agent Profile"
+                    className="w-40 h-40 rounded-full object-cover border-2 border-green-500 shadow-md"
+                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`; }}
+                  />
+                </div>
+                {/* Agent ID, Agency, and Contact Information */}
+                <div className="flex-1">
                   <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agent ID: {agent.user_id}</p>
                   {agent.agency && <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agency: {agent.agency}</p>}
-                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Status: <span className={`font-medium ${agent.user_status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{agent.user_status?.toUpperCase() || 'N/A'}</span></p>
+
+                  <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
+                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      ✉️ <strong>Email:</strong> <a href={`mailto:${agent.email}`} className="text-blue-500 hover:underline">{agent.email}</a>
+                    </p>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      📞 <strong>Phone:</strong> {agent.phone || 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
-                <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                  ✉️ <strong>Email:</strong> <a href={`mailto:${agent.email}`} className="text-blue-500 hover:underline">{agent.email}</a>
-                </p>
-                <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                  📞 <strong>Phone:</strong> {agent.phone || 'N/A'}
-                </p>
-              </div>
+              {/* Expanded Profile Picture Modal */}
+              <AnimatePresence>
+                {isProfilePicExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+                    onClick={() => setIsProfilePicExpanded(false)} // Close on click outside
+                  >
+                    <motion.img
+                      ref={profilePicRef}
+                      src={agent.profile_picture_url || `https://placehold.co/400x400/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
+                      alt="Agent Profile Expanded"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="max-w-full max-h-[90vh] rounded-lg shadow-2xl cursor-pointer"
+                      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image itself
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
 
               <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
                 <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>About {agent.full_name}</h3>
@@ -533,6 +604,7 @@ const AgentProfile = () => {
               </div>
             </motion.div>
 
+            {/* Chat with Agent section for mobile */}
             {isMobile && (
                 <motion.div
                     className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col items-center justify-center text-center ${isMobile ? 'mt-8' : (darkMode ? "bg-gray-800" : "bg-white")}`}
@@ -563,6 +635,69 @@ const AgentProfile = () => {
                 </motion.div>
             )}
 
+            {/* Agency Overview Panel - Moved here for mobile */}
+            {isMobile && agent.agency_info && (
+              <motion.div
+                className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                  <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                </h2>
+                {agent.agency_info ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    {agent.agency_info.logo_url ? (
+                      <img
+                        src={agent.agency_info.logo_url}
+                        alt={`${agent.agency_info.agency_name} Logo`}
+                        className="w-16 h-16 rounded-full object-cover border border-gray-300"
+                        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
+                      />
+                    ) : (
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
+                        {getInitial(agent.agency_info.agency_name)}
+                      </div>
+                    )}
+                    <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
+                      {agent.agency_info.agency_name}
+                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                        ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                        ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                        {toSentenceCase(agent.agency_info.status) || 'N/A'}
+                      </span>
+                    </p>
+                  </div>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
+                  </p>
+                  <div className="flex justify-center"> {/* Centering the button */}
+                    <button
+                      onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
+                      className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                    >
+                      View Agency Profile
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
+              )}
+              </motion.div>
+            )}
+
+            {/* "Recommended for You" section for mobile */}
             {isMobile && userRole === 'client' && (
                 <motion.div
                   className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
@@ -575,8 +710,8 @@ const AgentProfile = () => {
                     </h2>
                     {recommendedListings.length > 0 ? (
                         <div className="flex flex-col items-center w-full">
-                            {/* Changed grid to 2x2 for desktop, 1x2 for mobile */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 p-2 -mx-2">
+                            {/* Changed grid to 2x2 for mobile, 1x2 for larger screens (sm, lg) */}
+                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4 p-2 -mx-2">
                                 {displayedRecommendedListings.map(listing => (
                                     <div key={listing.property_id} className="w-full">
                                         <ListingCard listing={listing} />
@@ -623,7 +758,8 @@ const AgentProfile = () => {
               </h2>
               {agentListings.length > 0 ? (
                   <div className="flex flex-col items-center w-full">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-4 p-2 -mx-2">
+                      {/* Changed grid to 2x2 for mobile, 1x2 for larger screens (sm, md, lg, xl, 2xl) */}
+                      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-4 p-2 -mx-2">
                           {displayedAgentListings.map(listing => (
                               <div key={listing.property_id} className="w-full">
                                   <ListingCard
@@ -681,10 +817,11 @@ const AgentProfile = () => {
 
           </div>
 
+          {/* Right Column */}
           <div className="w-full lg:w-2/5 space-y-8">
             {!isMobile && (
                 <motion.div
-                    className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col items-center justify-center text-center ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                    className={'p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center text-center ' + (darkMode ? "bg-gray-800" : "bg-white")}
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
@@ -712,6 +849,69 @@ const AgentProfile = () => {
                 </motion.div>
             )}
 
+            {/* Agency Overview Panel - Moved here for desktop */}
+            {!isMobile && agent.agency_info && (
+              <motion.div
+                className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                  <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                </h2>
+                {agent.agency_info ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    {agent.agency_info.logo_url ? (
+                      <img
+                        src={agent.agency_info.logo_url}
+                        alt={`${agent.agency_info.agency_name} Logo`}
+                        className="w-16 h-16 rounded-full object-cover border border-gray-300"
+                        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
+                      />
+                    ) : (
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
+                        {getInitial(agent.agency_info.agency_name)}
+                      </div>
+                    )}
+                    <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
+                      {agent.agency_info.agency_name}
+                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                        ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                        ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                        {toSentenceCase(agent.agency_info.status) || 'N/A'}
+                      </span>
+                    </p>
+                  </div>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
+                  </p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
+                  </p>
+                  <div className="flex justify-center"> {/* Centering the button */}
+                    <button
+                      onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
+                      className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                    >
+                      View Agency Profile
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
+              )}
+              </motion.div>
+            )}
+
+            {/* "Recommended for You" section for desktop */}
             {!isMobile && userRole === 'client' && (
                 <motion.div
                   className={'p-6 rounded-2xl shadow-xl flex flex-col ' + (darkMode ? "bg-gray-800" : "bg-white")}
@@ -724,8 +924,8 @@ const AgentProfile = () => {
                     </h2>
                     {recommendedListings.length > 0 ? (
                         <div className="flex flex-col items-center w-full">
-                            {/* Changed grid to 2x2 for desktop, 1x2 for mobile */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 p-2 -mx-2">
+                            {/* Desktop: 2x2 grid */}
+                            <div className="grid grid-cols-2 gap-4 p-2 -mx-2">
                                 {displayedRecommendedListings.map(listing => (
                                     <div key={listing.property_id} className="w-full">
                                         <ListingCard listing={listing} />

@@ -54,6 +54,26 @@ axiosInstance.interceptors.response.use(
     if (hideLoadingGlobal) {
       hideLoadingGlobal();
     }
+
+    // --- NEW: Session Revocation Handling ---
+    if (error.response) {
+      const { status, data } = error.response;
+
+      // Check for 403 Forbidden or 401 Unauthorized errors
+      // and specifically for the 'SESSION_REVOKED' code from the backend
+      if ((status === 403 || status === 401) && data.code === 'SESSION_REVOKED') {
+        console.warn('Session revoked or inactive. Logging out...');
+        localStorage.removeItem('token'); // Clear the invalid token
+        // Redirect to login page
+        // You might use history.push('/signin') if using react-router-dom,
+        // otherwise, a direct window.location.href change
+        window.location.href = '/signin';
+        // Prevent further processing of this error by resolving the promise
+        return Promise.resolve({ data: { message: "Session revoked, logged out." } });
+      }
+    }
+    // --- END NEW: Session Revocation Handling ---
+
     return Promise.reject(error);
   }
 );

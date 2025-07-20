@@ -12,7 +12,6 @@ import DisplayPicture from '../components/profile/DisplayPicture';
 import General from './profile/General';
 import Security from './profile/Security';
 import Privacy from './profile/Privacy';
-import Settings from './profile/Settings'; // Ensure Settings is imported
 
 function ManageProfile() {
   const [form, setForm] = useState({
@@ -243,7 +242,6 @@ function ManageProfile() {
     { name: "General", key: "general" },
     { name: "Security", key: "security" },
     { name: "Privacy", key: "privacy" },
-    { name: "Settings", key: "settings" } // NEW: Added Settings
   ];
   const activeSectionName = MENU_ITEMS.find(item => item.key === activeSection)?.name || "Manage Profile";
 
@@ -328,16 +326,7 @@ function ManageProfile() {
               activeSection={activeSection}
             />
           )}
-
-          {activeSection === "settings" && ( // NEW: Render Settings component
-            <Settings
-              form={form}
-              handleChange={handleChange}
-              handleUpdate={handleUpdate}
-              updating={updating}
-              userInfo={userInfo}
-            />
-          )}
+  
         </motion.div>
       </motion.main>
     </div>

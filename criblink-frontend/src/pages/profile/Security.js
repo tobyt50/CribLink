@@ -27,17 +27,21 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
       const response = await axiosInstance.get(`${API_BASE_URL}/users/sessions/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Sort sessions to put the current one first, then by last activity
+      // Sort sessions to put the current one first, then by login_time (which is now available)
       const sortedSessions = response.data.sort((a, b) => {
         // Prioritize the session matching currentSessionIdFromToken if available
         if (currentSessionIdFromToken) {
           if (a.session_id === currentSessionIdFromToken && b.session_id !== currentSessionIdFromToken) return -1;
           if (a.session_id !== currentSessionIdFromToken && b.session_id === currentSessionIdFromToken) return 1;
         }
-        // Fallback to backend's is_current and then last_activity
+        // Fallback to backend's is_current and then login_time
+        // Assuming 'is_current' is a boolean flag from the backend indicating the current session
         if (a.is_current && !b.is_current) return -1;
         if (!a.is_current && b.is_current) return 1;
-        return new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime();
+        // Use login_time for sorting, ensuring it's a valid date
+        const dateA = new Date(a.login_time || 0); // Default to epoch if login_time is invalid
+        const dateB = new Date(b.login_time || 0);
+        return dateB.getTime() - dateA.getTime();
       });
       setActiveSessions(sortedSessions);
     } catch (error) {
@@ -71,7 +75,7 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
     }
   }, [token, fetchActiveSessions, fetchLoginHistory]);
 
-  // Styles for form elements
+  // Styles for form elements (unchanged)
   const inputFieldStyles =
     `mt-1 block w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
       darkMode
@@ -88,6 +92,7 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
       message: "Are you sure you want to revoke this session? The user on that device will be logged out.",
       onConfirm: async () => {
         try {
+          // Changed from POST to DELETE to match the backend route
           await axiosInstance.delete(`${API_BASE_URL}/users/sessions/${sessionId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -99,6 +104,33 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
         }
       },
       confirmLabel: "Revoke",
+      cancelLabel: "Cancel"
+    });
+  };
+
+  // Function to handle signing out from all other devices
+  const handleSignOutAllOtherDevices = () => {
+    showConfirm({
+      title: "Sign Out All Other Devices",
+      message: "Are you sure you want to sign out from all other active sessions?",
+      onConfirm: async () => {
+        try {
+          // This endpoint is not provided in the user's files, assuming it would be a POST
+          // If this endpoint exists, ensure its route in userRoutes.js matches this.
+          // For now, I'll assume a placeholder route `/users/signout-all-devices`
+          // You might need to add a new route in userRoutes.js and a corresponding controller function
+          // in userController.js for this functionality if it doesn't exist.
+          await axiosInstance.post(`${API_BASE_URL}/users/signout-all-devices`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          showMessage('Successfully signed out from all other devices.', 'success');
+          fetchActiveSessions(); // Refresh the list
+        } catch (error) {
+          console.error('Error signing out all devices:', error);
+          showMessage(error?.response?.data?.message || 'Failed to sign out from all other devices.', 'error');
+        }
+      },
+      confirmLabel: "Sign Out All",
       cancelLabel: "Cancel"
     });
   };
@@ -233,13 +265,16 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
               >
                 <div className="flex-grow mb-2 md:mb-0">
                   <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
-                    {session.device} {(session.is_current || session.session_id === currentSessionIdFromToken) && <span className="text-green-500 text-xs">(Current Session)</span>}
+                    {/* Use session.device, fallback to 'Unknown Device' if null/undefined */}
+                    {session.device || 'Unknown Device'} {(session.is_current || session.session_id === currentSessionIdFromToken) && <span className="text-green-500 text-xs">(Current Session)</span>}
                   </p>
                   <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    {session.location} &bull; {session.ip_address}
+                    {/* Use session.location, fallback to 'N/A Location' */}
+                    {session.location || 'N/A Location'} &bull; {session.ip_address || 'N/A IP'}
                   </p>
                   <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                    Last Activity: {formatDateTime(session.last_activity)}
+                    {/* Use session.login_time, fallback to 'N/A' */}
+                    Last Activity: {formatDateTime(session.login_time)}
                   </p>
                 </div>
                 {!(session.is_current || session.session_id === currentSessionIdFromToken) && (
@@ -254,6 +289,16 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
             ))
           ) : (
             <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No other active sessions.</p>
+          )}
+          {activeSessions.length > 1 && ( // Only show if there's more than one session
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={handleSignOutAllOtherDevices} // Call the new handler
+                className="bg-red-600 text-white py-2 px-4 rounded-full hover:bg-red-700 text-md font-semibold shadow transition duration-200 ease-in-out transform hover:scale-105 flex items-center"
+              >
+                <LogOut size={18} className="mr-2" /> Sign Out All Other Devices
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -278,11 +323,14 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
                 className={`p-3 rounded-xl border flex flex-col md:flex-row md:items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}
               >
                 <div className="flex-grow mb-1 md:mb-0">
-                  <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{log.device}</p>
+                  {/* Use log.device, fallback to 'Unknown Device' */}
+                  <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{log.device || 'Unknown Device'}</p>
                   <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    {log.location} &bull; {log.ip_address}
+                    {/* Use log.location, fallback to 'N/A Location' */}
+                    {log.location || 'N/A Location'} &bull; {log.ip_address || 'N/A IP'}
                   </p>
                   <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    {/* Use log.login_time, fallback to 'N/A' */}
                     Time: {formatDateTime(log.login_time)}
                   </p>
                 </div>

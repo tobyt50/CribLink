@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '../layouts/AppShell';
 import Card from './ui/Card'; // Assuming you have a Card component in ui folder
-import { UserPlus, UserX, Hourglass } from 'lucide-react'; // Import connect/disconnect icons and Hourglass
+import { UserPlus, UserX, Hourglass, CheckCircle, X } from 'lucide-react'; // Import all necessary icons
 
 /**
  * AgencyCard component displays individual agency details in a card format.
@@ -12,29 +12,48 @@ import { UserPlus, UserX, Hourglass } from 'lucide-react'; // Import connect/dis
  * @param {object} props - The component props.
  * @param {object} props.agency - The agency object containing details like name, email, phone, website, logo_url, description.
  * @param {function} props.onClick - Function to call when the card is clicked, receives agency.agency_id.
- * @param {boolean} [props.isCurrentUserAgent=false] - True if the currently logged-in user is an agent.
- * @param {string} [props.currentUserAgencyId=null] - The agency_id the current user is connected to (if any).
- * @param {string} [props.currentUserAgencyRequestStatus='none'] - The request status of the current user to an agency ('accepted', 'pending', 'none').
+ * @param {boolean} [props.isCurrentUserAgent=false] - True if the currently logged-in user is an agent (regular agent).
+ * @param {boolean} [props.isCurrentUserAgencyAdmin=false] - True if the currently logged-in user is an agency admin.
+ * @param {string|null} [props.currentUserAgencyId=null] - The agency_id of the agency the current user is an admin of, if any.
+ * @param {boolean} [props.isLastAdminOfOwnAgency=false] - True if the current user is the last admin of their own agency.
+ * @param {Array<object>} [props.agentMemberships=[]] - Array of all agency memberships for the current agent.
+ * @param {number} [props.maxAgencyAffiliations=5] - Maximum number of agencies an agent can be affiliated with.
  * @param {function} [props.onConnectClick] - Function to call when connect button is clicked (for agents).
  * @param {function} [props.onDisconnectClick] - Function to call when disconnect button is clicked (for agents).
+ * @param {function} [props.onCancelRequestClick] - Function to call when cancel pending request button is clicked (for agents).
  */
 function AgencyCard({
   agency,
   onClick,
   isCurrentUserAgent = false,
-  currentUserAgencyId = null,
-  currentUserAgencyRequestStatus = 'none',
+  isCurrentUserAgencyAdmin = false, // New prop
+  currentUserAgencyId = null, // New prop
+  isLastAdminOfOwnAgency = false, // New prop
+  agentMemberships = [],
+  maxAgencyAffiliations = 5,
   onConnectClick,
   onDisconnectClick,
+  onCancelRequestClick,
 }) {
   const { darkMode } = useTheme();
 
-  // Determine if the current agency is the one the current agent is connected to
-  const isAgentConnectedToThisAgency = isCurrentUserAgent && currentUserAgencyId === agency.agency_id && currentUserAgencyRequestStatus === 'accepted';
-  // Determine if the current agency is the one the current agent has a pending request to
-  const isAgentPendingToThisAgency = isCurrentUserAgent && currentUserAgencyId === agency.agency_id && currentUserAgencyRequestStatus === 'pending';
-  // Determine if the current agent is not connected to any agency
-  const isAgentNotConnectedToAnyAgency = isCurrentUserAgent && !currentUserAgencyId;
+  // Determine the current agent's affiliation status with THIS specific agency
+  const currentAffiliation = agentMemberships.find(m => m.agency_id === agency.agency_id);
+  const isConnected = currentAffiliation?.request_status === 'accepted';
+  const isPending = currentAffiliation?.request_status === 'pending';
+  const isRejected = currentAffiliation?.request_status === 'rejected';
+
+  // Determine if the current user is an admin of THIS specific agency
+  const isThisAgencyCurrentUsersAdminAgency = isCurrentUserAgencyAdmin && (agency.agency_id === currentUserAgencyId);
+
+  // Determine if the agent has reached the maximum number of affiliations (connected or pending)
+  const hasReachedMaxAffiliations = agentMemberships.filter(m => m.request_status === 'accepted' || m.request_status === 'pending').length >= maxAgencyAffiliations;
+
+  // Determine if the "Connect" button should be disabled
+  const isConnectDisabled = !isCurrentUserAgent || isConnected || isPending || hasReachedMaxAffiliations || isThisAgencyCurrentUsersAdminAgency;
+
+  // Determine if the "Disconnect" button should be disabled for an admin
+  const isDisconnectDisabledForAdmin = isThisAgencyCurrentUsersAdminAgency && isLastAdminOfOwnAgency;
 
   return (
     <Card className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] max-w-md">
@@ -59,32 +78,31 @@ function AgencyCard({
 
         {/* Left side: Agency Details (name, email, phone, website) */}
         <div className="flex-grow text-left min-w-0">
-        <div className="text-lg font-semibold mb-5 whitespace-nowrap overflow-visible">
-
+          <div className="text-lg font-semibold mb-5 whitespace-nowrap overflow-visible">
             {agency.name}
           </div>
           <div className="space-y-1">
-          {/* Email now clickable and normal color */}
-          <div className="text-sm mb-1 text-gray-600 dark:text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">
-            <a href={`mailto:${agency.email}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
-              {agency.email}
-            </a>
-          </div>
-          {/* Phone number brought back, clickable, and normal color */}
-          {agency.phone && (
-            <div className="text-xs text-gray-600 dark:text-gray-300">
-              <a href={`tel:${agency.phone}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
-                {agency.phone}
+            {/* Email now clickable and normal color */}
+            <div className="text-sm mb-1 text-gray-600 dark:text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">
+              <a href={`mailto:${agency.email}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
+                {agency.email}
               </a>
             </div>
-          )}
-          {agency.website && (
-            <div className="text-xs text-blue-500 hover:underline overflow-hidden text-ellipsis whitespace-nowrap">
-              <a href={agency.website} target="_blank" rel="noopener noreferrer">
-                {agency.website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]}
-              </a>
-            </div>
-          )}
+            {/* Phone number brought back, clickable, and normal color */}
+            {agency.phone && (
+              <div className="text-xs text-gray-600 dark:text-gray-300">
+                <a href={`tel:${agency.phone}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
+                  {agency.phone}
+                </a>
+              </div>
+            )}
+            {agency.website && (
+              <div className="text-xs text-blue-500 hover:underline overflow-hidden text-ellipsis whitespace-nowrap">
+                <a href={agency.website} target="_blank" rel="noopener noreferrer">
+                  {agency.website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]}
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -100,50 +118,73 @@ function AgencyCard({
 
       {/* Action Buttons */}
       <div className="flex justify-center w-full border-t border-gray-200 dark:border-gray-700 pt-2">
-        {isCurrentUserAgent ? (
+        {isCurrentUserAgent || isCurrentUserAgencyAdmin ? ( // Show buttons if user is agent or admin
           <>
-            {isAgentConnectedToThisAgency ? (
+            {isThisAgencyCurrentUsersAdminAgency ? ( // If the current user is an admin of THIS agency
               <button
-                onClick={(e) => { e.stopPropagation(); onDisconnectClick(); }}
+                onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
+                disabled={isDisconnectDisabledForAdmin}
+                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                  ${isDisconnectDisabledForAdmin ? "opacity-50 cursor-not-allowed" : ""}
+                  ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
+                title={isDisconnectDisabledForAdmin ? "You are the last admin of this agency. Please assign another admin before disconnecting." : "Disconnect from Agency"}
+              >
+                <UserX className="h-4 w-4 mr-1" /> Disconnect
+              </button>
+            ) : isConnected ? ( // If connected as a regular agent
+              <button
+                onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
                 className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
                   ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
                 title="Disconnect from Agency"
               >
                 <UserX className="h-4 w-4 mr-1" /> Disconnect
               </button>
-            ) : isAgentPendingToThisAgency ? (
-              // This block correctly displays the Hourglass icon and "Pending" text
+            ) : isPending ? (
+              <div className="flex items-center space-x-2">
+                <button
+                  disabled
+                  className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center opacity-50 cursor-not-allowed
+                    ${darkMode ? "text-yellow-400 bg-gray-700" : "text-yellow-700 bg-gray-100"} border border-transparent`}
+                  title="Pending Request"
+                >
+                  <Hourglass className="h-4 w-4 mr-1 animate-pulse" /> Pending
+                </button>
+                {onCancelRequestClick && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onCancelRequestClick(agency.agency_id, agency.name); }}
+                    className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                      ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"} border-transparent`}
+                    title="Cancel Pending Request"
+                  >
+                    <X className="h-4 w-4 mr-1" /> Cancel
+                  </button>
+                )}
+              </div>
+            ) : isRejected ? (
               <button
                 disabled
                 className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center opacity-50 cursor-not-allowed
-                  ${darkMode ? "text-yellow-400 bg-gray-700" : "text-yellow-700 bg-gray-100"} border border-transparent`}
-                title="Pending Request"
+                  ${darkMode ? "text-red-400 bg-gray-700" : "text-red-700 bg-gray-100"} border border-transparent`}
+                title="Request Rejected"
               >
-                <Hourglass className="h-4 w-4 mr-1" /> Pending
-              </button>
-            ) : isAgentNotConnectedToAnyAgency && onConnectClick ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); onConnectClick(agency.agency_id); }}
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                  ${darkMode ? "text-green-400 hover:bg-gray-700 hover:border hover:border-green-500" : "text-green-700 hover:bg-gray-100 hover:border hover:border-green-500"} border-transparent`}
-                title="Connect to Agency"
-              >
-                <UserPlus className="h-4 w-4 mr-1" /> Connect
+                <UserX className="h-4 w-4 mr-1" /> Rejected
               </button>
             ) : (
-              // Fallback for agents who are already connected to a *different* agency
               <button
-                onClick={(e) => { e.stopPropagation(); onClick(agency.agency_id); }}
+                onClick={(e) => { e.stopPropagation(); onConnectClick(agency.agency_id); }}
+                disabled={isConnectDisabled}
                 className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                  ${darkMode ? "text-blue-400 hover:bg-gray-700 hover:border hover:border-blue-500" : "text-blue-700 hover:bg-gray-100 hover:border hover:border-blue-500"} border-transparent`}
-                title="View Details"
+                  ${isConnectDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                  ${darkMode ? "text-green-400 hover:bg-gray-700 hover:border hover:border-green-500" : "text-green-700 hover:bg-gray-100 hover:border hover:border-green-500"} border-transparent`}
+                title={isConnectDisabled ? (hasReachedMaxAffiliations ? `You can only affiliate with ${maxAgencyAffiliations} agencies.` : "Already connected or pending with this agency.") : "Connect to Agency"}
               >
-                View Details
+                <UserPlus className="h-4 w-4 mr-1" /> Connect
               </button>
             )}
           </>
         ) : (
-          // Default for non-agents or if connect/disconnect logic not applicable
+          // Default for non-agents/non-admins or if connect/disconnect logic not applicable
           <button
             onClick={(e) => { e.stopPropagation(); onClick(agency.agency_id); }}
             className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center

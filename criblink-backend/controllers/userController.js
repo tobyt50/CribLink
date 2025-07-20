@@ -5,8 +5,11 @@ const logActivity = require('../utils/logActivity');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
+const axios = require('axios'); // Import axios for HTTP requests
 
 const SECRET_KEY = process.env.JWT_KEY || 'lionel_messi_10_is_the_goat!';
+// Changed API key variable name to be more generic for different geocoding services
+const GEOCODING_API_KEY = process.env.OPENCAGE_GEOCODING_API_KEY; // Get API key from environment variables
 
 // Configure Nodemailer (replace with your actual email service details)
 const transporter = nodemailer.createTransport({
@@ -16,6 +19,46 @@ const transporter = nodemailer.createTransport({
         pass: process.env.EMAIL_PASS // Your email password or app-specific password
     }
 });
+
+// Helper function to perform reverse geocoding using OpenCage
+async function reverseGeocode(latitude, longitude) {
+    if (!GEOCODING_API_KEY) {
+        console.warn('Geocoding API Key is not set. Location will be raw coordinates.');
+        return null;
+    }
+
+    try {
+        // OpenCage Geocoding API endpoint
+        const response = await axios.get(
+            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${GEOCODING_API_KEY}`
+        );
+
+        if (response.data.status.code === 200 && response.data.results.length > 0) {
+            const components = response.data.results[0].components;
+            let city = components.city || components.town || components.village || '';
+            let state = components.state || components.county || '';
+            let country = components.country || '';
+
+            if (city && state) {
+                return `${city}, ${state}`;
+            } else if (city) {
+                return city;
+            } else if (state) {
+                return state;
+            } else if (country) {
+                return country;
+            } else {
+                return response.data.results[0].formatted; // Fallback to full formatted address
+            }
+        }
+        console.warn('Reverse geocoding failed or no results found from OpenCage:', response.data.status.message || response.data.status.code);
+        return null;
+    } catch (error) {
+        console.error('Error during OpenCage reverse geocoding API call:', error.message);
+        return null;
+    }
+}
+
 
 exports.signupUser = async (req, res) => {
     // Destructure all fields that can be sent from SignUp.js, including optional ones
@@ -143,7 +186,10 @@ exports.signupUser = async (req, res) => {
 
 exports.signinUser = async (req, res) => {
     // Expect `identifier` which can be either email or username
-    const { identifier, password, device_info, location_info, ip_address } = req.body;
+    // NEW: Destructure device_info and location_info from req.body
+    let { identifier, password, device_info, location_info } = req.body; // Make location_info mutable
+    // NEW: Get IP address directly from the request on the backend
+    const ip_address = req.ip || req.connection.remoteAddress || 'Unknown IP';
 
     let loginStatus = 'Failed';
     let user = null;
@@ -168,14 +214,16 @@ exports.signinUser = async (req, res) => {
                 await db.query(
                     `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                      VALUES ($1, $2, $3, $4, $5, $6)`,
-                    [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', 'Invalid password']
+                    // NEW: Pass device_info and location_info, use backend-derived ip_address
+                    [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address, 'Failed', 'Invalid password']
                 );
             } else {
                  // Log a generic failed attempt if no user found by identifier
                  await db.query(
                     `INSERT INTO user_login_history (device, location, ip_address, status, message)
                      VALUES ($1, $2, $3, $4, $5)`,
-                    [device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', 'Failed', `Invalid identifier: ${identifier}`]
+                    // NEW: Pass device_info and location_info, use backend-derived ip_address
+                    [device_info || 'Unknown', location_info || 'Unknown', ip_address, 'Failed', `Invalid identifier: ${identifier}`]
                 );
             }
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -187,7 +235,8 @@ exports.signinUser = async (req, res) => {
             await db.query(
                 `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', loginStatus, 'Account banned']
+                // NEW: Pass device_info and location_info, use backend-derived ip_address
+                [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address, loginStatus, 'Account banned']
             );
             return res.status(403).json({ message: 'Your account has been banned.' });
         }
@@ -197,22 +246,32 @@ exports.signinUser = async (req, res) => {
             await db.query(
                 `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', loginStatus, 'Account deactivated']
+                // NEW: Pass device_info and location_info, use backend-derived ip_address
+                [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address, loginStatus, 'Account deactivated']
             );
             return res.status(403).json({ message: 'Your account is deactivated. Please reactivate it to sign in.' });
         }
 
-        // Deactivate previous sessions for this user before creating a new one
-        await db.query(
-            `UPDATE user_sessions SET is_current = FALSE WHERE user_id = $1`,
-            [user.user_id]
-        );
+        // --- NEW: Perform reverse geocoding on the backend if location_info is lat/lon ---
+        if (location_info && location_info.startsWith('Lat:')) {
+            const latLonMatch = location_info.match(/Lat: ([\d.-]+), Lon: ([\d.-]+)/);
+            if (latLonMatch) {
+                const latitude = parseFloat(latLonMatch[1]);
+                const longitude = parseFloat(latLonMatch[2]);
+                const formattedLocation = await reverseGeocode(latitude, longitude);
+                if (formattedLocation) {
+                    location_info = formattedLocation;
+                }
+            }
+        }
+        // --- END NEW ---
 
-        // Create a new session
+        // Create a new session (is_current will be true for this new session, status active)
         const sessionResult = await db.query(
-            `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current)
-             VALUES ($1, $2, $3, $4, TRUE) RETURNING session_id`,
-            [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown']
+            `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current, status)
+             VALUES ($1, $2, $3, $4, TRUE, 'active') RETURNING session_id`, // NEW: Added status column
+            // NEW: Pass device_info and location_info, use backend-derived ip_address
+            [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address]
         );
         const newSessionId = sessionResult.rows[0].session_id;
 
@@ -220,7 +279,8 @@ exports.signinUser = async (req, res) => {
         await db.query(
             `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-            [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address || 'Unknown', loginStatus, 'Successful login']
+            // NEW: Pass device_info and location_info, use backend-derived ip_address
+            [user.user_id, device_info || 'Unknown', location_info || 'Unknown', ip_address, loginStatus, 'Successful login']
         );
 
         const token = jwt.sign({
@@ -229,7 +289,7 @@ exports.signinUser = async (req, res) => {
             email: user.email,
             role: user.role,
             status: user.status,
-            session_id: newSessionId,
+            session_id: newSessionId, // Include the new session ID in the token
             agency_id: user.agency_id
         }, SECRET_KEY, { expiresIn: '7d' });
 
@@ -460,6 +520,7 @@ exports.updateProfile = async (req, res) => {
                 currency: updatedUser.currency,
                 notification_email: updatedUser.notification_email,
                 preferred_communication_channel: updatedUser.preferred_communication_channel,
+                social_links: updatedUser.social_links,
                 share_favourites_with_agents: updatedUser.share_favourites_with_agents,
                 share_property_preferences_with_agents: updatedUser.share_property_preferences_with_agents
             },
@@ -651,7 +712,8 @@ exports.getActiveSessions = async (req, res) => {
     try {
         const userId = req.user.user_id;
         const result = await db.query(
-            `SELECT session_id, device, location, ip_address, login_time
+            // Ensure these column names (login_time, status) exist in your user_sessions table
+            `SELECT session_id, device, location, ip_address, login_time, status
              FROM user_sessions WHERE user_id = $1 AND status = 'active' ORDER BY login_time DESC`,
             [userId]
         );
@@ -672,8 +734,9 @@ exports.revokeSession = async (req, res) => {
     }
 
     try {
+        // Changed from DELETE to UPDATE to set status to 'inactive'
         const result = await db.query(
-            `DELETE FROM user_sessions WHERE session_id = $1 AND user_id = $2 RETURNING session_id`,
+            `UPDATE user_sessions SET status = 'inactive' WHERE session_id = $1 AND user_id = $2 RETURNING session_id`,
             [sessionId, userId]
         );
 
@@ -688,6 +751,31 @@ exports.revokeSession = async (req, res) => {
         res.status(500).json({ message: 'Failed to revoke session.', error: err.message });
     }
 };
+
+// NEW: Sign out from all other devices
+exports.signOutAllOtherDevices = async (req, res) => {
+    const userId = req.user.user_id;
+    const currentSessionId = req.user.session_id;
+
+    try {
+        // Update all sessions for the user to 'inactive' except the current one
+        const result = await db.query(
+            `UPDATE user_sessions SET status = 'inactive' WHERE user_id = $1 AND session_id != $2 RETURNING session_id`,
+            [userId, currentSessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(200).json({ message: 'No other active sessions to sign out from.' });
+        }
+
+        await logActivity(`${req.user.name} signed out from all other devices`, req.user, 'security_signout_all');
+        res.status(200).json({ message: `Successfully signed out from ${result.rows.length} other devices.` });
+    } catch (err) {
+        console.error('Error signing out all other devices:', err);
+        res.status(500).json({ message: 'Failed to sign out from all other devices.', error: err.message });
+    }
+};
+
 
 // --- User Login History ---
 
