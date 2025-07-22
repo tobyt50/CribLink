@@ -12,14 +12,12 @@ exports.getAllListings = async (req, res) => {
       page,
       limit,
       status,
-      agent_id,
+      agent_id, // This parameter is used to filter listings by a specific agent
       sortBy,
-      // Add new advanced filter parameters here
       location,
       property_type,
       bedrooms,
       bathrooms,
-      // New land-specific filters
       land_size,
       zoning_type,
       title_type
@@ -28,7 +26,7 @@ exports.getAllListings = async (req, res) => {
     const userRole = req.user ? req.user.role : 'guest';
     const userId = req.user ? req.user.user_id : null;
 
-    let baseQuery = 'FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id'; // Join with property_details
+    let baseQuery = 'FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id';
     let conditions = [];
     let values = [];
     let valueIndex = 1;
@@ -40,23 +38,27 @@ exports.getAllListings = async (req, res) => {
       conditions.push(`pl.status ILIKE $${valueIndex++}`);
       values.push(status);
     } else {
-      // 2. Role-based default filtering
+      // 2. Role-based default filtering for status
       if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
+        // Clients, visitors, and guests only see 'available', 'featured', 'sold', 'under offer' listings
         conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
         values.push(['available', 'featured', 'sold', 'under offer']);
       } else if (userRole === 'agent') {
+        // Agents see their own listings regardless of status, plus public statuses
         conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
         values.push(['available', 'featured', 'sold', 'under offer'], userId);
-
-        if (agent_id && String(agent_id) === String(userId)) {
-          conditions.push(`pl.agent_id = $${valueIndex++}`);
-          values.push(agent_id);
-        }
       }
-      // Admin has full access if no status is specified (no filtering needed)
+      // Admin has full access if no status is specified (no filtering needed based on status for admin)
     }
 
-    // 3. Additional filters
+    // 3. Filter by agent_id if provided in the query (applies to all roles)
+    // This allows fetching listings for a specific agent's profile page.
+    if (agent_id) {
+      conditions.push(`pl.agent_id = $${valueIndex++}`);
+      values.push(agent_id);
+    }
+
+    // 4. Additional filters (existing logic)
     if (purchase_category && purchase_category.toLowerCase() !== 'all') {
       conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
       values.push(purchase_category);
@@ -72,7 +74,6 @@ exports.getAllListings = async (req, res) => {
       values.push(max_price);
     }
 
-    // Add new conditions for advanced filters
     if (location) {
       conditions.push(`pl.location ILIKE $${valueIndex++}`);
       values.push(`%${location}%`);
@@ -108,7 +109,6 @@ exports.getAllListings = async (req, res) => {
       values.push(`%${title_type}%`);
     }
 
-
     if (search && search.trim() !== '') {
       const keyword = `%${search.trim()}%`;
       conditions.push(`(
@@ -122,13 +122,13 @@ exports.getAllListings = async (req, res) => {
       valueIndex += 5;
     }
 
-    // 4. Where clause
+    // 5. Where clause
     let whereClause = '';
     if (conditions.length > 0) {
       whereClause = ' WHERE ' + conditions.join(' AND ');
     }
 
-    // 5. Pagination and Sorting
+    // 6. Pagination and Sorting
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
@@ -142,8 +142,7 @@ exports.getAllListings = async (req, res) => {
       orderByClause = 'ORDER BY pl.price ASC';
     }
 
-    // 6. Query building
-    // Select all columns from property_listings (pl.*) and property_details (pd.*)
+    // 7. Query building
     const query = `SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
     values.push(limitNum, offset);
 
@@ -226,6 +225,7 @@ exports.createListing = async (req, res) => {
     } = req.body;
 
     const agent_id = req.user ? req.user.user_id : null;
+    const agency_id = req.user ? req.user.agency_id : null; // Get agency_id from req.user
     if (!agent_id) {
         return res.status(401).json({ message: 'Authentication required to create a listing.' });
     }
@@ -249,15 +249,16 @@ exports.createListing = async (req, res) => {
             mainImagePublicIdToSave = getCloudinaryPublicId(mainImageURL);
         }
 
+        // Insert agency_id into the property_listings table
         const listingResult = await pool.query(
-            `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id, agency_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
              RETURNING property_id`,
             [
                 title, location, state, price, status || 'pending', agent_id, date_listed, property_type,
                 property_type?.toLowerCase() === 'land' ? null : bedrooms, // Set bedrooms to null if land
                 property_type?.toLowerCase() === 'land' ? null : bathrooms, // Set bathrooms to null if land
-                purchase_category, mainImageUrlToSave, mainImagePublicIdToSave
+                purchase_category, mainImageUrlToSave, mainImagePublicIdToSave, agency_id // Include agency_id here
             ]
         );
 
@@ -325,7 +326,7 @@ exports.createListing = async (req, res) => {
 
         const createdListingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
@@ -360,7 +361,7 @@ exports.getListingById = async (req, res) => {
     try {
         const listingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl
@@ -647,7 +648,7 @@ exports.updateListing = async (req, res) => {
 
         const updatedListingResult = await pool.query(
             `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id,
+                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id,
                 pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
                 u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
             FROM property_listings pl

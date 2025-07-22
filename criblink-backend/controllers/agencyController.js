@@ -720,7 +720,7 @@ exports.getAgentPendingRequests = async (req, res) => {
     try {
         const result = await db.query(
             `SELECT
-                am.agency_member_id AS request_id,
+                am.agency_member_id,
                 am.agency_id,
                 a.name AS agency_name,
                 a.logo_url, -- Include logo_url for General.js display
@@ -1290,31 +1290,55 @@ exports.getAgencyAdminCount = async (req, res) => {
 exports.getAgencyListings = async (req, res) => {
     const { agencyId } = req.params;
     try {
-        // Optional: Add authorization check if only certain roles can view agency listings
-        // For now, making it public for the profile page
         const result = await db.query(
             `SELECT
-                p.property_id,
-                p.title,
-                p.price,
-                p.location,
-                p.state,
-                p.property_type,
-                p.purchase_category,
-                p.image_url,
-                p.status,
-                p.bedrooms,
-                p.bathrooms,
-                p.square_footage,
-                p.lot_size,
-                p.year_built,
-                p.date_listed
-             FROM properties p
-             WHERE p.agency_id = $1 AND p.is_active = TRUE AND p.is_approved = TRUE
-             ORDER BY p.date_listed DESC`,
+                pl.property_id,
+                pl.title,
+                pl.price,
+                pl.location,
+                pl.state,
+                pl.property_type,
+                pl.purchase_category,
+                pl.image_url,
+                pl.status,
+                pl.bedrooms,
+                pl.bathrooms,
+                pd.square_footage,
+                pd.lot_size,
+                pd.year_built,
+                pl.date_listed,
+                pd.description,
+                pd.heating_type,
+                pd.cooling_type,
+                pd.parking,
+                pd.amenities,
+                pd.land_size,
+                pd.zoning_type,
+                pd.title_type,
+                u.full_name AS agent_name,
+                u.email AS agent_email,
+                u.phone AS agent_phone
+             FROM property_listings pl
+             LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+             LEFT JOIN users u ON pl.agent_id = u.user_id
+             WHERE pl.agency_id = $1
+             ORDER BY pl.date_listed DESC`,
             [agencyId]
         );
-        res.status(200).json(result.rows);
+
+        // Fetch gallery images for each listing
+        const listingsWithGallery = await Promise.all(
+            result.rows.map(async (listing) => {
+                const galleryResult = await db.query(
+                    'SELECT image_url FROM property_images WHERE property_id = $1 ORDER BY image_id',
+                    [listing.property_id]
+                );
+                listing.gallery_images = galleryResult.rows.map((row) => row.image_url);
+                return listing;
+            })
+        );
+
+        res.status(200).json(listingsWithGallery);
     } catch (error) {
         console.error('Error fetching agency listings:', error);
         res.status(500).json({ message: 'Server error fetching agency listings.', error: error.message });

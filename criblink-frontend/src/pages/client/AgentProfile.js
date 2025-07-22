@@ -46,17 +46,23 @@ const AgentProfile = () => {
   // Set recommendedListingsPerPage to 4 for a 2x2 grid
   const [recommendedListings, setRecommendedListings] = useState([]);
   const [recommendedListingStartIndex, setRecommendedListingStartIndex] = useState(0);
-  const recommendedListingsPerPage = 4;
+  const recommendedListingsPerPage = 4; // For a 2x2 grid
 
   const [agentListings, setAgentListings] = useState([]);
   const [agentListingStartIndex, setAgentListingStartIndex] = useState(0);
-  const agentListingsPerPage = 4;
+  const agentListingsPerPage = 4; // For a 2x2 grid
 
   const [isMobile, setIsMobile] = useState(false);
 
   const [isClientInquiryModalOpen, setIsClientInquiryModalOpen] = useState(false);
   const [conversationForModal, setConversationForModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
+
+  // Refs for auto-swipe functionality
+  const agentCarouselRef = useRef(null);
+  const autoSwipeAgentIntervalRef = useRef(null);
+  const recommendedCarouselRef = useRef(null);
+  const autoSwipeRecommendedIntervalRef = useRef(null);
 
 
   useEffect(() => {
@@ -168,6 +174,7 @@ const AgentProfile = () => {
     if (agentId && userRole === 'client' && currentUserId) {
       try {
         const token = localStorage.getItem('token');
+        // Removed limit and page parameters to fetch all recommendations
         const response = await axiosInstance.get(`${API_BASE_URL}/clients/${currentUserId}/recommendations/agent/${agentId}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -189,13 +196,15 @@ const AgentProfile = () => {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axiosInstance.get(`${API_BASE_URL}/listings?agent_id=${agentId}&limit=${agentListingsPerPage}&page=1`, { headers });
+      // Fetch listings specifically for this agent, removed limit and page parameters
+      const response = await axiosInstance.get(`${API_BASE_URL}/listings?agent_id=${agentId}`, { headers });
       setAgentListings(response.data.listings || []);
     } catch (error) {
       console.error("Error fetching agent's listings:", error);
+      showMessage("Failed to load agent's listings.", 'error'); // Added error message for user
       setAgentListings([]);
     }
-  }, [agentId]);
+  }, [agentId, showMessage]); // Added showMessage to dependencies
 
 
   const fetchConversationForAgent = useCallback(async () => {
@@ -369,7 +378,7 @@ const AgentProfile = () => {
   useEffect(() => {
     if (currentUserId !== null || userRole === 'guest') {
       fetchAgentData();
-      fetchAgentListings();
+      fetchAgentListings(); // Ensure this is called
     }
   }, [currentUserId, userRole, fetchAgentData, fetchAgentListings]);
 
@@ -453,10 +462,17 @@ const AgentProfile = () => {
 
   const handlePrevAgentListing = () => {
     setAgentListingStartIndex((prevIndex) => Math.max(0, prevIndex - agentListingsPerPage));
+    clearInterval(autoSwipeAgentIntervalRef.current); // Stop auto-swipe on manual interaction
   };
 
   const handleNextAgentListing = () => {
-    setAgentListingStartIndex((prevIndex) => Math.min(agentListings.length - agentListingsPerPage, prevIndex + agentListingsPerPage));
+    setAgentListingStartIndex((prevIndex) => {
+      const totalPages = Math.ceil(agentListings.length / agentListingsPerPage);
+      const currentPage = prevIndex / agentListingsPerPage;
+      const nextPage = (currentPage + 1) % totalPages;
+      return nextPage * agentListingsPerPage;
+    });
+    clearInterval(autoSwipeAgentIntervalRef.current); // Stop auto-swipe on manual interaction
   };
 
   const displayedAgentListings = agentListings.slice(
@@ -466,16 +482,133 @@ const AgentProfile = () => {
 
   const handlePrevRecommendedAgent = () => {
     setRecommendedListingStartIndex((prevIndex) => Math.max(0, prevIndex - recommendedListingsPerPage));
+    clearInterval(autoSwipeRecommendedIntervalRef.current); // Stop auto-swipe on manual interaction
   };
 
   const handleNextRecommendedAgent = () => {
-    setRecommendedListingStartIndex((prevIndex) => Math.min(recommendedListings.length - recommendedListingsPerPage, prevIndex + recommendedListingsPerPage));
+    setRecommendedListingStartIndex((prevIndex) => {
+      const totalPages = Math.ceil(recommendedListings.length / recommendedListingsPerPage);
+      const currentPage = prevIndex / recommendedListingsPerPage;
+      const nextPage = (currentPage + 1) % totalPages;
+      return nextPage * recommendedListingsPerPage;
+    });
+    clearInterval(autoSwipeRecommendedIntervalRef.current); // Stop auto-swipe on manual interaction
   };
 
   const displayedRecommendedListings = recommendedListings.slice(
     recommendedListingStartIndex,
     recommendedListingStartIndex + recommendedListingsPerPage
   );
+
+  // Auto-swipe for Agent's Listings
+  useEffect(() => {
+    if (autoSwipeAgentIntervalRef.current) {
+      clearInterval(autoSwipeAgentIntervalRef.current);
+    }
+
+    if (agentListings.length > agentListingsPerPage) {
+      autoSwipeAgentIntervalRef.current = setInterval(() => {
+        setAgentListingStartIndex((prevIndex) => {
+          const totalPages = Math.ceil(agentListings.length / agentListingsPerPage);
+          const currentPage = prevIndex / agentListingsPerPage;
+          const nextPage = (currentPage + 1) % totalPages;
+          return nextPage * agentListingsPerPage;
+        });
+      }, 5000); // Change every 5 seconds
+    }
+
+    return () => {
+      if (autoSwipeAgentIntervalRef.current) {
+        clearInterval(autoSwipeAgentIntervalRef.current);
+      }
+    };
+  }, [agentListings, agentListingsPerPage]);
+
+  // Auto-swipe for Recommended Listings
+  useEffect(() => {
+    if (autoSwipeRecommendedIntervalRef.current) {
+      clearInterval(autoSwipeRecommendedIntervalRef.current);
+    }
+
+    if (recommendedListings.length > recommendedListingsPerPage) {
+      autoSwipeRecommendedIntervalRef.current = setInterval(() => {
+        setRecommendedListingStartIndex((prevIndex) => {
+          const totalPages = Math.ceil(recommendedListings.length / recommendedListingsPerPage);
+          const currentPage = prevIndex / recommendedListingsPerPage;
+          const nextPage = (currentPage + 1) % totalPages;
+          return nextPage * recommendedListingsPerPage;
+        });
+      }, 5000); // Change every 5 seconds
+    }
+
+    return () => {
+      if (autoSwipeRecommendedIntervalRef.current) {
+        clearInterval(autoSwipeRecommendedIntervalRef.current);
+      }
+    };
+  }, [recommendedListings, recommendedListingsPerPage]);
+
+
+  // Touch event handlers for Agent's Listings
+  const handleTouchStartAgent = useCallback((e) => {
+    clearInterval(autoSwipeAgentIntervalRef.current);
+    if (agentCarouselRef.current) {
+      agentCarouselRef.current.startX = e.touches[0].clientX;
+    }
+  }, []);
+
+  const handleTouchMoveAgent = useCallback((e) => {
+    if (!agentCarouselRef.current || agentCarouselRef.current.startX === undefined) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = agentCarouselRef.current.startX - currentX;
+    if (Math.abs(diffX) > 10) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTouchEndAgent = useCallback((e) => {
+    if (!agentCarouselRef.current || agentCarouselRef.current.startX === undefined) return;
+    const endX = e.changedTouches[0].clientX;
+    const diffX = agentCarouselRef.current.startX - endX;
+    const swipeThreshold = 50;
+    if (diffX > swipeThreshold) {
+      handleNextAgentListing();
+    } else if (diffX < -swipeThreshold) {
+      handlePrevAgentListing();
+    }
+    agentCarouselRef.current.startX = undefined;
+  }, [handleNextAgentListing, handlePrevAgentListing]);
+
+  // Touch event handlers for Recommended Listings
+  const handleTouchStartRecommended = useCallback((e) => {
+    clearInterval(autoSwipeRecommendedIntervalRef.current);
+    if (recommendedCarouselRef.current) {
+      recommendedCarouselRef.current.startX = e.touches[0].clientX;
+    }
+  }, []);
+
+  const handleTouchMoveRecommended = useCallback((e) => {
+    if (!recommendedCarouselRef.current || recommendedCarouselRef.current.startX === undefined) return;
+    const currentX = e.touches[0].clientX;
+    const diffX = recommendedCarouselRef.current.startX - currentX;
+    if (Math.abs(diffX) > 10) {
+      e.preventDefault();
+    }
+  }, []);
+
+  const handleTouchEndRecommended = useCallback((e) => {
+    if (!recommendedCarouselRef.current || recommendedCarouselRef.current.startX === undefined) return;
+    const endX = e.changedTouches[0].clientX;
+    const diffX = recommendedCarouselRef.current.startX - endX;
+    const swipeThreshold = 50;
+    if (diffX > swipeThreshold) {
+      handleNextRecommendedAgent();
+    } else if (diffX < -swipeThreshold) {
+      handlePrevRecommendedAgent();
+    }
+    recommendedCarouselRef.current.startX = undefined;
+  }, [handleNextRecommendedAgent, handlePrevRecommendedAgent]);
+
 
   if (!agent) {
     return (
@@ -706,19 +839,34 @@ const AgentProfile = () => {
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
+                  ref={recommendedCarouselRef}
+                  onTouchStart={handleTouchStartRecommended}
+                  onTouchMove={handleTouchMoveRecommended}
+                  onTouchEnd={handleTouchEndRecommended}
                 >
                     <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
                         Recommended for You by {agent.full_name}
                     </h2>
                     {recommendedListings.length > 0 ? (
                         <div className="flex flex-col items-center w-full">
-                            {/* Changed grid to 2x2 for mobile, 1x2 for larger screens (sm, lg) */}
-                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-4 p-2 -mx-2">
-                                {displayedRecommendedListings.map(listing => (
-                                    <div key={listing.property_id} className="w-full">
-                                        <ListingCard listing={listing} />
-                                    </div>
-                                ))}
+                            {/* Removed fixed height container for auto-swipe */}
+                            <div className="relative w-full overflow-hidden">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={`recommended-page-${recommendedListingStartIndex}`}
+                                        initial={{ opacity: 0, x: 100 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -100 }}
+                                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                                        className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                                    >
+                                        {displayedRecommendedListings.map(listing => (
+                                            <div key={listing.property_id} className="w-full">
+                                                <ListingCard listing={listing} />
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                </AnimatePresence>
                             </div>
                             <div className="flex justify-center mt-4 space-x-4">
                                 <button
@@ -754,24 +902,39 @@ const AgentProfile = () => {
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
+              ref={agentCarouselRef}
+              onTouchStart={handleTouchStartAgent}
+              onTouchMove={handleTouchMoveAgent}
+              onTouchEnd={handleTouchEndAgent}
             >
               <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
                 Agent's Listings
               </h2>
               {agentListings.length > 0 ? (
                   <div className="flex flex-col items-center w-full">
-                      {/* Changed grid to 2x2 for mobile, 1x2 for larger screens (sm, md, lg, xl, 2xl) */}
-                      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-4 p-2 -mx-2">
-                          {displayedAgentListings.map(listing => (
-                              <div key={listing.property_id} className="w-full">
-                                  <ListingCard
-                                      listing={listing}
-                                      darkMode={darkMode}
-                                      onViewProperty={handleViewProperty}
-                                      showAgentName={false}
-                                  />
-                              </div>
-                          ))}
+                      {/* Removed fixed height container for auto-swipe */}
+                      <div className="relative w-full overflow-hidden">
+                          <AnimatePresence mode="wait">
+                              <motion.div
+                                  key={`agent-page-${agentListingStartIndex}`}
+                                  initial={{ opacity: 0, x: 100 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -100 }}
+                                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                                  className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                              >
+                                  {displayedAgentListings.map(listing => (
+                                      <div key={listing.property_id} className="w-full">
+                                          <ListingCard
+                                              listing={listing}
+                                              darkMode={darkMode}
+                                              onViewProperty={handleViewProperty}
+                                              showAgentName={false}
+                                          />
+                                      </div>
+                                  ))}
+                              </motion.div>
+                          </AnimatePresence>
                       </div>
                       <div className="flex justify-center mt-4 space-x-4">
                           <button
@@ -796,7 +959,7 @@ const AgentProfile = () => {
                   </div>
               ) : (
                   <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                      No listings available from this agent yet. (Backend endpoint required: `/api/agents/${agentId}/listings`)
+                      No listings available from this agent yet.
                   </p>
               )}
             </motion.div>
@@ -920,19 +1083,34 @@ const AgentProfile = () => {
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
+                  ref={recommendedCarouselRef}
+                  onTouchStart={handleTouchStartRecommended}
+                  onTouchMove={handleTouchMoveRecommended}
+                  onTouchEnd={handleTouchEndRecommended}
                 >
                     <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
                         Recommended for You by {agent.full_name}
                     </h2>
                     {recommendedListings.length > 0 ? (
                         <div className="flex flex-col items-center w-full">
-                            {/* Desktop: 2x2 grid */}
-                            <div className="grid grid-cols-2 gap-4 p-2 -mx-2">
-                                {displayedRecommendedListings.map(listing => (
-                                    <div key={listing.property_id} className="w-full">
-                                        <ListingCard listing={listing} />
-                                    </div>
-                                ))}
+                            {/* Removed fixed height container for auto-swipe */}
+                            <div className="relative w-full overflow-hidden">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={`recommended-page-${recommendedListingStartIndex}`}
+                                        initial={{ opacity: 0, x: 100 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -100 }}
+                                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                                        className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                                    >
+                                        {displayedRecommendedListings.map(listing => (
+                                            <div key={listing.property_id} className="w-full">
+                                                <ListingCard listing={listing} />
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                </AnimatePresence>
                             </div>
                             <div className="flex justify-center mt-4 space-x-4">
                                 <button

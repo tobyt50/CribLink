@@ -380,7 +380,7 @@ const getAllInquiriesForAgent = async (req, res) => {
     const queryParams = [];
     let paramIndex = 1;
 
-    // NEW: Adjust query for agent/admin/agency_admin
+    // Adjust query for agent/admin/agency_admin
     if (req.user.role === 'agent') {
         whereClause += `
           WHERE
@@ -389,7 +389,7 @@ const getAllInquiriesForAgent = async (req, res) => {
         `;
         queryParams.push(req.user.user_id);
         paramIndex++;
-    } else if (req.user.role === 'agency_admin') { // NEW: Agency Admin can see inquiries for their agents
+    } else if (req.user.role === 'agency_admin') { // Agency Admin can see inquiries for their agents
         // Get all agent_ids belonging to this agency
         const agencyAgents = await query(
             `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
@@ -823,28 +823,60 @@ const deleteConversation = async (req, res) => {
   }
 };
 
-// Count total inquiries (clients + guests)
+// Count total inquiries (distinct conversations) for the authenticated user's role
 const countAllInquiries = async (req, res) => {
   const userId = req.user.user_id;
   const role = req.user.role;
 
-  let visibilityClause = '';
-  if (role === 'client') {
-    visibilityClause = 'AND hidden_from_client = FALSE';
-  } else if (role === 'agent' || role === 'admin' || role === 'agency_admin') { // NEW: Added agency_admin
-    visibilityClause = 'AND hidden_from_agent = FALSE';
+  let whereClause = '';
+  const queryParams = [];
+  let paramIndex = 1;
+
+  if (role === 'agent') {
+    // For agents, count distinct conversations where they are the assigned agent, sender, or recipient
+    whereClause += `
+      WHERE
+        (agent_id = $${paramIndex} OR sender_id = $${paramIndex} OR recipient_id = $${paramIndex})
+        AND hidden_from_agent = FALSE
+    `;
+    queryParams.push(userId);
+    paramIndex++;
+  } else if (role === 'agency_admin') {
+    // Agency admin sees inquiries for all agents in their agency
+    const agencyAgents = await query(
+      `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+      [req.user.agency_id]
+    );
+    const agentIds = agencyAgents.rows.map(row => row.agent_id);
+
+    if (agentIds.length === 0) {
+      return res.json({ count: 0 });
+    }
+
+    whereClause += `
+      WHERE
+        (agent_id = ANY($${paramIndex}::int[]) OR sender_id = ANY($${paramIndex}::int[]) OR recipient_id = ANY($${paramIndex}::int[]))
+        AND hidden_from_agent = FALSE
+    `;
+    queryParams.push(agentIds);
+    paramIndex++;
+  } else if (role === 'admin') {
+    // Admin sees all inquiries
+    whereClause += ` WHERE hidden_from_agent = FALSE`;
+  } else if (role === 'client') {
+    // Clients only see their own inquiries
+    whereClause += ` WHERE client_id = $${paramIndex} AND hidden_from_client = FALSE`;
+    queryParams.push(userId);
+    paramIndex++;
   }
+
 
   try {
     const result = await query(`
-      SELECT COUNT(*)
+      SELECT COUNT(DISTINCT conversation_id)
       FROM inquiries
-      WHERE (
-        (client_id IS NOT NULL AND sender_id = client_id)
-        OR (client_id IS NULL AND name IS NOT NULL)
-      )
-      ${visibilityClause}
-    `);
+      ${whereClause}
+    `, queryParams);
 
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
@@ -853,24 +885,51 @@ const countAllInquiries = async (req, res) => {
   }
 };
 
-// Count all agent replies (not distinct conversations)
+// Count all agent replies (messages with message_type = 'agent_reply')
 const countAgentResponses = async (req, res) => {
+  const userId = req.user.user_id;
   const role = req.user.role;
 
-  let visibilityClause = '';
-  if (role === 'client') {
-    visibilityClause = 'AND hidden_from_client = FALSE';
-  } else if (role === 'agent' || role === 'admin' || role === 'agency_admin') { // NEW: Added agency_admin
-    visibilityClause = 'AND hidden_from_agent = FALSE';
+  let whereClause = ` WHERE message_type = 'agent_reply'`;
+  const queryParams = [];
+  let paramIndex = 1;
+
+  if (role === 'agent') {
+    // For agents, count only their own replies
+    whereClause += ` AND sender_id = $${paramIndex} AND hidden_from_agent = FALSE`;
+    queryParams.push(userId);
+    paramIndex++;
+  } else if (role === 'agency_admin') {
+    // Agency admin sees responses from agents in their agency
+    const agencyAgents = await query(
+      `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+      [req.user.agency_id]
+    );
+    const agentIds = agencyAgents.rows.map(row => row.agent_id);
+
+    if (agentIds.length === 0) {
+      return res.json({ count: 0 });
+    }
+
+    whereClause += ` AND sender_id = ANY($${paramIndex}::int[]) AND hidden_from_agent = FALSE`;
+    queryParams.push(agentIds);
+    paramIndex++;
+  } else if (role === 'admin') {
+    // Admin sees all agent replies
+    whereClause += ` AND hidden_from_agent = FALSE`;
+  } else if (role === 'client') {
+    // Clients should not be calling this endpoint, but if they do, filter by their conversations
+    whereClause += ` AND client_id = $${paramIndex} AND hidden_from_client = FALSE`;
+    queryParams.push(userId);
+    paramIndex++;
   }
 
   try {
     const result = await query(`
       SELECT COUNT(*)
       FROM inquiries
-      WHERE message_type = 'agent_reply'
-      ${visibilityClause}
-    `);
+      ${whereClause}
+    `, queryParams);
 
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {

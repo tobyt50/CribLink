@@ -10,7 +10,7 @@ import { useTheme } from '../layouts/AppShell';
 import {
   X, Bookmark,
   UserPlus, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical,
-  Share2, MessageSquareText // Added MessageSquareText for chat icon
+  Share2, MessageSquareText, Phone, Mail // Added Phone and Mail icons
 } from 'lucide-react';
 import ShareModal from '../components/ShareModal';
 import ClientInquiryModal from '../components/ClientInquiryModal'; // Import ClientInquiryModal
@@ -1108,137 +1108,152 @@ const ListingDetails = () => {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           {agentInfo && (
-  <div className={`space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}>
-    <h2 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Agent</h2>
+            <div className={`space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}>
+              <h2 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Agent</h2>
 
-    <div className="flex items-center space-x-4">
-      <img
-        src={agentInfo.profilePic}
-        alt={agentInfo.name}
-        className={`w-16 h-16 rounded-full object-cover border-2 shadow-sm ${darkMode ? "border-green-700" : "border-green-300"}`}
-      />
-      <div className="flex flex-col">
-        <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-          {agentInfo.name}
-          {userRole === 'client' && agentInfo.id && userId !== agentInfo.id && (
-            <span className="ml-2 inline-block align-middle relative" ref={optionsMenuRef}>
-              {(connectionStatus === 'none' || connectionStatus === 'rejected') && (
-                <button
-                  onClick={handleSendConnectionRequest}
-                  className={`p-1.5 rounded-full transition-all duration-200
-                      ${darkMode ? "text-purple-400 hover:bg-gray-700" : "text-purple-600 hover:bg-gray-200"}`}
-                  title="Send Connection Request"
-                >
-                  <UserPlus size={20} />
-                </button>
-              )}
-              {connectionStatus === 'pending_sent' && (
-                <button
-                  disabled
-                  className={`p-1.5 rounded-full cursor-not-allowed ${darkMode ? "text-gray-500" : "text-gray-400"}`}
-                  title="Connection Request Sent (Pending)"
-                >
-                  <Hourglass size={20} />
-                </button>
-              )}
-              {connectionStatus === 'pending_received' && (
-                <button
-                  onClick={() => navigate(`/client/dashboard/requests`)}
-                  className={`p-1.5 rounded-full transition-all duration-200
-                      ${darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-200"}`}
-                  title="Respond to Agent Request"
-                >
-                  <UserRoundCheck size={20} />
-                </button>
-              )}
-              {connectionStatus === 'connected' && (
-                <>
-                  <button
-                    disabled
-                    className={`p-1.5 rounded-full cursor-not-allowed ${darkMode ? "text-green-500" : "text-green-600"}`}
-                    title="Already Connected"
-                  >
-                    <CheckCircle size={20} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowOptionsMenu(!showOptionsMenu); }}
-                    className={`ml-1 p-1.5 rounded-full transition-all duration-200
-                      ${darkMode ? "text-gray-400 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
-                    title="More Options"
-                  >
-                    <EllipsisVertical size={20} />
-                  </button>
-                  {showOptionsMenu && (
-                    <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg z-10
-                      ${darkMode ? "bg-gray-700 ring-1 ring-gray-600" : "bg-white ring-1 ring-gray-200"}`}>
-                      <div className="py-1" role="menu" aria-orientation="vertical">
-                        <button
-                          onClick={handleDisconnectFromAgent}
-                          className={`flex items-center w-full px-4 py-2 text-sm
-                            ${darkMode ? "text-gray-200 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-100"}`}
-                          role="menuitem"
-                        >
-                          <UserX size={16} className="mr-2" /> Disconnect
-                        </button>
-                      </div>
-                    </div>
+              <div className="flex items-center space-x-4">
+                <img
+                  src={agentInfo.profilePic}
+                  alt={agentInfo.name}
+                  className={`w-16 h-16 rounded-full object-cover border-2 shadow-sm ${darkMode ? "border-green-700" : "border-green-300"}`}
+                />
+                <div className="flex flex-col">
+                  <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+                    {agentInfo.name}
+                    {userRole === 'client' && agentInfo.id && userId !== agentInfo.id && (
+                      <span className="ml-2 inline-block align-middle relative" ref={optionsMenuRef}>
+                        {(connectionStatus === 'none' || connectionStatus === 'rejected') && (
+                          <button
+                            onClick={handleSendConnectionRequest}
+                            className={`p-1.5 rounded-full transition-all duration-200
+                                ${darkMode ? "text-purple-400 hover:bg-gray-700" : "text-purple-600 hover:bg-gray-200"}`}
+                            title="Send Connection Request"
+                          >
+                            <UserPlus size={20} />
+                          </button>
+                        )}
+                        {connectionStatus === 'pending_sent' && (
+                          <button
+                            disabled
+                            className={`p-1.5 rounded-full cursor-not-allowed ${darkMode ? "text-gray-500" : "text-gray-400"}`}
+                            title="Connection Request Sent (Pending)"
+                          >
+                            <Hourglass size={20} />
+                          </button>
+                        )}
+                        {connectionStatus === 'pending_received' && (
+                          <button
+                            onClick={() => navigate(`/client/dashboard/requests`)}
+                            className={`p-1.5 rounded-full transition-all duration-200
+                                ${darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-200"}`}
+                            title="Respond to Agent Request"
+                          >
+                            <UserRoundCheck size={20} />
+                          </button>
+                        )}
+                        {connectionStatus === 'connected' && (
+                          <>
+                            <button
+                              disabled
+                              className={`p-1.5 rounded-full cursor-not-allowed ${darkMode ? "text-green-500" : "text-green-600"}`}
+                              title="Already Connected"
+                            >
+                              <CheckCircle size={20} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowOptionsMenu(!showOptionsMenu); }}
+                              className={`ml-1 p-1.5 rounded-full transition-all duration-200
+                                ${darkMode ? "text-gray-400 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
+                              title="More Options"
+                            >
+                              <EllipsisVertical size={20} />
+                            </button>
+                            {showOptionsMenu && (
+                              <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg z-10
+                                ${darkMode ? "bg-gray-700 ring-1 ring-gray-600" : "bg-white ring-1 ring-gray-200"}`}>
+                                <div className="py-1" role="menu" aria-orientation="vertical">
+                                  <button
+                                    onClick={handleDisconnectFromAgent}
+                                    className={`flex items-center w-full px-4 py-2 text-sm
+                                      ${darkMode ? "text-gray-200 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-100"}`}
+                                    role="menuitem"
+                                  >
+                                    <UserX size={16} className="mr-2" /> Disconnect
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </p>
+                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Property Agent</p>
+                  {agentInfo.agency !== 'N/A' && (
+                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{agentInfo.agency}</p>
                   )}
-                </>
+                </div>
+              </div>
+
+              {/* Refactored Contact Buttons */}
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
+                {agentInfo.phone !== 'N/A' && userRole !== 'guest' && (
+                  <a
+                    href={`tel:${agentInfo.phone}`}
+                    // Change p-3 to p-2 for smaller padding
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl font-semibold transition-colors duration-300 shadow-md flex-1 min-w-[90px] max-w-[calc(33%-0.75rem)]
+                      ${darkMode ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+                    title="Call Agent"
+                  >
+                    {/* Optionally change icon size from size={24} to size={20} or smaller */}
+                    <Phone size={20} />
+                    {/* Optionally change text-xs to text-xxs or even remove if too small */}
+                    <span className="text-xs mt-1">Call</span>
+                  </a>
+                )}
+
+                {agentInfo.email !== 'N/A' && (
+                  <a
+                    href={`mailto:${agentInfo.email}`}
+                    // Change p-3 to p-2 for smaller padding
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl font-semibold transition-colors duration-300 shadow-md flex-1 min-w-[90px] max-w-[calc(33%-0.75rem)]
+                      ${darkMode ? "bg-green-600 text-white hover:bg-green-500" : "bg-green-500 text-white hover:bg-green-600"}`}
+                    title="Email Agent"
+                  >
+                    {/* Optionally change icon size from size={24} to size={20} or smaller */}
+                    <Mail size={20} />
+                    {/* Optionally change text-xs to text-xxs or even remove if too small */}
+                    <span className="text-xs mt-1">Email</span>
+                  </a>
+                )}
+
+                {agentInfo.id && (userRole === 'client' || userRole === 'guest') && (
+                  <button
+                    onClick={handleOpenChat}
+                    // Change p-3 to p-2 for smaller padding
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl font-semibold transition-colors duration-300 shadow-md flex-1 min-w-[90px] max-w-[calc(33%-0.75rem)]
+                      ${darkMode ? "bg-purple-600 text-white hover:bg-purple-500" : "bg-purple-500 text-white hover:bg-purple-600"}`}
+                    title="Chat with Agent"
+                  >
+                    {/* Optionally change icon size from size={24} to size={20} or smaller */}
+                    <MessageSquareText size={20} />
+                    {/* Optionally change text-xs to text-xxs or even remove if too small */}
+                    <span className="text-xs mt-1">Chat</span>
+                  </button>
+                )}
+              </div>
+
+              {userRole === 'client' && agentInfo.id && userId !== agentInfo.id && (
+                <button
+                  onClick={() => navigate(`/agent-profile/${agentInfo.id}`)}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full mt-4
+                    ${darkMode ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-500 text-white hover:bg-gray-600"}`}
+                >
+                  👤 View Agent Profile
+                </button>
               )}
-            </span>
+            </div>
           )}
-        </p>
-        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Property Agent</p>
-        {agentInfo.agency !== 'N/A' && (
-          <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{agentInfo.agency}</p>
-        )}
-      </div>
-    </div>
-
-    <div className="space-y-3 pt-2">
-      {agentInfo.phone !== 'N/A' && userRole !== 'guest' && (
-        <a
-          href={`tel:${agentInfo.phone}`}
-          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full
-            ${darkMode ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-blue-500 text-white hover:bg-blue-600"}`}
-        >
-          📞 Call Agent
-        </a>
-      )}
-
-      {agentInfo.email !== 'N/A' && (
-          <a
-            href={`mailto:${agentInfo.email}`}
-            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full
-              ${darkMode ? "bg-green-600 text-white hover:bg-green-500" : "bg-green-500 text-white hover:bg-green-600"}`}
-          >
-            📧 Email Agent
-          </a>
-        )
-      }
-      {/* NEW: Chat with Agent Button */}
-      {agentInfo.id && (userRole === 'client' || userRole === 'guest') && (
-        <button
-          onClick={handleOpenChat}
-          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full
-            ${darkMode ? "bg-purple-600 text-white hover:bg-purple-500" : "bg-purple-500 text-white hover:bg-purple-600"}`}
-        >
-          <MessageSquareText size={20} /> Chat with Agent
-        </button>
-      )}
-
-      {userRole === 'client' && agentInfo.id && userId !== agentInfo.id && (
-        <button
-          onClick={() => navigate(`/agent-profile/${agentInfo.id}`)}
-          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md w-full
-            ${darkMode ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-gray-500 text-white hover:bg-gray-600"}`}
-        >
-          👤 View Agent Profile 
-        </button>
-      )}
-    </div>
-  </div>
-)}
 
 
           <div className={`space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}>
@@ -1287,22 +1302,25 @@ const ListingDetails = () => {
         >
           <h2 className={`text-xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Similar Listings You Might Like</h2>
           <div className="flex flex-col items-center w-full">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`similar-page-${similarListingStartIndex}`} // Key for AnimatePresence
-                  initial={{ opacity: 0, x: 100 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full" // Ensure grid applies inside motion.div
-                >
-                  {displayedSimilarListings.map((similarListing) => (
-                    <div key={similarListing.property_id} className="w-full">
-                      <ListingCard key={similarListing.property_id} listing={similarListing} darkMode={darkMode} />
-                    </div>
-                  ))}
-                </motion.div>
-              </AnimatePresence>
+              {/* New wrapper div for fixed height and relative positioning */}
+              <div className="relative w-full overflow-hidden min-h-[650px] md:min-h-[350px]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`similar-page-${similarListingStartIndex}`} // Key for AnimatePresence
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                    className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full absolute inset-0" // Ensure grid applies inside motion.div
+                  >
+                    {displayedSimilarListings.map((similarListing) => (
+                      <div key={similarListing.property_id} className="w-full">
+                        <ListingCard key={similarListing.property_id} listing={similarListing} darkMode={darkMode} />
+                      </div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+              </div> {/* End of new wrapper div */}
 
             <div className="flex justify-center mt-4 space-x-4">
               <button
@@ -1400,4 +1418,3 @@ const ListingDetails = () => {
 };
 
 export default ListingDetails;
-
