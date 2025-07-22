@@ -726,9 +726,9 @@ exports.getAgentPendingRequests = async (req, res) => {
                 a.logo_url, -- Include logo_url for General.js display
                 am.request_status,
                 am.member_status,
+                am.role AS agency_member_role, -- Fetch agency_member_role
                 am.joined_at AS requested_at,
-                am.message,
-                am.role AS agency_member_role -- Fetch agency_member_role
+                am.message
              FROM agency_members am
              JOIN agencies a ON am.agency_id = a.agency_id
              WHERE am.agent_id = $1 AND am.request_status = 'pending'
@@ -1279,5 +1279,44 @@ exports.getAgencyAdminCount = async (req, res) => {
     } catch (error) {
         console.error('Error fetching agency admin count:', error);
         res.status(500).json({ message: 'Server error fetching agency admin count.', error: error.message });
+    }
+};
+
+/**
+ * @desc Get all listings associated with a specific agency
+ * @route GET /api/agencies/:agencyId/listings
+ * @access Public (or Private if listings are sensitive)
+ */
+exports.getAgencyListings = async (req, res) => {
+    const { agencyId } = req.params;
+    try {
+        // Optional: Add authorization check if only certain roles can view agency listings
+        // For now, making it public for the profile page
+        const result = await db.query(
+            `SELECT
+                p.property_id,
+                p.title,
+                p.price,
+                p.location,
+                p.state,
+                p.property_type,
+                p.purchase_category,
+                p.image_url,
+                p.status,
+                p.bedrooms,
+                p.bathrooms,
+                p.square_footage,
+                p.lot_size,
+                p.year_built,
+                p.date_listed
+             FROM properties p
+             WHERE p.agency_id = $1 AND p.is_active = TRUE AND p.is_approved = TRUE
+             ORDER BY p.date_listed DESC`,
+            [agencyId]
+        );
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error fetching agency listings:', error);
+        res.status(500).json({ message: 'Server error fetching agency listings.', error: error.message });
     }
 };

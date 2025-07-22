@@ -638,7 +638,9 @@ const AgentProfile = () => {
             {/* Agency Overview Panel - Moved here for mobile */}
             {isMobile && agent.agency_info && (
               <motion.div
-                className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+                // They are now applied only on medium (md) screens and up.
+                className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} space-y-4 ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.5 }}

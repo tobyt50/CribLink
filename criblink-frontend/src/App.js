@@ -75,6 +75,8 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFoundPage from "./pages/NotFoundPage";
 // NEW: Agencies Page
 import Agencies from "./pages/Agencies";
+// NEW: AgencyProfile Page
+import AgencyProfile from "./pages/AgencyProfile"; // Import AgencyProfile
 
 // NEW: Import AddLegalDocument component (shared between admin and agent)
 import AddLegalDocument from "./pages/AddLegalDocument";
@@ -192,6 +194,10 @@ function AppContent() {
             <Route path="/select-role" element={<SelectRole />} />
             <Route path="/listings/:id" element={<ListingDetails />} />
             <Route path="*" element={<NotFoundPage />} />
+            {/* NEW: Agency Profile page accessible to all users */}
+            <Route path="/agencies/:id" element={<AgencyProfile />} />
+            {/* NEW: Agencies page accessible to all users */}
+            <Route path="/agencies" element={<Agencies />} />
           </Route>
 
           {/* Authenticated base user routes */}
@@ -205,10 +211,6 @@ function AppContent() {
             <Route path="favourites" element={<Favourites />} />
             <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
               <Route index element={<EditListing />} />
-            </Route>
-            {/* NEW: Agencies page accessible to admin, agent, agency_admin */}
-            <Route path="/agencies" element={<RoleProtectedRoute allowedRole={["admin", "agent", "agency_admin"]} />}>
-              <Route index element={<Agencies />} />
             </Route>
 
             {/* Agent Profile page accessible to clients and agency_admins */}

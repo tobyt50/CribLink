@@ -41,8 +41,8 @@ function Header() {
         <nav className="hidden md:flex items-stretch space-x-6 text-sm font-medium h-full">
           {[
             { to: "/", label: "Listings" },
-            // NEW: Agencies Link
-            { to: "/agencies", label: "Agencies", roles: ['admin', 'agent', 'agency_admin'] },
+            // NEW: Agencies Link - now visible to all
+            { to: "/agencies", label: "Agencies" },
             { to: "/about", label: "About Us" },
             { to: "/contact", label: "Contact Us" },
           ].map(({ to, label, roles }) => {
@@ -50,9 +50,7 @@ function Header() {
             // If 'roles' are specified, and 'user' is not null AND user's role is NOT in allowedRoles, return null.
             // If 'user' is null (unauthenticated), 'user && !roles.includes(user.role)' will be false,
             // so the link will not render if 'roles' is defined.
-            if (roles && (!user || !roles.includes(user.role))) {
-              return null;
-            }
+            // Removed the roles check for the Agencies link
             return (
               <Link
                 key={to}
@@ -116,12 +114,10 @@ function Header() {
           <Link to="/" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
             Listings
           </Link>
-          {/* NEW: Agencies Link for Mobile - only show if user is authenticated and has allowed role */}
-          {user && ['admin', 'agent', 'agency_admin'].includes(user.role) && (
-            <Link to="/agencies" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
-              Agencies
-            </Link>
-          )}
+          {/* NEW: Agencies Link for Mobile - now visible to all users */}
+          <Link to="/agencies" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
+            Agencies
+          </Link>
           <Link to="/about" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
             About Us
           </Link>

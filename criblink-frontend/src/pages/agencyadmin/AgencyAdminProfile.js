@@ -142,7 +142,9 @@ const AgencyAdminProfile = () => {
           {/* Left Column: Admin Details */}
           <div className="w-full lg:w-3/5 space-y-8">
             <motion.div
-              className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+              // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+              // They are now applied only on medium (md) screens and up.
+              className={`p-6 space-y-4 ${darkMode ? "bg-gray-800" : "md:bg-white"} md:rounded-2xl md:shadow-xl`}
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -235,7 +237,9 @@ const AgencyAdminProfile = () => {
           <div className="w-full lg:w-2/5 space-y-8">
             {/* Agency Overview Panel */}
             <motion.div
-              className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+              // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+              // They are now applied only on medium (md) screens and up.
+              className={`p-6 space-y-4 ${darkMode ? "bg-gray-800" : "md:bg-white"} md:rounded-2xl md:shadow-xl`}
               initial={{ x: 50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -295,7 +299,9 @@ const AgencyAdminProfile = () => {
 
             {/* Agent Management Overview */}
             <motion.div
-              className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+              // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+              // They are now applied only on medium (md) screens and up.
+              className={`p-6 space-y-4 ${darkMode ? "bg-gray-800" : "md:bg-white"} md:rounded-2xl md:shadow-xl`}
               initial={{ x: 50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -339,14 +345,16 @@ const AgencyAdminProfile = () => {
                     ))}
                   </ul>
                 ) : (
-                  <p className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>No recent actions recorded.</p> 
+                  <p className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>No recent actions recorded.</p>
                 )}
               </div>
             </motion.div>
 
             {/* Listings Management Overview */}
             <motion.div
-              className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
+              // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+              // They are now applied only on medium (md) screens and up.
+              className={`p-6 space-y-4 ${darkMode ? "bg-gray-800" : "md:bg-white"} md:rounded-2xl md:shadow-xl`}
               initial={{ x: 50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.5 }}
@@ -375,7 +383,7 @@ const AgencyAdminProfile = () => {
                     ))}
                   </ul>
                 ) : (
-                  <p className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>No recently modified listings.</p> 
+                  <p className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>No recently modified listings.</p>
                 )}
               </div>
 

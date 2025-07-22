@@ -56,7 +56,10 @@ function AgencyCard({
   const isDisconnectDisabledForAdmin = isThisAgencyCurrentUsersAdminAgency && isLastAdminOfOwnAgency;
 
   return (
-    <Card className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] max-w-md">
+    <Card
+      className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] max-w-md cursor-pointer" // Added cursor-pointer
+      onClick={() => onClick(agency.agency_id)} // Make the entire card clickable
+    >
       {/* Agency Logo and Main Details Section */}
       <div className="flex flex-row-reverse items-start gap-4 mb-2">
         {/* Right side: Logo */}
@@ -84,21 +87,21 @@ function AgencyCard({
           <div className="space-y-1">
             {/* Email now clickable and normal color */}
             <div className="text-sm mb-1 text-gray-600 dark:text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">
-              <a href={`mailto:${agency.email}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
+              <a href={`mailto:${agency.email}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`} onClick={(e) => e.stopPropagation()}>
                 {agency.email}
               </a>
             </div>
             {/* Phone number brought back, clickable, and normal color */}
             {agency.phone && (
               <div className="text-xs text-gray-600 dark:text-gray-300">
-                <a href={`tel:${agency.phone}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`}>
+                <a href={`tel:${agency.phone}`} className={`${darkMode ? "text-gray-300" : "text-gray-600"} hover:underline`} onClick={(e) => e.stopPropagation()}>
                   {agency.phone}
                 </a>
               </div>
             )}
             {agency.website && (
               <div className="text-xs text-blue-500 hover:underline overflow-hidden text-ellipsis whitespace-nowrap">
-                <a href={agency.website} target="_blank" rel="noopener noreferrer">
+                <a href={agency.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                   {agency.website.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0]}
                 </a>
               </div>
@@ -184,14 +187,10 @@ function AgencyCard({
             )}
           </>
         ) : (
-          // Default for non-agents/non-admins or if connect/disconnect logic not applicable
-          <button
-            onClick={(e) => { e.stopPropagation(); onClick(agency.agency_id); }}
-            className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-              ${darkMode ? "text-green-400 hover:bg-gray-700" : "text-green-700 hover:bg-gray-100"} border border-transparent hover:border-green-500`}
-          >
-            View Details
-          </button>
+          // For non-agents/non-admins, the entire card is now clickable for navigation,
+          // so this "View Details" button is no longer needed.
+          // The parent <Card> component now handles the onClick.
+          null
         )}
       </div>
     </Card>

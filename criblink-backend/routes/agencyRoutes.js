@@ -164,5 +164,12 @@ router.get('/:agentId/agency-memberships', authenticateToken, authorizeRoles(['a
  */
 router.get('/:agencyId/admin-count', authenticateToken, authorizeRoles(['agency_admin', 'admin']), agencyController.getAgencyAdminCount);
 
+/**
+ * @route GET /api/agencies/:agencyId/listings
+ * @desc Get all listings associated with a specific agency
+ * @access Public (or Private if listings are sensitive)
+ */
+router.get('/:agencyId/listings', agencyController.getAgencyListings); // No authentication needed if public
+
 
 module.exports = router;

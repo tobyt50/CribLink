@@ -126,8 +126,8 @@ function Agencies() {
 
   const handleAgencyClick = (agencyId) => {
     console.log("Clicked agency:", agencyId);
-    // You might navigate to an agency detail page here
-    // navigate(`/agencies/${agencyId}`);
+    // Navigate to the agency detail page
+    navigate(`/agencies/${agencyId}`);
   };
 
   // Handler for agent to send a request to join an agency
