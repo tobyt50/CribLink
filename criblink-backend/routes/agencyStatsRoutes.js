@@ -42,6 +42,29 @@ router.get('/:agencyId/listings/count', agencyStatsController.getAgencyListingsC
 router.get('/:agencyId/listings/pending-approvals', agencyStatsController.getAgencyPendingApprovalsCount);
 
 /**
+ * @route GET /api/agency-stats/:agencyId/pending-agent-requests/count
+ * @desc Get count of pending agent join requests for a specific agency
+ * @access Private (Agency Admin or Super Admin)
+ */
+router.get('/:agencyId/pending-agent-requests/count', agencyStatsController.getAgencyPendingAgentRequestsCount);
+
+/**
+ * @route GET /api/agency-stats/:agencyId/listings/under-offer/count
+ * @desc Get count of listings with 'under offer' status for a specific agency
+ * @access Private (Agency Admin or Super Admin)
+ */
+router.get('/:agencyId/listings/under-offer/count', agencyStatsController.getAgencyUnderOfferListingsCount);
+
+/**
+ * @route GET /api/agency-stats/:agencyId/listings/sold/count
+ * @desc Get count of listings with 'sold' status for a specific agency
+ * @access Private (Agency Admin or Super Admin)
+ */
+router.get('/:agencyId/listings/sold/count', agencyStatsController.getAgencySoldListingsCount);
+
+// Removed route for featured listings
+
+/**
  * @route GET /api/agency-stats/:agencyId/recent-activity
  * @desc Get recent activity for a specific agency (inquiries, new agents, listings)
  * @access Private (Agency Admin or Super Admin)

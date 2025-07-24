@@ -4,13 +4,13 @@ import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, User, Home, MessageSquare, X, Briefcase, DollarSign, BarChart2, Users, Settings, UserCog } from 'lucide-react';
+import { Menu, User, Home, MessageSquare, X, Briefcase, DollarSign, BarChart2, Users, Settings, UserCog, ListChecks, UserPlus, CheckCircle, Clock } from 'lucide-react'; // Removed Tag
 import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card';
 import StatCard from '../../components/StatCard';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext'; // Corrected import path
 
 const AgencyDashboard = () => {
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -25,7 +25,11 @@ const AgencyDashboard = () => {
   const [adminsCount, setAdminsCount] = useState(null);
   const [clientsCount, setClientsCount] = useState(null);
   const [listingsCount, setListingsCount] = useState(null);
-  const [pendingApprovals, setPendingApprovals] = useState(null);
+  const [pendingListingsCount, setPendingListingsCount] = useState(null);
+  const [pendingAgentRequestsCount, setPendingAgentRequestsCount] = useState(null);
+  const [underOfferListingsCount, setUnderOfferListingsCount] = useState(null);
+  const [soldListingsCount, setSoldListingsCount] = useState(null);
+  // Removed featuredListingsCount
   const [clientInquiriesCount, setClientInquiriesCount] = useState(null);
   const [agentResponsesCount, setAgentResponsesCount] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -48,6 +52,12 @@ const AgencyDashboard = () => {
   // Navigation functions
   const goToListings = () => navigate('/agency/listings');
   const goToPendingListings = () => navigate('/agency/listings', { state: { statusFilter: 'pending' } });
+  const goToPendingAgentRequests = () => navigate('/agency/members', { state: { showPendingRequests: true } });
+  // Navigation for specific listing statuses
+  const goToUnderOfferListings = () => navigate('/agency/listings', { state: { statusFilter: 'under offer' } });
+  const goToSoldListings = () => navigate('/agency/listings', { state: { statusFilter: 'sold' } });
+  // Removed goToFeaturedListings
+
 
   // Updated navigation for members with role filters
   const goToMembersAdmins = () => navigate('/agency/members', { state: { roleFilter: 'agency_admin' } });
@@ -66,7 +76,11 @@ const AgencyDashboard = () => {
         setAdminsCount(null);
         setClientsCount(null);
         setListingsCount(null);
-        setPendingApprovals(null);
+        setPendingListingsCount(null);
+        setPendingAgentRequestsCount(null);
+        setUnderOfferListingsCount(null);
+        setSoldListingsCount(null);
+        // Removed setFeaturedListingsCount
         setClientInquiriesCount(null);
         setAgentResponsesCount(null);
         setRecentActivities([]);
@@ -81,7 +95,11 @@ const AgencyDashboard = () => {
           adminsRes,
           clientsRes,
           listingsRes,
-          pendingRes,
+          pendingListingsRes,
+          pendingAgentRequestsRes,
+          underOfferRes,
+          soldRes,
+          // Removed featuredRes
           inquiriesRes,
           responsesRes,
           activityRes,
@@ -92,6 +110,10 @@ const AgencyDashboard = () => {
           axiosInstance.get(`/agency-stats/${agencyId}/clients/count`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/listings/count`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/listings/pending-approvals`, { headers }),
+          axiosInstance.get(`/agency-stats/${agencyId}/pending-agent-requests/count`, { headers }),
+          axiosInstance.get(`/agency-stats/${agencyId}/listings/under-offer/count`, { headers }),
+          axiosInstance.get(`/agency-stats/${agencyId}/listings/sold/count`, { headers }),
+          // Removed API call for featured
           axiosInstance.get(`/inquiries/agent/count/all-inquiries`, { headers }),
           axiosInstance.get(`/inquiries/agent/count/agent-responses`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/recent-activity`, { headers }),
@@ -102,7 +124,11 @@ const AgencyDashboard = () => {
         setAdminsCount(adminsRes.data.count);
         setClientsCount(clientsRes.data.count);
         setListingsCount(listingsRes.data.count);
-        setPendingApprovals(pendingRes.data.count);
+        setPendingListingsCount(pendingListingsRes.data.count);
+        setPendingAgentRequestsCount(pendingAgentRequestsRes.data.count);
+        setUnderOfferListingsCount(underOfferRes.data.count);
+        setSoldListingsCount(soldRes.data.count);
+        // Removed setFeaturedListingsCount
         setClientInquiriesCount(inquiriesRes.data.count);
         setAgentResponsesCount(responsesRes.data.count);
         setAgencyName(agencyDetailsRes.data.name);
@@ -165,8 +191,7 @@ const AgencyDashboard = () => {
 
 
   const stats = [
-    { label: 'Listings', value: listingsCount ?? '...', onClick: goToListings, icon: <Home size={24} /> },
-    { label: 'Pending Approvals', value: pendingApprovals ?? '...', onClick: goToPendingListings, icon: <MessageSquare size={24} /> },
+    // Removed old Listings stat card as it's now a combined card
   ];
 
   const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 5);
@@ -240,7 +265,8 @@ const AgencyDashboard = () => {
                 <Users size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
               </div>
               {/* Changed to 3 columns, centered text, and re-ordered */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+              {/* Refactored: Removed sm:grid-cols-3 to ensure 3 columns on all screen sizes */}
+              <div className="grid grid-cols-3 gap-4 w-full">
                 {/* Admins */}
                 <StatCard label="Admins" value={adminsCount} onClick={goToMembersAdmins} textCentered={true} />
                 {/* Agents */}
@@ -250,22 +276,48 @@ const AgencyDashboard = () => {
               </div>
             </Card>
 
-            {stats.map((stat, idx) => (
-              <Card key={idx} onClick={stat.onClick}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>
-                  {stat.icon && <span className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>{stat.icon}</span>}
-                </div>
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{stat.value}</p>
-              </Card>
-            ))}
+            {/* NEW: Pending Approvals Card with sub-cards */}
+            <Card>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Pending Approvals</h3>
+                <ListChecks size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              {/* Refactored: Removed sm:grid-cols-2 to ensure 2 columns on all screen sizes */}
+              <div className="grid grid-cols-2 gap-4 w-full">
+                {/* Listings Sub-card */}
+                <StatCard label="Listings" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<Home size={20} />} />
+                {/* Agent Requests Sub-card */}
+                <StatCard label="Agent Requests" value={pendingAgentRequestsCount} onClick={goToPendingAgentRequests} textCentered={true} icon={<UserPlus size={20} />} />
+              </div>
+            </Card>
+
+            {/* NEW: Listings Overview Card with sub-cards */}
+            <Card>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Listings Overview</h3>
+                <Home size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              {/* Refactored: Removed sm:grid-cols-3 to ensure 3 columns on all screen sizes */}
+              <div className="grid grid-cols-3 gap-4 w-full">
+                {/* Total Listings */}
+                <StatCard label="Total" value={listingsCount} onClick={goToListings} textCentered={true} icon={<Home size={20} />} />
+                {/* Under Offer Listings */}
+                <StatCard label="Under Offer" value={underOfferListingsCount} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} />
+                {/* Sold Listings */}
+                <StatCard label="Sold" value={soldListingsCount} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
+                {/* Removed Featured Listings */}
+              </div>
+            </Card>
+
+
             {/* Inquiry and Response Stats - Combined Card */}
             <div className={`p-4 rounded-xl shadow text-center ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
               <div className="flex items-center justify-between mb-2">
                 <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Metrics</h3>
                 <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+              {/* Refactored: Removed sm:grid-cols-2 to ensure 2 columns on all screen sizes */}
+              <div className="grid grid-cols-2 gap-4 w-full">
                 <StatCard label="Inquiries" value={clientInquiriesCount} textCentered={true} />
                 <StatCard label="Responses" value={agentResponsesCount} textCentered={true} />
               </div>
@@ -331,7 +383,7 @@ const AgencyDashboard = () => {
               <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
-                  onClick={() => navigate('/agent/add-listing')}
+                  onClick={() => navigate('/agency/add-listing')}
                   className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
                     ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
                 >

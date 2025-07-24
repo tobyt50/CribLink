@@ -196,9 +196,9 @@ const sendMessageInquiry = async (req, res) => {
     !conversation_id ||
     !message_content || // message_content is always required for non-shell messages
     !recipient_id ||
-    !['client_reply', 'agent_reply'].includes(message_type)
+    !['client_reply', 'agent_reply', 'agency_admin_reply'].includes(message_type) // NEW: Added agency_admin_reply
   ) {
-    return res.status(400).json({ error: 'Missing required message fields.' });
+    return res.status(400).json({ error: 'Missing required message fields or invalid message type.' });
   }
 
   try {
@@ -223,19 +223,19 @@ const sendMessageInquiry = async (req, res) => {
     } else {
       // Step 3: This is a new conversation — pull values from token/req
       if (req.user.role === 'agent' || req.user.role === 'agency_admin') { // NEW: Allow agency_admin
-        agent_id = req.user.user_id;
-        client_id = recipient_id;
+        agent_id = req.user.user_id; // The sender is the agent/agency_admin
+        client_id = recipient_id; // The recipient is the client
       } else if (req.user.role === 'client') {
         client_id = req.user.user_id;
-        agent_id = recipient_id;
+        agent_id = recipient_id; // The recipient is the agent
       } else {
         return res.status(400).json({ error: 'Invalid sender role.' });
       }
     }
 
-    // Step 4: Determine read flags
-    const read_by_client = message_type === 'client_reply';
-    const read_by_agent = message_type === 'agent_reply';
+    // Step 4: Determine read flags based on who is sending the message
+    const read_by_client = ['client_reply'].includes(message_type); // Client sends, so client has read it
+    const read_by_agent = ['agent_reply', 'agency_admin_reply'].includes(message_type); // Agent/Admin sends, so agent/admin has read it
 
     // Step 5: Insert the message into the DB
     const result = await query(
@@ -260,11 +260,12 @@ const sendMessageInquiry = async (req, res) => {
     const newMessage = result.rows[0];
 
     // Step 6: Update flags/status on conversation
-    if (message_type === 'agent_reply') {
+    if (['agent_reply', 'agency_admin_reply'].includes(message_type)) { // If an agent or agency admin replies
       await query(
         `UPDATE inquiries SET is_agent_responded = TRUE, status = 'open' WHERE conversation_id = $1`,
         [conversation_id]
       );
+      // Mark all messages from client as read by agent
       await query(
         `UPDATE inquiries SET read_by_agent = TRUE WHERE conversation_id = $1 AND sender_id = $2`,
         [conversation_id, client_id]
@@ -274,6 +275,7 @@ const sendMessageInquiry = async (req, res) => {
         `UPDATE inquiries SET is_agent_responded = FALSE, status = 'new' WHERE conversation_id = $1`,
         [conversation_id]
       );
+      // Mark all messages from agent as read by client
       await query(
         `UPDATE inquiries SET read_by_client = TRUE WHERE conversation_id = $1 AND sender_id = $2`,
         [conversation_id, agent_id]
@@ -298,7 +300,7 @@ const sendMessageInquiry = async (req, res) => {
         inquiryId: newMessage.inquiry_id,
         // The 'read' flag here should indicate if the RECIPIENT has read it based on message type
         read: message_type === 'client_reply' ? newMessage.read_by_agent : newMessage.read_by_client,
-        is_agent_responded: message_type === 'agent_reply'
+        is_agent_responded: ['agent_reply', 'agency_admin_reply'].includes(message_type)
       });
 
       io.emit('inquiry_list_changed', {
@@ -370,7 +372,10 @@ const getAllInquiriesForAgent = async (req, res) => {
       orderBy = 'p.title';
     } else if (sort && validSortKeys.includes(`i.${sort}`)) {
       orderBy = `i.${sort}`;
+    } else if (sort === 'assigned_agent') { // NEW: Sort by assigned agent name
+      orderBy = 'u_agent.full_name';
     }
+
 
     if (direction && ['asc', 'desc'].includes(direction.toLowerCase())) {
       orderDirection = direction.toUpperCase();
@@ -392,15 +397,17 @@ const getAllInquiriesForAgent = async (req, res) => {
     } else if (req.user.role === 'agency_admin') { // Agency Admin can see inquiries for their agents
         // Get all agent_ids belonging to this agency
         const agencyAgents = await query(
-            `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+            `SELECT user_id FROM users WHERE agency_id = $1 AND role IN ('agent', 'agency_admin')`, // Include agency_admin themselves
             [req.user.agency_id]
         );
-        const agentIds = agencyAgents.rows.map(row => row.agent_id);
+        const agentIds = agencyAgents.rows.map(row => row.user_id);
 
         if (agentIds.length === 0) {
             return res.json({ inquiries: [], total: 0, page: pageNum, totalPages: 0 });
         }
 
+        // The query needs to select conversations where the agent_id (assigned agent)
+        // or sender_id or recipient_id is one of the agents in the agency.
         whereClause += `
             WHERE
                 (i.agent_id = ANY($${paramIndex}::int[]) OR i.recipient_id = ANY($${paramIndex}::int[]) OR i.sender_id = ANY($${paramIndex}::int[]))
@@ -441,6 +448,7 @@ const getAllInquiriesForAgent = async (req, res) => {
           COALESCE(u_client.full_name, i.name) AS client_name,
           COALESCE(u_client.email, i.email) AS client_email,
           COALESCE(u_client.phone, i.phone) AS client_phone,
+          u_client.profile_picture_url AS client_profile_picture_url, -- ADDED: Client profile picture URL
           u_agent.full_name AS agent_name, u_agent.email AS agent_email,
           p.title AS property_title
        FROM inquiries i
@@ -458,6 +466,8 @@ const getAllInquiriesForAgent = async (req, res) => {
         conversationsMap.set(inq.conversation_id, {
           id: inq.conversation_id, client_id: inq.client_id, agent_id: inq.agent_id, property_id: inq.property_id,
           clientName: inq.client_name, clientEmail: inq.client_email, clientPhone: inq.client_phone,
+          clientProfilePictureUrl: inq.client_profile_picture_url, // ADDED: Client profile picture URL to map
+          agent_name: inq.agent_name, // NEW: Include assigned agent's name
           propertyTitle: inq.property_title || (inq.property_id ? `Property ${inq.property_id}` : 'General Inquiry'),
           messages: [], lastMessage: null, lastMessageTimestamp: null, lastMessageSenderId: null,
           unreadCount: 0, is_agent_responded: inq.is_agent_responded, is_opened: inq.is_opened,
@@ -486,10 +496,20 @@ const getAllInquiriesForAgent = async (req, res) => {
         conv.lastMessageTimestamp = lastMsg.timestamp;
         conv.lastMessageSenderId = lastMsg.sender_id;
       }
-      // Correct unread count for the AGENT (messages from client that agent hasn't read)
-      conv.unreadCount = conv.messages.filter(msg =>
-        msg.sender_id === conv.client_id && !msg.read
-      ).length;
+      // Correct unread count for the current user's role
+      let unreadCount = 0;
+      if (req.user.role === 'client') {
+        // For client, count messages from agent that client hasn't read
+        unreadCount = conv.messages.filter(msg =>
+          msg.sender_id === conv.agent_id && !msg.read
+        ).length;
+      } else if (req.user.role === 'agent' || req.user.role === 'admin' || req.user.role === 'agency_admin') {
+        // For agent/admin/agency_admin, count messages from client that agent/admin hasn't read
+        unreadCount = conv.messages.filter(msg =>
+          msg.sender_id === conv.client_id && !msg.read
+        ).length;
+      }
+      conv.unreadCount = unreadCount;
 
       const latestStatusInquiry = allInquiries.rows
         .filter(inq => inq.conversation_id === conv.id)
@@ -502,6 +522,13 @@ const getAllInquiriesForAgent = async (req, res) => {
     });
 
     groupedConversations.sort((a, b) => {
+      // Handle sorting by agent name
+      if (sort === 'assigned_agent') {
+        const nameA = a.agent_name || '';
+        const nameB = b.agent_name || '';
+        return orderDirection === 'ASC' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      }
+      // Existing sorting logic for other keys
       const dateA = new Date(a.lastMessageTimestamp);
       const dateB = new Date(b.lastMessageTimestamp);
       return orderDirection === 'ASC' ? dateA - dateB : dateB - dateA;
@@ -682,6 +709,88 @@ const assignInquiry = async (req, res) => {
   }
 };
 
+// PUT /inquiries/agency-admin/reassign/:conversationId - NEW ENDPOINT
+const reassignInquiry = async (req, res) => {
+  const { conversationId } = req.params;
+  const { new_agent_id } = req.body;
+  const io = req.app.get('io');
+  const agencyAdminUserId = req.user.user_id;
+  const agencyId = req.user.agency_id;
+
+  if (!new_agent_id) {
+    return res.status(400).json({ error: 'New agent ID is required for reassignment.' });
+  }
+
+  try {
+    // 1. Verify the agency admin is authorized for this agency
+    const userAgencyCheck = await query('SELECT agency_id FROM users WHERE user_id = $1', [agencyAdminUserId]);
+    if (!userAgencyCheck.rows.length || userAgencyCheck.rows[0].agency_id !== agencyId) {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized for this agency.' });
+    }
+
+    // 2. Verify the conversation belongs to an agent within this agency
+    const conversationCheck = await query(
+      `SELECT i.agent_id, i.client_id, i.property_id, u_agent.agency_id
+       FROM inquiries i
+       JOIN users u_agent ON i.agent_id = u_agent.user_id
+       WHERE i.conversation_id = $1 LIMIT 1`,
+      [conversationId]
+    );
+
+    if (conversationCheck.rows.length === 0 || conversationCheck.rows[0].agency_id !== agencyId) {
+      return res.status(404).json({ message: 'Conversation not found or not part of your agency.' });
+    }
+
+    // 3. Verify the new_agent_id belongs to the same agency
+    const newAgentCheck = await query(
+      `SELECT user_id FROM users WHERE user_id = $1 AND agency_id = $2 AND role = 'agent'`,
+      [new_agent_id, agencyId]
+    );
+    if (newAgentCheck.rows.length === 0) {
+      return res.status(400).json({ message: 'New agent not found in your agency or is not an agent.' });
+    }
+
+    // 4. Update all messages in the conversation with the new agent_id
+    const result = await query(
+      `UPDATE inquiries
+       SET agent_id = $1, updated_at = NOW()
+       WHERE conversation_id = $2
+       RETURNING *`,
+      [new_agent_id, conversationId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found or no messages updated.' });
+    }
+
+    await logActivity(
+      `Agency Admin (ID: ${agencyAdminUserId}) reassigned conversation ${conversationId} to agent ID ${new_agent_id}.`,
+      req.user,
+      'inquiry_reassignment'
+    );
+
+    // Emit Socket.IO event for reassignment
+    if (io) {
+      io.emit('inquiry_reassigned', {
+        conversationId: conversationId,
+        newAgentId: new_agent_id,
+        oldAgentId: conversationCheck.rows[0].agent_id,
+        timestamp: new Date().toISOString(),
+      });
+      io.emit('inquiry_list_changed', {
+        reason: 'inquiry_reassigned',
+        conversationId: conversationId
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error reassigning inquiry:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
 // PUT /agent/inquiries/mark-opened/:conversationId
 const markConversationOpened = async (req, res) => {
   const { conversationId } = req.params;
@@ -844,10 +953,10 @@ const countAllInquiries = async (req, res) => {
   } else if (role === 'agency_admin') {
     // Agency admin sees inquiries for all agents in their agency
     const agencyAgents = await query(
-      `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+      `SELECT user_id FROM users WHERE agency_id = $1 AND role IN ('agent', 'agency_admin')`, // Include agency_admin themselves
       [req.user.agency_id]
     );
-    const agentIds = agencyAgents.rows.map(row => row.agent_id);
+    const agentIds = agencyAgents.rows.map(row => row.user_id);
 
     if (agentIds.length === 0) {
       return res.json({ count: 0 });
@@ -902,10 +1011,10 @@ const countAgentResponses = async (req, res) => {
   } else if (role === 'agency_admin') {
     // Agency admin sees responses from agents in their agency
     const agencyAgents = await query(
-      `SELECT agent_id FROM agency_members WHERE agency_id = $1`,
+      `SELECT user_id FROM users WHERE agency_id = $1 AND role IN ('agent', 'agency_admin')`, // Include agency_admin themselves
       [req.user.agency_id]
     );
-    const agentIds = agencyAgents.rows.map(row => row.agent_id);
+    const agentIds = agencyAgents.rows.map(row => row.user_id);
 
     if (agentIds.length === 0) {
       return res.json({ count: 0 });
@@ -973,6 +1082,7 @@ const getAgentClientConversation = async (req, res) => {
         COALESCE(uc.full_name, i.name) AS clientName,
         COALESCE(uc.email, i.email) AS clientEmail,
         COALESCE(uc.phone, i.phone) AS clientPhone,
+        uc.profile_picture_url AS clientProfilePictureUrl, -- ADDED: Client profile picture URL
         ua.full_name AS agentName,
         ua.email AS agentEmail,
         pl.property_id,
@@ -1039,6 +1149,7 @@ module.exports = {
   getAllInquiriesForClient,
   markMessagesAsRead,
   assignInquiry,
+  reassignInquiry, // NEW: Export the reassign function
   markConversationOpened,
   markConversationResponded,
   deleteConversation,

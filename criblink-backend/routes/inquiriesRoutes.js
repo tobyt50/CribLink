@@ -67,5 +67,12 @@ router.get('/agent/count/all-inquiries', authenticateToken, authorizeRoles('agen
 // GET /inquiries/agent/count/agent-responses — Get total agent responses (for agent/admin/agency_admin)
 router.get('/agent/count/agent-responses', authenticateToken, authorizeRoles('agent', 'admin', 'agency_admin'), inquiriesController.countAgentResponses); // NEW: Added agency_admin
 
+/* -------------------------------------------
+   AGENCY ADMIN ROUTES (mounted as /inquiries/agency-admin) - NEW
+------------------------------------------- */
+
+// PUT /inquiries/agency-admin/reassign/:conversationId - Reassign an inquiry to another agent
+router.put('/agency-admin/reassign/:conversationId', authenticateToken, authorizeRoles('agency_admin', 'admin'), inquiriesController.reassignInquiry); // NEW: Reassign Inquiry
+
 
 module.exports = router;

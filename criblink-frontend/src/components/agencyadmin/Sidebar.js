@@ -9,16 +9,18 @@ import {
   Settings, // For Settings
   X,
   Shield,
-  Landmark // For Agency Info
+  Landmark, // For Agency Info
+  MessageSquare // For Inquiries
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell.js';
 
 // Define the menu items specifically for Agency Admin
 const MENU_ITEMS = [
   { name: 'Dashboard', to: '/agency/dashboard', icon: <Home />, key: 'dashboard' },
-  { name: 'Listings', to: '/agency/listings', icon: <LayoutGrid />, key: 'listings' },
+  { name: 'Listings', to: '/agency/listings', icon: <LayoutGrid />, key: 'listings' }, // Updated path
   { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
   { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
+  { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' }, // NEW: Added Inquiries
   // Note: Properties route is not explicitly in App.js agencyAdminRoutes, but added here for completeness if it exists
   // { name: 'Properties', to: '/agency/properties', icon: <Home />, key: 'properties' },
   { name: 'Settings', to: '/agency/settings', icon: <Settings />, key: 'settings' },

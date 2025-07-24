@@ -83,11 +83,12 @@ import AddLegalDocument from "./pages/AddLegalDocument";
 
 // NEW: Agency Admin Pages
 import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard'; // NEW: Import AgencyAdminDashboard
-// import AgencyAdminListings from './pages/agencyadmin/Listings';
+import AgencyAdminListings from './pages/agencyadmin/Listings'; // NEW: Import AgencyAdminListings
 import Members from './pages/agencyadmin/Members'; // Renamed from Agents
 // import AgencyAdminProperties from './pages/agencyadmin/Properties';
 import AgencyAdminSettings from './pages/agencyadmin/Settings';
 import AgencyAdminProfile from './pages/agencyadmin/AgencyAdminProfile'; // Import the new AgencyAdminProfile component
+import AgencyInquiries from './pages/agencyadmin/AgencyInquiries'; // NEW: Import AgencyInquiries
 
 
 // Define routes for each role
@@ -130,11 +131,14 @@ const clientRoutes = [
 // NEW: Agency Admin Routes
 const agencyAdminRoutes = [
   { path: "dashboard", element: <AgencyAdminDashboard /> }, // NEW: Added AgencyAdminDashboard route
-  // { path: "listings", element: <AgencyAdminListings /> },
+  { path: "listings", element: <AgencyAdminListings /> }, // NEW: Added AgencyAdminListings route
   { path: "members", element: <Members /> }, // Updated to Members
   { path: "clients", element: <Clients /> }, // NEW: Added Clients route for agency admin
+  { path: "inquiries", element: <AgencyInquiries /> }, // NEW: Added AgencyInquiries route
   // { path: "properties", element: <AgencyAdminProperties /> },
   { path: "settings", element: <AgencyAdminSettings /> },
+  { path: "add-listing", element: <AddListing /> }, // Added AddListing for agency admin
+  { path: "edit-listing/:id", element: <EditListing /> }, // Added EditListing for agency admin
 ];
 
 
@@ -210,10 +214,7 @@ function AppContent() {
               <Route path="privacy" element={<Privacy />} />
             </Route>
             <Route path="favourites" element={<Favourites />} />
-            <Route path="edit-listing/:id" element={<RoleProtectedRoute allowedRole={["admin", "agent"]} />}>
-              <Route index element={<EditListing />} />
-            </Route>
-
+            {/* Removed direct edit-listing route here as it's now handled within role-specific routes */}
             {/* Agent Profile page accessible to clients and agency_admins */}
             <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin"]} />}>
               <Route index element={<AgentProfile />} />

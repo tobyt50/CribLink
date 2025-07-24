@@ -20,11 +20,13 @@ exports.getAllListings = async (req, res) => {
       bathrooms,
       land_size,
       zoning_type,
-      title_type
+      title_type,
+      agency_id: queryAgencyId // New: parameter for agency_id
     } = req.query;
 
     const userRole = req.user ? req.user.role : 'guest';
     const userId = req.user ? req.user.user_id : null;
+    const userAgencyId = req.user ? req.user.agency_id : null; // Get agency_id from authenticated user
 
     let baseQuery = 'FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id';
     let conditions = [];
@@ -51,14 +53,26 @@ exports.getAllListings = async (req, res) => {
       // Admin has full access if no status is specified (no filtering needed based on status for admin)
     }
 
-    // 3. Filter by agent_id if provided in the query (applies to all roles)
+    // 3. Filter by agency_id if the user is an agency_admin
+    // This ensures agency admins only see listings for their agency
+    if (userRole === 'agency_admin' && userAgencyId) {
+        conditions.push(`pl.agency_id = $${valueIndex++}`);
+        values.push(userAgencyId);
+    } else if (queryAgencyId) {
+        // Allow filtering by agency_id if provided in the query, for public agency profiles etc.
+        conditions.push(`pl.agency_id = $${valueIndex++}`);
+        values.push(queryAgencyId);
+    }
+
+
+    // 4. Filter by agent_id if provided in the query (applies to all roles)
     // This allows fetching listings for a specific agent's profile page.
     if (agent_id) {
       conditions.push(`pl.agent_id = $${valueIndex++}`);
       values.push(agent_id);
     }
 
-    // 4. Additional filters (existing logic)
+    // 5. Additional filters (existing logic)
     if (purchase_category && purchase_category.toLowerCase() !== 'all') {
       conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
       values.push(purchase_category);
@@ -122,13 +136,13 @@ exports.getAllListings = async (req, res) => {
       valueIndex += 5;
     }
 
-    // 5. Where clause
+    // 6. Where clause
     let whereClause = '';
     if (conditions.length > 0) {
       whereClause = ' WHERE ' + conditions.join(' AND ');
     }
 
-    // 6. Pagination and Sorting
+    // 7. Pagination and Sorting
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
@@ -142,7 +156,7 @@ exports.getAllListings = async (req, res) => {
       orderByClause = 'ORDER BY pl.price ASC';
     }
 
-    // 7. Query building
+    // 8. Query building
     const query = `SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
     values.push(limitNum, offset);
 
@@ -216,7 +230,7 @@ exports.createListing = async (req, res) => {
         land_size, // New field for land
         zoning_type, // New field for land
         title_type, // New field for land
-        mainImageBase64,
+        mainImageBase664, // Corrected from mainImageBase64
         mainImageOriginalName,
         mainImageURL,
         galleryImagesBase64,
@@ -239,9 +253,9 @@ exports.createListing = async (req, res) => {
         await pool.query('BEGIN');
 
         // Determine main image URL and public ID
-        if (mainImageBase64 && mainImageOriginalName) {
+        if (mainImageBase664 && mainImageOriginalName) {
             // Pass mainImageBase64 string directly to uploadToCloudinary
-            const uploadResult = await uploadToCloudinary(mainImageBase64, mainImageOriginalName, 'listings');
+            const uploadResult = await uploadToCloudinary(mainImageBase664, mainImageOriginalName, 'listings'); // Corrected variable name
             mainImageUrlToSave = uploadResult.url;
             mainImagePublicIdToSave = uploadResult.publicId;
         } else if (mainImageURL) {
@@ -302,7 +316,7 @@ exports.createListing = async (req, res) => {
         }
 
         // Upload new gallery images to Cloudinary
-        if (galleryImagesBase664 && Array.isArray(galleryImagesBase64)) {
+        if (galleryImagesBase64 && Array.isArray(galleryImagesBase64)) {
             for (let i = 0; i < galleryImagesBase64.length; i++) {
                 const base64 = galleryImagesBase64[i];
                 const originalname = galleryImagesOriginalNames[i];

@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ClientSidebar from '../../components/client/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
+import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react'; // Added icons for mobile view
 import { useTheme } from '../../layouts/AppShell';
 import ClientInquiryModal from '../../components/ClientInquiryModal';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { Menu, X } from 'lucide-react';
 import socket from '../../socket';
 import API_BASE_URL from '../../config';
 
@@ -27,9 +27,14 @@ const ClientInquiries = () => {
   const { showConfirm } = useConfirmDialog();
   const [isClientInquiryModalOpen, setIsClientInquiryModalOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
-  // New state to track which conversation is currently opened in the modal
   const [openedConversationId, setOpenedConversationId] = useState(null);
   const navigate = useNavigate();
+
+  // State for expanded profile picture
+  const [isProfilePicExpanded, setIsProfilePicExpanded] = useState(false);
+  const [expandedProfilePicUrl, setExpandedProfilePicUrl] = useState('');
+  const [expandedProfilePicName, setExpandedProfilePicName] = useState('');
+  const profilePicRef = useRef(null);
 
   const getClientUserId = useCallback(() => {
     const token = localStorage.getItem('token');
@@ -74,6 +79,25 @@ const ClientInquiries = () => {
   useEffect(() => {
     fetchInquiries();
   }, [fetchInquiries]);
+
+  // Effect to handle clicks outside the expanded profile picture
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profilePicRef.current && !profilePicRef.current.contains(event.target)) {
+        setIsProfilePicExpanded(false);
+      }
+    };
+
+    if (isProfilePicExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfilePicExpanded]);
 
   // Real-time functionality with sockets
   useEffect(() => {
@@ -269,6 +293,17 @@ const ClientInquiries = () => {
   const totalPages = Math.ceil(totalConversations / limit);
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
+  const getInitial = (name) => {
+    const safeName = String(name || '');
+    return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
+  };
+
+  const handleProfilePicClick = (url, name) => {
+    setExpandedProfilePicUrl(url);
+    setExpandedProfilePicName(name);
+    setIsProfilePicExpanded(true);
+  };
+
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && (
@@ -290,6 +325,32 @@ const ClientInquiries = () => {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <input type="text" placeholder="Search..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 focus:outline-none focus:border-transparent focus:ring-1 ${darkMode ? "bg-gray-700 border-gray-600 text-white focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 focus:ring-600"}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            {/* Mobile: Refresh and Sort buttons side-by-side */}
+            {isMobile && (
+              <div className="flex gap-4 w-full">
+                <button
+                    onClick={fetchInquiries}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 w-1/2 ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+                >
+                    <RefreshCw size={16} /> Refresh
+                </button>
+                <button
+                    onClick={() => handleSortClick('last_message_timestamp')}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 w-1/2 ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+                >
+                    Sort by Date {renderSortIcon('last_message_timestamp')}
+                </button>
+              </div>
+            )}
+            {/* Desktop: Refresh button (already there) */}
+            {!isMobile && (
+              <button
+                  onClick={fetchInquiries}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+              >
+                  <RefreshCw size={16} /> Refresh
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -325,7 +386,18 @@ const ClientInquiries = () => {
 
                   return (
                     <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold ? 'font-bold' : 'font-normal'}`} onClick={() => handleViewConversation(conv)}>
-                      <td className="py-2 px-2 truncate" title={conv.agentName}><span className="flex items-center">{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span></td>
+                      <td className="py-2 px-2 truncate" title={conv.agentName}>
+                        <div className="flex items-center">
+                          <img
+                            src={conv.agentProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`}
+                            alt="Agent Profile"
+                            className="w-8 h-8 rounded-full mr-3 object-cover cursor-pointer"
+                            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
+                            onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
+                          />
+                          <span className="flex items-center">{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                        </div>
+                      </td>
                       <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General Inquiry'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
                       <td className={`py-2 px-2 truncate ${isBold ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || 'No messages yet.'}</td>
                       <td className="py-2 px-2 truncate" title={new Date(conv.lastMessageTimestamp).toLocaleString()}>{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
@@ -359,6 +431,29 @@ const ClientInquiries = () => {
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
           />
+        )}
+
+        {/* Expanded Profile Picture Modal */}
+        {isProfilePicExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+            onClick={() => setIsProfilePicExpanded(false)} // Close on click outside
+          >
+            <motion.img
+              ref={profilePicRef}
+              src={expandedProfilePicUrl || `https://placehold.co/400x400/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(expandedProfilePicName)}`}
+              alt={`${expandedProfilePicName} Profile Expanded`}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl cursor-pointer"
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image itself
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -65,7 +65,7 @@ exports.getAgencyAdminCount = async (req, res) => {
 
 
 /**
- * @desc Get count of clients who have inquired with agents from a specific agency
+ * @desc Get count of clients who have an accepted relationship with agents from a specific agency
  * @route GET /api/agency-stats/:agencyId/clients/count
  * @access Private (Agency Admin or Super Admin)
  */
@@ -84,22 +84,22 @@ exports.getAgencyClientCount = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        // Get all agent_ids belonging to this agency
+        // Get all agent_ids belonging to this agency with an 'accepted' membership status
         const agencyAgentsResult = await pool.query(
-            `SELECT agent_id FROM agency_members WHERE agency_id = $1 AND request_status = 'accepted'`,
+            `SELECT user_id FROM users WHERE agency_id = $1 AND role = 'agent'`,
             [agencyId]
         );
-        const agentIds = agencyAgentsResult.rows.map(row => row.agent_id);
+        const agentIds = agencyAgentsResult.rows.map(row => row.user_id);
 
         if (agentIds.length === 0) {
             return res.status(200).json({ count: 0 });
         }
 
-        // Count distinct clients who have inquired with any of these agents
+        // Count distinct clients who have an accepted relationship with any of these agents
         const result = await pool.query(
             `SELECT COUNT(DISTINCT client_id)
-             FROM inquiries
-             WHERE agent_id = ANY($1::int[]) AND client_id IS NOT NULL`, // Ensure client_id is not null (for logged-in clients)
+             FROM agent_clients
+             WHERE agent_id = ANY($1::int[]) AND request_status = 'accepted'`,
             [agentIds]
         );
         res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
@@ -176,6 +176,104 @@ exports.getAgencyPendingApprovalsCount = async (req, res) => {
 };
 
 /**
+ * @desc Get count of pending agent join requests for a specific agency
+ * @route GET /api/agency-stats/:agencyId/pending-agent-requests/count
+ * @access Private (Agency Admin or Super Admin)
+ */
+exports.getAgencyPendingAgentRequestsCount = async (req, res) => {
+    const { agencyId } = req.params;
+    const currentUserId = req.user.user_id;
+    const currentUserRole = req.user.role;
+
+    try {
+        // Authorization: Must be an agency admin of this agency or a super admin
+        if (currentUserRole === 'agency_admin') {
+            if (req.user.agency_id !== parseInt(agencyId)) {
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
+            }
+        } else if (currentUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+        // Corrected table name: agency_members
+        const result = await pool.query(
+            `SELECT COUNT(agency_member_id) FROM agency_members WHERE agency_id = $1 AND request_status = 'pending'`,
+            [agencyId]
+        );
+        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+    } catch (err) {
+        console.error('Error fetching agency pending agent requests count:', err);
+        res.status(500).json({ message: 'Failed to fetch agency pending agent requests count.', error: err.message });
+    }
+};
+
+/**
+ * @desc Get count of listings with 'under offer' status for a specific agency
+ * @route GET /api/agency-stats/:agencyId/listings/under-offer/count
+ * @access Private (Agency Admin or Super Admin)
+ */
+exports.getAgencyUnderOfferListingsCount = async (req, res) => {
+    const { agencyId } = req.params;
+    const currentUserId = req.user.user_id;
+    const currentUserRole = req.user.role;
+
+    try {
+        if (currentUserRole === 'agency_admin') {
+            if (req.user.agency_id !== parseInt(agencyId)) {
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
+            }
+        } else if (currentUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+        const result = await pool.query(
+            `SELECT COUNT(pl.property_id)
+             FROM property_listings pl
+             WHERE pl.agency_id = $1 AND TRIM(LOWER(pl.status)) = 'under offer'`,
+            [agencyId]
+        );
+        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+    } catch (err) {
+        console.error('Error fetching agency under offer listings count:', err);
+        res.status(500).json({ message: 'Failed to fetch agency under offer listings count.', error: err.message });
+    }
+};
+
+/**
+ * @desc Get count of listings with 'sold' status for a specific agency
+ * @route GET /api/agency-stats/:agencyId/listings/sold/count
+ * @access Private (Agency Admin or Super Admin)
+ */
+exports.getAgencySoldListingsCount = async (req, res) => {
+    const { agencyId } = req.params;
+    const currentUserId = req.user.user_id;
+    const currentUserRole = req.user.role;
+
+    try {
+        if (currentUserRole === 'agency_admin') {
+            if (req.user.agency_id !== parseInt(agencyId)) {
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
+            }
+        } else if (currentUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+        const result = await pool.query(
+            `SELECT COUNT(pl.property_id)
+             FROM property_listings pl
+             WHERE pl.agency_id = $1 AND TRIM(LOWER(pl.status)) = 'sold'`,
+            [agencyId]
+        );
+        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+    } catch (err) {
+        console.error('Error fetching agency sold listings count:', err);
+        res.status(500).json({ message: 'Failed to fetch agency sold listings count.', error: err.message });
+    }
+};
+
+// Removed getAgencyFeaturedListingsCount function
+
+/**
  * @desc Get recent activity for a specific agency (inquiries, new agents, listings)
  * @route GET /api/agency-stats/:agencyId/recent-activity
  * @access Private (Agency Admin or Super Admin)
@@ -195,7 +293,7 @@ exports.getAgencyRecentActivity = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        // Get all agent_ids belonging to this agency
+        // Get all user_ids (agents and admins) belonging to this agency
         const agencyMembersResult = await pool.query(
             `SELECT user_id, role FROM users WHERE agency_id = $1 AND (role = 'agent' OR role = 'agency_admin')`,
             [agencyId]
@@ -221,7 +319,8 @@ exports.getAgencyRecentActivity = async (req, res) => {
 
         // Fetch recent agent joins for this agency
         const newAgents = await pool.query(`
-            SELECT 'agent_join' AS type, full_name, date_joined AS timestamp
+            SELECT 'agent_join' AS type, full_name, 
+                   COALESCE(TO_CHAR(date_joined, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), NOW()::text) AS timestamp
             FROM users
             WHERE agency_id = $1 AND role = 'agent'
             ORDER BY date_joined DESC
@@ -230,7 +329,8 @@ exports.getAgencyRecentActivity = async (req, res) => {
 
         // Fetch recent listings created by agents/admins in this agency
         const newListings = await pool.query(`
-            SELECT 'listing' AS type, pl.title AS message, pl.date_listed AS timestamp
+            SELECT 'listing' AS type, pl.title AS message, 
+                   COALESCE(TO_CHAR(pl.date_listed, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), NOW()::text) AS timestamp
             FROM property_listings pl
             WHERE pl.agency_id = $1
             ORDER BY pl.date_listed DESC
@@ -252,7 +352,7 @@ exports.getAgencyRecentActivity = async (req, res) => {
             ...newListings.rows.map(row => ({
                 type: 'listing',
                 message: `New Listing added: "${row.message}"`,
-                timestamp: row.timestamp
+                timestamp: row.timestamp // Use the aliased timestamp from the query
             }))
         ];
 

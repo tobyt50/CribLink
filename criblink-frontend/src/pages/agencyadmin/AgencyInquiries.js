@@ -1,18 +1,19 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AgentSidebar from '../../components/agent/Sidebar';
+import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Assuming a new sidebar for agency admin
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react'; // Added icons for mobile view
 import { useTheme } from '../../layouts/AppShell';
-import AgentInquiryModal from '../../components/AgentInquiryModal';
+import AgentInquiryModal from '../../components/AgentInquiryModal'; // Reusing AgentInquiryModal for display
+import ReassignAgentModal from '../../components/agencyadmin/ReassignAgentModal'; // New component for reassigning
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
 import API_BASE_URL from '../../config';
 import socket from '../../socket';
 
-const AgentInquiries = () => {
+const AgencyInquiries = () => {
   const [groupedConversations, setGroupedConversations] = useState([]);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('last_message_timestamp');
@@ -31,34 +32,41 @@ const AgentInquiries = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false); // State for reassign modal
+  const [inquiryToReassign, setInquiryToReassign] = useState(null); // Holds conversation for reassignment
+
   // State for expanded profile picture
   const [isProfilePicExpanded, setIsProfilePicExpanded] = useState(false);
   const [expandedProfilePicUrl, setExpandedProfilePicUrl] = useState('');
   const [expandedProfilePicName, setExpandedProfilePicName] = useState('');
   const profilePicRef = useRef(null);
 
-  const getAgentUserId = useCallback(() => {
+  const getAgencyAdminUserId = useCallback(() => {
     const token = localStorage.getItem('token');
     if (!token) return null;
     try {
+      // Assuming agency admin userId is stored similarly in JWT
       return JSON.parse(atob(token.split('.')[1])).userId;
     } catch (error) {
+      console.error("Error decoding token:", error);
       return null;
     }
   }, []);
 
-  const agentUserId = getAgentUserId();
+  const agencyAdminUserId = getAgencyAdminUserId();
+
 
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
     return groupedConversations.find(conv => conv.id === selectedConversationId);
   }, [selectedConversationId, groupedConversations]);
 
-
   const fetchInquiries = useCallback(async () => {
     const params = new URLSearchParams({ search, sort: sortKey, direction: sortDirection, page, limit });
     try {
       const token = localStorage.getItem('token');
+      // Endpoint to fetch all inquiries for the agency admin
+      // The backend `getAllInquiriesForAgent` already handles the 'agency_admin' role
       const res = await fetch(`${API_BASE_URL}/inquiries/agent?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
@@ -66,6 +74,7 @@ const AgentInquiries = () => {
       setTotalConversations(data.total);
     } catch (err) {
       showMessage('Failed to fetch inquiries.', 'error');
+      console.error("Error fetching agency inquiries:", err);
     }
   }, [search, page, sortKey, sortDirection, showMessage]);
 
@@ -97,10 +106,11 @@ const AgentInquiries = () => {
     };
   }, [isProfilePicExpanded]);
 
-  // Real-time functionality
+  // Real-time functionality (similar to AgentInquiries but adjusted for admin view)
   useEffect(() => {
     if (!socket.connected) socket.connect();
 
+    // Join all conversation rooms relevant to the fetched inquiries
     groupedConversations.forEach(conv => socket.emit('join_conversation', conv.id));
 
     const handleNewMessage = (newMessage) => {
@@ -109,13 +119,14 @@ const AgentInquiries = () => {
             const updatedConversations = prev.map(conv => {
                 if (conv.id === newMessage.conversationId) {
                     conversationExists = true;
+                    // Prevent duplicate messages if already present
                     if (conv.messages.some(msg => msg.inquiry_id === newMessage.inquiryId)) return conv;
 
                     const messageToAdd = {
                         ...newMessage,
-                        sender: newMessage.senderId === conv.client_id ? 'Client' : 'Agent',
-                        // Message is considered read if the modal for this conversation is currently open
-                        read: (openedConversationId === conv.id && newMessage.senderId === conv.client_id) ? true : newMessage.read
+                        sender: newMessage.senderId === conv.client_id ? 'Client' : (newMessage.senderId === conv.agent_id ? 'Agent' : 'Unknown'), // Identify sender
+                        // Messages are considered read by admin if modal is open for this conv
+                        read: (openedConversationId === conv.id) ? true : newMessage.read
                     };
 
                     const updatedConv = {
@@ -124,24 +135,26 @@ const AgentInquiries = () => {
                         lastMessage: newMessage.message,
                         lastMessageTimestamp: newMessage.timestamp,
                         lastMessageSenderId: newMessage.senderId,
-                        // Increment unread count only if the message is from the client AND it's NOT read by agent
-                        unreadCount: (newMessage.senderId === conv.client_id && !messageToAdd.read) ? conv.unreadCount + 1 : conv.unreadCount,
-                        // Update is_agent_responded only if the agent sends a reply
-                        is_agent_responded: newMessage.senderId === agentUserId ? true : conv.is_agent_responded,
+                        // Unread count for admin view: any message not from current admin and not read by admin
+                        unreadCount: (newMessage.senderId !== agencyAdminUserId && !messageToAdd.read) ? conv.unreadCount + 1 : conv.unreadCount,
+                        // is_agent_responded logic remains tied to the assigned agent
+                        is_agent_responded: newMessage.senderId === conv.agent_id ? true : conv.is_agent_responded, // Use conv.agent_id for assigned agent
                     };
                     return updatedConv;
                 }
                 return conv;
             });
 
-            if (!conversationExists && (newMessage.agentId === agentUserId || !newMessage.agentId)) {
+            // If a new conversation appears relevant to this admin's agency, refetch
+            // (e.g., if a new inquiry is created under a listing associated with their agency)
+            if (!conversationExists) {
                 fetchInquiries();
                 return prev;
             }
             const sortedConversations = updatedConversations.sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp));
 
             if (selectedConversationId && sortedConversations.some(c => c.id === selectedConversationId)) {
-                setSelectedConversationId(prevId => prevId);
+                setSelectedConversationId(prevId => prevId); // Keep the selected conversation active
             }
 
             return sortedConversations;
@@ -149,42 +162,34 @@ const AgentInquiries = () => {
     };
 
     const handleReadAck = ({ conversationId, readerId, role }) => {
-        if (readerId === agentUserId && role === 'agent') {
-            setGroupedConversations(prev => prev.map(conv => {
-                if (conv.id === conversationId) {
-                    return {
-                        ...conv,
-                        messages: conv.messages.map(msg => msg.sender_id === conv.client_id ? { ...msg, read: true } : msg),
-                        unreadCount: 0 // Clear unread count when current user reads
-                    };
-                }
-                return conv;
-            }));
-            if (selectedConversationId && selectedConversationId === conversationId) {
-                setSelectedConversationId(prevId => prevId);
+        // For agency admin, if *any* relevant party (client or agent) reads, update state
+        setGroupedConversations(prev => prev.map(conv => {
+            if (conv.id === conversationId) {
+                return {
+                    ...conv,
+                    messages: conv.messages.map(msg => ({ ...msg, read: true })), // Mark all messages as read for admin view
+                    unreadCount: 0 // Clear unread count when an acknowledgment comes
+                };
             }
-        }
-        else if (role === 'client') {
-             setGroupedConversations(prev => prev.map(conv => {
-                if (conv.id === conversationId) {
-                    return {
-                        ...conv,
-                        messages: conv.messages.map(msg => msg.sender_id === agentUserId ? { ...msg, read: true } : msg),
-                    };
-                }
-                return conv;
-            }));
-            if (selectedConversationId && selectedConversationId === conversationId) {
-                setSelectedConversationId(prevId => prevId);
-            }
+            return conv;
+        }));
+        if (selectedConversationId && selectedConversationId === conversationId) {
+            setSelectedConversationId(prevId => prevId);
         }
     };
 
+    const handleReassignment = (data) => {
+      showMessage(`Inquiry ${data.conversationId} reassigned to new agent.`, 'info');
+      fetchInquiries(); // Refresh list to reflect new assignment
+    };
+
+
     socket.on('new_message', handleNewMessage);
-    socket.on('new_inquiry_for_agent', fetchInquiries);
+    socket.on('new_inquiry_for_agent', fetchInquiries); // Still listen for this as it might create new entries for the agency
     socket.on('message_read_ack', handleReadAck);
     socket.on('conversation_deleted', fetchInquiries);
-    socket.on('inquiry_list_changed', fetchInquiries);
+    socket.on('inquiry_list_changed', fetchInquiries); // Listen for general changes, including reassignments
+    socket.on('inquiry_reassigned', handleReassignment);
 
 
     return () => {
@@ -193,8 +198,9 @@ const AgentInquiries = () => {
       socket.off('message_read_ack', handleReadAck);
       socket.off('conversation_deleted', fetchInquiries);
       socket.off('inquiry_list_changed', fetchInquiries);
+      socket.off('inquiry_reassigned', handleReassignment);
     };
-  }, [groupedConversations, agentUserId, fetchInquiries, openedConversationId, selectedConversationId]);
+  }, [groupedConversations, agencyAdminUserId, fetchInquiries, openedConversationId, selectedConversationId, showMessage]);
 
   const handleSortClick = (key) => {
     setSortDirection(sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc');
@@ -207,37 +213,37 @@ const AgentInquiries = () => {
   const handleViewConversation = useCallback(async (conversation) => {
     setSelectedConversationId(conversation.id);
     setIsAgentInquiryModalOpen(true);
-    setOpenedConversationId(conversation.id); // Set the conversation as opened
-
-    // Only mark as read if there are unread messages. Status remains "New Message" until agent sends reply.
+    setOpenedConversationId(conversation.id); // Set the conversation as opened for admin
+    
+    // Mark messages as read for admin view if there are unread messages from client or agent
     if (conversation.unreadCount > 0) {
       const token = localStorage.getItem('token');
       try {
-        await fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversation.id}`, {
+        await fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversation.id}`, { // Reusing agent endpoint, which handles agency_admin role
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        socket.emit('message_read', { conversationId: conversation.id, userId: agentUserId, role: 'agent' });
-        // Optimistically update the unreadCount to 0, but status remains 'New Message'
+        // Emit read ack for admin's view
+        socket.emit('message_read', { conversationId: conversation.id, userId: agencyAdminUserId, role: 'agency_admin' });
         setGroupedConversations(prev => prev.map(c =>
             c.id === conversation.id ? { ...c, unreadCount: 0 } : c
         ));
       } catch (error) {
-        console.error("Failed to mark messages as read:", error);
+        console.error("Failed to mark messages as read for admin:", error);
         showMessage("Failed to mark messages as read.", 'error');
       }
     }
 
     try {
         const token = localStorage.getItem('token');
-        await fetch(`${API_BASE_URL}/inquiries/agent/mark-opened/${conversation.id}`, {
+        await fetch(`${API_BASE_URL}/inquiries/agent/mark-opened/${conversation.id}`, { // Reusing agent endpoint, which handles agency_admin role
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
     } catch (error) {
-        console.error("Failed to mark conversation as opened:", error);
+        console.error("Failed to mark conversation as opened by admin:", error);
     }
-  }, [agentUserId, showMessage]);
+  }, [agencyAdminUserId, showMessage]);
 
   const handleDeleteInquiry = async () => {
     if (!selectedConversation) return;
@@ -246,11 +252,12 @@ const AgentInquiries = () => {
       message: `Are you sure you want to delete this conversation with ${selectedConversation.clientName}? This is irreversible.`,
       onConfirm: async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/inquiries/agent/delete-conversation/${selectedConversation.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        // Admin can delete any conversation under their agency
+        const res = await fetch(`${API_BASE_URL}/inquiries/agent/delete-conversation/${selectedConversation.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); // Reusing agent endpoint, which handles agency_admin role
         if (res.ok) {
           showMessage('Conversation deleted.', 'success');
           setIsAgentInquiryModalOpen(false);
-          setOpenedConversationId(null); // Clear opened conversation ID
+          setOpenedConversationId(null);
           fetchInquiries();
         } else {
           showMessage('Failed to delete conversation.', 'error');
@@ -260,6 +267,7 @@ const AgentInquiries = () => {
   };
 
   const handleSendMessageToConversation = async (conversationId, messageText) => {
+    // Agency admin can also send messages, which would be from the agency's perspective
     const token = localStorage.getItem('token');
     await fetch(`${API_BASE_URL}/inquiries/message`, {
       method: 'POST',
@@ -268,30 +276,42 @@ const AgentInquiries = () => {
         conversation_id: conversationId,
         property_id: selectedConversation?.property_id,
         message_content: messageText,
-        recipient_id: selectedConversation?.client_id,
-        message_type: 'agent_reply',
+        recipient_id: selectedConversation?.client_id, // Still sent to the client
+        message_type: 'agency_admin_reply', // New message type, handled by backend
       }),
     });
-
-    // Mark as responded when agent sends a message
-    try {
-        const token = localStorage.getItem('token');
-        await fetch(`${API_BASE_URL}/inquiries/agent/mark-responded/${conversationId}`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        // Optimistically update local state to 'Responded' after sending a message
-        setGroupedConversations(prev => prev.map(c =>
-            c.id === conversationId ? { ...c, is_agent_responded: true } : c
-        ));
-    } catch (error) {
-        console.error("Failed to mark conversation as responded:", error);
-    }
+    // This will implicitly update the conversation via socket.io 'new_message' event
   };
+
+  const handleReassignInquiry = useCallback(async (conversationId, newAgentId) => {
+    if (!conversationId || !newAgentId) {
+      showMessage('Invalid reassign request.', 'error');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/inquiries/agency-admin/reassign/${conversationId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ new_agent_id: newAgentId })
+      });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      showMessage('Inquiry reassigned successfully!', 'success');
+      setIsReassignModalOpen(false);
+      fetchInquiries(); // Re-fetch to update the assigned agent displayed
+      socket.emit('inquiry_reassigned', { conversationId, newAgentId }); // Emit for real-time update
+    } catch (error) {
+      console.error("Failed to reassign inquiry:", error);
+      showMessage('Failed to reassign inquiry.', 'error');
+    }
+  }, [showMessage, fetchInquiries]);
 
   const totalPages = Math.ceil(totalConversations / limit);
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
+  // Default placeholder image for client profile
+  const defaultProfilePicture = "https://placehold.co/40x40/aabbcc/ffffff?text=User";
   const getInitial = (name) => {
     const safeName = String(name || '');
     return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
@@ -303,12 +323,13 @@ const AgentInquiries = () => {
     setIsProfilePicExpanded(true);
   };
 
+
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}><AnimatePresence mode="wait"><motion.div key={isSidebarOpen ? 'x' : 'm'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }}>{isSidebarOpen ? <X size={20} /> : <Menu size={20} />}</motion.div></AnimatePresence></motion.button>}
-      <AgentSidebar collapsed={isCollapsed} setCollapsed={setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      <AgencyAdminSidebar collapsed={isCollapsed} setCollapsed={setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       <motion.div key={isMobile ? 'mobile' : 'desktop'} animate={{ marginLeft: contentShift }} transition={{ duration: 0.3 }} className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0">
-        <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Inquiries</h1>
+        <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agency Inquiries</h1>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <input type="text" placeholder="Search..." className={`w-full md:w-1/3 py-2 px-4 border rounded-xl h-10 focus:outline-none focus:ring-1 ${darkMode ? "bg-gray-700 border-gray-600 text-white focus:ring-green-400" : "bg-white border-gray-300 focus:ring-green-600"}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -345,17 +366,11 @@ const AgentInquiries = () => {
             <div className="space-y-4">
               {groupedConversations.length > 0 ? (
                 groupedConversations.map(conv => {
-                  // Determine if the conversation has unread messages FOR THE AGENT
-                  const hasUnreadMessagesForAgent = conv.messages.some(msg =>
-                    msg.sender_id === conv.client_id && !msg.read
+                  const hasUnreadMessagesForAdmin = conv.messages.some(msg =>
+                    msg.sender_id !== agencyAdminUserId && !msg.read
                   );
-
-                  // Determine display status: "New Message" if unread messages OR if agent hasn't responded yet
-                  // "Responded" only if agent has sent a message AND all client messages are read
-                  const displayStatus = conv.is_agent_responded ? 'Responded' : 'New Message';
-
-                  // Text bolding logic: bold if new message status AND modal is not open for this conversation
-                  const isBold = hasUnreadMessagesForAgent && openedConversationId !== conv.id;
+                  const displayStatus = conv.is_agent_responded ? 'Responded' : (hasUnreadMessagesForAdmin ? 'New Message' : 'Open');
+                  const isBold = hasUnreadMessagesForAdmin && openedConversationId !== conv.id;
 
                   return (
                     <div
@@ -376,13 +391,14 @@ const AgentInquiries = () => {
                             {conv.clientName}
                           </h4>
                         </div>
-                        {hasUnreadMessagesForAgent && (
+                        {hasUnreadMessagesForAdmin && (
                           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                             New
                           </span>
                         )}
                       </div>
-                      <div> {/* No ml-16 here */}
+                      {/* Content below the profile picture and name, no longer shifted right */}
+                      <div> 
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <Building size={14} className="inline-block mr-1" />
                           <span className="font-medium">{conv.propertyTitle || 'General Inquiry'}</span>
@@ -401,7 +417,7 @@ const AgentInquiries = () => {
                             className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (conv.agent_id) navigate(`/agent-profile/${conv.agent_id}`);
+                              if (conv.agent_id) navigate(`/agent-profile/${conv.agent_id}`); // Corrected path
                             }}
                           >
                             {conv.agent_name || 'Unassigned'}
@@ -415,6 +431,18 @@ const AgentInquiries = () => {
                           <Clock size={12} className="inline-block mr-1" />
                           {new Date(conv.lastMessageTimestamp).toLocaleString()}
                         </p>
+                        <div className="flex justify-end mt-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent opening the conversation modal
+                              setInquiryToReassign(conv);
+                              setIsReassignModalOpen(true);
+                            }}
+                            className={`flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-semibold ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                          >
+                            <Tag size={14} /> Reassign
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -427,20 +455,18 @@ const AgentInquiries = () => {
             // Desktop table view
             <div className="overflow-x-auto">
               <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'status', label: 'Status'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
+                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'assigned_agent', label: 'Assigned Agent'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} onClick={() => c.key !== 'actions' && handleSortClick(c.key)} className={`py-2 px-2 ${c.key !== 'actions' ? 'cursor-pointer select-none' : ''} ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px'}}><div className="flex items-center gap-1"><span>{c.label}</span>{c.key !== 'actions' && renderSortIcon(c.key)}</div></th>)}</tr></thead>
                 <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                   {groupedConversations.length > 0 ? groupedConversations.map(conv => {
-                    // Determine if the conversation has unread messages FOR THE AGENT
-                    const hasUnreadMessagesForAgent = conv.messages.some(msg =>
-                      msg.sender_id === conv.client_id && !msg.read
+                    // Determine if the conversation has unread messages FOR THE ADMIN (any message not from admin and not read by admin)
+                    const hasUnreadMessagesForAdmin = conv.messages.some(msg =>
+                      msg.sender_id !== agencyAdminUserId && !msg.read
                     );
 
-                    // Determine display status: "New Message" if unread messages OR if agent hasn't responded yet
-                    // "Responded" only if agent has sent a message AND all client messages are read
-                    const displayStatus = conv.is_agent_responded ? 'Responded' : 'New Message';
+                    const displayStatus = conv.is_agent_responded ? 'Responded' : (hasUnreadMessagesForAdmin ? 'New Message' : 'Open');
 
                     // Text bolding logic: bold if new message status AND modal is not open for this conversation
-                    const isBold = hasUnreadMessagesForAgent && openedConversationId !== conv.id;
+                    const isBold = hasUnreadMessagesForAdmin && openedConversationId !== conv.id;
 
                     return (
                       <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold ? 'font-bold' : 'font-normal'}`} onClick={() => handleViewConversation(conv)}>
@@ -453,16 +479,39 @@ const AgentInquiries = () => {
                               onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.clientName)}`; }}
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                             />
-                            <span className="flex items-center">{conv.clientName}{conv.client_id && <button onClick={e => { e.stopPropagation(); navigate(`/agent/client-profile/${conv.client_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            <span className="flex items-center">{conv.clientName}{conv.client_id && <button onClick={e => { e.stopPropagation(); navigate(`/agency/client-profile/${conv.client_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
                           </div>
                         </td>
                         <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
+                        <td className="py-2 px-2 truncate" title={conv.agent_name || 'Unassigned'}>
+                          <span
+                            className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (conv.agent_id) navigate(`/agent-profile/${conv.agent_id}`); // Corrected path
+                            }}
+                          >
+                            {conv.agent_name || 'Unassigned'}
+                          </span>
+                        </td>
                         <td className={`py-2 px-2 truncate ${isBold ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || '...'}</td>
                         <td className="py-2 px-2 truncate">{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
                         <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (darkMode ? 'text-green-400' : 'text-green-700')}`}>{displayStatus}</td>
+                        <td className="py-2 px-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent opening the conversation modal
+                              setInquiryToReassign(conv);
+                              setIsReassignModalOpen(true);
+                            }}
+                            className={`flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-semibold ${darkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                          >
+                            <Users size={14} /> Reassign
+                          </button>
+                        </td>
                       </tr>
                     )
-                  }) : <tr><td colSpan="5" className="py-8 text-center text-gray-500">No conversations.</td></tr>}
+                  }) : <tr><td colSpan="7" className="py-8 text-center text-gray-500">No conversations.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -488,6 +537,16 @@ const AgentInquiries = () => {
             onViewProperty={(id) => navigate(`/listings/${id}`)}
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
+          />
+        )}
+        {isReassignModalOpen && inquiryToReassign && (
+          <ReassignAgentModal
+            isOpen={isReassignModalOpen}
+            onClose={() => setIsReassignModalOpen(false)}
+            darkMode={darkMode}
+            conversationId={inquiryToReassign.id}
+            currentAssignedAgentId={inquiryToReassign.agent_id}
+            onReassign={handleReassignInquiry}
           />
         )}
 
@@ -518,4 +577,4 @@ const AgentInquiries = () => {
   );
 };
 
-export default AgentInquiries;
+export default AgencyInquiries;

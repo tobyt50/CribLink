@@ -155,7 +155,7 @@ const Members = () => {
 
   const [pendingRequests, setPendingRequests] = useState([]);
   const [filteredPendingRequests, setFilteredPendingRequests] = useState([]);
-  const [showPendingRequests, setShowPendingRequests] = useState(false);
+  const [showPendingRequests, setShowPendingRequests] = useState(false); // State to toggle between members and pending requests
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [memberStatusFilter, setMemberStatusFilter] = useState('all');
@@ -177,12 +177,15 @@ const Members = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Effect to set initial role filter from navigation state
+  // Effect to set initial role filter or show pending requests from navigation state
   useEffect(() => {
     if (location.state?.roleFilter) {
       setMemberRoleFilter(location.state.roleFilter);
-      // Clear the state so it doesn't persist on subsequent visits
-      navigate(location.pathname, { replace: true, state: {} });
+      setShowPendingRequests(false); // Ensure we are on the members tab
+      navigate(location.pathname, { replace: true, state: {} }); // Clear the state
+    } else if (location.state?.showPendingRequests) {
+      setShowPendingRequests(true); // Switch to pending requests tab
+      navigate(location.pathname, { replace: true, state: {} }); // Clear the state
     }
   }, [location.state, navigate, location.pathname]);
 
