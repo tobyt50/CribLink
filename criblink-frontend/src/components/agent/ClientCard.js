@@ -24,7 +24,8 @@ const ClientCard = ({
   onCancelEdit,
   acceptAction,
   rejectAction,
-  isPendingRequestCard
+  isPendingRequestCard,
+  userRole // New prop: userRole
 }) => {
   const { darkMode } = useTheme();
 
@@ -51,6 +52,9 @@ const ClientCard = ({
   const Separator = () => (
     <div className="w-px bg-gray-200 dark:bg-gray-700 h-6 self-center mx-0.5"></div>
   );
+
+  // Determine if actions are disabled for agency_admin
+  const isAgencyAdmin = userRole === 'agency_admin';
 
   return (
     <Card
@@ -88,6 +92,11 @@ const ClientCard = ({
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {isPendingRequestCard ? `Requested: ${formatDate(client.date_joined)}` : `Joined: ${formatDate(client.date_joined)}`}
           </div>
+          {isAgencyAdmin && client.agent_name && ( // Display assigned agent for agency admins
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Agent: <span className="font-medium text-green-600 dark:text-green-400">{client.agent_name}</span>
+            </div>
+          )}
 
           <div className="w-full mt-4">
             {isPendingRequestCard ? (
@@ -100,7 +109,7 @@ const ClientCard = ({
                 </div>
               </div>
             ) : (
-              editingNoteId === client.user_id ? (
+              editingNoteId === client.user_id && !isAgencyAdmin ? ( // Only allow editing if not agency admin
                 <div className="flex flex-col w-full" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 mb-1">
                     <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes:</span>
@@ -134,13 +143,18 @@ const ClientCard = ({
                 <div className="text-sm text-gray-500 dark:text-gray-400 relative break-words min-w-0" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 mb-1">
                     <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes:</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEditNote(client.user_id, client.notes); }}
-                      className={`p-1 rounded-full ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-                      title="Edit Note"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
+                    {!isAgencyAdmin && ( // Only show edit button if not agency admin
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditNote(client.user_id, client.notes); }}
+                        className={`p-1 rounded-full ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
+                        title="Edit Note"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                    {isAgencyAdmin && ( // Tooltip for agency admin
+                      <span className="text-xs text-gray-400 ml-2" title="Only assigned agent can edit notes."></span>
+                    )}
                   </div>
                   <div className="w-full max-h-[3.75rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800 pr-1 overflow-hidden">
                     <span className="italic block break-words">
@@ -157,22 +171,35 @@ const ClientCard = ({
       <div className="flex flex-nowrap justify-center gap-0.5 w-full pt-1 pb-1 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
         {isPendingRequestCard ? (
           <>
+            {!isAgencyAdmin && ( // Only agents can accept/reject requests
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); acceptAction(); }}
+                  className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
+                    ${darkMode ? "text-green-400 hover:text-green-300 hover:bg-gray-700" : "text-green-700 hover:text-green-800 hover:bg-gray-100"} border border-transparent hover:border-green-500`}
+                  title="Accept Request"
+                >
+                  <CheckCircleIcon className="h-5 w-5" /> Accept
+                </button>
+                <Separator />
+                <button
+                  onClick={(e) => { e.stopPropagation(); rejectAction(); }}
+                  className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
+                    ${darkMode ? "text-red-400 hover:text-red-300 hover:bg-gray-700" : "text-red-700 hover:text-red-800 hover:bg-gray-100"} border border-transparent hover:border-red-500`}
+                  title="Reject Request"
+                >
+                  <XCircleIcon className="h-5 w-5" /> Reject
+                </button>
+                <Separator />
+              </>
+            )}
             <button
-              onClick={(e) => { e.stopPropagation(); acceptAction(); }}
-              className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
-                ${darkMode ? "text-green-400 hover:text-green-300 hover:bg-gray-700" : "text-green-700 hover:text-green-800 hover:bg-gray-100"} border border-transparent hover:border-green-500`}
-              title="Accept Request"
+                onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
+                className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
+                text-blue-500 hover:border-blue-600 border border-transparent`}
+                title="Chat with client"
             >
-              <CheckCircleIcon className="h-5 w-5" /> Accept
-            </button>
-            <Separator />
-            <button
-              onClick={(e) => { e.stopPropagation(); rejectAction(); }}
-              className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
-                ${darkMode ? "text-red-400 hover:text-red-300 hover:bg-gray-700" : "text-red-700 hover:text-red-800 hover:bg-gray-100"} border border-transparent hover:border-red-500`}
-              title="Reject Request"
-            >
-              <XCircleIcon className="h-5 w-5" /> Reject
+                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
             </button>
           </>
         ) : (
@@ -199,15 +226,18 @@ const ClientCard = ({
             <button
               onClick={(e) => { e.stopPropagation(); onToggleStatus(client.user_id, client.client_status); }}
               className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
-                ${darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100"} border border-transparent hover:border-yellow-500`}
+                ${isAgencyAdmin ? 'text-yellow-300 cursor-not-allowed opacity-50' : (darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-yellow-500'}`}
+              title={isAgencyAdmin ? "Only assigned agent can change client status" : (client.client_status === 'vip' ? 'Make Regular' : 'Make VIP')}
+              disabled={isAgencyAdmin}
             >
               {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
             </button>
             <Separator />
             <button
               onClick={(e) => { e.stopPropagation(); onRemoveClient(client.user_id); }}
-              className={`h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full ${darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100"} border border-transparent hover:border-red-500`}
-              title="Remove Client"
+              className={`h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full ${isAgencyAdmin ? 'text-red-300 cursor-not-allowed opacity-50' : (darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-red-500'}`}
+              title={isAgencyAdmin ? "Only assigned agent can remove client" : "Remove Client"}
+              disabled={isAgencyAdmin}
             >
               <TrashIcon className="h-5 w-5" />
             </button>

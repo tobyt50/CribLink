@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Squares2X2Icon,
   TableCellsIcon,
@@ -141,7 +141,8 @@ const Members = () => {
   const { showConfirm } = useConfirmDialog();
   const { user } = useAuth();
   const agencyId = user?.agency_id;
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
   const [activeSection, setActiveSection] = useState('members');
@@ -157,7 +158,8 @@ const Members = () => {
   const [showPendingRequests, setShowPendingRequests] = useState(false);
 
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [memberStatusFilter, setMemberStatusFilter] = useState('all'); // New state for member status filter
+  const [memberStatusFilter, setMemberStatusFilter] = useState('all');
+  const [memberRoleFilter, setMemberRoleFilter] = useState('all');
 
   // Helper to capitalize the first letter of a string
   const capitalizeFirstLetter = (string) => {
@@ -175,6 +177,16 @@ const Members = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Effect to set initial role filter from navigation state
+  useEffect(() => {
+    if (location.state?.roleFilter) {
+      setMemberRoleFilter(location.state.roleFilter);
+      // Clear the state so it doesn't persist on subsequent visits
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
+
+
   const fetchMembersAndRequests = useCallback(async () => {
     if (!agencyId) {
       showMessage('Agency ID not available. Cannot fetch members.', 'error');
@@ -183,10 +195,23 @@ const Members = () => {
 
     try {
       const token = localStorage.getItem('token');
+      // Fetch all members (agents and agency_admins) for the agency
+      // Assuming the backend endpoint returns users with a 'role' property (e.g., 'agent', 'admin' from agency_members table)
       const membersRes = await axios.get(`${API_BASE_URL}/agencies/${agencyId}/agents`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMembers(membersRes.data);
+
+      // Map the incoming data to ensure 'agency_role' is consistently available
+      // and maps 'admin' from backend to 'agency_admin' for frontend display/filter.
+      const fetchedMembers = membersRes.data.map(member => ({
+        ...member,
+        // If backend sends 'admin' for agency_members.role, map it to 'agency_admin' for frontend
+        agency_role: member.agency_role === 'admin' ? 'agency_admin' : (member.agency_role || 'agent'),
+        // Ensure member_status is also present, defaulting to 'regular' if not provided
+        member_status: member.member_status || 'regular',
+      }));
+
+      setMembers(fetchedMembers);
 
       const requestsRes = await axios.get(`${API_BASE_URL}/agencies/${agencyId}/pending-requests`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -223,6 +248,15 @@ const Members = () => {
         });
       }
 
+      // Apply member role filter
+      if (memberRoleFilter !== 'all') {
+        console.log(`[Frontend Filter] Applying role filter: ${memberRoleFilter}`);
+        currentMembers = currentMembers.filter((member) => {
+          console.log(`[Frontend Filter] Member: ${member.full_name}, Role: ${member.agency_role}`);
+          return (member.agency_role).toLowerCase() === memberRoleFilter;
+        });
+      }
+
       currentMembers.sort((a, b) => {
         const aValue = a[sortKey];
         const bValue = b[sortKey];
@@ -233,7 +267,7 @@ const Members = () => {
       setFilteredMembers(currentMembers);
       setPage(1);
     }
-  }, [searchTerm, members, sortKey, sortDirection, showPendingRequests, memberStatusFilter]);
+  }, [searchTerm, members, sortKey, sortDirection, showPendingRequests, memberStatusFilter, memberRoleFilter]);
 
   useEffect(() => {
     if (showPendingRequests) {
@@ -250,7 +284,7 @@ const Members = () => {
         const aValue = a[sortKey];
         const bValue = b[sortKey];
         if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bBValue - aValue;
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       });
 
       setFilteredPendingRequests(currentRequests);
@@ -306,10 +340,10 @@ const Members = () => {
           item.full_name,
           item.email,
           item.phone || '',
-          item.agency_role || '',
+          item.agency_role || '', // Use the mapped agency_role
           new Date(item.joined_at).toLocaleDateString(),
           item.user_status || '',
-          item.member_status || '', // Include member_status in export
+          item.member_status || '',
         ].map(field => `"${String(field).replace(/"/g, '""')}"`);
       }
     });
@@ -470,7 +504,9 @@ const Members = () => {
           await axios.put(`${API_BASE_URL}/agencies/${agencyId}/members/${memberId}/status`, { status: newStatus }, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          // Update the members state directly to reflect the change
           setMembers((prev) => prev.map((m) => m.user_id === memberId ? { ...m, member_status: newStatus } : m));
+          // Also update filteredMembers to ensure the current view is consistent
           setFilteredMembers((prev) => prev.map((m) => m.user_id === memberId ? { ...m, member_status: newStatus } : m));
           showMessage(`Member status updated to ${capitalizeFirstLetter(newStatus)}.`, 'success');
         } catch (err) {
@@ -495,9 +531,15 @@ const Members = () => {
     setPage(1); // Reset page on filter change
   };
 
+  // New: Handler for member role filter change
+  const handleMemberRoleChange = (value) => {
+    setMemberRoleFilter(value);
+    setPage(1); // Reset page on filter change
+  };
+
   // Function to navigate to agent profile
   const handleViewProfile = (memberId, agencyRole) => {
-    if (agencyRole === 'admin') {
+    if (agencyRole === 'agency_admin') {
       navigate(`/agency-admin-profile/${memberId}`);
     } else {
       navigate(`/agent-profile/${memberId}`);
@@ -616,6 +658,21 @@ const Members = () => {
                 className={`w-full md:w-1/3 px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
               />
 
+              {/* Desktop Member Role Filter */}
+              <div className="w-full md:w-1/6">
+                <Dropdown
+                  options={[
+                    { value: 'all', label: 'All Roles' },
+                    { value: 'agent', label: 'Agents' },
+                    { value: 'agency_admin', label: 'Admins' },
+                  ]}
+                  value={memberRoleFilter}
+                  onChange={handleMemberRoleChange}
+                  placeholder="Filter by Role"
+                  className="w-full"
+                />
+              </div>
+
               {/* Desktop Member Status Filter */}
               <div className="w-full md:w-1/6">
                 <Dropdown
@@ -701,14 +758,14 @@ const Members = () => {
                         request_id: request.request_id,
                         agency_role: 'pending', // Pending requests don't have a role yet in the agency
                         user_status: 'pending',
-                        member_status: request.member_status || 'regular', // Pass member_status for pending
+                        member_status: request.member_status || 'regular',
                       }}
                       acceptAction={handleAcceptRequest}
                       rejectAction={handleRejectRequest}
                       isPendingRequestCard={true}
                       darkMode={darkMode}
-                      user={user} // Pass user for role checks
-                      onViewProfile={handleViewProfile} // Pass the navigation function
+                      user={user}
+                      onViewProfile={handleViewProfile}
                     />
                   ))}
                 </div>
@@ -760,16 +817,16 @@ const Members = () => {
                         current_user_id: user?.user_id,
                         total_admins: totalAdmins,
                         user_status: member.user_status || 'active',
-                        member_status: member.member_status || 'regular', // Ensure member_status is passed
+                        member_status: member.member_status || 'regular',
                       }}
-                      onViewProfile={handleViewProfile} // Pass the navigation function
+                      onViewProfile={handleViewProfile}
                       onRemoveMember={handleRemoveMember}
                       onPromoteMember={handlePromoteMember}
                       onDemoteMember={handleDemoteMember}
-                      onToggleMemberStatus={handleToggleMemberStatus} // Pass the new toggle function
+                      onToggleMemberStatus={handleToggleMemberStatus}
                       isPendingRequestCard={false}
                       darkMode={darkMode}
-                      user={user} // Pass user for role checks
+                      user={user}
                     />
                   ))}
                 </div>
@@ -782,7 +839,7 @@ const Members = () => {
                         <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Email {renderSortIcon('email')}</th>
                         <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Role</th>
                         <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Member Status</th> {/* New column for member status */}
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Member Status</th>
                         <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
                       </tr>
                     </thead>
@@ -793,7 +850,6 @@ const Members = () => {
                           <td className="px-1 py-2" title={member.email}>{member.email}</td>
                           <td className={`px-1 py-2 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} title={member.agency_role || 'agent'}>{member.agency_role === 'agency_admin' ? 'Admin' : (member.agency_role || 'Agent')}</td>
                           <td className={`px-1 py-2 font-semibold ${member.user_status === 'banned' ? 'text-red-600' : member.user_status === 'deactivated' ? 'text-yellow-600' : 'text-green-600'}`} title={member.user_status || 'active'}>{(member.user_status || 'active').charAt(0).toUpperCase() + (member.user_status || 'active').slice(1)}</td>
-                          {/* Display Member Status */}
                           <td className="px-1 py-2">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold
                                 ${member.member_status === 'vip' ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
@@ -822,7 +878,6 @@ const Members = () => {
                               </button>
                             )}
 
-                            {/* Toggle Member Status Button (only for admins, not self) */}
                             {user?.role === 'agency_admin' && user?.user_id !== member.user_id && (
                                 <button
                                     onClick={() => handleToggleMemberStatus(member.user_id, member.member_status)}
@@ -840,7 +895,7 @@ const Members = () => {
                                   title="You cannot remove yourself as you are the last agency administrator."
                                 >
                                   <TrashIcon className="h-4 w-4" />
-                                  
+
                                 </button>
                             ) : (
                                 <button onClick={() => handleRemoveMember(member.user_id)} title="Remove member" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
@@ -911,6 +966,24 @@ const Members = () => {
                     className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                   />
                 </div>
+              </div>
+
+              {/* Role Dropdown for Mobile */}
+              <div>
+                <label htmlFor="member-role-filter" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}>
+                  Member Role
+                </label>
+                <Dropdown
+                  options={[
+                    { value: 'all', label: 'All Roles' },
+                    { value: 'agent', label: 'Agents' },
+                    { value: 'agency_admin', label: 'Admins' },
+                  ]}
+                  value={memberRoleFilter}
+                  onChange={handleMemberRoleChange}
+                  placeholder="Select Role"
+                  className="w-full"
+                />
               </div>
 
               {/* Status Dropdown for Mobile */}

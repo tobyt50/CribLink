@@ -612,6 +612,7 @@ exports.rejectJoinRequest = async (req, res) => {
  */
 exports.getAgentsByAgencyId = async (req, res) => {
     const { agencyId } = req.params;
+    const { role } = req.query; // Get the role filter from query parameters
     const performingUserId = req.user.user_id;
     const performingUserRole = req.user.role;
 
@@ -631,8 +632,8 @@ exports.getAgentsByAgencyId = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
         }
 
-        const result = await db.query(
-            `SELECT
+        let query = `
+            SELECT
                 u.user_id, u.full_name, u.email, u.phone, u.profile_picture_url, u.date_joined, u.status AS user_status,
                 am.role AS agency_role, -- Use am.role for the role within the agency
                 am.joined_at,
@@ -640,9 +641,18 @@ exports.getAgentsByAgencyId = async (req, res) => {
              FROM users u
              JOIN agency_members am ON u.user_id = am.agent_id
              WHERE am.agency_id = $1 AND am.request_status = 'accepted'
-             ORDER BY u.full_name`,
-            [agencyId]
-        );
+        `;
+        const queryParams = [agencyId];
+        let paramIndex = 2;
+
+        if (role && role !== 'all') {
+            query += ` AND am.role = $${paramIndex++}`;
+            queryParams.push(role);
+        }
+
+        query += ` ORDER BY u.full_name`;
+
+        const result = await db.query(query, queryParams);
         
         res.status(200).json(result.rows);
     } catch (error) {

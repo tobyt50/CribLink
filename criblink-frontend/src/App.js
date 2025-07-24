@@ -82,7 +82,7 @@ import AgencyProfile from "./pages/AgencyProfile"; // Import AgencyProfile
 import AddLegalDocument from "./pages/AddLegalDocument";
 
 // NEW: Agency Admin Pages
-// import AgencyAdminDashboard from './pages/agencyadmin/Dashboard'; // Assuming this will be created
+import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard'; // NEW: Import AgencyAdminDashboard
 // import AgencyAdminListings from './pages/agencyadmin/Listings';
 import Members from './pages/agencyadmin/Members'; // Renamed from Agents
 // import AgencyAdminProperties from './pages/agencyadmin/Properties';
@@ -129,9 +129,10 @@ const clientRoutes = [
 
 // NEW: Agency Admin Routes
 const agencyAdminRoutes = [
-  // { path: "dashboard", element: <AgencyAdminDashboard /> },
+  { path: "dashboard", element: <AgencyAdminDashboard /> }, // NEW: Added AgencyAdminDashboard route
   // { path: "listings", element: <AgencyAdminListings /> },
   { path: "members", element: <Members /> }, // Updated to Members
+  { path: "clients", element: <Clients /> }, // NEW: Added Clients route for agency admin
   // { path: "properties", element: <AgencyAdminProperties /> },
   { path: "settings", element: <AgencyAdminSettings /> },
 ];

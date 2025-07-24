@@ -5,9 +5,10 @@ import {
   ChevronLeft,
   Home,
   LayoutGrid, // For Listings
-  Users, // For Members
+  Users, // For Members and Clients
   Settings, // For Settings
   X,
+  Shield,
   Landmark // For Agency Info
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell.js';
@@ -17,6 +18,7 @@ const MENU_ITEMS = [
   { name: 'Dashboard', to: '/agency/dashboard', icon: <Home />, key: 'dashboard' },
   { name: 'Listings', to: '/agency/listings', icon: <LayoutGrid />, key: 'listings' },
   { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
+  { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
   // Note: Properties route is not explicitly in App.js agencyAdminRoutes, but added here for completeness if it exists
   // { name: 'Properties', to: '/agency/properties', icon: <Home />, key: 'properties' },
   { name: 'Settings', to: '/agency/settings', icon: <Settings />, key: 'settings' },

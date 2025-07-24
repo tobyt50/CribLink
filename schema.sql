@@ -673,7 +673,8 @@ CREATE TABLE public.property_listings (
     bathrooms integer,
     image_url text,
     image_public_id character varying(255),
-    agency_id integer
+    agency_id integer,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -788,7 +789,7 @@ ALTER TABLE public.user_favourites OWNER TO postgres;
 
 CREATE TABLE public.user_login_history (
     history_id integer NOT NULL,
-    user_id integer NOT NULL,
+    user_id integer,
     device character varying(255),
     location character varying(100),
     ip_address character varying(45),
@@ -1343,6 +1344,13 @@ CREATE INDEX idx_inquiries_status ON public.inquiries USING btree (status);
 --
 
 CREATE TRIGGER update_inquiries_updated_at BEFORE UPDATE ON public.inquiries FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: property_listings update_property_listings_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_property_listings_updated_at BEFORE UPDATE ON public.property_listings FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --

@@ -60,11 +60,13 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
   const handleDashboardRedirect = () => {
     if (!user?.role) return;
     const role = user.role.toLowerCase();
-    if (["admin", "agent", "client"].includes(role)) {
+    if (role === "admin" || role === "agent" || role === "client") {
       navigate(`/${role}/dashboard`);
-      setShowMenu(false);
-      onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false);
+    } else if (role === "agency_admin") { // NEW: Handle agency_admin role
+      navigate('/agency/dashboard');
     }
+    setShowMenu(false);
+    onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false);
   };
 
   const menuVariants = {

@@ -88,6 +88,7 @@ const clientSettingsRoutes = require('./routes/clientSettings');
 const agentRoutes = require('./routes/agentRoutes');
 const agencyRoutes = require('./routes/agencyRoutes'); // NEW: Import agency routes
 const agencyAdminRoutes = require('./routes/agencyAdminRoutes'); // NEW: Import agency admin routes
+const agencyStatsRoutes = require('./routes/agencyStatsRoutes'); // NEW: Import agency stats routes
 
 // 🚏 Route mounting
 app.use('/clients', clientRoutes);
@@ -111,6 +112,7 @@ app.use('/agents', agentRoutes);
 app.use('/inquiries', inquiriesRoutes);
 app.use('/agencies', agencyRoutes); // NEW: Mount agency routes
 app.use('/agency-admins', agencyAdminRoutes); // NEW: Mount agency admin routes
+app.use('/agency-stats', agencyStatsRoutes); // NEW: Mount agency stats routes
 
 // 🟢 Launch server
 const PORT = process.env.PORT || 5000;

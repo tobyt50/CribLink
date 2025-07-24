@@ -1,25 +1,54 @@
 const db = require('../db');
-// const logActivity = require('../utils/logActivity'); // Assuming you have this utility if needed
+const logActivity = require('../utils/logActivity'); // Assuming you have this utility if needed
 
 // Fetch all clients + VIP + notes for a specific agent
-exports.getClientsForAgent = async (req, res) => {
+const getClientsForAgent = async (req, res) => {
   const { agentId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization: An agent can only view their own clients.
+  // Admins can view any agent's clients. Agency Admins can view clients of agents in their agency.
+  if (parseInt(agentId) !== currentUserId && currentUserRole !== 'admin' && currentUserRole !== 'agency_admin') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to view these clients.' });
+  }
+
   try {
-    const result = await db.query(`
-      SELECT u.user_id, u.full_name, u.email, u.date_joined, u.status, ac.notes, ac.status AS client_status, u.profile_picture_url
+    let queryText = `
+      SELECT
+        u.user_id,
+        u.full_name,
+        u.email,
+        u.phone,
+        u.profile_picture_url,
+        u.date_joined,
+        u.status,
+        ac.notes,
+        ac.status AS client_status,
+        (SELECT COUNT(*) FROM inquiries WHERE client_id = u.user_id AND agent_id = ac.agent_id AND read_by_agent = FALSE AND message_type = 'client_reply') AS unread_messages_count
       FROM agent_clients ac
       JOIN users u ON ac.client_id = u.user_id
       WHERE ac.agent_id = $1 AND ac.request_status = 'accepted'
-    `, [agentId]); // Only show clients where relationship is accepted
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('Get clients error:', err);
-    res.status(500).json({ error: 'Internal error fetching clients' });
+      ORDER BY u.full_name ASC
+    `;
+    const queryParams = [agentId];
+
+    const result = await db.query(queryText, queryParams);
+
+    const clients = result.rows.map(client => ({
+      ...client,
+      hasUnreadMessagesFromClient: client.unread_messages_count > 0,
+    }));
+
+    res.status(200).json(clients);
+  } catch (error) {
+    console.error('Error fetching clients for agent:', error);
+    res.status(500).json({ message: 'Server error fetching clients.', error: error.message });
   }
 };
 
 // Function to get a specific client's full profile details
-exports.getClientProfileDetails = async (req, res) => {
+const getClientProfileDetails = async (req, res) => {
     const { clientId } = req.params;
     const requestingUserId = req.user.user_id; // The ID of the authenticated user
     const requestingUserRole = req.user.role; // The role of the authenticated user
@@ -82,7 +111,7 @@ exports.getClientProfileDetails = async (req, res) => {
 };
 
 // Get Client Property Preferences
-exports.getClientPreferences = async (req, res) => {
+const getClientPreferences = async (req, res) => {
     const { clientId } = req.params;
     try {
         const result = await db.query(
@@ -111,7 +140,7 @@ exports.getClientPreferences = async (req, res) => {
 };
 
 // Update Client Property Preferences
-exports.updateClientPreferences = async (req, res) => {
+const updateClientPreferences = async (req, res) => {
     const { clientId } = req.params;
     const { preferred_property_type, preferred_location, min_price, max_price, min_bedrooms, min_bathrooms } = req.body;
 
@@ -141,7 +170,7 @@ exports.updateClientPreferences = async (req, res) => {
 };
 
 // Get Agent-Recommended Listings for a Client (Existing: for agents to see what they recommended to a client)
-exports.getRecommendedListings = async (req, res) => {
+const getRecommendedListings = async (req, res) => {
     const { clientId } = req.params;
     const agentId = req.user.user_id; // The authenticated agent
 
@@ -173,7 +202,7 @@ exports.getRecommendedListings = async (req, res) => {
 };
 
 // NEW: Get Recommended Listings from a Specific Agent for an Authenticated Client
-exports.getRecommendedListingsByAgentForClient = async (req, res) => {
+const getRecommendedListingsByAgentForClient = async (req, res) => {
     const { clientId, agentId } = req.params;
     const requestingUserId = req.user.user_id;
     const requestingUserRole = req.user.role;
@@ -216,7 +245,7 @@ exports.getRecommendedListingsByAgentForClient = async (req, res) => {
 
 
 // Add a Recommended Listing for a Client
-exports.addRecommendedListing = async (req, res) => {
+const addRecommendedListing = async (req, res) => {
     const { clientId, propertyId } = req.params;
     const agentId = req.user.user_id;
 
@@ -240,7 +269,7 @@ exports.addRecommendedListing = async (req, res) => {
 };
 
 // Remove a Recommended Listing for a Client
-exports.removeRecommendedListing = async (req, res) => {
+const removeRecommendedListing = async (req, res) => {
     const { clientId, propertyId } = req.params;
     const agentId = req.user.user_id;
 
@@ -264,7 +293,7 @@ exports.removeRecommendedListing = async (req, res) => {
 
 
 // NEW: sendConnectionRequestToAgent - Client sends a connection request to an agent
-exports.sendConnectionRequestToAgent = async (req, res) => {
+const sendConnectionRequestToAgent = async (req, res) => {
     const { agentId } = req.params; // The agent the client wants to connect with
     const clientId = req.user.user_id; // The authenticated client sending the request
     const { message } = req.body; // Optional message
@@ -342,7 +371,7 @@ exports.sendConnectionRequestToAgent = async (req, res) => {
 };
 
 // NEW: getConnectionStatus - Get connection status between a client and an agent
-exports.getConnectionStatus = async (req, res) => {
+const getConnectionStatus = async (req, res) => {
     const { clientId, agentId } = req.params;
     const requestingUserId = req.user.user_id;
     const requestingUserRole = req.user.role;
@@ -410,7 +439,7 @@ exports.getConnectionStatus = async (req, res) => {
 };
 
 // NEW: disconnectFromAgent - Client disconnects from an agent
-exports.disconnectFromAgent = async (req, res) => {
+const disconnectFromAgent = async (req, res) => {
     const { clientId, agentId } = req.params;
     const requestingUserId = req.user.user_id;
 
@@ -457,7 +486,7 @@ exports.disconnectFromAgent = async (req, res) => {
 
 
 // NEW: getClientIncomingRequests - Get connection requests sent TO the authenticated client (from agents)
-exports.getClientIncomingRequests = async (req, res) => {
+const getClientIncomingRequests = async (req, res) => {
     const clientId = req.user.user_id; // The authenticated client
     const clientRole = req.user.role;
 
@@ -483,7 +512,7 @@ exports.getClientIncomingRequests = async (req, res) => {
 };
 
 // NEW: getClientOutgoingRequests - Get connection requests sent BY the authenticated client (to agents)
-exports.getClientOutgoingRequests = async (req, res) => {
+const getClientOutgoingRequests = async (req, res) => {
     const clientId = req.user.user_id; // The authenticated client
     const clientRole = req.user.role;
 
@@ -509,7 +538,7 @@ exports.getClientOutgoingRequests = async (req, res) => {
 };
 
 // NEW: acceptConnectionRequestFromAgent - Client accepts a connection request from an agent
-exports.acceptConnectionRequestFromAgent = async (req, res) => {
+const acceptConnectionRequestFromAgent = async (req, res) => {
     const { requestId } = req.params;
     const clientId = req.user.user_id;
     const clientRole = req.user.role;
@@ -560,7 +589,7 @@ exports.acceptConnectionRequestFromAgent = async (req, res) => {
 };
 
 // NEW: rejectConnectionRequestFromAgent - Client rejects a connection request from an agent
-exports.rejectConnectionRequestFromAgent = async (req, res) => {
+const rejectConnectionRequestFromAgent = async (req, res) => {
     const { requestId } = req.params;
     const clientId = req.user.user_id;
     const clientRole = req.user.role;
@@ -594,7 +623,7 @@ exports.rejectConnectionRequestFromAgent = async (req, res) => {
 
 
 // Send email mock
-exports.sendEmailToClient = async (req, res) => {
+const sendEmailToClient = async (req, res) => {
   const { agentId, clientId } = req.params;
   const { subject, message } = req.body;
 
@@ -603,7 +632,7 @@ exports.sendEmailToClient = async (req, res) => {
 };
 
 // Respond to inquiry mock
-exports.respondToInquiry = async (req, res) => {
+const respondToInquiry = async (req, res) => {
   const { agentId, clientId } = req.params;
   const { message } = req.body;
 
@@ -612,16 +641,30 @@ exports.respondToInquiry = async (req, res) => {
 };
 
 // Add agent notes
-exports.addNoteToClient = async (req, res) => {
+const addNoteToClient = async (req, res) => {
   const { agentId, clientId } = req.params;
   const { note } = req.body;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization check: Only the assigned agent can update the note
+  if (parseInt(agentId) !== currentUserId || currentUserRole !== 'agent') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to update this client\'s note.' });
+  }
 
   try {
-    await db.query(`
+    const result = await db.query(`
       UPDATE agent_clients SET notes = $1 WHERE agent_id = $2 AND client_id = $3 AND request_status = 'accepted'
     `, [note, agentId, clientId]);
 
-    res.status(200).json({ message: 'Note added' });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Client connection not found or not accepted.' });
+    }
+
+    // Optional: Log activity
+    await logActivity(`Agent ${agentId} updated note for client ${clientId}`, req.user, 'client_note_update');
+
+    res.status(200).json({ message: 'Note added successfully.' });
   } catch (err) {
     console.error('Add note error:', err);
     res.status(500).json({ error: 'Error adding note' });
@@ -629,7 +672,7 @@ exports.addNoteToClient = async (req, res) => {
 };
 
 // Toggle VIP status
-exports.toggleVipFlag = async (req, res) => {
+const toggleVipFlag = async (req, res) => {
   const { agentId, clientId } = req.params;
   const { status } = req.body;
 
@@ -637,11 +680,26 @@ exports.toggleVipFlag = async (req, res) => {
     return res.status(400).json({ error: 'Invalid status value' });
   }
 
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization check: Only the assigned agent can toggle VIP status
+  if (parseInt(agentId) !== currentUserId || currentUserRole !== 'agent') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to change this client\'s VIP status.' });
+  }
+
   try {
     // Only update if the request_status is 'accepted'
-    await db.query(`
+    const result = await db.query(`
       UPDATE agent_clients SET status = $1 WHERE agent_id = $2 AND client_id = $3 AND request_status = 'accepted'
     `, [status, agentId, clientId]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Client connection not found or not accepted.' });
+    }
+
+    // Optional: Log activity
+    await logActivity(`Agent ${agentId} changed client ${clientId} status to ${status}`, req.user, 'client_status_update');
 
     res.status(200).json({ message: 'Client status updated' });
   } catch (err) {
@@ -651,7 +709,7 @@ exports.toggleVipFlag = async (req, res) => {
 };
 
 // Optional: Save message to message log
-exports.sendMessageToClient = async (req, res) => {
+const sendMessageToClient = async (req, res) => {
   const { agentId, clientId } = req.params;
   const { message } = req.body;
 
@@ -664,8 +722,16 @@ exports.sendMessageToClient = async (req, res) => {
   }
 };
 
-exports.archiveClient = async (req, res) => {
+const archiveClient = async (req, res) => {
   const { agentId, clientId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization check: Only the assigned agent can archive the client
+  if (parseInt(agentId) !== currentUserId || currentUserRole !== 'agent') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to archive this client.' });
+  }
+
   // Log incoming parameters for debugging
   console.log(`[archiveClient] Attempting to archive client: agentId=${agentId}, clientId=${clientId}`);
   try {
@@ -720,8 +786,17 @@ exports.archiveClient = async (req, res) => {
   }
 };
 
-exports.getArchivedClients = async (req, res) => {
+const getArchivedClients = async (req, res) => {
   const { agentId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization: An agent can only view their own archived clients.
+  // Admins can view any agent's archived clients.
+  if (parseInt(agentId) !== currentUserId && currentUserRole !== 'admin') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to view these archived clients.' });
+  }
+
   try {
     const result = await db.query(`
       SELECT u.user_id, u.full_name, u.email, u.date_joined, u.status, ac.notes, ac.status AS client_status, ac.archived_at
@@ -736,8 +811,16 @@ exports.getArchivedClients = async (req, res) => {
   }
 };
 
-exports.restoreClient = async (req, res) => {
+const restoreClient = async (req, res) => {
   const { agentId, clientId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
+
+  // Authorization check: Only the assigned agent can restore the client
+  if (parseInt(agentId) !== currentUserId || currentUserRole !== 'agent') {
+    return res.status(403).json({ message: 'Forbidden: You are not authorized to restore this client.' });
+  }
+
   try {
     // Move back to active table
     // When restoring, set request_status to 'accepted' as it signifies an active relationship
@@ -771,7 +854,7 @@ exports.restoreClient = async (req, res) => {
 };
 
 // Function to permanently delete an archived client
-exports.deleteArchivedClient = async (req, res) => {
+const deleteArchivedClient = async (req, res) => {
   const { agentId, clientId } = req.params;
   try {
     // Delete the client from the archived_clients table
@@ -789,4 +872,147 @@ exports.deleteArchivedClient = async (req, res) => {
     console.error('Delete archived client error:', err);
     res.status(500).json({ error: 'Failed to permanently delete archived client' });
   }
+};
+
+/**
+ * @desc Get all clients associated with agents of a specific agency
+ * @route GET /api/clients/agency/:agencyId/clients
+ * @access Private (Agency Admin or Super Admin)
+ */
+const getClientsByAgencyId = async (req, res) => {
+    const { agencyId } = req.params;
+    const performingUserId = req.user.user_id;
+    const performingUserRole = req.user.role;
+
+    try {
+        // Authorization: User must be an agency admin of this agency or a super admin
+        const agencyExistsCheck = await db.query('SELECT agency_id FROM agencies WHERE agency_id = $1', [agencyId]);
+        if (agencyExistsCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Agency not found.' });
+        }
+
+        if (performingUserRole === 'agency_admin') {
+            const performingUserAgencyResult = await db.query('SELECT agency_id FROM users WHERE user_id = $1', [performingUserId]);
+            if (performingUserAgencyResult.rows.length === 0 || performingUserAgencyResult.rows[0].agency_id !== parseInt(agencyId)) {
+                return res.status(403).json({ message: 'Forbidden: You are not authorized to view clients for this agency.' });
+            }
+        } else if (performingUserRole !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
+        }
+
+        // Fetch all agents belonging to this agency
+        const agentsInAgencyResult = await db.query(
+            `SELECT user_id FROM users WHERE agency_id = $1 AND role = 'agent'`,
+            [agencyId]
+        );
+        const agentIds = agentsInAgencyResult.rows.map(row => row.user_id);
+
+        if (agentIds.length === 0) {
+            return res.status(200).json([]); // No agents in this agency, so no clients
+        }
+
+        // Fetch clients connected to these agents
+        const clientsResult = await db.query(
+            `SELECT
+                c.user_id,
+                c.full_name,
+                c.email,
+                c.phone,
+                c.profile_picture_url,
+                c.date_joined,
+                c.status,
+                ac.notes,
+                ac.status AS client_status,
+                u_agent.user_id AS agent_id,
+                u_agent.full_name AS agent_name,
+                u_agent.email AS agent_email,
+                (SELECT COUNT(*) FROM inquiries WHERE client_id = c.user_id AND agent_id = ac.agent_id AND read_by_agent = FALSE AND message_type = 'client_reply') AS unread_messages_count
+             FROM agent_clients ac -- clients
+             JOIN users c ON ac.client_id = c.user_id
+             JOIN users u_agent ON ac.agent_id = u_agent.user_id
+             WHERE ac.agent_id = ANY($1::int[]) AND ac.request_status = 'accepted'
+             ORDER BY c.full_name ASC`,
+            [agentIds]
+        );
+
+        // Additionally, fetch any clients who have initiated inquiries with agents from this agency
+        // but might not yet have a formal 'connected' status in agent_clients.
+        // This ensures all relevant clients are shown.
+        const inquiryClientsResult = await db.query(
+            `SELECT DISTINCT
+                i.client_id AS user_id,
+                COALESCE(u_client.full_name, i.name) AS full_name,
+                COALESCE(u_client.email, i.email) AS email,
+                COALESCE(u_client.phone, i.phone) AS phone,
+                u_client.profile_picture_url,
+                u_client.date_joined,
+                u_client.status,
+                NULL AS notes, -- Notes are specific to agent_clients, not inquiries
+                'inquiry' AS client_status, -- Mark as inquiry
+                i.agent_id,
+                u_agent.full_name AS agent_name,
+                u_agent.email AS agent_email,
+                (SELECT COUNT(*) FROM inquiries WHERE client_id = i.client_id AND agent_id = i.agent_id AND read_by_agent = FALSE AND message_type = 'client_reply') AS unread_messages_count
+             FROM inquiries i
+             LEFT JOIN users u_client ON i.client_id = u_client.user_id
+             JOIN users u_agent ON i.agent_id = u_agent.user_id
+             WHERE i.agent_id = ANY($1::int[])
+             AND i.client_id IS NOT NULL
+             AND i.message_content IS NOT NULL AND i.message_content != '::shell::' -- Exclude shell messages
+             ORDER BY full_name ASC`,
+            [agentIds]
+        );
+
+        // Combine results, ensuring uniqueness by client_id
+        const combinedClientsMap = new Map();
+        clientsResult.rows.forEach(client => combinedClientsMap.set(client.user_id, {
+          ...client,
+          hasUnreadMessagesFromClient: client.unread_messages_count > 0,
+        }));
+        inquiryClientsResult.rows.forEach(client => {
+            if (!combinedClientsMap.has(client.user_id)) { // Only add if not already in connected clients
+                combinedClientsMap.set(client.user_id, {
+                  ...client,
+                  hasUnreadMessagesFromClient: client.unread_messages_count > 0,
+                });
+            }
+        });
+
+        const allAgencyClients = Array.from(combinedClientsMap.values());
+
+        res.status(200).json(allAgencyClients);
+
+    } catch (error) {
+        console.error('Error fetching clients for agency:', error);
+        res.status(500).json({ message: 'Server error fetching agency clients.', error: error.message });
+    }
+};
+
+
+module.exports = {
+  getClientsForAgent,
+  getClientProfileDetails,
+  getClientPreferences,
+  updateClientPreferences,
+  getRecommendedListings,
+  getRecommendedListingsByAgentForClient,
+  addRecommendedListing,
+  removeRecommendedListing,
+  sendConnectionRequestToAgent,
+  getConnectionStatus,
+  disconnectFromAgent,
+  getClientIncomingRequests,
+  getClientOutgoingRequests,
+  acceptConnectionRequestFromAgent,
+  rejectConnectionRequestFromAgent,
+  sendEmailToClient,
+  respondToInquiry,
+  addNoteToClient, // Keeping addNoteToClient as requested
+  toggleVipFlag,
+  sendMessageToClient,
+  archiveClient,
+  getArchivedClients,
+  restoreClient,
+  deleteArchivedClient,
+  getClientsByAgencyId,
 };

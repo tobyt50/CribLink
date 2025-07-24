@@ -17,6 +17,7 @@ import {
   ChevronDownIcon, // Import ChevronDownIcon for the Dropdown component
 } from '@heroicons/react/24/outline';
 import AgentSidebar from '../../components/agent/Sidebar';
+import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Import AgencyAdminSidebar
 import SendEmailModal from '../../components/agent/SendEmailModal';
 import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus, UserPlus, UserMinus } from 'lucide-react';
@@ -142,8 +143,9 @@ const Clients = () => {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [agentId, setAgentId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null); // Renamed from agentId to currentUserId
   const [userRole, setUserRole] = useState('');
+  const [agencyId, setAgencyId] = useState(null); // New state for agencyId
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -188,13 +190,13 @@ const Clients = () => {
   // Function to get the current authenticated user's ID and role from token
   const getAuthenticatedUserInfo = useCallback(() => {
     const token = localStorage.getItem('token');
-    if (!token) return { userId: null, role: 'guest' };
+    if (!token) return { userId: null, role: 'guest', agencyId: null };
     try {
       const decoded = JSON.parse(atob(token.split('.')[1]));
-      return { userId: decoded.user_id, role: decoded.role };
+      return { userId: decoded.user_id, role: decoded.role, agencyId: decoded.agency_id }; // Get agency_id from token
     } catch (error) {
       console.error("Error decoding token for authenticated user info:", error);
-      return { userId: null, role: 'guest' };
+      return { userId: null, role: 'guest', agencyId: null };
     }
   }, []);
 
@@ -212,16 +214,17 @@ const Clients = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data && data.user_id) {
-          setAgentId(data.user_id);
-          const { userId, role } = getAuthenticatedUserInfo();
+          setCurrentUserId(data.user_id);
+          const { userId, role, agencyId } = getAuthenticatedUserInfo();
           setUserRole(role);
+          setAgencyId(agencyId); // Set agencyId
         } else {
           showMessage('Invalid user data. Please sign in again.', 'error');
           navigate('/signin');
         }
       } catch (err) {
-        console.error("Failed to fetch agent profile:", err);
-        showMessage('Failed to load agent profile. Please sign in.', 'error');
+        console.error("Failed to fetch user profile:", err);
+        showMessage('Failed to load user profile. Please sign in.', 'error');
         navigate('/signin');
       }
     };
@@ -229,46 +232,66 @@ const Clients = () => {
   }, [navigate, showMessage, getAuthenticatedUserInfo]);
 
   const fetchClientsAndRequests = useCallback(async () => {
-    if (!agentId) {
+    if (!currentUserId) {
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      const clientsRes = await axios.get(`${API_BASE_URL}/clients/agent/${agentId}/clients`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      let clientsRes;
+
+      if (userRole === 'agency_admin' && agencyId) {
+        // Fetch all clients for the agency if user is agency_admin
+        clientsRes = await axios.get(`${API_BASE_URL}/clients/agency/${agencyId}/clients`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else if (userRole === 'agent') {
+        // Fetch clients for the specific agent
+        clientsRes = await axios.get(`${API_BASE_URL}/clients/agent/${currentUserId}/clients`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } else {
+        // If not agent or agency_admin, clear clients and return
+        setClients([]);
+        setPendingRequests([]);
+        return;
+      }
 
       setClients(clientsRes.data);
-      // setFilteredClients(clientsRes.data); // This will be updated by the useEffect below
 
-      const requestsRes = await axios.get(`${API_BASE_URL}/agents/${agentId}/connection-requests/incoming`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPendingRequests(requestsRes.data);
-      // setFilteredPendingRequests(requestsRes.data); // This will be updated by the useEffect below
+      // Only fetch pending requests if the user is an agent
+      if (userRole === 'agent') {
+        const requestsRes = await axios.get(`${API_BASE_URL}/agents/${currentUserId}/connection-requests/incoming`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPendingRequests(requestsRes.data);
+      } else {
+        setPendingRequests([]); // Agency admins don't manage individual agent's pending requests here
+      }
 
     } catch (err) {
       console.error('Failed to fetch data:', err);
       showMessage('Failed to fetch clients or requests. Please try again.', 'error');
     }
-  }, [agentId, showMessage]);
+  }, [currentUserId, userRole, agencyId, showMessage]);
+
 
   useEffect(() => {
     fetchClientsAndRequests();
-  }, [fetchClientsAndRequests, showPendingRequests]);
+  }, [fetchClientsAndRequests, showPendingRequests, userRole]); // Added userRole to dependencies
 
 
   // New: Fetch conversation for a specific client
-  const fetchConversationForClient = useCallback(async (clientIdToFetch) => {
-    if (!clientIdToFetch || !agentId) {
+  const fetchConversationForClient = useCallback(async (clientIdToFetch, agentIdForConversation) => {
+    if (!clientIdToFetch || !agentIdForConversation) {
       console.log('Client ID or Agent ID not available for conversation fetch.');
       return null;
     }
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE_URL}/inquiries/agent/${agentId}/client/${clientIdToFetch}/conversation`, {
+      // The API endpoint now takes both agentId and clientId
+      const res = await fetch(`${API_BASE_URL}/inquiries/agent/${agentIdForConversation}/client/${clientIdToFetch}/conversation`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -319,7 +342,8 @@ const Clients = () => {
       showMessage('Failed to load client conversation.', 'error');
       return null;
     }
-  }, [agentId, clients, showMessage]);
+  }, [clients, showMessage]); // Removed agentId from dependencies, now passed as param
+
 
   // Effect to filter and sort clients
   useEffect(() => {
@@ -329,7 +353,8 @@ const Clients = () => {
       if (searchTerm) {
         currentClients = currentClients.filter((c) =>
           c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.email.toLowerCase().includes(searchTerm.toLowerCase())
+          c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (userRole === 'agency_admin' && c.agent_name?.toLowerCase().includes(searchTerm.toLowerCase())) // Search by agent name for agency admins
         );
       }
 
@@ -351,7 +376,7 @@ const Clients = () => {
       setFilteredClients(currentClients);
       setPage(1);
     }
-  }, [searchTerm, clients, sortKey, sortDirection, showPendingRequests, clientStatusFilter]); // Added clientStatusFilter to dependencies
+  }, [searchTerm, clients, sortKey, sortDirection, showPendingRequests, clientStatusFilter, userRole]); // Added userRole to dependencies
 
   // Effect to filter and sort pending requests
   useEffect(() => {
@@ -389,12 +414,17 @@ const Clients = () => {
       showMessage('Client data is missing for chat. Please wait or refresh.', 'info');
       return;
     }
-    if (!agentId) {
-      showMessage('Agent ID not available. Please try again later.', 'info');
+    // Determine the agent ID for the conversation.
+    // If agency_admin, use the agent_id associated with the client.
+    // If agent, use their own currentUserId.
+    const agentIdForConversation = userRole === 'agency_admin' ? clientToChat.agent_id : currentUserId;
+
+    if (!agentIdForConversation) {
+      showMessage('Agent ID not available for conversation. Please try again later.', 'info');
       return;
     }
 
-    let conversationToOpen = await fetchConversationForClient(clientToChat.user_id);
+    let conversationToOpen = await fetchConversationForClient(clientToChat.user_id, agentIdForConversation);
 
     if (!conversationToOpen) {
       try {
@@ -407,7 +437,7 @@ const Clients = () => {
           },
           body: JSON.stringify({
             client_id: clientToChat.user_id,
-            agent_id: agentId,
+            agent_id: agentIdForConversation, // Use the determined agentIdForConversation
             message_content: null // Initial message content can be null for general inquiry
           })
         });
@@ -426,14 +456,14 @@ const Clients = () => {
             client_id: conversation.client_id,
             agent_id: conversation.agent_id,
             property_id: conversation.property_id,
-            clientName: clients.find(c => c.user_id === conv.client_id)?.full_name || conv.client_full_name,
-            clientEmail: clients.find(c => c.user_id === conv.client_id)?.email || conv.client_email,
-            clientPhone: clients.find(c => c.user_id === conv.client_id)?.phone || conv.client_phone,
+            clientName: clients.find(c => c.user_id === conversation.client_id)?.full_name || conversation.client_full_name, // Corrected to use conversation.client_id
+            clientEmail: clients.find(c => c.user_id === conversation.client_id)?.email || conversation.client_email, // Corrected to use conversation.client_id
+            clientPhone: clients.find(c => c.user_id === conversation.client_id)?.phone || conversation.client_phone, // Corrected to use conversation.client_id
             propertyTitle: conversation.property_title || 'General Inquiry',
             messages: Array.isArray(conversation.messages)
               ? conversation.messages.map(msg => ({
                   inquiry_id: msg.inquiry_id,
-                  sender: msg.sender_id === agentId ? 'Agent' : 'Client',
+                  sender: msg.sender_id === agentIdForConversation ? 'Agent' : 'Client', // Use agentIdForConversation here
                   sender_id: msg.sender_id,
                   message: msg.message,
                   timestamp: msg.timestamp,
@@ -473,7 +503,7 @@ const Clients = () => {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        socket.emit('message_read', { conversationId: conversationToOpen.id, userId: agentId, role: 'agent' });
+        socket.emit('message_read', { conversationId: conversationToOpen.id, userId: currentUserId, role: userRole }); // Use currentUserId and userRole
         setConversationForModal(prev => prev ? { ...prev, unreadCount: 0 } : null);
       } catch (error) {
         console.error("Failed to mark messages as read:", error);
@@ -490,9 +520,9 @@ const Clients = () => {
     } catch (error) {
       console.error("Failed to mark conversation as opened:", error);
     }
-  }, [agentId, fetchConversationForClient, showMessage, clients]); // Added clients to dependencies for clientName lookup
+  }, [currentUserId, userRole, fetchConversationForClient, showMessage, clients]); // Added userRole to dependencies
 
-  const handleDeleteInquiry = useCallback(async () => {
+  const handleDeleteInquiry = useCallback(() => {
     if (!conversationForModal) return;
     showConfirm({
       title: "Delete Conversation",
@@ -548,7 +578,7 @@ const Clients = () => {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id);
+      const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id, conversationForModal?.agent_id); // Pass agent_id
       if (updatedConversation) {
         setConversationForModal(updatedConversation);
       }
@@ -561,14 +591,14 @@ const Clients = () => {
   useEffect(() => {
     if (!socket.connected) socket.connect();
 
-    if (conversationForModal?.id && agentId) {
+    if (conversationForModal?.id && currentUserId) { // Use currentUserId
       socket.emit('join_conversation', conversationForModal.id);
     }
 
     const handleNewMessage = async (newMessage) => {
       if (!conversationForModal || newMessage.conversationId !== conversationForModal.id) return;
 
-      const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id);
+      const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id, conversationForModal?.agent_id); // Pass agent_id
       if (updatedConversation) {
         setConversationForModal(updatedConversation);
       }
@@ -579,7 +609,7 @@ const Clients = () => {
 
       if (isFromClient && openedConversationId === conversationForModal.id) {
         const token = localStorage.getItem('token');
-        if (token && agentId) {
+        if (token && currentUserId) { // Use currentUserId
           fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversationForModal.id}`, {
             method: 'PUT',
             headers: {
@@ -591,8 +621,8 @@ const Clients = () => {
               if (res.ok) {
                 socket.emit('message_read', {
                   conversationId: conversationForModal.id,
-                  userId: agentId,
-                  role: 'agent'
+                  userId: currentUserId, // Use currentUserId
+                  role: userRole // Use userRole
                 });
               }
             })
@@ -603,7 +633,7 @@ const Clients = () => {
 
     const handleReadAck = async ({ conversationId, readerId, role }) => {
       if (conversationId === conversationForModal?.id) {
-        const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id);
+        const updatedConversation = await fetchConversationForClient(conversationForModal?.client_id, conversationForModal?.agent_id); // Pass agent_id
         if (updatedConversation) {
           setConversationForModal(updatedConversation);
         }
@@ -614,13 +644,13 @@ const Clients = () => {
     socket.on('message_read_ack', handleReadAck);
 
     return () => {
-      if (conversationForModal?.id && agentId) {
+      if (conversationForModal?.id && currentUserId) { // Use currentUserId
         socket.emit('leave_conversation', conversationForModal.id);
       }
       socket.off('new_message', handleNewMessage);
       socket.off('message_read_ack', handleReadAck);
     };
-  }, [conversationForModal, openedConversationId, agentId, showMessage, fetchConversationForClient]);
+  }, [conversationForModal, openedConversationId, currentUserId, userRole, showMessage, fetchConversationForClient]); // Added userRole to dependencies
 
 
   const handleViewProfile = (clientId) => {
@@ -632,6 +662,11 @@ const Clients = () => {
   };
 
   const handleRemoveClient = async (clientId) => {
+    // Only agents can remove clients
+    if (userRole !== 'agent') {
+      showMessage('Only agents can remove clients.', 'error');
+      return;
+    }
     showConfirm({
       title: "Archive Client",
       message: "Are you sure you want to archive this client? You can restore them later from 'Archived Clients'.",
@@ -642,7 +677,7 @@ const Clients = () => {
 
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}`, {
+          await axios.delete(`${API_BASE_URL}/clients/agent/${currentUserId}/clients/${clientId}`, { // Use currentUserId
             headers: { Authorization: `Bearer ${token}` },
           });
           showMessage("Client archived successfully!", 'success');
@@ -667,10 +702,15 @@ const Clients = () => {
 
 
   const handleToggleStatus = async (clientId, currentStatus) => {
+    // Only agents can toggle client status
+    if (userRole !== 'agent') {
+      showMessage('Only agents can change client statuses.', 'error');
+      return;
+    }
     const newStatus = currentStatus === 'vip' ? 'regular' : 'vip';
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}/vip`, { status: newStatus }, {
+      await axios.put(`${API_BASE_URL}/clients/agent/${currentUserId}/clients/${clientId}/vip`, { status: newStatus }, { // Use currentUserId
         headers: { Authorization: `Bearer ${token}` },
       });
       setClients((prev) => prev.map((c) => c.user_id === clientId ? { ...c, client_status: newStatus } : c));
@@ -712,7 +752,9 @@ const Clients = () => {
 
     const headers = showPendingRequests
       ? ['request_id', 'client_id', 'client_name', 'client_email', 'message', 'created_at', 'status']
-      : ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status'];
+      : (userRole === 'agency_admin'
+        ? ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status', 'agent_name', 'agent_email'] // Added agent info for agency admin
+        : ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status']);
 
     const csvRows = dataToExport.map((item) => {
       if (showPendingRequests) {
@@ -726,7 +768,7 @@ const Clients = () => {
           item.status || '',
         ].map(field => `"${String(field).replace(/"/g, '""')}"`);
       } else {
-        return [
+        const baseFields = [
           item.user_id,
           item.full_name,
           item.email,
@@ -734,7 +776,11 @@ const Clients = () => {
           item.status,
           item.notes || '',
           item.client_status || '',
-        ].map(field => `"${String(field).replace(/"/g, '""')}"`);
+        ];
+        if (userRole === 'agency_admin') {
+          return [...baseFields, item.agent_name || '', item.agent_email || ''].map(field => `"${String(field).replace(/"/g, '""')}"`);
+        }
+        return baseFields.map(field => `"${String(field).replace(/"/g, '""')}"`);
       }
     });
 
@@ -742,7 +788,7 @@ const Clients = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = showPendingRequests ? 'pending_requests.csv' : 'clients.csv';
+    link.download = showPendingRequests ? 'pending_requests.csv' : (userRole === 'agency_admin' ? 'agency_clients.csv' : 'clients.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -750,17 +796,30 @@ const Clients = () => {
     showMessage("Data exported successfully!", 'success');
   };
 
-  const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+  // Adjust contentShift based on userRole
+  const contentShift = isMobile ? 0 : isCollapsed ? 80 : (userRole === 'agency_admin' ? 256 : 256); // Assuming agency sidebar is also 256px when expanded
 
   const handleEditNote = useCallback((clientId, currentNote) => {
+    // Only agents can edit notes
+    if (userRole !== 'agent') {
+      showMessage('Only agents can edit client notes.', 'error');
+      return;
+    }
     setEditingNoteId(clientId);
     setEditedNoteContent(currentNote || '');
-  }, []);
+  }, [userRole, showMessage]);
 
   const handleSaveNote = useCallback(async (clientId) => {
+    // Only agents can save notes
+    if (userRole !== 'agent') {
+      showMessage('Only agents can save client notes.', 'error');
+      setEditingNoteId(null);
+      setEditedNoteContent('');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}/note`, {
+      await axios.put(`${API_BASE_URL}/clients/agent/${currentUserId}/clients/${clientId}/note`, { // Use currentUserId
         note: editedNoteContent,
       }, {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -780,7 +839,7 @@ const Clients = () => {
       setEditingNoteId(null);
       setEditedNoteContent('');
     }
-  }, [agentId, editedNoteContent, clients, showMessage]);
+  }, [currentUserId, editedNoteContent, clients, showMessage, userRole]);
 
   const handleCancelEdit = useCallback(() => {
     setEditingNoteId(null);
@@ -788,13 +847,18 @@ const Clients = () => {
   }, []);
 
   const handleAcceptRequest = async (requestId, clientIdToAccept) => {
+    // Only agents can accept requests
+    if (userRole !== 'agent') {
+      showMessage('Only agents can accept connection requests.', 'error');
+      return;
+    }
     showConfirm({
       title: "Accept Connection Request",
       message: `Are you sure you want to accept this connection request from ${pendingRequests.find(r => r.request_id === requestId)?.client_name || 'this client'}?`,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.post(`${API_BASE_URL}/agents/${agentId}/connection-requests/${requestId}/accept-from-client`, {}, {
+          await axios.post(`${API_BASE_URL}/agents/${currentUserId}/connection-requests/${requestId}/accept-from-client`, {}, { // Use currentUserId
             headers: { Authorization: `Bearer ${token}` },
           });
           showMessage('Connection request accepted!', 'success');
@@ -810,13 +874,18 @@ const Clients = () => {
   };
 
   const handleRejectRequest = async (requestId) => {
+    // Only agents can reject requests
+    if (userRole !== 'agent') {
+      showMessage('Only agents can reject connection requests.', 'error');
+      return;
+    }
     showConfirm({
       title: "Reject Connection Request",
       message: `Are you sure you want to reject this connection request?`,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.post(`${API_BASE_URL}/agents/${agentId}/connection-requests/${requestId}/reject-from-client`, {}, {
+          await axios.post(`${API_BASE_URL}/agents/${currentUserId}/connection-requests/${requestId}/reject-from-client`, {}, { // Use currentUserId
             headers: { Authorization: `Bearer ${token}` },
           });
           showMessage('Connection request rejected.', 'info');
@@ -874,15 +943,27 @@ const Clients = () => {
         </motion.button>
       )}
 
-      <AgentSidebar
-        collapsed={isMobile ? false : isCollapsed}
-        setCollapsed={isMobile ? () => {} : setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        isMobile={isMobile}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
+      {userRole === 'agency_admin' ? (
+        <AgencyAdminSidebar
+          collapsed={isMobile ? false : isCollapsed}
+          setCollapsed={isMobile ? () => {} : setIsCollapsed}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          isMobile={isMobile}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
+      ) : (
+        <AgentSidebar
+          collapsed={isMobile ? false : isCollapsed}
+          setCollapsed={isMobile ? () => {} : setIsCollapsed}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          isMobile={isMobile}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
+      )}
       <motion.div
         key={isMobile ? 'mobile' : 'desktop'}
         animate={{ marginLeft: contentShift }}
@@ -949,7 +1030,7 @@ const Clients = () => {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
               <input
                 type="text"
-                placeholder="Search clients..."
+                placeholder={userRole === 'agency_admin' ? "Search clients by name, email, or agent..." : "Search clients by name or email..."}
                 value={searchTerm}
                 onChange={handleSearchChange} // Use the new handler
                 className={`w-full md:w-1/3 px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
@@ -1002,25 +1083,27 @@ const Clients = () => {
             </div>
           )}
 
-          <div className="flex justify-center mb-6">
-            <button
-              onClick={() => { setShowPendingRequests(false); setPage(1); }}
-              className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200
-                      ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
-            >
-              Your Clients ({clients.length})
-            </button>
-            <button
-              onClick={() => { setShowPendingRequests(true); setPage(1); }}
-              className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200
-                      ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-            >
-              Pending Requests ({pendingRequests.length})
-            </button>
-          </div>
+          {userRole === 'agent' && ( // Only show pending requests toggle for agents
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => { setShowPendingRequests(false); setPage(1); }}
+                className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200
+                        ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
+              >
+                Your Clients ({clients.length})
+              </button>
+              <button
+                onClick={() => { setShowPendingRequests(true); setPage(1); }}
+                className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200
+                        ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+              >
+                Pending Requests ({pendingRequests.length})
+              </button>
+            </div>
+          )}
 
 
-          {showPendingRequests ? (
+          {showPendingRequests && userRole === 'agent' ? ( // Ensure pending requests are only shown for agents
             paginatedData.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 No pending connection requests found.
@@ -1043,7 +1126,7 @@ const Clients = () => {
                       }}
                       onViewProfile={() => showMessage('View Client Profile is not available directly from pending requests here.', 'info')}
                       onSendEmail={() => showMessage('Email client directly from here.', 'info')}
-                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null })}
+                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null, agent_id: currentUserId })} // Pass currentUserId as agent_id
                       onToggleStatus={() => showMessage('Cannot toggle status for pending requests.', 'info')}
                       onRemoveClient={() => handleRejectRequest(request.request_id)}
                       editingNoteId={null}
@@ -1054,6 +1137,7 @@ const Clients = () => {
                       acceptAction={() => handleAcceptRequest(request.request_id, request.client_id)}
                       rejectAction={() => handleRejectRequest(request.request_id)}
                       isPendingRequestCard={true}
+                      userRole={userRole} // Pass userRole
                     />
                   ))}
                 </div>
@@ -1082,7 +1166,7 @@ const Clients = () => {
                               <XCircleIcon className="h-6 w-6" />
                             </button>
                             <button
-                                onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null })}
+                                onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null, agent_id: currentUserId })} // Pass currentUserId as agent_id
                                 className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
                                 text-blue-500 hover:border-blue-600 border border-transparent`}
                                 title="Chat with client"
@@ -1122,6 +1206,7 @@ const Clients = () => {
                       }}
                       onSaveNote={handleSaveNote}
                       onCancelEdit={handleCancelEdit}
+                      userRole={userRole} // Pass userRole
                     />
                   ))}
                 </div>
@@ -1130,10 +1215,13 @@ const Clients = () => {
                   <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Name {renderSortIcon('full_name')}</th>
-                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Email {renderSortIcon('email')}</th>
+                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '20%' }}>Name {renderSortIcon('full_name')}</th>
+                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '20%' : '25%' }}>Email {renderSortIcon('email')}</th>
+                        {userRole === 'agency_admin' && (
+                          <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Agent {renderSortIcon('agent_name')}</th>
+                        )}
                         <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Status</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '25%' }}>Actions</th> {/* Adjusted width */}
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
@@ -1141,12 +1229,15 @@ const Clients = () => {
                         <tr key={client.user_id} className={`border-t cursor-default break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
                           <td className="px-1 py-2" title={client.full_name}>{client.full_name}</td>
                           <td className="px-1 py-2" title={client.email}>{client.email}</td>
+                          {userRole === 'agency_admin' && (
+                            <td className="px-1 py-2" title={client.agent_name}>{client.agent_name || 'N/A'}</td>
+                          )}
                           <td className={`px-1 py-2 font-semibold ${
                             client.client_status === 'vip'
                               ? 'text-green-600'
                               : (darkMode ? 'text-gray-300' : 'text-gray-600')
                             }`} title={client.client_status || 'regular'}>{client.client_status || 'regular'}</td>
-                          <td className="px-1 py-2 flex gap-1">
+                          <td className="px-1 py-2 flex gap-1 flex-wrap"> {/* Added flex-wrap */}
                             <button onClick={() => handleViewProfile(client.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`}>View</button>
                             <button onClick={() => handleSendEmail(client)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>Email</button>
                             <button
@@ -1157,12 +1248,34 @@ const Clients = () => {
                             >
                                 <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
                             </button>
-                            <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`}>
-                              {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
-                            </button>
-                            <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
+                            {userRole === 'agent' && ( // Only agents can toggle status and remove clients
+                              <>
+                                <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`}>
+                                  {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+                                </button>
+                                <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                            {userRole === 'agency_admin' && ( // Tooltips for agency admin restricted actions
+                              <>
+                                <button
+                                  className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-300 border border-transparent cursor-not-allowed opacity-50`}
+                                  title="Only assigned agent can change client status"
+                                  disabled
+                                >
+                                  {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+                                </button>
+                                <button
+                                  title="Only assigned agent can remove client"
+                                  className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-300 border border-transparent cursor-not-allowed opacity-50`}
+                                  disabled
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1192,7 +1305,7 @@ const Clients = () => {
         <SendEmailModal
           isOpen={emailModalOpen}
           onClose={() => setEmailModalOpen(false)}
-          agentId={agentId}
+          agentId={currentUserId} // Use currentUserId
           client={selectedClient}
           onSent={() => showMessage("Email sent", 'success')}
           darkMode={darkMode}
@@ -1213,6 +1326,7 @@ const Clients = () => {
             onViewProperty={handleViewProperty}
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
+            userRole={userRole} // Pass userRole to modal
           />
         )}
       </AnimatePresence>
@@ -1253,7 +1367,7 @@ const Clients = () => {
                   <input
                     type="text"
                     id="search"
-                    placeholder="Search by name or email..."
+                    placeholder={userRole === 'agency_admin' ? "Search by name, email, or agent..." : "Search by name or email..."}
                     value={searchTerm}
                     onChange={handleSearchChange}
                     className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}

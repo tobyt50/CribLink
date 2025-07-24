@@ -4,7 +4,7 @@ const clientController = require('../controllers/clientController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware'); // Import authorizeRoles
 
 // Core
-router.get('/agent/:agentId/clients', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.getClientsForAgent); // Only agents/admins can get clients for an agent
+router.get('/agent/:agentId/clients', authenticateToken, authorizeRoles(['agent', 'admin', 'agency_admin']), clientController.getClientsForAgent); // Only agents/admins can get clients for an agent
 router.get('/:clientId', authenticateToken, clientController.getClientProfileDetails); // Auth token required, internal logic handles client-agent relationship
 
 // Client Property Preferences (requires authentication as a client)
@@ -41,12 +41,15 @@ router.get('/:clientId/connection-requests/status/:agentId', authenticateToken, 
 router.post('/agent/:agentId/clients/:clientId/email', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.sendEmailToClient);
 router.post('/agent/:agentId/clients/:clientId/respond', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.respondToInquiry);
 // CHANGED: From router.post to router.put for addNoteToClient
-router.put('/agent/:agentId/clients/:clientId/note', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.addNoteToClient);
+router.put('/agent/:agentId/clients/:clientId/note', authenticateToken, authorizeRoles('agent'), clientController.addNoteToClient); // Updated authorization to 'agent'
 router.post('/agent/:agentId/clients/:clientId/message', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.sendMessageToClient);
-router.put('/agent/:agentId/clients/:clientId/vip', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.toggleVipFlag);
-router.delete('/agent/:agentId/clients/:clientId', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.archiveClient);
+router.put('/agent/:agentId/clients/:clientId/vip', authenticateToken, authorizeRoles('agent'), clientController.toggleVipFlag); // Updated authorization to 'agent'
+router.delete('/agent/:agentId/clients/:clientId', authenticateToken, authorizeRoles('agent'), clientController.archiveClient); // Updated authorization to 'agent'
 router.delete('/agent/:agentId/archived-clients/:clientId', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.deleteArchivedClient);
 router.get('/agent/:agentId/archived-clients', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.getArchivedClients);
-router.post('/agent/:agentId/archived-clients/:clientId/restore', authenticateToken, authorizeRoles(['agent', 'admin']), clientController.restoreClient);
+router.post('/agent/:agentId/archived-clients/:clientId/restore', authenticateToken, authorizeRoles('agent'), clientController.restoreClient); // Updated authorization to 'agent'
+
+// NEW: Agency Admin related client routes
+router.get('/agency/:agencyId/clients', authenticateToken, authorizeRoles(['agency_admin', 'admin']), clientController.getClientsByAgencyId);
 
 module.exports = router;
