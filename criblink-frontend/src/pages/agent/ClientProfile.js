@@ -60,7 +60,8 @@ const ClientProfile = () => {
   const recommendedListingsPerPage = 4;
 
 
-  const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+  // Conditionally set contentShift to 0 if the user is not an agent
+  const contentShift = userRole === 'agent' && !isMobile ? (isCollapsed ? 80 : 256) : 0;
 
   const getAuthenticatedUserInfo = useCallback(() => {
     const token = localStorage.getItem('token');
@@ -559,7 +560,8 @@ const ClientProfile = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {isMobile && (
+      {/* Conditionally render the mobile menu button for the sidebar */}
+      {isMobile && userRole === 'agent' && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
           className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
@@ -581,15 +583,18 @@ const ClientProfile = () => {
         </motion.button>
       )}
 
-      <AgentSidebar
-        collapsed={isMobile ? false : isCollapsed}
-        setCollapsed={isMobile ? () => { } : setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        isMobile={isMobile}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
+      {/* Conditionally render the AgentSidebar */}
+      {userRole === 'agent' && (
+        <AgentSidebar
+          collapsed={isMobile ? false : isCollapsed}
+          setCollapsed={isMobile ? () => { } : setIsCollapsed}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          isMobile={isMobile}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
+      )}
 
       <motion.div
         key={isMobile ? 'mobile' : 'desktop'}
@@ -691,7 +696,8 @@ const ClientProfile = () => {
 
             </motion.div>
 
-            {isMobile && (
+            {/* Conditionally render chat button for mobile if user is agent */}
+            {isMobile && userRole === 'agent' && (
               <motion.div
                 className={`flex flex-col items-center justify-center text-center ${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                 initial={{ x: 50, opacity: 0 }}
@@ -772,7 +778,8 @@ const ClientProfile = () => {
           </div>
 
           <div className="w-full lg:w-2/5 space-y-8">
-            {!isMobile && (
+            {/* Conditionally render chat button for desktop if user is agent */}
+            {!isMobile && userRole === 'agent' && (
               <motion.div
                 className={'p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center text-center ' + (darkMode ? "bg-gray-800" : "bg-white")}
                 initial={{ x: 50, opacity: 0 }}

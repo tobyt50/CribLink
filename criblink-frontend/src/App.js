@@ -46,7 +46,7 @@ import AgentListings from './pages/agent/Listings';
 import Clients from './pages/agent/Clients';
 import ClientProfile from './pages/agent/ClientProfile';
 import AgentInquiries from './pages/agent/AgentInquiries';
-import ArchivedClients from './pages/agent/ArchivedClients';
+import Archive from './pages/agent/Archive'; // Renamed from ArchivedClients to Archive
 import AgentSettings from './pages/agent/Settings';
 import LegalDocumentsAgent from "./pages/agent/LegalDocuments"; // NEW: Import Agent's LegalDocuments
 
@@ -115,7 +115,7 @@ const agentRoutes = [
   { path: "clients", element: <Clients /> },
   { path: "client-profile/:clientId", element: <ClientProfile /> },
   { path: "inquiries", element: <AgentInquiries /> },
-  { path: "archived-clients", element: <ArchivedClients /> },
+  { path: "archive", element: <Archive /> }, // Updated route to "archive"
   { path: "settings", element: <AgentSettings /> },
   { path: "add-document", element: <AddLegalDocument /> },
   { path: "documents", element: <LegalDocumentsAgent /> }, // NEW: Agent's Legal Documents list
@@ -134,6 +134,7 @@ const agencyAdminRoutes = [
   { path: "listings", element: <AgencyAdminListings /> }, // NEW: Added AgencyAdminListings route
   { path: "members", element: <Members /> }, // Updated to Members
   { path: "clients", element: <Clients /> }, // NEW: Added Clients route for agency admin
+  { path: "client-profile/:clientId", element: <ClientProfile /> }, // NEW: Added ClientProfile route for agency admin
   { path: "inquiries", element: <AgencyInquiries /> }, // NEW: Added AgencyInquiries route
   // { path: "properties", element: <AgencyAdminProperties /> },
   { path: "settings", element: <AgencyAdminSettings /> },
@@ -215,13 +216,13 @@ function AppContent() {
             </Route>
             <Route path="favourites" element={<Favourites />} />
             {/* Removed direct edit-listing route here as it's now handled within role-specific routes */}
-            {/* Agent Profile page accessible to clients and agency_admins */}
-            <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin"]} />}>
+            {/* Agent Profile page accessible to clients, agency_admins, and agents */}
+            <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin", "agent"]} />}>
               <Route index element={<AgentProfile />} />
             </Route>
 
-            {/* NEW: Agency Admin Profile page accessible to agency_admin themselves */}
-            <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin"]} />}>
+            {/* NEW: Agency Admin Profile page accessible to agency_admin, agents, and admin */}
+            <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
               <Route index element={<AgencyAdminProfile />} />
             </Route>
           </Route>

@@ -218,6 +218,7 @@ const sendMessageInquiry = async (req, res) => {
         [conversation_id]
       );
       const first = convDetails.rows[0];
+      // FIX: Access client_id directly from 'first' object, not 'first.client.id'
       client_id = first.client_id;
       agent_id = first.agent_id;
     } else {
@@ -387,9 +388,11 @@ const getAllInquiriesForAgent = async (req, res) => {
 
     // Adjust query for agent/admin/agency_admin
     if (req.user.role === 'agent') {
+        // Agent sees inquiries where they are current agent, sender, recipient, OR original agent (if reassigned)
+        // AND it's not hidden from them
         whereClause += `
           WHERE
-            (i.agent_id = $${paramIndex} OR i.recipient_id = $${paramIndex} OR i.sender_id = $${paramIndex})
+            (i.agent_id = $${paramIndex} OR i.recipient_id = $${paramIndex} OR i.sender_id = $${paramIndex} OR i.original_agent_id = $${paramIndex})
             AND i.hidden_from_agent = FALSE
         `;
         queryParams.push(req.user.user_id);
@@ -407,10 +410,10 @@ const getAllInquiriesForAgent = async (req, res) => {
         }
 
         // The query needs to select conversations where the agent_id (assigned agent)
-        // or sender_id or recipient_id is one of the agents in the agency.
+        // or sender_id or recipient_id or original_agent_id is one of the agents in the agency.
         whereClause += `
             WHERE
-                (i.agent_id = ANY($${paramIndex}::int[]) OR i.recipient_id = ANY($${paramIndex}::int[]) OR i.sender_id = ANY($${paramIndex}::int[]))
+                (i.agent_id = ANY($${paramIndex}::int[]) OR i.recipient_id = ANY($${paramIndex}::int[]) OR i.sender_id = ANY($${paramIndex}::int[]) OR i.original_agent_id = ANY($${paramIndex}::int[]))
                 AND i.hidden_from_agent = FALSE
         `;
         queryParams.push(agentIds);
@@ -444,16 +447,21 @@ const getAllInquiriesForAgent = async (req, res) => {
       `SELECT
           i.inquiry_id, i.conversation_id, i.client_id, i.agent_id, i.property_id, i.sender_id,
           i.recipient_id, i.message_content, i.message_type, i.status, i.read_by_client, i.read_by_agent,
-          i.is_agent_responded, i.is_opened, i.created_at, i.updated_at,
+          i.is_agent_responded, i.is_opened, i.created_at, i.updated_at, i.hidden_from_agent, -- NEW: hidden_from_agent
+          i.original_agent_id, i.reassigned_by_admin_id, i.reassigned_at,
           COALESCE(u_client.full_name, i.name) AS client_name,
           COALESCE(u_client.email, i.email) AS client_email,
           COALESCE(u_client.phone, i.phone) AS client_phone,
-          u_client.profile_picture_url AS client_profile_picture_url, -- ADDED: Client profile picture URL
+          u_client.profile_picture_url AS client_profile_picture_url,
           u_agent.full_name AS agent_name, u_agent.email AS agent_email,
+          ua_original.full_name AS original_agent_name,
+          ua_reassigned_by.full_name AS reassigned_by_admin_name,
           p.title AS property_title
        FROM inquiries i
        LEFT JOIN users u_client ON i.client_id = u_client.user_id
        LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN users ua_original ON i.original_agent_id = ua_original.user_id
+       LEFT JOIN users ua_reassigned_by ON i.reassigned_by_admin_id = ua_reassigned_by.user_id
        LEFT JOIN property_listings p ON i.property_id = p.property_id
        ${whereClause}
        ORDER BY i.conversation_id, i.created_at ASC`,
@@ -466,11 +474,17 @@ const getAllInquiriesForAgent = async (req, res) => {
         conversationsMap.set(inq.conversation_id, {
           id: inq.conversation_id, client_id: inq.client_id, agent_id: inq.agent_id, property_id: inq.property_id,
           clientName: inq.client_name, clientEmail: inq.client_email, clientPhone: inq.client_phone,
-          clientProfilePictureUrl: inq.client_profile_picture_url, // ADDED: Client profile picture URL to map
-          agent_name: inq.agent_name, // NEW: Include assigned agent's name
+          clientProfilePictureUrl: inq.client_profile_picture_url,
+          agent_name: inq.agent_name,
           propertyTitle: inq.property_title || (inq.property_id ? `Property ${inq.property_id}` : 'General Inquiry'),
           messages: [], lastMessage: null, lastMessageTimestamp: null, lastMessageSenderId: null,
           unreadCount: 0, is_agent_responded: inq.is_agent_responded, is_opened: inq.is_opened,
+          hidden_from_agent: inq.hidden_from_agent, // NEW: hidden_from_agent
+          original_agent_id: inq.original_agent_id,
+          original_agent_name: inq.original_agent_name,
+          reassigned_by_admin_id: inq.reassigned_by_admin_id,
+          reassigned_by_admin_name: inq.reassigned_by_admin_name,
+          reassigned_at: inq.reassigned_at,
         });
       }
       const conversation = conversationsMap.get(inq.conversation_id);
@@ -519,6 +533,13 @@ const getAllInquiriesForAgent = async (req, res) => {
         conv.is_agent_responded = latestStatusInquiry.is_agent_responded;
         conv.is_opened = latestStatusInquiry.is_opened;
       }
+
+      // Determine if this conversation is reassigned FROM the current agent
+      if (req.user.role === 'agent' && conv.original_agent_id === req.user.user_id && conv.agent_id !== req.user.user_id) {
+        conv.isReassignedFromMe = true;
+      } else {
+        conv.isReassignedFromMe = false;
+      }
     });
 
     groupedConversations.sort((a, b) => {
@@ -542,6 +563,150 @@ const getAllInquiriesForAgent = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// NEW: Get all archived inquiries for an agent
+const getArchivedInquiriesForAgent = async (req, res) => {
+  try {
+    const { sort, direction } = req.query;
+    const userId = req.user.user_id; // Current agent's ID
+
+    let orderBy = 'i.created_at';
+    let orderDirection = 'DESC';
+
+    const validSortKeys = ['i.created_at', 'u_client.full_name', 'p.title', 'i.status', 'i.reassigned_at', 'u_agent.full_name'];
+    if (sort === 'clientName') {
+      orderBy = `COALESCE(u_client.full_name, i.name)`;
+    } else if (sort === 'propertyTitle') {
+      orderBy = 'p.title';
+    } else if (sort === 'lastMessageTimestamp') {
+      orderBy = 'i.created_at'; // Sort by message timestamp for inquiries
+    } else if (sort === 'agent_name') {
+      orderBy = 'u_agent.full_name';
+    } else if (sort === 'reassigned_at') {
+      orderBy = 'i.reassigned_at';
+    }
+
+
+    if (direction && ['asc', 'desc'].includes(direction.toLowerCase())) {
+      orderDirection = direction.toUpperCase();
+    }
+
+    // Filter for conversations hidden from the current agent
+    const whereClause = ` WHERE i.hidden_from_agent = TRUE AND (i.agent_id = $1 OR i.original_agent_id = $1 OR i.sender_id = $1 OR i.recipient_id = $1)`;
+    const queryParams = [userId];
+
+    const allArchivedInquiries = await query(
+      `SELECT
+          i.inquiry_id, i.conversation_id, i.client_id, i.agent_id, i.property_id, i.sender_id,
+          i.recipient_id, i.message_content, i.message_type, i.status, i.read_by_client, i.read_by_agent,
+          i.is_agent_responded, i.is_opened, i.created_at, i.updated_at, i.hidden_from_agent,
+          i.original_agent_id, i.reassigned_by_admin_id, i.reassigned_at,
+          COALESCE(u_client.full_name, i.name) AS client_name,
+          COALESCE(u_client.email, i.email) AS client_email,
+          COALESCE(u_client.phone, i.phone) AS client_phone,
+          u_client.profile_picture_url AS client_profile_picture_url,
+          u_agent.full_name AS agent_name, u_agent.email AS agent_email,
+          ua_original.full_name AS original_agent_name,
+          ua_reassigned_by.full_name AS reassigned_by_admin_name,
+          p.title AS property_title
+       FROM inquiries i
+       LEFT JOIN users u_client ON i.client_id = u_client.user_id
+       LEFT JOIN users u_agent ON i.agent_id = u_agent.user_id
+       LEFT JOIN users ua_original ON i.original_agent_id = ua_original.user_id
+       LEFT JOIN users ua_reassigned_by ON i.reassigned_by_admin_id = ua_reassigned_by.user_id
+       LEFT JOIN property_listings p ON i.property_id = p.property_id
+       ${whereClause}
+       ORDER BY i.conversation_id, i.created_at ASC`,
+      queryParams
+    );
+
+    const conversationsMap = new Map();
+    allArchivedInquiries.rows.forEach(inq => {
+      if (!conversationsMap.has(inq.conversation_id)) {
+        conversationsMap.set(inq.conversation_id, {
+          id: inq.conversation_id, client_id: inq.client_id, agent_id: inq.agent_id, property_id: inq.property_id,
+          clientName: inq.client_name, clientEmail: inq.client_email, clientPhone: inq.client_phone,
+          clientProfilePictureUrl: inq.client_profile_picture_url,
+          agent_name: inq.agent_name,
+          propertyTitle: inq.property_title || (inq.property_id ? `Property ${inq.property_id}` : 'General Inquiry'),
+          messages: [], lastMessage: null, lastMessageTimestamp: null, lastMessageSenderId: null,
+          unreadCount: 0, is_agent_responded: inq.is_agent_responded, is_opened: inq.is_opened,
+          hidden_from_agent: inq.hidden_from_agent,
+          original_agent_id: inq.original_agent_id,
+          original_agent_name: inq.original_agent_name,
+          reassigned_by_admin_id: inq.reassigned_by_admin_id,
+          reassigned_by_admin_name: inq.reassigned_by_admin_name,
+          reassigned_at: inq.reassigned_at,
+        });
+      }
+      const conversation = conversationsMap.get(inq.conversation_id);
+      const isClientMessage = inq.sender_id === inq.client_id;
+
+      if (inq.message_content !== null && inq.message_content !== '::shell::') {
+        conversation.messages.push({
+          inquiry_id: inq.inquiry_id, sender_id: inq.sender_id, sender: isClientMessage ? 'Client' : 'Agent',
+          message: inq.message_content, timestamp: inq.created_at,
+          read: isClientMessage ? inq.read_by_agent : inq.read_by_client,
+        });
+      }
+    });
+
+    const groupedConversations = Array.from(conversationsMap.values());
+
+    groupedConversations.forEach(conv => {
+      conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      if (conv.messages.length > 0) {
+        const lastMsg = conv.messages[conv.messages.length - 1];
+        conv.lastMessage = lastMsg.message;
+        conv.lastMessageTimestamp = lastMsg.timestamp;
+        conv.lastMessageSenderId = lastMsg.sender_id;
+      }
+      // Determine if this conversation was reassigned FROM the current agent
+      // even if it's now archived. This is for display purposes in the archive.
+      if (conv.original_agent_id === userId && conv.agent_id !== userId) {
+        conv.isReassignedFromMe = true;
+      } else {
+        conv.isReassignedFromMe = false;
+      }
+    });
+
+    groupedConversations.sort((a, b) => {
+      let aValue, bValue;
+
+      if (sort === 'clientName') {
+        aValue = a.clientName || '';
+        bValue = b.clientName || '';
+      } else if (sort === 'propertyTitle') {
+        aValue = a.propertyTitle || '';
+        bValue = b.propertyTitle || '';
+      } else if (sort === 'lastMessageTimestamp') {
+        aValue = new Date(a.lastMessageTimestamp || 0).getTime();
+        bValue = new Date(b.lastMessageTimestamp || 0).getTime();
+      } else if (sort === 'agent_name') {
+        aValue = a.agent_name || '';
+        bValue = b.agent_name || '';
+      } else if (sort === 'reassigned_at') {
+        aValue = new Date(a.reassigned_at || 0).getTime();
+        bValue = new Date(b.reassigned_at || 0).getTime();
+      } else {
+        aValue = a[sort];
+        bValue = b[sort];
+      }
+
+      if (typeof aValue === 'string' || typeof bValue === 'string') {
+        return orderDirection === 'ASC' ? String(aValue).localeCompare(String(bValue)) : String(bValue).localeCompare(String(aValue));
+      }
+      return orderDirection === 'ASC' ? aValue - bValue : bValue - aValue;
+    });
+
+
+    res.json({ inquiries: groupedConversations, total: groupedConversations.length });
+  } catch (err) {
+    console.error('Error fetching archived agent inquiries:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 
 const getAllInquiriesForClient = async (req, res) => {
   try {
@@ -636,7 +801,7 @@ const getAllInquiriesForClient = async (req, res) => {
       if (conv.messages.length > 0) {
         const lastMsg = conv.messages[conv.messages.length - 1];
         conv.lastMessage = lastMsg.message;
-        conv.lastMessageTimestamp = lastMsg.timestamp;
+        conv.lastMessageTimestamp = lastMsg.timestamp; // Corrected: Use lastMsg.timestamp
         conv.lastMessageSenderId = lastMsg.sender_id;
       }
       // Correct unread count for the CLIENT (messages from agent that client hasn't read)
@@ -741,6 +906,8 @@ const reassignInquiry = async (req, res) => {
       return res.status(404).json({ message: 'Conversation not found or not part of your agency.' });
     }
 
+    const oldAgentId = conversationCheck.rows[0].agent_id; // Get the current agent_id before update
+
     // 3. Verify the new_agent_id belongs to the same agency
     const newAgentCheck = await query(
       `SELECT user_id FROM users WHERE user_id = $1 AND agency_id = $2 AND role = 'agent'`,
@@ -750,13 +917,17 @@ const reassignInquiry = async (req, res) => {
       return res.status(400).json({ message: 'New agent not found in your agency or is not an agent.' });
     }
 
-    // 4. Update all messages in the conversation with the new agent_id
+    // 4. Update all messages in the conversation with the new agent_id and reassignment details
     const result = await query(
       `UPDATE inquiries
-       SET agent_id = $1, updated_at = NOW()
-       WHERE conversation_id = $2
+       SET agent_id = $1,
+           original_agent_id = $2, -- Store the old agent ID
+           reassigned_by_admin_id = $3,
+           reassigned_at = NOW(),
+           updated_at = NOW()
+       WHERE conversation_id = $4
        RETURNING *`,
-      [new_agent_id, conversationId]
+      [new_agent_id, oldAgentId, agencyAdminUserId, conversationId]
     );
 
     if (result.rows.length === 0) {
@@ -764,7 +935,7 @@ const reassignInquiry = async (req, res) => {
     }
 
     await logActivity(
-      `Agency Admin (ID: ${agencyAdminUserId}) reassigned conversation ${conversationId} to agent ID ${new_agent_id}.`,
+      `Agency Admin (ID: ${agencyAdminUserId}) reassigned conversation ${conversationId} from agent ID ${oldAgentId} to agent ID ${new_agent_id}.`,
       req.user,
       'inquiry_reassignment'
     );
@@ -774,7 +945,8 @@ const reassignInquiry = async (req, res) => {
       io.emit('inquiry_reassigned', {
         conversationId: conversationId,
         newAgentId: new_agent_id,
-        oldAgentId: conversationCheck.rows[0].agent_id,
+        oldAgentId: oldAgentId,
+        reassignedByAdminId: agencyAdminUserId,
         timestamp: new Date().toISOString(),
       });
       io.emit('inquiry_list_changed', {
@@ -786,6 +958,103 @@ const reassignInquiry = async (req, res) => {
     res.sendStatus(200);
   } catch (err) {
     console.error('Error reassigning inquiry:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+// PUT /inquiries/:conversationId/archive-for-agent - NEW ENDPOINT for soft delete/archive
+const archiveInquiryForAgent = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id; // The agent performing the archive
+  const io = req.app.get('io');
+
+  try {
+    // Check if the current user is an agent involved in this conversation
+    const conversationCheck = await query(
+      `SELECT 1 FROM inquiries
+       WHERE conversation_id = $1 AND (agent_id = $2 OR original_agent_id = $2 OR sender_id = $2 OR recipient_id = $2) LIMIT 1`,
+      [conversationId, userId]
+    );
+
+    if (conversationCheck.rows.length === 0) {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to archive this conversation.' });
+    }
+
+    // Set hidden_from_agent to TRUE for this conversation for the current agent
+    await query(
+      `UPDATE inquiries
+       SET hidden_from_agent = TRUE
+       WHERE conversation_id = $1`, // Note: This updates all rows for this conversation_id
+      [conversationId]
+    );
+
+    await logActivity(`Agent (ID: ${userId}) archived conversation ${conversationId}.`, req.user, 'inquiry_archive');
+
+    // Emit Socket.IO event to notify other clients (e.g., the client in this conversation)
+    if (io) {
+      io.emit('inquiry_archived_for_agent', {
+        conversationId: conversationId,
+        agentId: userId,
+        timestamp: new Date().toISOString(),
+      });
+      io.emit('inquiry_list_changed', {
+        reason: 'inquiry_archived_for_agent',
+        conversationId: conversationId
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error archiving inquiry for agent:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /inquiries/:conversationId/restore-for-agent - NEW ENDPOINT to unarchive
+const restoreInquiryForAgent = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id; // The agent performing the restore
+  const io = req.app.get('io');
+
+  try {
+    // Check if the current user is an agent involved in this conversation
+    const conversationCheck = await query(
+      `SELECT 1 FROM inquiries
+       WHERE conversation_id = $1 AND (agent_id = $2 OR original_agent_id = $2 OR sender_id = $2 OR recipient_id = $2) LIMIT 1`,
+      [conversationId, userId]
+    );
+
+    if (conversationCheck.rows.length === 0) {
+      return res.status(403).json({ message: 'Forbidden: You are not authorized to restore this conversation.' });
+    }
+
+    // Set hidden_from_agent to FALSE for this conversation for the current agent
+    await query(
+      `UPDATE inquiries
+       SET hidden_from_agent = FALSE
+       WHERE conversation_id = $1`,
+      [conversationId]
+    );
+
+    await logActivity(`Agent (ID: ${userId}) restored conversation ${conversationId}.`, req.user, 'inquiry_restore');
+
+    // Emit Socket.IO event
+    if (io) {
+      io.emit('inquiry_restored_for_agent', {
+        conversationId: conversationId,
+        agentId: userId,
+        timestamp: new Date().toISOString(),
+      });
+      io.emit('inquiry_list_changed', {
+        reason: 'inquiry_restored_for_agent',
+        conversationId: conversationId
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error restoring inquiry for agent:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -855,6 +1124,8 @@ const markConversationResponded = async (req, res) => {
 };
 
 // DELETE /inquiries/delete-conversation/:conversationId
+// This function now handles permanent deletion only if both client and agent have hidden it.
+// Otherwise, it just marks it hidden for the current user.
 const deleteConversation = async (req, res) => {
   const { conversationId } = req.params;
   const userId = req.user.user_id;
@@ -863,7 +1134,7 @@ const deleteConversation = async (req, res) => {
 
   const columnToUpdate =
     role === 'client' ? 'hidden_from_client'
-    : role === 'agent' || role === 'admin' || role === 'agency_admin' ? 'hidden_from_agent' // NEW: Added agency_admin
+    : role === 'agent' || role === 'admin' || role === 'agency_admin' ? 'hidden_from_agent'
     : null;
 
   if (!columnToUpdate) {
@@ -871,11 +1142,11 @@ const deleteConversation = async (req, res) => {
   }
 
   try {
-    // Soft delete: Mark conversation as hidden from the deleting user's view
+    // Mark conversation as hidden from the deleting user's view
     await query(
       `UPDATE inquiries
        SET ${columnToUpdate} = TRUE
-       WHERE conversation_id = $1 AND (sender_id = $2 OR recipient_id = $2 OR client_id = $2 OR agent_id = $2)`,
+       WHERE conversation_id = $1 AND (sender_id = $2 OR recipient_id = $2 OR client_id = $2 OR agent_id = $2 OR original_agent_id = $2)`,
       [conversationId, userId]
     );
 
@@ -932,6 +1203,55 @@ const deleteConversation = async (req, res) => {
   }
 };
 
+// NEW: Permanently delete inquiry (for agency admin/admin from archive)
+const permanentlyDeleteInquiry = async (req, res) => {
+  const { conversationId } = req.params;
+  const userId = req.user.user_id;
+  const role = req.user.role;
+  const io = req.app.get('io');
+
+  // Only allow admin or agency_admin to permanently delete from archive
+  if (role !== 'admin' && role !== 'agency_admin') {
+    return res.status(403).json({ message: 'Forbidden: Only administrators or agency administrators can permanently delete inquiries.' });
+  }
+
+  try {
+    // Check if the conversation exists and if it's already hidden from both parties (optional, but good practice)
+    const checkStatus = await query(
+      `SELECT hidden_from_client, hidden_from_agent FROM inquiries WHERE conversation_id = $1 LIMIT 1`,
+      [conversationId]
+    );
+
+    if (checkStatus.rows.length === 0) {
+      return res.status(404).json({ message: 'Conversation not found.' });
+    }
+
+    // Perform permanent deletion
+    await query(
+      `DELETE FROM inquiries WHERE conversation_id = $1`,
+      [conversationId]
+    );
+
+    await logActivity(`${role} (ID: ${userId}) permanently deleted conversation ${conversationId}.`, req.user, 'inquiry_permanent_delete');
+
+    if (io) {
+      io.to(conversationId).emit('conversation_permanently_deleted', {
+        conversationId
+      });
+      io.emit('inquiry_list_changed', {
+        reason: 'conversation_permanently_deleted',
+        conversationId
+      });
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Error permanently deleting inquiry:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
 // Count total inquiries (distinct conversations) for the authenticated user's role
 const countAllInquiries = async (req, res) => {
   const userId = req.user.user_id;
@@ -942,10 +1262,11 @@ const countAllInquiries = async (req, res) => {
   let paramIndex = 1;
 
   if (role === 'agent') {
-    // For agents, count distinct conversations where they are the assigned agent, sender, or recipient
+    // For agents, count distinct conversations where they are the assigned agent, sender, recipient, or original agent
+    // AND it's not hidden from them
     whereClause += `
       WHERE
-        (agent_id = $${paramIndex} OR sender_id = $${paramIndex} OR recipient_id = $${paramIndex})
+        (agent_id = $${paramIndex} OR sender_id = $${paramIndex} OR recipient_id = $${paramIndex} OR original_agent_id = $${paramIndex})
         AND hidden_from_agent = FALSE
     `;
     queryParams.push(userId);
@@ -964,7 +1285,7 @@ const countAllInquiries = async (req, res) => {
 
     whereClause += `
       WHERE
-        (agent_id = ANY($${paramIndex}::int[]) OR sender_id = ANY($${paramIndex}::int[]) OR recipient_id = ANY($${paramIndex}::int[]))
+        (agent_id = ANY($${paramIndex}::int[]) OR sender_id = ANY($${paramIndex}::int[]) OR recipient_id = ANY($${paramIndex}::int[]) OR original_agent_id = ANY($${paramIndex}::int[]))
         AND hidden_from_agent = FALSE
     `;
     queryParams.push(agentIds);
@@ -1060,7 +1381,7 @@ const getAgentClientConversation = async (req, res) => {
     }
     // For agents/agency_admins, they can view conversations they are involved in (either as agent_id or sender/recipient).
     // An admin can view all.
-    if ((currentUserRole === 'agent' || currentUserRole === 'agency_admin') && parseInt(agentId) !== currentUserId) { // NEW: Added agency_admin
+    if ((currentUserRole === 'agent' || currentUserRole === 'agency_admin') && parseInt(agentId) !== currentUserId) {
          // Also check if the agent/agency_admin is the sender or recipient of any message in this conversation.
         const isAgentInvolved = await query(
             `SELECT 1 FROM inquiries
@@ -1082,7 +1403,7 @@ const getAgentClientConversation = async (req, res) => {
         COALESCE(uc.full_name, i.name) AS clientName,
         COALESCE(uc.email, i.email) AS clientEmail,
         COALESCE(uc.phone, i.phone) AS clientPhone,
-        uc.profile_picture_url AS clientProfilePictureUrl, -- ADDED: Client profile picture URL
+        uc.profile_picture_url AS clientProfilePictureUrl,
         ua.full_name AS agentName,
         ua.email AS agentEmail,
         pl.property_id,
@@ -1090,11 +1411,18 @@ const getAgentClientConversation = async (req, res) => {
         i.status,
         i.is_agent_responded,
         i.is_opened,
+        i.original_agent_id,
+        i.reassigned_by_admin_id,
+        i.reassigned_at,
+        ua_original.full_name AS original_agent_name,
+        ua_reassigned_by.full_name AS reassigned_by_admin_name,
         (SELECT read_by_client FROM inquiries WHERE conversation_id = i.conversation_id ORDER BY created_at DESC LIMIT 1) AS read_by_client,
         (SELECT read_by_agent FROM inquiries WHERE conversation_id = i.conversation_id ORDER BY created_at DESC LIMIT 1) AS read_by_agent
       FROM inquiries i
       LEFT JOIN users uc ON i.client_id = uc.user_id
       LEFT JOIN users ua ON i.agent_id = ua.user_id
+      LEFT JOIN users ua_original ON i.original_agent_id = ua_original.user_id
+      LEFT JOIN users ua_reassigned_by ON i.reassigned_by_admin_id = ua_reassigned_by.user_id
       LEFT JOIN property_listings pl ON i.property_id = pl.property_id
       WHERE i.agent_id = $1 AND i.client_id = $2
       ORDER BY i.created_at DESC
@@ -1109,7 +1437,7 @@ const getAgentClientConversation = async (req, res) => {
     const conversation = conversationResult.rows[0];
 
     // Determine the visibility column based on the current user's role
-    const visibilityColumn = currentUserRole === 'client' ? 'hidden_from_client' : 'hidden_from_agent'; // This is fine, as agency_admin also uses hidden_from_agent
+    const visibilityColumn = currentUserRole === 'client' ? 'hidden_from_client' : 'hidden_from_agent';
 
     const messagesResult = await query(
       `SELECT
@@ -1134,6 +1462,13 @@ const getAgentClientConversation = async (req, res) => {
       read: msg.sender_id === conversation.client_id ? msg.read_by_agent : msg.read_by_client
     }));
 
+    // Determine if this conversation is reassigned FROM the current agent for the modal view
+    if (currentUserRole === 'agent' && conversation.original_agent_id === currentUserId && conversation.agent_id !== currentUserId) {
+      conversation.isReassignedFromMe = true;
+    } else {
+      conversation.isReassignedFromMe = false;
+    }
+
     res.status(200).json({ conversation });
   } catch (err) {
     console.error('Error fetching agent-client conversation:', err);
@@ -1146,13 +1481,17 @@ module.exports = {
   createGeneralInquiry, // Export the new function
   sendMessageInquiry,
   getAllInquiriesForAgent,
+  getArchivedInquiriesForAgent, // NEW: Export the archived inquiries function
   getAllInquiriesForClient,
   markMessagesAsRead,
   assignInquiry,
   reassignInquiry, // NEW: Export the reassign function
+  archiveInquiryForAgent, // NEW: Export archive function
+  restoreInquiryForAgent, // NEW: Export restore function
   markConversationOpened,
   markConversationResponded,
   deleteConversation,
+  permanentlyDeleteInquiry, // NEW: Export permanent delete function
   countAllInquiries,
   countAgentResponses,
   getAgentClientConversation,

@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AgentSidebar from '../../components/agent/Sidebar';
-import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
-import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react'; // Added icons for mobile view
+import { ArrowUpIcon, ArrowDownIcon, ArchiveBoxIcon, TrashIcon } from '@heroicons/react/24/outline'; // Added ArchiveBoxIcon, TrashIcon
+import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import AgentInquiryModal from '../../components/AgentInquiryModal';
 import { useMessage } from '../../context/MessageContext';
@@ -47,7 +47,19 @@ const AgentInquiries = () => {
     }
   }, []);
 
+  // NEW: Function to get the user's role from the token
+  const getUserRole = useCallback(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      return JSON.parse(atob(token.split('.')[1])).role; // Assuming 'role' is in the token payload
+    } catch (error) {
+      return null;
+    }
+  }, []);
+
   const agentUserId = getAgentUserId();
+  const currentUserRole = getUserRole(); // NEW: Get the current user's role
 
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
@@ -185,6 +197,8 @@ const AgentInquiries = () => {
     socket.on('message_read_ack', handleReadAck);
     socket.on('conversation_deleted', fetchInquiries);
     socket.on('inquiry_list_changed', fetchInquiries);
+    // NEW: Listen for reassignment events to trigger a refetch
+    socket.on('inquiry_reassigned', fetchInquiries);
 
 
     return () => {
@@ -193,6 +207,7 @@ const AgentInquiries = () => {
       socket.off('message_read_ack', handleReadAck);
       socket.off('conversation_deleted', fetchInquiries);
       socket.off('inquiry_list_changed', fetchInquiries);
+      socket.off('inquiry_reassigned', fetchInquiries); // NEW
     };
   }, [groupedConversations, agentUserId, fetchInquiries, openedConversationId, selectedConversationId]);
 
@@ -209,8 +224,8 @@ const AgentInquiries = () => {
     setIsAgentInquiryModalOpen(true);
     setOpenedConversationId(conversation.id); // Set the conversation as opened
 
-    // Only mark as read if there are unread messages. Status remains "New Message" until agent sends reply.
-    if (conversation.unreadCount > 0) {
+    // Only mark as read if there are unread messages AND it's not reassigned from current agent
+    if (conversation.unreadCount > 0 && !conversation.isReassignedFromMe) {
       const token = localStorage.getItem('token');
       try {
         await fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversation.id}`, {
@@ -239,21 +254,29 @@ const AgentInquiries = () => {
     }
   }, [agentUserId, showMessage]);
 
-  const handleDeleteInquiry = async () => {
-    if (!selectedConversation) return;
+  const handleArchiveConversation = async (conversationId, isReassignedFromMe) => {
     showConfirm({
-      title: "Delete Conversation",
-      message: `Are you sure you want to delete this conversation with ${selectedConversation.clientName}? This is irreversible.`,
+      title: isReassignedFromMe ? "Remove from List" : "Archive Conversation",
+      message: isReassignedFromMe ? "Are you sure you want to remove this reassigned chat from your active list? It will still be accessible in the Archive." : `Are you sure you want to archive this conversation? It will be moved to your Archive and you can restore it later.`,
       onConfirm: async () => {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/inquiries/agent/delete-conversation/${selectedConversation.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-          showMessage('Conversation deleted.', 'success');
-          setIsAgentInquiryModalOpen(false);
-          setOpenedConversationId(null); // Clear opened conversation ID
-          fetchInquiries();
-        } else {
-          showMessage('Failed to delete conversation.', 'error');
+        try {
+          // This endpoint will set hidden_from_agent = TRUE for the current agent
+          const res = await fetch(`${API_BASE_URL}/inquiries/${conversationId}/archive-for-agent`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            showMessage(isReassignedFromMe ? 'Chat removed from list.' : 'Conversation archived.', 'success');
+            setIsAgentInquiryModalOpen(false);
+            setOpenedConversationId(null); // Clear opened conversation ID
+            fetchInquiries(); // Refetch to update the list
+          } else {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+        } catch (error) {
+          console.error('Failed to archive/remove conversation:', error);
+          showMessage(isReassignedFromMe ? 'Failed to remove chat from list.' : 'Failed to archive conversation.', 'error');
         }
       }
     });
@@ -357,10 +380,13 @@ const AgentInquiries = () => {
                   // Text bolding logic: bold if new message status AND modal is not open for this conversation
                   const isBold = hasUnreadMessagesForAgent && openedConversationId !== conv.id;
 
+                  // NEW: Determine if this inquiry was reassigned FROM the current agent
+                  const isReassignedFromMe = conv.isReassignedFromMe;
+
                   return (
                     <div
                       key={conv.id}
-                      className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isBold ? 'border-l-4 border-green-500' : ''}`}
+                      className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isBold ? 'border-l-4 border-green-500' : ''} ${isReassignedFromMe ? 'opacity-60 border-l-4 border-yellow-500' : ''}`}
                       onClick={() => handleViewConversation(conv)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -373,12 +399,27 @@ const AgentInquiries = () => {
                             onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                           />
                           <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''}`}>
-                            {conv.clientName}
+                            {/* Client Name clickable */}
+                            {conv.client_id ? (
+                                <span
+                                    className="cursor-pointer hover:underline"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/agent/client-profile/${conv.client_id}`); }}
+                                >
+                                    {conv.clientName}
+                                </span>
+                            ) : (
+                                <span>{conv.clientName}</span>
+                            )}
                           </h4>
                         </div>
-                        {hasUnreadMessagesForAgent && (
+                        {hasUnreadMessagesForAgent && !isReassignedFromMe && (
                           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                             New
+                          </span>
+                        )}
+                        {isReassignedFromMe && (
+                          <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            Reassigned
                           </span>
                         )}
                       </div>
@@ -397,7 +438,8 @@ const AgentInquiries = () => {
                         </p>
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <Users size={14} className="inline-block mr-1" />
-                          Assigned: <span
+                          Assigned: {/* Agent Name clickable */}
+                          <span
                             className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -407,14 +449,40 @@ const AgentInquiries = () => {
                             {conv.agent_name || 'Unassigned'}
                           </span>
                         </p>
+                        {isReassignedFromMe && conv.reassigned_by_admin_name && conv.reassigned_at && (
+                          <p className={`text-xs mb-1 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                            <Tag size={12} className="inline-block mr-1" />
+                            Reassigned to {conv.agent_name} by {/* Admin Name clickable */}
+                            {conv.reassigned_by_admin_id ? (
+                                <span
+                                    className="cursor-pointer hover:underline"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/agency-admin-profile/${conv.reassigned_by_admin_id}`); }}
+                                >
+                                    {conv.reassigned_by_admin_name}
+                                </span>
+                            ) : (
+                                <span>{conv.reassigned_by_admin_name}</span>
+                            )}
+                            on {new Date(conv.reassigned_at).toLocaleDateString()}
+                          </p>
+                        )}
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <MessageSquare size={14} className="inline-block mr-1" />
-                          Last Message: <span className={`${isBold ? 'text-red-400 font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
+                          Last Message: <span className={`${isBold && !isReassignedFromMe ? 'text-red-400 font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
                         </p>
                         <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <Clock size={12} className="inline-block mr-1" />
                           {new Date(conv.lastMessageTimestamp).toLocaleString()}
                         </p>
+                        <div className="mt-2 flex gap-2 justify-end">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleArchiveConversation(conv.id, isReassignedFromMe); }}
+                                className={`p-1 rounded-full ${darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-600 hover:text-green-700"}`}
+                                title={isReassignedFromMe ? "Remove from my list" : "Archive Conversation"}
+                            >
+                                {isReassignedFromMe ? <TrashIcon className="h-5 w-5" /> : <ArchiveBoxIcon className="h-5 w-5" />}
+                            </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -427,7 +495,7 @@ const AgentInquiries = () => {
             // Desktop table view
             <div className="overflow-x-auto">
               <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'status', label: 'Status'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
+                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'assigned_agent', label: 'Assigned To'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
                 <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                   {groupedConversations.length > 0 ? groupedConversations.map(conv => {
                     // Determine if the conversation has unread messages FOR THE AGENT
@@ -437,13 +505,19 @@ const AgentInquiries = () => {
 
                     // Determine display status: "New Message" if unread messages OR if agent hasn't responded yet
                     // "Responded" only if agent has sent a message AND all client messages are read
-                    const displayStatus = conv.is_agent_responded ? 'Responded' : 'New Message';
+                    let displayStatus = conv.is_agent_responded ? 'Responded' : 'New Message';
 
                     // Text bolding logic: bold if new message status AND modal is not open for this conversation
                     const isBold = hasUnreadMessagesForAgent && openedConversationId !== conv.id;
 
+                    // NEW: Determine if this inquiry was reassigned FROM the current agent
+                    const isReassignedFromMe = conv.isReassignedFromMe;
+                    if (isReassignedFromMe) {
+                      displayStatus = 'Reassigned';
+                    }
+
                     return (
-                      <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold ? 'font-bold' : 'font-normal'}`} onClick={() => handleViewConversation(conv)}>
+                      <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold && !isReassignedFromMe ? 'font-bold' : 'font-normal'} ${isReassignedFromMe ? 'opacity-60 bg-yellow-100 dark:bg-yellow-900' : ''}`} onClick={() => handleViewConversation(conv)}>
                         <td className="py-2 px-2 truncate" title={conv.clientName}>
                           <div className="flex items-center">
                             <img
@@ -453,16 +527,65 @@ const AgentInquiries = () => {
                               onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.clientName)}`; }}
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                             />
-                            <span className="flex items-center">{conv.clientName}{conv.client_id && <button onClick={e => { e.stopPropagation(); navigate(`/agent/client-profile/${conv.client_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            {/* Client Name clickable */}
+                            <span className="flex items-center">
+                                {conv.client_id ? (
+                                    <span
+                                        className="cursor-pointer hover:underline"
+                                        onClick={e => { e.stopPropagation(); navigate(`/agent/client-profile/${conv.client_id}`) }}
+                                    >
+                                        {conv.clientName}
+                                    </span>
+                                ) : (
+                                    <span>{conv.clientName}</span>
+                                )}
+                            </span>
                           </div>
                         </td>
                         <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
-                        <td className={`py-2 px-2 truncate ${isBold ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || '...'}</td>
+                        <td className={`py-2 px-2 truncate ${isBold && !isReassignedFromMe ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || '...'}</td>
                         <td className="py-2 px-2 truncate">{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
-                        <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (darkMode ? 'text-green-400' : 'text-green-700')}`}>{displayStatus}</td>
+                        <td className="py-2 px-2 truncate">
+                          {/* Agent Name clickable */}
+                          <span
+                            className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (conv.agent_id) navigate(`/agent-profile/${conv.agent_id}`);
+                            }}
+                          >
+                            {conv.agent_name || 'Unassigned'}
+                          </span>
+                          {isReassignedFromMe && conv.reassigned_by_admin_name && conv.reassigned_at && (
+                            <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                              (from {conv.original_agent_name} by {/* Admin Name clickable */}
+                              {conv.reassigned_by_admin_id ? (
+                                  <span
+                                      className="cursor-pointer hover:underline"
+                                      onClick={(e) => { e.stopPropagation(); navigate(`/agency-admin-profile/${conv.reassigned_by_admin_id}`); }}
+                                  >
+                                      {conv.reassigned_by_admin_name}
+                                  </span>
+                              ) : (
+                                  <span>{conv.reassigned_by_admin_name}</span>
+                              )}{" "}
+                              on {new Date(conv.reassigned_at).toLocaleDateString()})
+                            </p>
+                          )}
+                        </td>
+                        <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (displayStatus === 'Reassigned' ? (darkMode ? 'text-yellow-400' : 'text-yellow-700') : (darkMode ? 'text-green-400' : 'text-green-700'))}`}>{displayStatus}</td>
+                        <td className="py-2 px-2 text-center">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleArchiveConversation(conv.id, isReassignedFromMe); }}
+                                className={`p-1 rounded-full ${darkMode ? "text-gray-400 hover:text-green-300" : "text-gray-600 hover:text-green-700"}`}
+                                title={isReassignedFromMe ? "Remove from my list" : "Archive Conversation"}
+                            >
+                                {isReassignedFromMe ? <TrashIcon className="h-5 w-5" /> : <ArchiveBoxIcon className="h-5 w-5" />}
+                            </button>
+                        </td>
                       </tr>
                     )
-                  }) : <tr><td colSpan="5" className="py-8 text-center text-gray-500">No conversations.</td></tr>}
+                  }) : <tr><td colSpan="7" className="py-8 text-center text-gray-500">No conversations.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -486,8 +609,10 @@ const AgentInquiries = () => {
             conversation={selectedConversation}
             darkMode={darkMode}
             onViewProperty={(id) => navigate(`/listings/${id}`)}
-            onDelete={handleDeleteInquiry}
+            onDelete={() => handleArchiveConversation(selectedConversation.id, selectedConversation.isReassignedFromMe)} // Now calls archive
             onSendMessage={handleSendMessageToConversation}
+            isReassignedForCurrentAgent={selectedConversation.isReassignedFromMe} // NEW PROP
+            userRole={currentUserRole} // NEW: Pass the userRole to the modal
           />
         )}
 

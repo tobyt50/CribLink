@@ -223,7 +223,7 @@ CREATE TABLE public.agency_members (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     message text,
     member_status character varying(50) DEFAULT 'regular'::character varying NOT NULL,
-    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'agent'::character varying])::text[])))
+    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('agent'::character varying)::text])))
 );
 
 
@@ -502,7 +502,10 @@ CREATE TABLE public.inquiries (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     hidden_from_client boolean DEFAULT false,
-    hidden_from_agent boolean DEFAULT false
+    hidden_from_agent boolean DEFAULT false,
+    original_agent_id integer,
+    reassigned_by_admin_id integer,
+    reassigned_at timestamp with time zone
 );
 
 
@@ -796,7 +799,7 @@ CREATE TABLE public.user_login_history (
     login_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     status character varying(20) NOT NULL,
     message text,
-    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY ((ARRAY['Success'::character varying, 'Failed'::character varying])::text[])))
+    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY (ARRAY[('Success'::character varying)::text, ('Failed'::character varying)::text])))
 );
 
 
@@ -884,8 +887,8 @@ CREATE TABLE public.users (
     profile_picture_public_id character varying(255),
     agency_id integer,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT valid_role CHECK (((role)::text = ANY ((ARRAY['client'::character varying, 'agent'::character varying, 'admin'::character varying, 'agency_admin'::character varying])::text[]))),
-    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'deactivated'::character varying])::text[])))
+    CONSTRAINT valid_role CHECK (((role)::text = ANY (ARRAY[('client'::character varying)::text, ('agent'::character varying)::text, ('admin'::character varying)::text, ('agency_admin'::character varying)::text]))),
+    CONSTRAINT valid_status CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('deactivated'::character varying)::text])))
 );
 
 

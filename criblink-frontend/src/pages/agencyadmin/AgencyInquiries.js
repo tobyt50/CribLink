@@ -388,7 +388,17 @@ const AgencyInquiries = () => {
                             onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                           />
                           <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''}`}>
-                            {conv.clientName}
+                            {/* Client Name clickable */}
+                            {conv.client_id ? (
+                                <span
+                                    className="cursor-pointer hover:underline"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/agency/client-profile/${conv.client_id}`); }}
+                                >
+                                    {conv.clientName}
+                                </span>
+                            ) : (
+                                <span>{conv.clientName}</span>
+                            )}
                           </h4>
                         </div>
                         {hasUnreadMessagesForAdmin && (
@@ -413,7 +423,8 @@ const AgencyInquiries = () => {
                         </p>
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <Users size={14} className="inline-block mr-1" />
-                          Assigned: <span
+                          Assigned: {/* Agent Name clickable */}
+                          <span
                             className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -479,11 +490,24 @@ const AgencyInquiries = () => {
                               onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.clientName)}`; }}
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                             />
-                            <span className="flex items-center">{conv.clientName}{conv.client_id && <button onClick={e => { e.stopPropagation(); navigate(`/agency/client-profile/${conv.client_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            {/* Client Name clickable */}
+                            <span className="flex items-center">
+                                {conv.client_id ? (
+                                    <span
+                                        className="cursor-pointer hover:underline"
+                                        onClick={e => { e.stopPropagation(); navigate(`/agency/client-profile/${conv.client_id}`) }}
+                                    >
+                                        {conv.clientName}
+                                    </span>
+                                ) : (
+                                    <span>{conv.clientName}</span>
+                                )}
+                            </span>
                           </div>
                         </td>
                         <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
                         <td className="py-2 px-2 truncate" title={conv.agent_name || 'Unassigned'}>
+                          {/* Agent Name clickable */}
                           <span
                             className={`font-medium ${conv.agent_id ? 'cursor-pointer hover:underline' : ''}`}
                             onClick={(e) => {
@@ -537,6 +561,10 @@ const AgencyInquiries = () => {
             onViewProperty={(id) => navigate(`/listings/${id}`)}
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
+            // Add a prop to indicate the user's role opening the modal
+            // This will allow AgentInquiryModal to conditionally enable/disable features
+            // and adjust navigation based on the role.
+            userRole="agency_admin"
           />
         )}
         {isReassignModalOpen && inquiryToReassign && (
