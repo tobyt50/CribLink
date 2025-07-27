@@ -15,10 +15,11 @@ import {
   XCircleIcon,
   ChatBubbleLeftRightIcon,
   ChevronDownIcon, // Import ChevronDownIcon for the Dropdown component
+  PhoneIcon, // Import PhoneIcon for call action
+  EnvelopeIcon, // Import EnvelopeIcon for email button
 } from '@heroicons/react/24/outline';
 import AgentSidebar from '../../components/agent/Sidebar';
 import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Import AgencyAdminSidebar
-import SendEmailModal from '../../components/agent/SendEmailModal';
 import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
@@ -141,8 +142,6 @@ const Clients = () => {
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null); // Renamed from agentId to currentUserId
   const [userRole, setUserRole] = useState('');
   const [agencyId, setAgencyId] = useState(null); // New state for agencyId
@@ -165,16 +164,12 @@ const Clients = () => {
 
   const [pendingRequests, setPendingRequests] = useState([]);
   const [filteredPendingRequests, setFilteredPendingRequests] = useState([]);
-  const [showPendingRequests, setShowPendingRequests] = useState(false);
+  const [activeTab, setActiveTab] = useState('your_clients'); // 'your_clients' or 'pending_requests'
 
   // States for AgentInquiryModal
   const [isAgentInquiryModalOpen, setIsAgentInquiryModalOpen] = useState(false);
   const [conversationForModal, setConversationForModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
-
-  // New states for mobile filter modal and client status filter
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false); // State for mobile filter modal
-  const [clientStatusFilter, setClientStatusFilter] = useState('all'); // 'all', 'vip', 'regular'
 
 
   useEffect(() => {
@@ -278,7 +273,7 @@ const Clients = () => {
 
   useEffect(() => {
     fetchClientsAndRequests();
-  }, [fetchClientsAndRequests, showPendingRequests, userRole]); // Added userRole to dependencies
+  }, [fetchClientsAndRequests, activeTab, userRole]); // Added userRole to dependencies
 
 
   // New: Fetch conversation for a specific client
@@ -347,66 +342,61 @@ const Clients = () => {
 
   // Effect to filter and sort clients
   useEffect(() => {
-    if (!showPendingRequests) {
-      let currentClients = [...clients];
+    let currentData = activeTab === 'your_clients' ? [...clients] : [...pendingRequests];
 
-      if (searchTerm) {
-        currentClients = currentClients.filter((c) =>
-          c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (userRole === 'agency_admin' && c.agent_name?.toLowerCase().includes(searchTerm.toLowerCase())) // Search by agent name for agency admins
-        );
-      }
-
-      // Apply client status filter
-      if (clientStatusFilter !== 'all') {
-        currentClients = currentClients.filter((client) => {
-          // Ensure client_status exists and matches the filter
-          return client.client_status?.toLowerCase() === clientStatusFilter;
-        });
-      }
-
-      currentClients.sort((a, b) => {
-        const aValue = a[sortKey];
-        const bValue = b[sortKey];
-        if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    if (searchTerm) {
+      currentData = currentData.filter((item) => {
+        if (activeTab === 'your_clients') {
+          return (
+            item.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (userRole === 'agency_admin' && item.agent_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
+        } else { // pending_requests
+          return (
+            item.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.client_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.client_phone?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
       });
-
-      setFilteredClients(currentClients);
-      setPage(1);
     }
-  }, [searchTerm, clients, sortKey, sortDirection, showPendingRequests, clientStatusFilter, userRole]); // Added userRole to dependencies
 
-  // Effect to filter and sort pending requests
-  useEffect(() => {
-    if (showPendingRequests) {
-      let currentRequests = [...pendingRequests];
+    currentData.sort((a, b) => {
+      const aValue = activeTab === 'your_clients' ? a[sortKey] : a[`client_${sortKey}`] || a[sortKey]; // Handle client_name, client_email for pending
+      const bValue = activeTab === 'your_clients' ? b[sortKey] : b[`client_${sortKey}`] || b[sortKey];
 
-      if (searchTerm) {
-        currentRequests = currentRequests.filter((r) =>
-          r.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          r.client_email.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+      if (typeof aValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
       }
-      // No status filter for pending requests as per current requirements
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
 
-      currentRequests.sort((a, b) => {
-        const aValue = a[sortKey];
-        const bValue = b[sortKey];
-        if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-      });
-
-      setFilteredPendingRequests(currentRequests);
-      setPage(1);
+    if (activeTab === 'your_clients') {
+      setFilteredClients(currentData);
+    } else {
+      setFilteredPendingRequests(currentData);
     }
-  }, [searchTerm, pendingRequests, sortKey, sortDirection, showPendingRequests]);
+    setPage(1);
+  }, [searchTerm, clients, pendingRequests, sortKey, sortDirection, activeTab, userRole]);
 
 
   const handleSendEmail = (client) => {
-    setSelectedClient(client);
-    setEmailModalOpen(true);
+    // Directly open mail client
+    if (client && client.email) {
+      window.location.href = `mailto:${client.email}`;
+    } else {
+      showMessage('Email address not available for this client.', 'info');
+    }
+  };
+
+  const handleCallClient = (phoneNumber) => {
+    if (phoneNumber) {
+      window.location.href = `tel:${phoneNumber}`;
+    } else {
+      showMessage('Phone number not available for this client.', 'info');
+    }
   };
 
   const handleOpenChat = useCallback(async (clientToChat) => {
@@ -650,7 +640,7 @@ const Clients = () => {
       socket.off('new_message', handleNewMessage);
       socket.off('message_read_ack', handleReadAck);
     };
-  }, [conversationForModal, openedConversationId, currentUserId, userRole, showMessage, fetchConversationForClient]); // Added userRole to dependencies
+  }, [conversationForModal, openedConversationId, currentUserId, userRole, showMessage, fetchConversationForClient]);
 
 
   const handleViewProfile = (clientId) => {
@@ -743,26 +733,27 @@ const Clients = () => {
   };
 
   const handleExportCsv = (scope) => {
-    const dataToExport = showPendingRequests ? (scope === 'current' ? filteredPendingRequests : pendingRequests) : (scope === 'current' ? filteredClients : clients);
+    const dataToExport = activeTab === 'your_clients' ? (scope === 'current' ? filteredClients : clients) : (scope === 'current' ? filteredPendingRequests : pendingRequests);
     if (dataToExport.length === 0) {
       showMessage(`No data found for ${scope} export.`, 'info');
       setIsExportDropdownOpen(false);
       return;
     }
 
-    const headers = showPendingRequests
-      ? ['request_id', 'client_id', 'client_name', 'client_email', 'message', 'created_at', 'status']
+    const headers = activeTab === 'pending_requests'
+      ? ['request_id', 'client_id', 'client_name', 'client_email', 'client_phone', 'message', 'created_at', 'status']
       : (userRole === 'agency_admin'
-        ? ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status', 'agent_name', 'agent_email'] // Added agent info for agency admin
-        : ['user_id', 'full_name', 'email', 'date_joined', 'status', 'notes', 'client_status']);
+        ? ['user_id', 'full_name', 'email', 'phone', 'date_joined', 'status', 'notes', 'client_status', 'agent_name', 'agent_email']
+        : ['user_id', 'full_name', 'email', 'phone', 'date_joined', 'status', 'notes', 'client_status']);
 
     const csvRows = dataToExport.map((item) => {
-      if (showPendingRequests) {
+      if (activeTab === 'pending_requests') {
         return [
           item.request_id,
           item.client_id,
           item.client_name,
           item.client_email,
+          item.client_phone || '',
           item.message || '',
           new Date(item.created_at).toLocaleDateString(),
           item.status || '',
@@ -772,6 +763,7 @@ const Clients = () => {
           item.user_id,
           item.full_name,
           item.email,
+          item.phone || '',
           new Date(item.date_joined).toLocaleDateString(),
           item.status,
           item.notes || '',
@@ -788,7 +780,7 @@ const Clients = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = showPendingRequests ? 'pending_requests.csv' : (userRole === 'agency_admin' ? 'agency_clients.csv' : 'clients.csv');
+    link.download = activeTab === 'pending_requests' ? 'pending_requests.csv' : (userRole === 'agency_admin' ? 'agency_clients.csv' : 'clients.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -900,23 +892,23 @@ const Clients = () => {
     });
   };
 
-  // Handlers for search and status changes (for both desktop and mobile filters)
+  // Handlers for search and tab changes
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setPage(1); // Reset page on search
   };
 
-  const handleClientStatusChange = (value) => {
-    setClientStatusFilter(value);
-    setPage(1); // Reset page on status change
+  const handleTabClick = (tabName) => {
+    setActiveTab(tabName);
+    setSearchTerm(''); // Clear search when switching tabs
+    setPage(1); // Reset page when switching tabs
   };
 
-
-  const totalItems = showPendingRequests ? filteredPendingRequests.length : filteredClients.length;
+  const totalItems = activeTab === 'your_clients' ? filteredClients.length : filteredPendingRequests.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const paginatedData = showPendingRequests
-    ? filteredPendingRequests.slice((page - 1) * itemsPerPage, page * itemsPerPage)
-    : filteredClients.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const paginatedData = activeTab === 'your_clients'
+    ? filteredClients.slice((page - 1) * itemsPerPage, page * itemsPerPage)
+    : filteredPendingRequests.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
 
   return (
@@ -981,78 +973,51 @@ const Clients = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
-          {isMobile && (
-            <div className="flex justify-between items-center mb-4">
-              {/* Mobile Filter Button */}
-              <button
-                className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                onClick={() => setIsFilterModalOpen(true)} // Open filter modal
-                title="Open Filters"
-              >
-                <SlidersHorizontal size={20} />
-              </button>
-              <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                <button
-                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                  className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                  title="Export"
-                >
-                  <FileText size={20} />
-                </button>
-                {isExportDropdownOpen && (
-                  <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800" : "bg-white"} ${darkMode ? "text-gray-200 border-gray-700" : "text-gray-900"}`}>
-                    <div className="py-1">
-                      <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
-                      <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Clients</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
-                  title="List View"
-                >
-                  <LayoutList className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
-                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                >
-                  <Squares2X2Icon className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-          )}
 
-          {!isMobile && (
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+          {/* Desktop View: Search, Tabs, View Mode on one line */}
+          <div className="hidden md:grid grid-cols-3 items-center gap-4 mb-6 max-w-[1344px] mx-auto">
+            {/* Search Bar (Left) */}
+            <div className="flex justify-start w-full">
               <input
                 type="text"
-                placeholder={userRole === 'agency_admin' ? "Search clients by name, email, or agent..." : "Search clients by name or email..."}
+                placeholder={userRole === 'agency_admin' ? "Search clients by name, email, phone, or agent..." : "Search clients by name, email, or phone..."}
                 value={searchTerm}
-                onChange={handleSearchChange} // Use the new handler
-                className={`w-full md:w-1/3 px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                onChange={handleSearchChange}
+                className={`w-full max-w-[28rem] px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
               />
+            </div>
 
-              {/* Desktop Status Filter - Reduced width */}
-              <div className="w-full md:w-1/6"> {/* Changed from md:w-1/4 to md:w-1/5 */}
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'vip', label: 'VIP' },
-                    { value: 'regular', label: 'Regular' },
-                  ]}
-                  value={clientStatusFilter}
-                  onChange={handleClientStatusChange} // Use the new handler
-                  placeholder="Filter by Status"
-                  className="w-full"
-                />
+            {/* Tabs for Your Clients / Pending Requests (Center) */}
+            {userRole === 'agent' && (
+              <div className="flex justify-center w-full max-w-[28rem] whitespace-nowrap">
+                <button
+                  onClick={() => handleTabClick('your_clients')}
+                  className={`w-1/2 px-4 py-[11px] text-sm font-semibold rounded-l-xl truncate transition-colors duration-200
+                    ${activeTab === 'your_clients' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
+                >
+                  Your Clients ({clients.length})
+                </button>
+                <button
+                  onClick={() => handleTabClick('pending_requests')}
+                  className={`w-1/2 px-4 py-[11px] text-sm font-semibold rounded-r-xl truncate transition-colors duration-200
+                    ${activeTab === 'pending_requests' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                >
+                  Pending Requests ({pendingRequests.length})
+                </button>
               </div>
+            )}
+            {userRole === 'agency_admin' && (
+                <div className="flex justify-center w-full max-w-[28rem] whitespace-nowrap">
+                    <span className={`px-4 py-[11px] text-sm font-semibold rounded-xl truncate
+                        ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                        All Clients ({clients.length})
+                    </span>
+                </div>
+            )}
 
-              <div className="flex gap-2 items-center">
-                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+            {/* View Mode Controls (Right) */}
+            <div className="flex justify-end gap-2 items-center">
+              <div className="relative inline-block text-left" ref={exportDropdownRef}>
                   <button
                     onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
                     className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
@@ -1069,9 +1034,51 @@ const Clients = () => {
                     </div>
                   )}
                 </div>
+              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <LayoutList className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
+                className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+              >
+                <Squares2X2Icon className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
 
+
+          {/* Mobile View: Search and View Mode on one line, Tabs below */}
+          <div className="md:hidden flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              {/* Search Bar (Left) */}
+              <input
+                type="text"
+                placeholder={userRole === 'agency_admin' ? "Search clients by name, email, phone, or agent..." : "Search clients by name, email, or phone..."}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className={`w-full px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+              />
+              {/* View Mode Controls (Right) */}
+              <div className="flex gap-2 items-center flex-shrink-0">
+                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                  <button
+                    onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                    title="Export"
+                  >
+                    <FileText size={20} />
+                  </button>
+                  {isExportDropdownOpen && (
+                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800" : "bg-white"} ${darkMode ? "text-gray-200 border-gray-700" : "text-gray-900"}`}>
+                      <div className="py-1">
+                        <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                        <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Clients</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
-                  <TableCellsIcon className="h-6 w-6" />
+                  <LayoutList className="h-6 w-6" />
                 </button>
                 <button
                   onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
@@ -1081,29 +1088,37 @@ const Clients = () => {
                 </button>
               </div>
             </div>
-          )}
+            {/* Tabs for Your Clients / Pending Requests (Below) */}
+            {userRole === 'agent' && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => handleTabClick('your_clients')}
+                  className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200 flex-1
+                            ${activeTab === 'your_clients' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
+                >
+                  Your Clients ({clients.length})
+                </button>
+                <button
+                  onClick={() => handleTabClick('pending_requests')}
+                  className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200 flex-1
+                            ${activeTab === 'pending_requests' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                >
+                  Pending ({pendingRequests.length})
+                </button>
+              </div>
+            )}
+             {userRole === 'agency_admin' && (
+                <div className="flex justify-center">
+                    <span className={`px-6 py-2 rounded-xl text-lg font-semibold
+                        ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                        All Clients ({clients.length})
+                    </span>
+                </div>
+            )}
+          </div>
 
-          {userRole === 'agent' && ( // Only show pending requests toggle for agents
-            <div className="flex justify-center mb-6">
-              <button
-                onClick={() => { setShowPendingRequests(false); setPage(1); }}
-                className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200
-                        ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
-              >
-                Your Clients ({clients.length})
-              </button>
-              <button
-                onClick={() => { setShowPendingRequests(true); setPage(1); }}
-                className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200
-                        ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-              >
-                Pending Requests ({pendingRequests.length})
-              </button>
-            </div>
-          )}
 
-
-          {showPendingRequests && userRole === 'agent' ? ( // Ensure pending requests are only shown for agents
+          {activeTab === 'pending_requests' && userRole === 'agent' ? (
             paginatedData.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 No pending connection requests found.
@@ -1118,15 +1133,16 @@ const Clients = () => {
                         user_id: request.client_id,
                         full_name: request.client_name,
                         email: request.client_email,
+                        phone: request.client_phone,
                         profile_picture_url: request.client_profile_picture_url,
                         date_joined: request.created_at,
                         status: request.status,
                         client_status: 'pending',
                         notes: request.message,
                       }}
-                      onViewProfile={() => showMessage('View Client Profile is not available directly from pending requests here.', 'info')}
-                      onSendEmail={() => showMessage('Email client directly from here.', 'info')}
-                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null, agent_id: currentUserId })} // Pass currentUserId as agent_id
+                      onViewProfile={handleViewProfile}
+                      onCallClient={handleCallClient}
+                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
                       onToggleStatus={() => showMessage('Cannot toggle status for pending requests.', 'info')}
                       onRemoveClient={() => handleRejectRequest(request.request_id)}
                       editingNoteId={null}
@@ -1137,7 +1153,7 @@ const Clients = () => {
                       acceptAction={() => handleAcceptRequest(request.request_id, request.client_id)}
                       rejectAction={() => handleRejectRequest(request.request_id)}
                       isPendingRequestCard={true}
-                      userRole={userRole} // Pass userRole
+                      userRole={userRole}
                     />
                   ))}
                 </div>
@@ -1146,27 +1162,43 @@ const Clients = () => {
                   <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('client_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Name {renderSortIcon('client_name')}</th>
-                        <th onClick={() => handleSortClick('client_email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Email {renderSortIcon('client_email')}</th>
-                        <th onClick={() => handleSortClick('created_at')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Requested At {renderSortIcon('created_at')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Actions</th>
+                        <th onClick={() => handleSortClick('client_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Name {renderSortIcon('client_name')}</th>
+                        <th onClick={() => handleSortClick('client_email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Email {renderSortIcon('client_email')}</th>
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
+                        <th onClick={() => handleSortClick('created_at')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Requested At {renderSortIcon('created_at')}</th>
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                       {paginatedData.map(request => (
-                        <tr key={request.request_id} className={`border-t cursor-default break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                        <tr
+                          key={request.request_id}
+                          className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                          onClick={() => handleViewProfile(request.client_id)}
+                        >
                           <td className="px-1 py-2" title={request.client_name}>{request.client_name}</td>
                           <td className="px-1 py-2" title={request.client_email}>{request.client_email}</td>
+                          <td className="px-1 py-2" title={request.client_phone}>{request.client_phone || 'N/A'}</td>
                           <td className="px-1 py-2">{new Date(request.created_at).toLocaleDateString()}</td>
-                          <td className="px-1 py-2 flex gap-1">
+                          <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
                             <button className="text-green-600 hover:border-green-700 p-1 border border-transparent" onClick={() => handleAcceptRequest(request.request_id, request.client_id)} title="Accept Request">
                               <CheckCircleIcon className="h-6 w-6" />
                             </button>
                             <button className="text-red-600 hover:border-red-700 p-1 border border-transparent" onClick={() => handleRejectRequest(request.request_id)} title="Reject Request">
                               <XCircleIcon className="h-6 w-6" />
                             </button>
+                            {request.client_phone && (
+                              <button
+                                  onClick={() => handleCallClient(request.client_phone)}
+                                  className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
+                                  text-green-500 hover:border-green-600 border border-transparent`}
+                                  title="Call client"
+                              >
+                                  <PhoneIcon className="h-4 w-4 mr-1" />Call
+                              </button>
+                            )}
                             <button
-                                onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: null, agent_id: currentUserId })} // Pass currentUserId as agent_id
+                                onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
                                 className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
                                 text-blue-500 hover:border-blue-600 border border-transparent`}
                                 title="Chat with client"
@@ -1194,7 +1226,7 @@ const Clients = () => {
                       key={client.user_id}
                       client={client}
                       onViewProfile={handleViewProfile}
-                      onSendEmail={handleSendEmail}
+                      onCallClient={handleCallClient}
                       onRespondInquiry={() => handleOpenChat(client)}
                       onToggleStatus={handleToggleStatus}
                       onRemoveClient={handleRemoveClient}
@@ -1206,7 +1238,7 @@ const Clients = () => {
                       }}
                       onSaveNote={handleSaveNote}
                       onCancelEdit={handleCancelEdit}
-                      userRole={userRole} // Pass userRole
+                      userRole={userRole}
                     />
                   ))}
                 </div>
@@ -1215,20 +1247,26 @@ const Clients = () => {
                   <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '20%' }}>Name {renderSortIcon('full_name')}</th>
-                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '20%' : '25%' }}>Email {renderSortIcon('email')}</th>
+                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name {renderSortIcon('full_name')}</th>
+                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Email {renderSortIcon('email')}</th>
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
                         {userRole === 'agency_admin' && (
                           <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Agent {renderSortIcon('agent_name')}</th>
                         )}
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Status</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '25%' }}>Actions</th> {/* Adjusted width */}
+                        <th onClick={() => handleSortClick('client_status')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status {renderSortIcon('client_status')}</th>
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '30%' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                       {paginatedData.map(client => (
-                        <tr key={client.user_id} className={`border-t cursor-default break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                        <tr
+                          key={client.user_id}
+                          className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                          onClick={() => handleViewProfile(client.user_id)}
+                        >
                           <td className="px-1 py-2" title={client.full_name}>{client.full_name}</td>
                           <td className="px-1 py-2" title={client.email}>{client.email}</td>
+                          <td className="px-1 py-2" title={client.phone}>{client.phone || 'N/A'}</td>
                           {userRole === 'agency_admin' && (
                             <td className="px-1 py-2" title={client.agent_name}>{client.agent_name || 'N/A'}</td>
                           )}
@@ -1237,9 +1275,20 @@ const Clients = () => {
                               ? 'text-green-600'
                               : (darkMode ? 'text-gray-300' : 'text-gray-600')
                             }`} title={client.client_status || 'regular'}>{client.client_status || 'regular'}</td>
-                          <td className="px-1 py-2 flex gap-1 flex-wrap"> {/* Added flex-wrap */}
-                            <button onClick={() => handleViewProfile(client.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`}>View</button>
-                            <button onClick={() => handleSendEmail(client)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>Email</button>
+                          <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => handleSendEmail(client)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>
+                              <EnvelopeIcon className="h-4 w-4 mr-1" />Email
+                            </button>
+                            {client.phone && (
+                              <button
+                                onClick={() => handleCallClient(client.phone)}
+                                className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
+                                text-green-500 hover:border-green-600 border border-transparent`}
+                                title="Call client"
+                              >
+                                <PhoneIcon className="h-4 w-4 mr-1" />Call
+                              </button>
+                            )}
                             <button
                                 onClick={() => handleOpenChat(client)}
                                 className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
@@ -1248,7 +1297,7 @@ const Clients = () => {
                             >
                                 <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
                             </button>
-                            {userRole === 'agent' && ( // Only agents can toggle status and remove clients
+                            {userRole === 'agent' && (
                               <>
                                 <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`}>
                                   {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
@@ -1258,7 +1307,7 @@ const Clients = () => {
                                 </button>
                               </>
                             )}
-                            {userRole === 'agency_admin' && ( // Tooltips for agency admin restricted actions
+                            {userRole === 'agency_admin' && (
                               <>
                                 <button
                                   className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-300 border border-transparent cursor-not-allowed opacity-50`}
@@ -1301,15 +1350,6 @@ const Clients = () => {
             </div>
           )}
         </motion.div>
-
-        <SendEmailModal
-          isOpen={emailModalOpen}
-          onClose={() => setEmailModalOpen(false)}
-          agentId={currentUserId} // Use currentUserId
-          client={selectedClient}
-          onSent={() => showMessage("Email sent", 'success')}
-          darkMode={darkMode}
-        />
       </motion.div>
 
       <AnimatePresence>
@@ -1326,85 +1366,8 @@ const Clients = () => {
             onViewProperty={handleViewProperty}
             onDelete={handleDeleteInquiry}
             onSendMessage={handleSendMessageToConversation}
-            userRole={userRole} // Pass userRole to modal
+            userRole={userRole}
           />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Filter Modal (for small screens) */}
-      <AnimatePresence>
-        {isFilterModalOpen && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            // Changed background to plain white and text to gray-900 for consistency
-            className={`fixed inset-0 z-50 flex flex-col bg-white text-gray-900`}
-          >
-            {/* Modal Header - Removed background and shadow */}
-            <div className={`flex items-center justify-between p-4`}> {/* Removed shadow-md and background classes */}
-              <h2 className="text-xl font-bold">Filter Clients</h2>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className={`p-2 rounded-full transition-colors duration-200 ${darkMode ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-200 text-gray-700"}`}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Modal Body - Filters */}
-            <div className="flex-1 p-4 space-y-6 overflow-y-auto">
-              {/* Search Bar */}
-              <div>
-                <label htmlFor="search" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}> {/* Adjusted text color for light mode */}
-                  Search Clients
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className={`h-5 w-5 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
-                  </div>
-                  <input
-                    type="text"
-                    id="search"
-                    placeholder={userRole === 'agency_admin' ? "Search by name, email, or agent..." : "Search by name or email..."}
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-                  />
-                </div>
-              </div>
-
-              {/* Status Dropdown */}
-              <div>
-                <label htmlFor="status-filter" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}> {/* Adjusted text color for light mode */}
-                  Client Status
-                </label>
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'vip', label: 'VIP' },
-                    { value: 'regular', label: 'Regular' },
-                  ]}
-                  value={clientStatusFilter}
-                  onChange={handleClientStatusChange}
-                  placeholder="Select Status"
-                  className="w-full"
-                />
-              </div>
-
-            </div>
-
-            {/* Apply Filters Button - Removed background and shadow */}
-            <div className={`p-4`}> {/* Removed shadow-lg and background classes */}
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -346,7 +346,7 @@ const ClientInquiries = () => {
             {!isMobile && (
               <button
                   onClick={fetchInquiries}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
               >
                   <RefreshCw size={16} /> Refresh
               </button>
@@ -381,7 +381,7 @@ const ClientInquiries = () => {
                   return (
                     <div
                       key={conv.id}
-                      className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isBold ? 'border-l-4 border-green-500' : ''}`}
+                      className={`p-4 rounded-xl shadow-md cursor-pointer relative ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} border-l-4 border-green-500`}
                       onClick={() => handleViewConversation(conv)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -393,7 +393,7 @@ const ClientInquiries = () => {
                             onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
                             onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
                           />
-                          <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''}`}>
+                          <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''} ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                             {/* Agent Name clickable */}
                             {conv.agent_id ? (
                                 <span
@@ -407,11 +407,12 @@ const ClientInquiries = () => {
                             )}
                           </h4>
                         </div>
-                        {hasUnreadMessagesForClient && (
-                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                            New
-                          </span>
-                        )}
+                        {/* Status tag moved to top right and made conditional */}
+                        <div className="absolute top-2 right-2">
+                            <span className={`${displayStatus === 'New Message' ? 'bg-red-500' : 'bg-green-500'} text-white text-xs font-bold px-2 py-1 rounded-full`}>
+                                {displayStatus}
+                            </span>
+                        </div>
                       </div>
                       <div> {/* No ml-16 here */}
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -428,7 +429,7 @@ const ClientInquiries = () => {
                         </p>
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <MessageSquare size={14} className="inline-block mr-1" />
-                          Last Message: <span className={`${isBold ? 'text-red-400 font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
+                          Last Message: <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
                         </p>
                         <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <Clock size={12} className="inline-block mr-1" />
@@ -496,11 +497,15 @@ const ClientInquiries = () => {
                               onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
                             />
-                            <span className="flex items-center">{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            <span className={`flex items-center ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
                           </div>
                         </td>
                         <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General Inquiry'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
-                        <td className={`py-2 px-2 truncate ${isBold ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || 'No messages yet.'}</td>
+                        <td className="py-2 px-2 truncate" title={conv.lastMessage}>
+                          <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>
+                            {conv.lastMessage || 'No messages yet.'}
+                          </span>
+                        </td>
                         <td className="py-2 px-2 truncate" title={new Date(conv.lastMessageTimestamp).toLocaleString()}>{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
                         <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (darkMode ? 'text-green-400' : 'text-green-700')}`}>{displayStatus}</td>
                       </tr>
@@ -563,3 +568,4 @@ const ClientInquiries = () => {
 };
 
 export default ClientInquiries;
+

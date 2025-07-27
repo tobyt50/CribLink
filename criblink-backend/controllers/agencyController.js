@@ -14,7 +14,7 @@ const SECRET_KEY = process.env.JWT_KEY || 'lionel_messi_10_is_the_goat!';
  * @access Private (Admin only initially)
  */
 exports.createAgency = async (req, res) => {
-    const { name, email, phone, website, description, logoBase64, logoOriginalname } = req.body; // Added logoOriginalname
+    const { name, email, phone, website, description, logoBase64, logoOriginalname, address } = req.body; // Added address
     const client = await db.pool.connect(); // Corrected: access pool from db
     try {
         await client.query('BEGIN');
@@ -35,9 +35,9 @@ exports.createAgency = async (req, res) => {
         }
 
         const result = await client.query(
-            `INSERT INTO agencies (name, email, phone, website, description, logo_url, logo_public_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [name, email, phone, website, description, logo_url, logo_public_id]
+            `INSERT INTO agencies (name, email, phone, website, description, logo_url, logo_public_id, address)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`, // Added address to INSERT
+            [name, email, phone, website, description, logo_url, logo_public_id, address] // Added address to values
         );
 
         await client.query('COMMIT');
@@ -185,11 +185,11 @@ exports.registerAgentAgency = async (req, res) => {
 exports.getAllAgencies = async (req, res) => {
     try {
         const { search } = req.query; // Get the search term from query parameters
-        let query = 'SELECT agency_id, name, email, phone, website, logo_url, description FROM agencies';
+        let query = 'SELECT agency_id, name, email, phone, website, logo_url, description, address FROM agencies'; // Added address
         const queryParams = [];
 
         if (search) {
-            query += ' WHERE name ILIKE $1 OR description ILIKE $1'; // Case-insensitive search
+            query += ' WHERE name ILIKE $1 OR description ILIKE $1 OR address ILIKE $1'; // Added address to search
             queryParams.push(`%${search}%`); // Add wildcard for partial matching
         }
 
@@ -211,7 +211,7 @@ exports.getAllAgencies = async (req, res) => {
 exports.getAgencyById = async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await db.query('SELECT agency_id, name, email, phone, website, description, agency_admin_id, logo_url, logo_public_id FROM agencies WHERE agency_id = $1', [id]); // Corrected: use db.query
+        const result = await db.query('SELECT agency_id, name, email, phone, website, description, agency_admin_id, logo_url, logo_public_id, address FROM agencies WHERE agency_id = $1', [id]); // Added address
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'Agency not found.' });
         }
@@ -229,7 +229,7 @@ exports.getAgencyById = async (req, res) => {
  */
 exports.updateAgency = async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, website, description, logoBase64, logoOriginalname } = req.body; // Added logoOriginalname
+    const { name, email, phone, website, description, logoBase64, logoOriginalname, address } = req.body; // Added address
     const performingUserId = req.user.user_id;
     const performingUserRole = req.user.role;
     const client = await db.pool.connect(); // Corrected: access pool from db
@@ -291,6 +291,7 @@ exports.updateAgency = async (req, res) => {
         if (phone !== undefined) { fieldsToUpdate.push(`phone = $${paramIndex++}`); values.push(phone); }
         if (website !== undefined) { fieldsToUpdate.push(`website = $${paramIndex++}`); values.push(website); }
         if (description !== undefined) { fieldsToUpdate.push(`description = $${paramIndex++}`); values.push(description); }
+        if (address !== undefined) { fieldsToUpdate.push(`address = $${paramIndex++}`); values.push(address); } // Added address to update fields
         // Only add logo fields if they were explicitly handled above (i.e., logoBase64 was in payload)
         if (logo_url !== undefined) { fieldsToUpdate.push(`logo_url = $${paramIndex++}`); values.push(logo_url); }
         if (logo_public_id !== undefined) { fieldsToUpdate.push(`logo_public_id = $${paramIndex++}`); values.push(logo_public_id); }
@@ -756,7 +757,7 @@ exports.getAgentPendingRequests = async (req, res) => {
 /**
  * @desc Remove an agent from an agency (by agency admin or super admin)
  * @route DELETE /api/agencies/:agencyId/members/:agentId
- * @access Private (Agency Admin or Super Admin)
+ * @access Private (Agency Admin or Super Admin, or the Agent themselves)
  */
 exports.removeAgencyMember = async (req, res) => {
     const { agencyId, agentId } = req.params;
@@ -1354,3 +1355,4 @@ exports.getAgencyListings = async (req, res) => {
         res.status(500).json({ message: 'Server error fetching agency listings.', error: error.message });
     }
 };
+

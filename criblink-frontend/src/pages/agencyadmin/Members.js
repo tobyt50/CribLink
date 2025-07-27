@@ -84,7 +84,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         <div className={`relative ${className}`} ref={dropdownRef}>
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} // Added e.stopPropagation() here
                 className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
                   ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
             >
@@ -112,7 +112,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
                                 key={option.value}
                                 variants={itemVariants}
                                 whileHover={{ x: 5 }}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Stop propagation to prevent parent from closing
                                     onChange(option.value);
                                     setIsOpen(false);
                                 }}
@@ -157,7 +158,10 @@ const Members = () => {
   const [filteredPendingRequests, setFilteredPendingRequests] = useState([]);
   const [showPendingRequests, setShowPendingRequests] = useState(false); // State to toggle between members and pending requests
 
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  // New state for controlling filter dropdown visibility within search bar
+  const [showSearchBarFilters, setShowSearchBarFilters] = useState(false);
+  const filterAreaRef = useRef(null); // Ref for the entire filter area (search bar + dropdowns)
+
   const [memberStatusFilter, setMemberStatusFilter] = useState('all');
   const [memberRoleFilter, setMemberRoleFilter] = useState('all');
 
@@ -169,13 +173,30 @@ const Members = () => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
-        setIsExportDropdownOpen(false);
+      if (
+        filterAreaRef.current &&
+        !filterAreaRef.current.contains(e.target)
+      ) {
+        setShowSearchBarFilters(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+  
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setShowSearchBarFilters(false);
+      }
+    };
+  
+    document.addEventListener('click', handleClickOutside); // ← changed
+    document.addEventListener('keydown', handleEscape);
+  
+    return () => {
+      document.removeEventListener('click', handleClickOutside); // ← changed
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
+  
+
 
   // Effect to set initial role filter or show pending requests from navigation state
   useEffect(() => {
@@ -240,7 +261,8 @@ const Members = () => {
       if (searchTerm) {
         currentMembers = currentMembers.filter((a) =>
           a.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.email.toLowerCase().includes(searchTerm.toLowerCase())
+          a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a.phone?.toLowerCase().includes(searchTerm.toLowerCase()) // Include phone in search
         );
       }
 
@@ -253,9 +275,7 @@ const Members = () => {
 
       // Apply member role filter
       if (memberRoleFilter !== 'all') {
-        console.log(`[Frontend Filter] Applying role filter: ${memberRoleFilter}`);
         currentMembers = currentMembers.filter((member) => {
-          console.log(`[Frontend Filter] Member: ${member.full_name}, Role: ${member.agency_role}`);
           return (member.agency_role).toLowerCase() === memberRoleFilter;
         });
       }
@@ -279,7 +299,8 @@ const Members = () => {
       if (searchTerm) {
         currentRequests = currentRequests.filter((r) =>
           r.agent_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          r.agent_email.toLowerCase().includes(searchTerm.toLowerCase())
+          r.agent_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          r.agent_phone?.toLowerCase().includes(searchTerm.toLowerCase()) // Include phone in search
         );
       }
 
@@ -287,7 +308,7 @@ const Members = () => {
         const aValue = a[sortKey];
         const bValue = b[sortKey];
         if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        return sortDirection === 'asc' ? aValue - bValue : bBValue - aValue;
       });
 
       setFilteredPendingRequests(currentRequests);
@@ -607,22 +628,108 @@ const Members = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
-          {isMobile && (
-            <div className="flex justify-between items-center mb-4">
+
+          {/* Desktop View: Search, Tabs, View Mode on one line */}
+          <div className="hidden md:grid grid-cols-3 items-center gap-4 mb-6 max-w-[1344px] mx-auto">
+            {/* Search Bar (Left) */}
+            <div className="flex justify-start w-full relative">
+  <div className="w-full relative" ref={filterAreaRef}> {/* Expanded ref scope here */}
+    <input
+      type="text"
+      placeholder="Search members by name or email..."
+      value={searchTerm}
+      onChange={handleSearchChange}
+      className={`w-full max-w-[28rem] px-4 py-2 pr-10 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+    />
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setTimeout(() => {
+          setShowSearchBarFilters(prev => !prev);
+        }, 0); // Delay prevents event clash
+      }}
+      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full ${darkMode ? "text-gray-300 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-200"}`}
+      title="Filter Members"
+    >
+      <SlidersHorizontal size={20} />
+    </button>
+
+    <AnimatePresence>
+      {showSearchBarFilters && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 10 }}
+          transition={{ duration: 0.2 }}
+          className={`absolute left-0 right-0 top-full mt-2 p-4 rounded-xl shadow-lg z-50 space-y-4
+            ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}
+        >
+          <div>
+            <label htmlFor="member-role-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+              Member Role
+            </label>
+            <Dropdown
+              options={[
+                { value: 'all', label: 'All Roles' },
+                { value: 'agent', label: 'Agents' },
+                { value: 'agency_admin', label: 'Admins' },
+              ]}
+              value={memberRoleFilter}
+              onChange={handleMemberRoleChange}
+              placeholder="Select Role"
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label htmlFor="member-status-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+              Rank
+            </label>
+            <Dropdown
+              options={[
+                { value: 'all', label: 'All Ranks' },
+                { value: 'vip', label: 'VIP' },
+                { value: 'regular', label: 'Regular' },
+              ]}
+              value={memberStatusFilter}
+              onChange={handleMemberStatusChange}
+              placeholder="Select Rank"
+              className="w-full"
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+</div>
+
+
+            {/* Tabs for Your Members / Pending Requests (Center) */}
+            <div className="flex justify-center w-full max-w-[28rem] whitespace-nowrap">
               <button
-                className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                onClick={() => setIsFilterModalOpen(true)}
-                title="Open Filters"
+                onClick={() => { setShowPendingRequests(false); setPage(1); }}
+                className={`w-1/2 px-4 py-[11px] text-sm font-semibold rounded-l-xl truncate transition-colors duration-200
+                        ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
               >
-                <SlidersHorizontal size={20} />
+                Your Members ({members.length})
               </button>
+              <button
+                onClick={() => { setShowPendingRequests(true); setPage(1); }}
+                className={`w-1/2 px-4 py-[11px] text-sm font-semibold rounded-r-xl truncate transition-colors duration-200
+                        ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+              >
+                Pending Requests ({pendingRequests.length})
+              </button>
+            </div>
+
+            {/* View Mode Controls (Right) */}
+            <div className="flex justify-end gap-2 items-center">
               <div className="relative inline-block text-left" ref={exportDropdownRef}>
                 <button
                   onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                  className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                  title="Export"
+                  className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
+                  title="Export to CSV"
                 >
-                  <FileText size={20} />
+                  Export to CSV <FileText className="ml-2 h-5 w-5" />
                 </button>
                 {isExportDropdownOpen && (
                   <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800" : "bg-white"} ${darkMode ? "text-gray-200 border-gray-700" : "text-gray-900"}`}>
@@ -633,72 +740,94 @@ const Members = () => {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultMembersView', 'simple'); }}
-                  title="List View"
-                >
-                  <LayoutList className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultMembersView', 'graphical'); }}
-                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                >
-                  <Squares2X2Icon className="h-6 w-6" />
-                </button>
-              </div>
+              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultMembersView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <LayoutList className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultMembersView', 'graphical'); }}
+                className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+              >
+                <Squares2X2Icon className="h-6 w-6" />
+              </button>
             </div>
-          )}
+          </div>
 
-          {!isMobile && (
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Search members..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className={`w-full md:w-1/3 px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-              />
 
-              {/* Desktop Member Role Filter */}
-              <div className="w-full md:w-1/6">
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Roles' },
-                    { value: 'agent', label: 'Agents' },
-                    { value: 'agency_admin', label: 'Admins' },
-                  ]}
-                  value={memberRoleFilter}
-                  onChange={handleMemberRoleChange}
-                  placeholder="Filter by Role"
-                  className="w-full"
+          {/* Mobile View: Search and View Mode on one line, Tabs below */}
+          <div className="md:hidden flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between gap-4">
+              {/* Search Bar with integrated Filter Icon */}
+              <div className="flex-1 relative" ref={filterAreaRef}> {/* Wrapped search and filter in one ref */}
+                <input
+                  type="text"
+                  placeholder="Search members by name or email..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className={`w-full px-4 py-2 pr-10 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                 />
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSearchBarFilters(prev => !prev); }} // Stop propagation here
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full ${darkMode ? "text-gray-300 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-200"}`}
+                  title="Filter Members"
+                >
+                  <SlidersHorizontal size={20} />
+                </button>
+                <AnimatePresence>
+                  {showSearchBarFilters && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className={`absolute left-0 right-0 top-full mt-2 p-4 rounded-xl shadow-lg z-50 space-y-4
+                        ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}
+                    >
+                      <div>
+                        <label htmlFor="member-role-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                          Member Role
+                        </label>
+                        <Dropdown
+                          options={[
+                            { value: 'all', label: 'All Roles' },
+                            { value: 'agent', label: 'Agents' },
+                            { value: 'agency_admin', label: 'Admins' },
+                          ]}
+                          value={memberRoleFilter}
+                          onChange={handleMemberRoleChange}
+                          placeholder="Select Role"
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="member-status-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                          Rank
+                        </label>
+                        <Dropdown
+                          options={[
+                            { value: 'all', label: 'All Ranks' },
+                            { value: 'vip', label: 'VIP' },
+                            { value: 'regular', label: 'Regular' },
+                          ]}
+                          value={memberStatusFilter}
+                          onChange={handleMemberStatusChange}
+                          placeholder="Select Rank"
+                          className="w-full"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Desktop Member Status Filter */}
-              <div className="w-full md:w-1/6">
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'vip', label: 'VIP' },
-                    { value: 'regular', label: 'Regular' },
-                  ]}
-                  value={memberStatusFilter}
-                  onChange={handleMemberStatusChange}
-                  placeholder="Filter by Status"
-                  className="w-full"
-                />
-              </div>
-
-              <div className="flex gap-2 items-center">
+              {/* View Mode Controls (Right) */}
+              <div className="flex gap-2 items-center flex-shrink-0">
                 <div className="relative inline-block text-left" ref={exportDropdownRef}>
                   <button
                     onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                    className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
-                    title="Export to CSV"
+                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                    title="Export"
                   >
-                    Export to CSV <FileText className="ml-2 h-5 w-5" />
+                    <FileText size={20} />
                   </button>
                   {isExportDropdownOpen && (
                     <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800" : "bg-white"} ${darkMode ? "text-gray-200 border-gray-700" : "text-gray-900"}`}>
@@ -709,9 +838,8 @@ const Members = () => {
                     </div>
                   )}
                 </div>
-
                 <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultMembersView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
-                  <TableCellsIcon className="h-6 w-6" />
+                  <LayoutList className="h-6 w-6" />
                 </button>
                 <button
                   onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultMembersView', 'graphical'); }}
@@ -721,23 +849,23 @@ const Members = () => {
                 </button>
               </div>
             </div>
-          )}
-
-          <div className="flex justify-center mb-6">
-            <button
-              onClick={() => { setShowPendingRequests(false); setPage(1); }}
-              className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200
-                      ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
-            >
-              Your Members ({members.length})
-            </button>
-            <button
-              onClick={() => { setShowPendingRequests(true); setPage(1); }}
-              className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200
-                      ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-            >
-              Pending Requests ({pendingRequests.length})
-            </button>
+            {/* Tabs for Your Members / Pending Requests (Below) */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => { setShowPendingRequests(false); setPage(1); }}
+                className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
+                          ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
+              >
+                Your Members ({members.length})
+              </button>
+              <button
+                onClick={() => { setShowPendingRequests(true); setPage(1); }}
+                className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
+                          ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+              >
+                Pending Requests ({pendingRequests.length})
+              </button>
+            </div>
           </div>
 
           {showPendingRequests ? (
@@ -755,6 +883,7 @@ const Members = () => {
                         user_id: request.agent_id,
                         full_name: request.agent_name,
                         email: request.agent_email,
+                        phone: request.agent_phone, // Pass phone for pending requests
                         profile_picture_url: request.agent_profile_picture_url,
                         requested_at: request.requested_at,
                         request_status: request.request_status,
@@ -774,22 +903,28 @@ const Members = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed table-fixed */}
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Name {renderSortIcon('agent_name')}</th>
-                        <th onClick={() => handleSortClick('agent_email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '30%' }}>Email {renderSortIcon('agent_email')}</th>
-                        <th onClick={() => handleSortClick('requested_at')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Requested At {renderSortIcon('requested_at')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
+                        <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[120px]">Name {renderSortIcon('agent_name')}</th>
+                        <th onClick={() => handleSortClick('agent_email')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[150px]">Email {renderSortIcon('agent_email')}</th>
+                        <th className="text-left py-2 px-2 whitespace-nowrap min-w-[100px]">Phone</th> {/* New Phone Header */}
+                        <th onClick={() => handleSortClick('requested_at')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[100px]">Requested At {renderSortIcon('requested_at')}</th>
+                        <th className="text-left py-2 px-2 whitespace-nowrap min-w-[120px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                       {paginatedData.map(request => (
-                        <tr key={request.request_id} className={`border-t cursor-default break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                          <td className="px-1 py-2" title={request.agent_name}>{request.agent_name}</td>
-                          <td className="px-1 py-2" title={request.agent_email}>{request.agent_email}</td>
-                          <td className="px-1 py-2">{new Date(request.requested_at).toLocaleDateString()}</td>
-                          <td className="px-1 py-2 flex gap-1">
+                        <tr
+                          key={request.request_id}
+                          className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                          onClick={() => handleViewProfile(request.agent_id, 'pending')} // Pass 'pending' as role for consistent handling
+                        >
+                          <td className="px-2 py-2 break-words" title={request.agent_name}>{request.agent_name}</td>
+                          <td className="px-2 py-2 break-words" title={request.agent_email}>{request.agent_email}</td>
+                          <td className="px-2 py-2 break-words" title={request.agent_phone}>{request.agent_phone || 'N/A'}</td> {/* New Phone Data */}
+                          <td className="px-2 py-2 break-words">{new Date(request.requested_at).toLocaleDateString()}</td>
+                          <td className="px-2 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for action buttons */}
                             <button className="text-green-600 hover:border-green-700 p-1 border border-transparent" onClick={() => handleAcceptRequest(request.request_id, request.agent_id)} title="Accept Request">
                               <CheckCircleIcon className="h-6 w-6" />
                             </button>
@@ -835,33 +970,37 @@ const Members = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed table-fixed */}
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Name {renderSortIcon('full_name')}</th>
-                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Email {renderSortIcon('email')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Role</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Member Status</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
+                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[120px]">Name {renderSortIcon('full_name')}</th>
+                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[150px]">Email {renderSortIcon('email')}</th>
+                        <th className="text-left py-2 px-2 whitespace-nowrap min-w-[100px]">Phone</th> {/* New Phone Header */}
+                        <th onClick={() => handleSortClick('agency_role')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[80px]">Role {renderSortIcon('agency_role')}</th>
+                        <th onClick={() => handleSortClick('user_status')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[80px]">Status {renderSortIcon('user_status')}</th>
+                        <th onClick={() => handleSortClick('member_status')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[80px]">Rank {renderSortIcon('member_status')}</th>
+                        <th className="text-left py-2 px-2 whitespace-nowrap min-w-[150px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                       {paginatedData.map(member => (
-                        <tr key={member.user_id} className={`border-t cursor-default break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                          <td className="px-1 py-2" title={member.full_name}>{member.full_name}</td>
-                          <td className="px-1 py-2" title={member.email}>{member.email}</td>
-                          <td className={`px-1 py-2 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} title={member.agency_role || 'agent'}>{member.agency_role === 'agency_admin' ? 'Admin' : (member.agency_role || 'Agent')}</td>
-                          <td className={`px-1 py-2 font-semibold ${member.user_status === 'banned' ? 'text-red-600' : member.user_status === 'deactivated' ? 'text-yellow-600' : 'text-green-600'}`} title={member.user_status || 'active'}>{(member.user_status || 'active').charAt(0).toUpperCase() + (member.user_status || 'active').slice(1)}</td>
-                          <td className="px-1 py-2">
+                        <tr
+                          key={member.user_id}
+                          className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                          onClick={() => handleViewProfile(member.user_id, member.agency_role)}
+                        >
+                          <td className="px-2 py-2 break-words" title={member.full_name}>{member.full_name}</td>
+                          <td className="px-2 py-2 break-words" title={member.email}>{member.email}</td>
+                          <td className="px-2 py-2 break-words" title={member.phone}>{member.phone || 'N/A'}</td> {/* New Phone Data */}
+                          <td className={`px-2 py-2 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'} break-words`} title={member.agency_role || 'agent'}>{member.agency_role === 'agency_admin' ? 'Admin' : (member.agency_role || 'Agent')}</td>
+                          <td className={`px-2 py-2 font-semibold ${member.user_status === 'banned' ? 'text-red-600' : member.user_status === 'deactivated' ? 'text-yellow-600' : 'text-green-600'} break-words`} title={member.user_status || 'active'}>{(member.user_status || 'active').charAt(0).toUpperCase() + (member.user_status || 'active').slice(1)}</td>
+                          <td className="px-2 py-2 break-words">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold
                                 ${member.member_status === 'vip' ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
                               {capitalizeFirstLetter(member.member_status || 'regular')}
                             </span>
                           </td>
-                          <td className="px-1 py-2 flex gap-1 items-center">
-                            <button onClick={() => handleViewProfile(member.user_id, member.agency_role)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>View</button>
-
+                          <td className="px-2 py-2 flex gap-1 items-center flex-wrap" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for action buttons */}
                             {member.agency_role === 'agent' && (
                               <button
                                 onClick={() => handlePromoteMember(member.user_id)}
@@ -931,95 +1070,6 @@ const Members = () => {
           )}
         </motion.div>
       </motion.div>
-
-      <AnimatePresence>
-        {isFilterModalOpen && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={`fixed inset-0 z-50 flex flex-col bg-white text-gray-900`}
-          >
-            <div className={`flex items-center justify-between p-4`}>
-              <h2 className="text-xl font-bold">Filter Members</h2>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className={`p-2 rounded-full transition-colors duration-200 ${darkMode ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-200 text-gray-700"}`}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex-1 p-4 space-y-6 overflow-y-auto">
-              <div>
-                <label htmlFor="search" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}>
-                  Search Members
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className={`h-5 w-5 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
-                  </div>
-                  <input
-                    type="text"
-                    id="search"
-                    placeholder="Search by name or email..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-                  />
-                </div>
-              </div>
-
-              {/* Role Dropdown for Mobile */}
-              <div>
-                <label htmlFor="member-role-filter" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}>
-                  Member Role
-                </label>
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Roles' },
-                    { value: 'agent', label: 'Agents' },
-                    { value: 'agency_admin', label: 'Admins' },
-                  ]}
-                  value={memberRoleFilter}
-                  onChange={handleMemberRoleChange}
-                  placeholder="Select Role"
-                  className="w-full"
-                />
-              </div>
-
-              {/* Status Dropdown for Mobile */}
-              <div>
-                <label htmlFor="member-status-filter" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-700" : "text-gray-700"}`}>
-                  Member Status
-                </label>
-                <Dropdown
-                  options={[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'vip', label: 'VIP' },
-                    { value: 'regular', label: 'Regular' },
-                  ]}
-                  value={memberStatusFilter}
-                  onChange={handleMemberStatusChange}
-                  placeholder="Select Status"
-                  className="w-full"
-                />
-              </div>
-
-            </div>
-
-            <div className={`p-4`}>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

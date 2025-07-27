@@ -1,33 +1,59 @@
-import React from 'react';
-import { useTheme } from '../../layouts/AppShell';
+import React, { useState, useCallback } from 'react'; // Added useState and useCallback back
+import { motion } from 'framer-motion';
 import {
   TrashIcon,
   PencilIcon,
   CheckIcon,
   XMarkIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  ChatBubbleLeftRightIcon,
+  PhoneIcon, // Import PhoneIcon
+  StarIcon, // New import for VIP medal
+  UserCircleIcon, // New import for Regular medal
 } from '@heroicons/react/24/outline';
-import Card from '../../components/ui/Card';
+import Card from '../../components/ui/Card'; // Assuming Card component path is correct
+import { useTheme } from '../../layouts/AppShell'; // Ensure useTheme is imported correctly
+
+// Separator component for buttons
+const Separator = ({ darkMode }) => (
+  <div className={`w-px h-6 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+);
 
 const ClientCard = ({
   client,
   onViewProfile,
-  onSendEmail,
+  onSendEmail, // This prop is no longer used directly in ClientCard, but kept for compatibility
+  onCallClient, // New prop for call action
   onRespondInquiry,
   onToggleStatus,
   onRemoveClient,
-  editingNoteId,
-  editedNoteContent,
-  onEditNote,
-  onSaveNote,
-  onCancelEdit,
+  editingNoteId, // This prop is now used for conditional rendering within ClientCard
+  editedNoteContent, // This prop is now used for textarea value within ClientCard
+  onEditNote, // This prop is now expected to update parent state for editingNoteId and editedNoteContent
+  onSaveNote, // This prop is now used for button click within ClientCard
+  onCancelEdit, // This prop is now used for button click within ClientCard
   acceptAction,
   rejectAction,
-  isPendingRequestCard,
-  userRole // New prop: userRole
+  isPendingRequestCard = false,
+  userRole, // Pass userRole to control button visibility
 }) => {
-  const { darkMode } = useTheme();
+  const { darkMode } = useTheme(); // Use the hook directly
+
+  const isEditing = editingNoteId === client.user_id; // Reverted to use editingNoteId prop
+
+  // Reverted handleNoteChange, handleSave, handleCancel to local scope
+  const handleNoteChange = useCallback((e) => {
+    onEditNote(client.user_id, e.target.value);
+  }, [client.user_id, onEditNote]);
+
+  const handleSave = useCallback(() => {
+    onSaveNote(client.user_id);
+  }, [client.user_id, onSaveNote]);
+
+  const handleCancel = useCallback(() => {
+    onCancelEdit();
+  }, [onCancelEdit]);
 
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
@@ -48,13 +74,13 @@ const ClientCard = ({
   const profilePicUrl = client.profile_picture_url;
   const nameForInitial = client.full_name;
 
-  // Helper to render a vertical separator
-  const Separator = () => (
-    <div className="w-px bg-gray-200 dark:bg-gray-700 h-6 self-center mx-0.5"></div>
-  );
-
   // Determine if actions are disabled for agency_admin
   const isAgencyAdmin = userRole === 'agency_admin';
+
+  // Define button classes based on AgentCard.js
+  const baseButtonClasses = `flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap h-6`;
+  const iconOnlyButtonClasses = `flex items-center justify-center rounded-xl px-1.5 py-0.5 h-6 flex-shrink-0 text-[0.7rem]`;
+
 
   return (
     <Card
@@ -88,10 +114,23 @@ const ClientCard = ({
 
         <div className="flex-grow text-left min-w-0 break-words">
           <div className="text-lg font-semibold mb-1 break-words">{client.full_name}</div>
-          <div className="text-sm mb-1 text-gray-600 dark:text-gray-300 break-words">{client.email}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {isPendingRequestCard ? `Requested: ${formatDate(client.date_joined)}` : `Joined: ${formatDate(client.date_joined)}`}
+          <div className="text-xs mb-1 text-gray-600 dark:text-gray-300 break-words"> {/* Reduced font size to text-xs */}
+            <a href={`mailto:${client.email}`} className="text-gray-600 dark:text-gray-300 hover:underline"> {/* Changed text-blue-500 to gray */}
+              {client.email}
+            </a>
           </div>
+          <div className="text-xs mb-1 text-gray-600 dark:text-gray-300 break-words"> {/* Reduced font size to text-xs */}
+            {client.phone ? (
+              <a href={`tel:${client.phone}`} className="text-gray-600 dark:text-gray-300 hover:underline"> {/* Changed text-blue-500 to gray */}
+                {client.phone}
+              </a>
+            ) : <span className="text-xs text-gray-500 dark:text-gray-400">N/A</span>} {/* Reduced N/A font size */}
+          </div>
+          {client.date_joined && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {isPendingRequestCard ? `Requested: ${formatDate(client.date_joined)}` : `Joined: ${formatDate(client.date_joined)}`}
+            </div>
+          )}
           {isAgencyAdmin && client.agent_name && ( // Display assigned agent for agency admins
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Agent: <span className="font-medium text-green-600 dark:text-green-400">{client.agent_name}</span>
@@ -109,7 +148,7 @@ const ClientCard = ({
                 </div>
               </div>
             ) : (
-              editingNoteId === client.user_id && !isAgencyAdmin ? ( // Only allow editing if not agency admin
+              isEditing && !isAgencyAdmin ? ( // Only allow editing if not agency admin
                 <div className="flex flex-col w-full" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 mb-1">
                     <span className={`font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes:</span>
@@ -119,19 +158,19 @@ const ClientCard = ({
                     onFocus={(e) => e.stopPropagation()}
                     className={`w-full p-2 border rounded-md text-sm resize-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800 overflow-y-auto ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "border-gray-300 text-gray-800"}`}
                     value={editedNoteContent}
-                    onChange={(e) => onEditNote(client.user_id, e.target.value)}
+                    onChange={handleNoteChange} // Use local handler
                     rows="3"
                   />
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onSaveNote(client.user_id); }}
+                      onClick={(e) => { e.stopPropagation(); handleSave(); }} // Use local handler
                       className={`p-1 rounded-full ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-700"}`}
                       title="Save Note"
                     >
                       <CheckIcon className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); onCancelEdit(); }}
+                      onClick={(e) => { e.stopPropagation(); handleCancel(); }} // Use local handler
                       className={`p-1 rounded-full ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-700"}`}
                       title="Cancel Edit"
                     >
@@ -168,80 +207,74 @@ const ClientCard = ({
         </div>
       </div>
 
-      <div className="flex flex-nowrap justify-center gap-0.5 w-full pt-1 pb-1 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
+      <div className="flex flex-nowrap justify-center gap-0.5 w-full pt-1 pb-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full"> {/* Changed pb-1 to pb-0 */}
         {isPendingRequestCard ? (
           <>
             {!isAgencyAdmin && ( // Only agents can accept/reject requests
               <>
                 <button
                   onClick={(e) => { e.stopPropagation(); acceptAction(); }}
-                  className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
-                    ${darkMode ? "text-green-400 hover:text-green-300 hover:bg-gray-700" : "text-green-700 hover:text-green-800 hover:bg-gray-100"} border border-transparent hover:border-green-500`}
+                  className={`${baseButtonClasses} bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500`}
                   title="Accept Request"
                 >
-                  <CheckCircleIcon className="h-5 w-5" /> Accept
+                  <CheckCircleIcon className="h-4 w-4 mr-1" /> Accept
                 </button>
-                <Separator />
+                <Separator darkMode={darkMode} />
                 <button
                   onClick={(e) => { e.stopPropagation(); rejectAction(); }}
-                  className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm transition-colors flex-shrink-0
-                    ${darkMode ? "text-red-400 hover:text-red-300 hover:bg-gray-700" : "text-red-700 hover:text-red-800 hover:bg-gray-100"} border border-transparent hover:border-red-500`}
+                  className={`${baseButtonClasses} bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500`}
                   title="Reject Request"
                 >
-                  <XCircleIcon className="h-5 w-5" /> Reject
+                  <XCircleIcon className="h-4 w-4 mr-1" /> Reject
                 </button>
-                <Separator />
+                <Separator darkMode={darkMode} />
               </>
             )}
+            {/* Removed Call button for pending requests */}
             <button
                 onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
-                className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
-                text-blue-500 hover:border-blue-600 border border-transparent`}
+                className={`${iconOnlyButtonClasses} ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-gray-100"} border border-transparent ${darkMode ? '' : 'hover:border-blue-500'}`}
                 title="Chat with client"
             >
                 <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
             </button>
           </>
         ) : (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); onSendEmail(client); }}
-              className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
-                ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-700 hover:bg-gray-100"} border border-transparent hover:border-blue-500`}
-            >
-              Email
-            </button>
-            <Separator />
+          <div className="flex gap-1 flex-nowrap overflow-x-auto pb-1">
             <button
               onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
-              className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
-                ${client.hasUnreadMessagesFromClient
-                  ? 'text-red-500 hover:text-red-600'
-                  : 'text-blue-500 hover:text-blue-600'} border border-transparent ${
-                client.hasUnreadMessagesFromClient ? 'hover:border-red-500' : 'hover:border-blue-500'}`}
+              className={`${iconOnlyButtonClasses} ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-gray-100"} border border-transparent ${darkMode ? '' : 'hover:border-blue-500'}`}
+              title="Chat with client"
             >
-              {client.hasUnreadMessagesFromClient ? 'Respond' : 'Chat'}
+              <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
             </button>
-            <Separator />
+            <Separator darkMode={darkMode} />
             <button
               onClick={(e) => { e.stopPropagation(); onToggleStatus(client.user_id, client.client_status); }}
-              className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
-                ${isAgencyAdmin ? 'text-yellow-300 cursor-not-allowed opacity-50' : (darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-yellow-500'}`}
+              className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-yellow-300 cursor-not-allowed opacity-50' : (darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-yellow-500'}`}
               title={isAgencyAdmin ? "Only assigned agent can change client status" : (client.client_status === 'vip' ? 'Make Regular' : 'Make VIP')}
               disabled={isAgencyAdmin}
             >
-              {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+              {client.client_status === 'vip' ? (
+                <>
+                  <UserCircleIcon className="h-4 w-4 mr-1" />Make Regular
+                </>
+              ) : (
+                <>
+                  <StarIcon className="h-4 w-4 mr-1" />Make VIP
+                </>
+              )}
             </button>
-            <Separator />
+            <Separator darkMode={darkMode} />
             <button
               onClick={(e) => { e.stopPropagation(); onRemoveClient(client.user_id); }}
-              className={`h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-full ${isAgencyAdmin ? 'text-red-300 cursor-not-allowed opacity-50' : (darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-red-500'}`}
-              title={isAgencyAdmin ? "Only assigned agent can remove client" : "Remove Client"}
+              className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-red-300 cursor-not-allowed opacity-50' : (darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-red-500'}`}
+              title={isAgencyAdmin ? "Only assigned agent can remove client" : "Disconnect client"}
               disabled={isAgencyAdmin}
             >
-              <TrashIcon className="h-5 w-5" />
+              <TrashIcon className="h-4 w-4 mr-1" />Disconnect
             </button>
-          </>
+          </div>
         )}
       </div>
     </Card>

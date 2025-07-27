@@ -195,14 +195,29 @@ const ClientInquiryModal = ({ isOpen, onClose, darkMode, conversation, onViewPro
               )}
             </p>
           )}
-          {!isGuest && conversation?.agentEmail && <p className="text-sm mb-2"><strong>Email:</strong> {conversation.agentEmail}</p>}
+          {!isGuest && conversation?.agentEmail && (
+            <p className="text-sm mb-2">
+              <strong>Email:</strong>{' '}
+              <a href={`mailto:${conversation.agentEmail}`} className={`hover:underline ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                {conversation.agentEmail}
+              </a>
+            </p>
+          )}
+          {!isGuest && conversation?.agentPhone && (
+            <p className="text-sm mb-2">
+              <strong>Phone:</strong>{' '}
+              <a href={`tel:${conversation.agentPhone}`} className={`hover:underline ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                {conversation.agentPhone}
+              </a>
+            </p>
+          )}
           {conversation?.property_id && <p className="flex items-center text-sm mb-2"><strong>Property:</strong>&nbsp;<span className="truncate max-w-[calc(100%-120px)]" title={conversation.propertyTitle}>{conversation.propertyTitle}</span><button onClick={() => onViewProperty(conversation.property_id)} className="ml-2 py-1 px-3 bg-blue-500 text-white rounded-xl text-xs">View</button></p>}
           {/* Guest Details Input (if isGuest is true) */}
           {isGuest && <div className={`mb-4 p-4 rounded-xl shadow-inner ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}><p className="font-semibold mb-3">Please provide your details:</p><input type="text" placeholder="Your Name (Required)" value={guestName} onChange={e => setGuestName(e.target.value)} className={inputStyle} /><input type="email" placeholder="Your Email (Required)" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} className={inputStyle} /><input type="tel" placeholder="Your Phone (Optional)" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} className={inputStyle.replace('mb-3', 'mb-0')} /></div>}
         </div>
         {/* Chat History Area (hidden for guest's initial inquiry) */}
         {!isGuest && (
-          <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 bg-opacity-30 backdrop-blur-sm h-[200px]" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/clean-gray-paper.png")', backgroundRepeat: 'repeat' }}>
+          <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 bg-opacity-30 backdrop-blur-sm h-[200px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
             {Object.entries(groupedChatHistory).map(([date, messagesForDate]) => (
               <div key={date}>
                 <div className="relative text-center my-4"><span className={`px-3 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>{date}</span></div>

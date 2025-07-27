@@ -774,7 +774,7 @@ const archiveClient = async (req, res) => {
         SET status = 'rejected', updated_at = NOW()
         WHERE (sender_id = $1 AND receiver_id = $2 AND status = 'accepted')
         OR (sender_id = $2 AND receiver_id = $1 AND status = 'accepted');
-    `, [clientId, agentId]); // Note: clientId is sender_id, agentId is receiver_id for client-sent. Reverse for agent-sent.
+    `, [clientId, agentId]);
 
     await db.query('COMMIT'); // Commit transaction
     console.log(`[archiveClient] Client ${clientId} archived and relationship disconnected successfully.`);
@@ -988,6 +988,150 @@ const getClientsByAgencyId = async (req, res) => {
     }
 };
 
+const getClientPendingAgentRequests = async (req, res) => {
+    const { clientId } = req.params;
+    const requestingUserId = req.user.user_id;
+    const requestingUserRole = req.user.role;
+
+    if (requestingUserRole !== 'client' || parseInt(clientId) !== requestingUserId) {
+        return res.status(403).json({ message: 'Forbidden: You can only view your own pending requests.' });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT
+                acr.request_id,
+                CASE
+                    WHEN acr.sender_id = $1 THEN acr.receiver_id
+                    ELSE acr.sender_id
+                END AS agent_id,
+                u.full_name AS agent_name,
+                u.email AS agent_email,
+                u.profile_picture_url AS agent_profile_picture_url,
+                acr.message,
+                acr.created_at,
+                acr.status,
+                acr.sender_id AS request_sender_id -- To distinguish if client sent or agent sent
+             FROM agent_client_requests acr
+             JOIN users u ON
+                CASE
+                    WHEN acr.sender_id = $1 THEN acr.receiver_id
+                    ELSE acr.sender_id
+                END = u.user_id
+             WHERE (acr.sender_id = $1 OR acr.receiver_id = $1)
+             AND acr.status = 'pending'
+             ORDER BY acr.created_at DESC`,
+            [clientId]
+        );
+
+        const formattedRequests = result.rows.map(row => ({
+            ...row,
+            is_outgoing: row.request_sender_id === parseInt(clientId),
+            is_incoming: row.request_sender_id !== parseInt(clientId)
+        }));
+
+        res.status(200).json({ requests: formattedRequests });
+    } catch (err) {
+        console.error('Error fetching client pending agent requests:', err);
+        res.status(500).json({ error: 'Failed to fetch pending connection requests.', details: err.message });
+    }
+};
+
+// Get details of the client's connected agent(s) - MODIFIED FOR MULTIPLE AGENTS
+const getConnectedAgentDetails = async (req, res) => {
+    const clientId = req.user.user_id;
+    try {
+        // Find ALL agents connected to this client with an 'accepted' status
+        const result = await db.query(
+            `SELECT u.user_id, u.full_name, u.email, u.phone, u.profile_picture_url,
+                    a.agency_id, -- ADDED: agency_id
+                    a.name AS agency_name, a.logo_url AS agency_logo_url, a.address AS agency_address,
+                    ap.avg_rating, ap.deals_closed, ap.properties_assigned
+             FROM agent_clients ac
+             JOIN users u ON ac.agent_id = u.user_id
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
+             LEFT JOIN agent_performance ap ON u.user_id = ap.user_id
+             WHERE ac.client_id = $1 AND ac.request_status = 'accepted'
+             ORDER BY u.full_name ASC`, // Removed LIMIT 1
+            [clientId]
+        );
+        // Always return an array, even if empty
+        res.status(200).json({ agents: result.rows });
+    } catch (err) {
+        console.error('Error fetching connected agent details:', err);
+        res.status(500).json({ error: 'Failed to fetch connected agent details.' });
+    }
+};
+
+// Get all agents (for clients to browse and connect) with pagination
+const getAllAgentsForClient = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20; // Default limit to 20 agents
+        const offset = (page - 1) * limit;
+        const searchTerm = req.query.search ? `%${req.query.search.toLowerCase()}%` : null;
+
+        let queryParams = [];
+        let whereClause = `WHERE u.role = 'agent' AND u.status = 'active'`;
+        let paramIndex = 1;
+
+        if (searchTerm) {
+            whereClause += ` AND (LOWER(u.full_name) ILIKE $${paramIndex} OR LOWER(u.email) ILIKE $${paramIndex} OR LOWER(a.name) ILIKE $${paramIndex} OR LOWER(a.address) ILIKE $${paramIndex})`;
+            queryParams.push(searchTerm);
+            paramIndex++;
+        }
+
+        // Count total agents matching the criteria
+        const countResult = await db.query(
+            `SELECT COUNT(u.user_id)
+             FROM users u
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
+             ${whereClause}`,
+            queryParams
+        );
+        const totalAgents = parseInt(countResult.rows[0].count, 10);
+
+        // Fetch paginated agents
+        const result = await db.query(
+            `SELECT
+                u.user_id,
+                u.full_name,
+                u.email,
+                u.phone,
+                u.profile_picture_url,
+                u.bio,
+                u.location,
+                u.date_joined,
+                u.status,
+                u.agency_id,
+                a.name AS agency_name,
+                a.logo_url AS agency_logo_url,
+                a.address AS agency_address,
+                ap.avg_rating,
+                ap.deals_closed,
+                ap.properties_assigned
+            FROM users u
+            LEFT JOIN agencies a ON u.agency_id = a.agency_id
+            LEFT JOIN agent_performance ap ON u.user_id = ap.user_id
+            ${whereClause}
+            ORDER BY u.full_name ASC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+            [...queryParams, limit, offset]
+        );
+
+        res.status(200).json({
+            agents: result.rows,
+            total: totalAgents,
+            page,
+            limit,
+            totalPages: Math.ceil(totalAgents / limit)
+        });
+    } catch (err) {
+        console.error('Error fetching all agents for client:', err);
+        res.status(500).json({ error: 'Failed to fetch agents.' });
+    }
+};
+
 
 module.exports = {
   getClientsForAgent,
@@ -1015,4 +1159,7 @@ module.exports = {
   restoreClient,
   deleteArchivedClient,
   getClientsByAgencyId,
+  getClientPendingAgentRequests,
+  getConnectedAgentDetails, // Added here
+  getAllAgentsForClient // Added here
 };

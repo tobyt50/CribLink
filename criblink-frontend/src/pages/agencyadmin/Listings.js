@@ -1,7 +1,6 @@
-// Listings.js
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Changed import
+import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
 import { useLocation } from 'react-router-dom';
 import ListingCard from '../../components/ListingCard';
 import axiosInstance from '../../api/axiosInstance';
@@ -14,9 +13,10 @@ import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileT
 import { useTheme } from '../../layouts/AppShell';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
-import { useSidebarState } from '../../hooks/useSidebarState'; // Import the hook
-import { useAuth } from '../../context/AuthContext'; // Import useAuth
+import { useSidebarState } from '../../hooks/useSidebarState';
+import { useAuth } from '../../context/AuthContext';
 
+// Reusable Dropdown Component (copied for self-containment and consistency with Members.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -35,11 +35,11 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             }
         };
 
-        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("click", handleClickOutside); // Changed from mousedown to click
         document.addEventListener("keydown", handleEscape);
 
         return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("click", handleClickOutside); // Changed from mousedown to click
             document.removeEventListener("keydown", handleEscape);
         };
     }, []);
@@ -72,7 +72,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         <div className={`relative ${className}`} ref={dropdownRef}>
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} // Added e.stopPropagation() here
                 className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
                   ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
             >
@@ -100,7 +100,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
                                 key={option.value}
                                 variants={itemVariants}
                                 whileHover={{ x: 5 }}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Stop propagation to prevent parent from closing
                                     onChange(option.value);
                                     setIsOpen(false);
                                 }}
@@ -122,7 +123,6 @@ const Listings = () => {
     const [listings, setListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    // Initialize viewMode from localStorage, default to 'simple' (table view)
     const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
     const [sortKey, setSortKey] = useState('date_listed');
     const [sortDirection, setSortDirection] = useState('desc');
@@ -137,30 +137,29 @@ const Listings = () => {
     const { darkMode } = useTheme();
     const { showMessage } = useMessage();
     const { showConfirm } = useConfirmDialog();
-    const { user } = useAuth(); // Get user from AuthContext
+    const { user } = useAuth();
 
-    // Use the useSidebarState hook
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
     const [activeSection, setActiveSection] = useState('listings');
 
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
     const exportDropdownRef = useRef(null);
 
-    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
+    // New state for controlling filter dropdown visibility within search bar
+    const [showSearchBarFilters, setShowSearchBarFilters] = useState(false);
+    const filterAreaRef = useRef(null); // Ref for the entire filter area (search bar + dropdowns)
+
 
     const location = useLocation();
 
     const [statusFilter, setStatusFilter] = useState(() => {
-        // Set initial status filter from location state, default to 'all'
         return location.state?.statusFilter || 'all';
     });
 
     useEffect(() => {
-        // Update status filter if it changes via location state (e.g., from dashboard click)
         if (location.state?.statusFilter && location.state.statusFilter !== statusFilter) {
             setStatusFilter(location.state.statusFilter);
-            setPage(1); // Reset page when filter changes
+            setPage(1);
         }
     }, [location.state?.statusFilter, statusFilter]);
 
@@ -169,16 +168,32 @@ const Listings = () => {
             if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
                 setIsExportDropdownOpen(false);
             }
+            // Close search bar filters if click outside
+            if (filterAreaRef.current && !filterAreaRef.current.contains(e.target)) {
+                setShowSearchBarFilters(false);
+            }
         };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                setIsExportDropdownOpen(false);
+                setShowSearchBarFilters(false);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside); // ← changed
+        document.addEventListener('keydown', handleEscape);
+
+        return () => {
+            document.removeEventListener('click', handleClickOutside); // ← changed
+            document.removeEventListener('keydown', handleEscape);
+        };
     }, []);
 
 
     const fetchListings = useCallback(async () => {
         const params = new URLSearchParams();
 
-        // Add agency_id to params if user is an agency_admin
         if (user && user.role === 'agency_admin' && user.agency_id) {
             params.append('agency_id', user.agency_id);
         }
@@ -227,7 +242,7 @@ const Listings = () => {
             setTotalListings(0);
             setTotalPages(1);
         }
-    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, showMessage, user]); // Added user to dependencies
+    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, showMessage, user]);
 
     useEffect(() => {
         fetchListings();
@@ -562,7 +577,7 @@ const Listings = () => {
                 </motion.button>
             )}
 
-            <AgencyAdminSidebar // Changed to AgencyAdminSidebar
+            <AgencyAdminSidebar
                 collapsed={isMobile ? false : isCollapsed}
                 setCollapsed={isMobile ? () => {} : setIsCollapsed}
                 activeSection={activeSection}
@@ -593,88 +608,262 @@ const Listings = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
-                        // Conditionally apply classes based on mobile view
                         className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-4 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                     >
+                        {/* Mobile View: Search, Add, Export, View Mode */}
                         {isMobile && (
-                            <div className="flex justify-between items-center mb-4">
-                                <button
-                                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/agency/add-listing')} // Updated path
-                                    title="Add New Listing"
-                                >
-                                    <Plus size={20} />
-                                </button>
-                                <button
-                                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => setIsFilterModalOpen(true)}
-                                    title="Open Filters"
-                                >
-                                    <SlidersHorizontal size={20} />
-                                </button>
-                                <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                            <div className="flex flex-col gap-4 mb-6">
+                                <div className="flex items-center justify-between gap-4">
+                                    {/* Search Bar with integrated Filter Icon */}
+                                    <div className="flex-1 relative" ref={filterAreaRef}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search listings..."
+                                            value={searchTerm}
+                                            onChange={handleSearchChange}
+                                            className={`w-full px-4 py-2 pr-10 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                                        />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowSearchBarFilters(prev => !prev); }}
+                                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full ${darkMode ? "text-gray-300 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-200"}`}
+                                            title="Filter Listings"
+                                        >
+                                            <SlidersHorizontal size={20} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {showSearchBarFilters && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className={`absolute left-0 right-0 top-full mt-2 p-4 rounded-xl shadow-lg z-50 space-y-4
+                                                        ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}
+                                                >
+                                                    <div>
+                                                        <label htmlFor="purchase-category-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Purchase Category
+                                                        </label>
+                                                        <PurchaseCategoryFilter
+                                                            selectedCategory={purchaseCategoryFilter}
+                                                            onChange={handlePurchaseCategoryChange}
+                                                            className="w-full"
+                                                            buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                darkMode
+                                                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                            }`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="status-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Status
+                                                        </label>
+                                                        <Dropdown
+                                                            placeholder="Select Status"
+                                                            options={statusOptions}
+                                                            value={statusFilter}
+                                                            onChange={handleStatusChange}
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="min-price-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Min Price
+                                                        </label>
+                                                        <div className="relative">
+                                                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Min Price"
+                                                                value={minPriceFilter}
+                                                                onChange={handleMinPriceChange}
+                                                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                    darkMode
+                                                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="max-price-filter-mobile" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Max Price
+                                                        </label>
+                                                        <div className="relative">
+                                                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Max Price"
+                                                                value={maxPriceFilter}
+                                                                onChange={handleMaxPriceChange}
+                                                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                    darkMode
+                                                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
                                     <button
-                                        onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                        title="Export"
+                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0"
+                                        onClick={() => navigate('/agency/add-listing')}
+                                        title="Add New Listing"
                                     >
-                                        <FileText size={20} />
+                                        <Plus size={20} />
                                     </button>
-                                    {isExportDropdownOpen && (
-                                        <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                                            <div className="py-1">
-                                                <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
-                                                <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+                                    <div className="relative inline-block text-left flex-shrink-0" ref={exportDropdownRef}>
+                                        <button
+                                            onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                            className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                            title="Export"
+                                        >
+                                            <FileText size={20} />
+                                        </button>
+                                        {isExportDropdownOpen && (
+                                            <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                                                <div className="py-1">
+                                                    <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                                                    <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
+                                {/* View mode buttons for mobile */}
+                                <div className="flex justify-center gap-2 w-full">
                                     <button
-                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                                         onClick={() => setViewMode('simple')}
                                         title="List View"
                                     >
-                                        <LayoutList className="h-5 w-5" />
+                                        <LayoutList className="h-5 w-5 mr-2" /> List View
                                     </button>
                                     <button
-                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                                         onClick={() => setViewMode('graphical')}
                                         title="Grid View"
                                     >
-                                        <LayoutGrid className="h-5 w-5" />
+                                        <LayoutGrid className="h-5 w-5 mr-2" /> Grid View
                                     </button>
                                 </div>
                             </div>
                         )}
 
+                        {/* Desktop View: Search, Add, Export, View Mode */}
                         {!isMobile && (
                             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                                 <div className="flex items-center gap-4 w-full">
-                                    <input
-                                        type="text"
-                                        placeholder="Search listings..."
-                                        value={searchTerm}
-                                        onChange={handleSearchChange}
-                                        className={`w-full md:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                          darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                        }`}
-                                    />
-                                    <button
-                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                        onClick={() => setIsDesktopFilterModalOpen(true)}
-                                        title="Open Filters"
-                                    >
-                                        <SlidersHorizontal size={20} />
-                                    </button>
+                                    {/* Search Bar with integrated Filter Icon */}
+                                    <div className="w-full relative max-w-[28rem]" ref={filterAreaRef}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search listings..."
+                                            value={searchTerm}
+                                            onChange={handleSearchChange}
+                                            className={`w-full px-4 py-2 pr-10 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                darkMode
+                                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                            }`}
+                                        />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowSearchBarFilters(prev => !prev); }}
+                                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full ${darkMode ? "text-gray-300 hover:bg-gray-600" : "text-gray-700 hover:bg-gray-200"}`}
+                                            title="Filter Listings"
+                                        >
+                                            <SlidersHorizontal size={20} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {showSearchBarFilters && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className={`absolute left-0 right-0 top-full mt-2 p-4 rounded-xl shadow-lg z-50 space-y-4
+                                                        ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}
+                                                >
+                                                    <div>
+                                                        <label htmlFor="purchase-category-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Purchase Category
+                                                        </label>
+                                                        <PurchaseCategoryFilter
+                                                            selectedCategory={purchaseCategoryFilter}
+                                                            onChange={handlePurchaseCategoryChange}
+                                                            className="w-full"
+                                                            buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                darkMode
+                                                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                            }`}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="status-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Status
+                                                        </label>
+                                                        <Dropdown
+                                                            placeholder="Select Status"
+                                                            options={statusOptions}
+                                                            value={statusFilter}
+                                                            onChange={handleStatusChange}
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="min-price-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Min Price
+                                                        </label>
+                                                        <div className="relative">
+                                                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Min Price"
+                                                                value={minPriceFilter}
+                                                                onChange={handleMinPriceChange}
+                                                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                    darkMode
+                                                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label htmlFor="max-price-filter-desktop" className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                                            Max Price
+                                                        </label>
+                                                        <div className="relative">
+                                                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Max Price"
+                                                                value={maxPriceFilter}
+                                                                onChange={handleMaxPriceChange}
+                                                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                                                                    darkMode
+                                                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                                                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                                                                }`}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/agency/add-listing')} // Updated path
+                                        onClick={() => navigate('/agency/add-listing')}
                                     >
                                         +Add
                                     </button>
@@ -722,7 +911,6 @@ const Listings = () => {
                             viewMode === 'graphical' ? (
                                 <motion.div
                                     layout
-                                    // Modified grid classes for better mobile responsiveness
                                     className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-5"
                                 >
                                     {filteredListings.map((listing) => (
@@ -828,7 +1016,7 @@ const Listings = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <button
                                                                     className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                                    onClick={() => navigate(`/agency/edit-listing/${listing.property_id}`)} // Updated path
+                                                                    onClick={() => navigate(`/agency/edit-listing/${listing.property_id}`)}
                                                                     title="Edit Listing"
                                                                 >
                                                                     <PencilIcon className="h-4 w-4 inline" />
@@ -873,183 +1061,6 @@ const Listings = () => {
                     </motion.div>
                 </main>
             </motion.div>
-
-            <AnimatePresence>
-                {isMobile && isFilterModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: "100%" }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: "100%" }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className={`fixed inset-x-0 top-14 bottom-0 z-50 p-6 flex flex-col overflow-y-auto ${darkMode ? "bg-gray-900" : "bg-white"}`}
-                    >
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
-                            <button onClick={() => setIsFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}>
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4 flex-grow">
-                            <div className="relative">
-                                <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
-                                <input
-                                    type="text"
-                                    placeholder="Search listings..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                      darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                    }`}
-                                />
-                            </div>
-
-                            <PurchaseCategoryFilter
-                                selectedCategory={purchaseCategoryFilter}
-                                onChange={handlePurchaseCategoryChange}
-                                className="w-full"
-                                buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                  darkMode
-                                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                }`}
-                            />
-
-                            <Dropdown
-                                placeholder="Select Status"
-                                options={statusOptions}
-                                value={statusFilter}
-                                onChange={handleStatusChange}
-                                className="w-full"
-                            />
-
-                            <div className="relative">
-                                <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
-                                <input
-                                    type="number"
-                                    placeholder="Min Price"
-                                    value={minPriceFilter}
-                                    onChange={handleMinPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                      darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                    }`}
-                                />
-                            </div>
-
-                            <div className="relative">
-                                <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
-                                <input
-                                    type="number"
-                                    placeholder="Max Price"
-                                    value={maxPriceFilter}
-                                    onChange={handleMaxPriceChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                      darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                    }`}
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => setIsFilterModalOpen(false)}
-                            className="w-full mt-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
-                        >
-                            Apply Filters
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {!isMobile && isDesktopFilterModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    >
-                        <motion.div
-                            initial={{ y: -50, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 50, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className={`rounded-3xl p-6 shadow-xl w-full max-w-md mx-auto ${darkMode ? "bg-gray-800" : "bg-white"}`}
-                        >
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Filters</h2>
-                                <button onClick={() => setIsDesktopFilterModalOpen(false)} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-700 text-gray-200" : "bg-gray-200"}`}>
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <PurchaseCategoryFilter
-                                    selectedCategory={purchaseCategoryFilter}
-                                    onChange={handlePurchaseCategoryChange}
-                                    className="w-full"
-                                    buttonClassName={`py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                      darkMode
-                                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                    }`}
-                                />
-
-                                <Dropdown
-                                    placeholder="Select Status"
-                                    options={statusOptions}
-                                    value={statusFilter}
-                                    onChange={handleStatusChange}
-                                    className="w-full"
-                                />
-
-                                <div className="relative">
-                                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
-                                    <input
-                                        type="number"
-                                        placeholder="Min Price"
-                                        value={minPriceFilter}
-                                        onChange={handleMinPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                          darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                        }`}
-                                    />
-                                </div>
-
-                                <div className="relative">
-                                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-lg font-bold ${darkMode ? "text-gray-400" : "text-gray-400"}`}>₦</span>
-                                    <input
-                                        type="number"
-                                        placeholder="Max Price"
-                                        value={maxPriceFilter}
-                                        onChange={handleMaxPriceChange}
-                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                                          darkMode
-                                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                                        }`}
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setIsDesktopFilterModalOpen(false)}
-                                className="w-full mt-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-colors"
-                            >
-                                Apply Filters
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

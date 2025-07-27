@@ -386,7 +386,7 @@ const AgentInquiries = () => {
                   return (
                     <div
                       key={conv.id}
-                      className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isBold ? 'border-l-4 border-green-500' : ''} ${isReassignedFromMe ? 'opacity-60 border-l-4 border-yellow-500' : ''}`}
+                      className={`p-4 rounded-xl shadow-md cursor-pointer relative ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isReassignedFromMe ? 'opacity-60 border-l-4 border-yellow-500' : 'border-l-4 border-green-500'}`}
                       onClick={() => handleViewConversation(conv)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -398,7 +398,7 @@ const AgentInquiries = () => {
                             onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.clientName)}`; }}
                             onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                           />
-                          <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''}`}>
+                          <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''} ${darkMode ? 'text-green-400' : 'text-green-600'}`}> {/* Adjusted client name color for mobile */}
                             {/* Client Name clickable */}
                             {conv.client_id ? (
                                 <span
@@ -412,16 +412,18 @@ const AgentInquiries = () => {
                             )}
                           </h4>
                         </div>
-                        {hasUnreadMessagesForAgent && !isReassignedFromMe && (
-                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                            New
-                          </span>
-                        )}
-                        {isReassignedFromMe && (
-                          <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                            Reassigned
-                          </span>
-                        )}
+                        {/* Status tag moved to top right and made conditional */}
+                        <div className="absolute top-2 right-2">
+                            {isReassignedFromMe ? (
+                                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                    Reassigned
+                                </span>
+                            ) : (
+                                <span className={`${displayStatus === 'New Message' ? 'bg-red-500' : 'bg-green-500'} text-white text-xs font-bold px-2 py-1 rounded-full`}> {/* Changed to red for new, green for responded */}
+                                    {displayStatus}
+                                </span>
+                            )}
+                        </div>
                       </div>
                       <div> {/* No ml-16 here */}
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -468,7 +470,7 @@ const AgentInquiries = () => {
                         )}
                         <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                           <MessageSquare size={14} className="inline-block mr-1" />
-                          Last Message: <span className={`${isBold && !isReassignedFromMe ? 'text-red-400 font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
+                          Last Message: <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold && !isReassignedFromMe ? 'font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
                         </p>
                         <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           <Clock size={12} className="inline-block mr-1" />
@@ -486,6 +488,7 @@ const AgentInquiries = () => {
                       </div>
                     </div>
                   );
+                
                 })
               ) : (
                 <p className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No conversations.</p>
@@ -495,7 +498,7 @@ const AgentInquiries = () => {
             // Desktop table view
             <div className="overflow-x-auto">
               <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'assigned_agent', label: 'Assigned To'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
+                <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'assigned_agent', label: 'Assigned To'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px', textAlign: c.key === 'actions' ? 'center' : 'left'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
                 <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                   {groupedConversations.length > 0 ? groupedConversations.map(conv => {
                     // Determine if the conversation has unread messages FOR THE AGENT
@@ -528,7 +531,7 @@ const AgentInquiries = () => {
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.clientProfilePictureUrl, conv.clientName); }}
                             />
                             {/* Client Name clickable */}
-                            <span className="flex items-center">
+                            <span className={`flex items-center ${darkMode ? 'text-green-400' : 'text-green-600'}`}> {/* Adjusted client name color for desktop */}
                                 {conv.client_id ? (
                                     <span
                                         className="cursor-pointer hover:underline"
@@ -543,7 +546,11 @@ const AgentInquiries = () => {
                           </div>
                         </td>
                         <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
-                        <td className={`py-2 px-2 truncate ${isBold && !isReassignedFromMe ? 'text-red-600 font-semibold' : ''}`} title={conv.lastMessage}>{conv.lastMessage || '...'}</td>
+                        <td className="py-2 px-2 truncate" title={conv.lastMessage}>
+                          <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold && !isReassignedFromMe ? 'font-semibold' : ''}`}>
+                            {conv.lastMessage || '...'}
+                          </span>
+                        </td>
                         <td className="py-2 px-2 truncate">{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
                         <td className="py-2 px-2 truncate">
                           {/* Agent Name clickable */}

@@ -167,6 +167,15 @@ const AgentInquiryModal = ({ isOpen, onClose, darkMode, conversation, onViewProp
     showMessage('Copied to clipboard!', 'success');
   };
 
+  const handleViewClientProfile = () => {
+    if (conversation?.client_id) {
+      if (userRole === 'agent') navigate(`/agent/client-profile/${conversation.client_id}`);
+      else if (userRole === 'agency_admin') navigate(`/agency/client-profile/${conversation.client_id}`);
+    } else {
+      showMessage('Client ID not available.', 'error');
+    }
+  };
+
   // Groups messages by date for display in the chat history
   const groupMessagesByDate = (messages) => {
     return messages.reduce((acc, msg) => {
@@ -239,10 +248,51 @@ const AgentInquiryModal = ({ isOpen, onClose, darkMode, conversation, onViewProp
                 ) : (
                     <span>{conversation.clientName || 'N/A'}</span>
                 )}
-                {!conversation.client_id && <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>Guest</span>}
+                {conversation.client_id && ( // Only show "View Profile" button if client_id exists
+                  <button 
+                    onClick={handleViewClientProfile} 
+                    className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs"
+                  >
+                    View Profile
+                  </button>
+                )}
             </p>
-            {conversation.clientEmail && <p className="flex items-center"><strong>Email:</strong>&nbsp;{conversation.clientEmail}{isGuestConversation && <><button onClick={() => handleCopyToClipboard(conversation.clientEmail)} className={`ml-2 p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Copy size={16} /></button><a href={`mailto:${conversation.clientEmail}`} className={`ml-2 p-1 rounded-full ${darkMode ? 'text-blue-300 hover:bg-gray-700' : 'text-blue-600 hover:bg-gray-100'}`}><Mail size={16} /></a></>}</p>}
-            {conversation.clientPhone && <p className="flex items-center"><strong>Phone:</strong>&nbsp;{conversation.clientPhone}{isGuestConversation && <><button onClick={() => handleCopyToClipboard(conversation.clientPhone)} className={`ml-2 p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Copy size={16} /></button><a href={`tel:${conversation.clientPhone}`} className={`ml-2 p-1 rounded-full ${darkMode ? 'text-blue-300 hover:bg-gray-700' : 'text-blue-600 hover:bg-gray-100'}`}><Phone size={16} /></a></>}</p>}
+            {conversation.clientEmail && (
+              <p className="flex items-center">
+                <strong>Email:</strong>&nbsp;
+                <a href={`mailto:${conversation.clientEmail}`} className={`hover:underline ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {conversation.clientEmail}
+                </a>
+                {isGuestConversation && (
+                  <>
+                    <button onClick={() => handleCopyToClipboard(conversation.clientEmail)} className={`ml-2 p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                      <Copy size={16} />
+                    </button>
+                    <a href={`mailto:${conversation.clientEmail}`} className={`ml-2 p-1 rounded-full ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-900 hover:bg-gray-100'}`}>
+                      <Mail size={16} />
+                    </a>
+                  </>
+                )}
+              </p>
+            )}
+            {conversation.clientPhone && (
+              <p className="flex items-center">
+                <strong>Phone:</strong>&nbsp;
+                <a href={`tel:${conversation.clientPhone}`} className={`hover:underline ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                  {conversation.clientPhone}
+                </a>
+                {isGuestConversation && (
+                  <>
+                    <button onClick={() => handleCopyToClipboard(conversation.clientPhone)} className={`ml-2 p-1 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                      <Copy size={16} />
+                    </button>
+                    <a href={`tel:${conversation.clientPhone}`} className={`ml-2 p-1 rounded-full ${darkMode ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-900 hover:bg-gray-100'}`}>
+                      <Phone size={16} />
+                    </a>
+                  </>
+                )}
+              </p>
+            )}
             {conversation.property_id && <p className="flex items-center"><strong>Property:</strong>&nbsp;<span className="truncate max-w-[calc(100%-120px)]" title={conversation.propertyTitle}>{conversation.propertyTitle}</span><button onClick={() => onViewProperty(conversation.property_id)} className="ml-2 py-1 px-3 bg-blue-500 text-white rounded-xl text-xs">View</button></p>}
           </div>
           {isReassignedForCurrentAgent && conversation.reassigned_by_admin_name && conversation.reassigned_at && (
@@ -286,7 +336,7 @@ const AgentInquiryModal = ({ isOpen, onClose, darkMode, conversation, onViewProp
           )}
         </div>
         {/* Chat History Area */}
-        <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 h-[200px] backdrop-blur-sm bg-gray-50 dark:bg-gray-800">
+        <div className="flex-grow overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-xl p-4 mb-4 space-y-4 h-[200px] backdrop-blur-sm bg-gray-50 dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
 
           {Object.entries(groupedChatHistory).map(([date, messagesForDate]) => (
             <div key={date}>

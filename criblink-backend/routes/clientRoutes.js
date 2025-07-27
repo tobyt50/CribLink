@@ -3,6 +3,9 @@ const router = express.Router();
 const clientController = require('../controllers/clientController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware'); // Import authorizeRoles
 
+// NEW: Get all agents for a client to browse (MUST BE BEFORE /:clientId)
+router.get('/all-agents', authenticateToken, authorizeRoles(['client']), clientController.getAllAgentsForClient);
+
 // Core
 router.get('/agent/:agentId/clients', authenticateToken, authorizeRoles(['agent', 'admin', 'agency_admin']), clientController.getClientsForAgent); // Only agents/admins can get clients for an agent
 router.get('/:clientId', authenticateToken, clientController.getClientProfileDetails); // Auth token required, internal logic handles client-agent relationship
@@ -28,6 +31,8 @@ router.post('/:clientId/connection-requests/send-to-agent/:agentId', authenticat
 router.get('/:clientId/connection-requests/incoming', authenticateToken, authorizeRoles(['client']), clientController.getClientIncomingRequests);
 // Get outgoing requests from a client - only the client can see their outgoing requests
 router.get('/:clientId/connection-requests/outgoing', authenticateToken, authorizeRoles(['client']), clientController.getClientOutgoingRequests);
+// NEW: Get all pending requests (incoming and outgoing) for a client
+router.get('/:clientId/pending-agent-requests', authenticateToken, authorizeRoles(['client']), clientController.getClientPendingAgentRequests); // NEW ROUTE
 // Client accepts a request from an agent - only the client can accept requests sent to them
 router.post('/:clientId/connection-requests/:requestId/accept-from-agent', authenticateToken, authorizeRoles(['client']), clientController.acceptConnectionRequestFromAgent);
 // Client rejects a request from an agent - only the client can reject requests sent to them
@@ -35,6 +40,12 @@ router.post('/:clientId/connection-requests/:requestId/reject-from-agent', authe
 
 // NEW: Get connection status between a client and an agent
 router.get('/:clientId/connection-requests/status/:agentId', authenticateToken, authorizeRoles(['client', 'agent', 'admin']), clientController.getConnectionStatus);
+
+// NEW: Client disconnects from an agent
+router.post('/:clientId/disconnect-agent/:agentId', authenticateToken, authorizeRoles(['client']), clientController.disconnectFromAgent); // NEW ROUTE
+
+// NEW: Get details of the authenticated client's connected agent(s)
+router.get('/:clientId/connected-agent', authenticateToken, authorizeRoles(['client']), clientController.getConnectedAgentDetails);
 
 
 // Actions (These are typically agent actions on clients, so require agent role)

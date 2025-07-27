@@ -8,6 +8,7 @@ import API_BASE_URL from '../config';
 import { useTheme } from '../layouts/AppShell';
 import { ChevronDown } from 'lucide-react';
 import { useMessage } from '../context/MessageContext';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 // Reusable Dropdown component (copied from AddListing.js for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -119,6 +120,7 @@ const AddLegalDocument = () => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
+  const { user } = useAuth(); // Get user from AuthContext
 
   // State variables for legal document fields
   const [documentTitle, setDocumentTitle] = useState('');
@@ -195,13 +197,14 @@ const AddLegalDocument = () => {
 
       const payload = {
         title: documentTitle,
-        client_name: clientName, // This should match the backend schema field name
-        property_id: propertyId || null, // Can be null if not associated with a specific property
+        client_name: clientName,
+        property_id: propertyId || null,
         document_type: documentType,
         status: status,
-        completion_date: completionDate || null, // Can be null
+        completion_date: completionDate || null,
         fileBase64: fileBase64,
         fileName: fileName,
+        // agent_id and agency_id will be added by the backend from req.user
       };
 
       const token = localStorage.getItem('token');
@@ -212,10 +215,9 @@ const AddLegalDocument = () => {
       }
 
       try {
-        // Use the /docs/upload endpoint as defined in documentRoutes.js
         await axiosInstance.post(`${API_BASE_URL}/docs/upload`, payload, {
           headers: {
-            'Content-Type': 'application/json', // Sending JSON with base64
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         });
@@ -231,7 +233,7 @@ const AddLegalDocument = () => {
         setDocumentFile(null);
 
         // Redirect back to the LegalDocuments page after successful upload
-        navigate(-1); // This will take the user back to the previous page, which should be LegalDocuments
+        navigate('/documents'); // Navigate to the shared documents page
       } catch (error) {
         let errorMessage = 'Failed to add legal document. Please try again.';
         if (error.response && error.response.data && error.response.data.message) {

@@ -152,6 +152,7 @@ const AgencyAdminSettings = () => {
         email: '',
         phone: '',
         website: '',
+        address: '', // Added address
         description: '',
         logoBase64: null,
         logoOriginalname: null,
@@ -348,6 +349,7 @@ const AgencyAdminSettings = () => {
                 email: response.data.email || '',
                 phone: response.data.phone || '',
                 website: response.data.website || '',
+                address: response.data.address || '', // Fetch address
                 description: response.data.description || '',
                 logoBase64: null, // Not fetched, only for new upload
                 logoOriginalname: null, // Not fetched, only for new upload
@@ -721,7 +723,7 @@ const AgencyAdminSettings = () => {
     // Comprehensive list of searchable items, grouped by section for robust filtering
     const searchableContent = {
         "agencyInfo": [
-            "Agency Information", "Agency Name", "Email", "Phone", "Website", "Description", "Agency ID", "Edit Information",
+            "Agency Information", "Agency Name", "Email", "Phone", "Website", "Description", "Agency ID", "Edit Information", "Address" // Added Address
         ],
         "members": [
             "Agency Members", "Remove", "Agent", "Email", "Role",
@@ -930,6 +932,14 @@ const AgencyAdminSettings = () => {
                                             <input type="url" name="website" value={agencyForm.website} onChange={handleAgencyFormChange} className={inputFieldStyles} />
                                         ) : (
                                             <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.website || 'N/A'}</p>
+                                        )}
+                                    </div>
+                                    <div className={inputGroupStyles}>
+                                        <label className={labelStyles}>Address</label> {/* Added Address field */}
+                                        {editingAgencyInfo ? (
+                                            <input type="text" name="address" value={agencyForm.address} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                        ) : (
+                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.address || 'N/A'}</p>
                                         )}
                                     </div>
                                     <div className={inputGroupStyles}>
@@ -1259,7 +1269,6 @@ const AgencyAdminSettings = () => {
                         </div>
                     )}
 
-                    {/* Danger Zone Section */}
                     {filterSection("dangerZone") && (
                         <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                             <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Danger Zone</h3>

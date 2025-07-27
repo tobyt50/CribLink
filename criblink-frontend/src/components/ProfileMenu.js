@@ -14,15 +14,15 @@ import {
 } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from '../context/MessageContext';
-import { useAuth } from '../context/AuthContext'; // <--- NEW IMPORT
+import { useAuth } from '../context/AuthContext';
 
-function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it comes from context
+function ProfileMenu({ onCloseMobileHeaderMenu }) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
-  const { user, logout } = useAuth(); // <--- Get user and logout from AuthContext
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -62,7 +62,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
     const role = user.role.toLowerCase();
     if (role === "admin" || role === "agent" || role === "client") {
       navigate(`/${role}/dashboard`);
-    } else if (role === "agency_admin") { // NEW: Handle agency_admin role
+    } else if (role === "agency_admin") {
       navigate('/agency/dashboard');
     }
     setShowMenu(false);
@@ -96,7 +96,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
       <button
         onClick={() => setShowMenu((prev) => !prev)}
         className={`flex items-center gap-2 transition-all duration-300 ease-in-out focus:outline-none
-          ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white hover:text-yellow-300"}`}
+          ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-gray-700 hover:text-yellow-500"}`}
       >
         {user ? (
           <>
@@ -111,19 +111,19 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                 {user.full_name?.charAt(0).toUpperCase() || "U"}
               </div>
             )}
-            <span className={`text-sm font-semibold hidden md:inline ${darkMode ? "text-gray-200" : "text-white"}`}>
+            <span className={`text-sm font-semibold hidden md:inline ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
               {user.full_name?.split(" ")[0]}
             </span>
           </>
         ) : (
-          <User className={`w-7 h-7 ${darkMode ? "text-gray-200" : "text-white"}`} />
+          <User className={`w-7 h-7 ${darkMode ? "text-gray-200" : "text-gray-700"}`} />
         )}
         <motion.div
           animate={{ rotate: showMenu ? 180 : 0 }}
           transition={{ duration: 0.2 }}
           className="hidden md:block"
         >
-          <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-white"}`} />
+          <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-gray-700"}`} />
         </motion.div>
 
         <motion.div
@@ -133,9 +133,9 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
           className="block md:hidden"
         >
           {showMenu ? (
-            <ChevronRight className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-white"}`} />
+            <ChevronRight className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-gray-700"}`} />
           ) : (
-            <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-white"}`} />
+            <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-200" : "text-gray-700"}`} />
           )}
         </motion.div>
       </button>
@@ -155,7 +155,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   whileHover={{ x: 5 }}
                   onClick={handleDashboardRedirect}
                   className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200
-                    ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white hover:text-yellow-300"}`}
+                    ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-gray-700 hover:text-yellow-500"}`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Dashboard</span>
@@ -165,7 +165,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/profile/general"
                     className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white hover:text-yellow-300"}`}
+                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-gray-700 hover:text-yellow-500"}`}
                     onClick={() => {
                       setShowMenu(false);
                       onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false);
@@ -180,7 +180,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   whileHover={{ x: 5 }}
                   onClick={handleLogout}
                   className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200
-                    ${darkMode ? "text-gray-200 hover:text-red-300" : "text-white hover:text-red-300"}`}
+                    ${darkMode ? "text-gray-200 hover:text-red-300" : "text-gray-700 hover:text-red-500"}`}
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
@@ -192,7 +192,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/signin"
                     className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white hover:text-yellow-300"}`}
+                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-gray-700 hover:text-yellow-500"}`}
                     onClick={() => {
                       setShowMenu(false);
                       onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false);
@@ -207,7 +207,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/select-role"
                     className={`flex items-center gap-1 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white hover:text-yellow-300"}`}
+                      ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-gray-700 hover:text-yellow-500"}`}
                     onClick={() => {
                       setShowMenu(false);
                       onCloseMobileHeaderMenu && onCloseMobileHeaderMenu(false);
@@ -231,7 +231,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
             animate="visible"
             exit="exit"
             className={`absolute right-0 top-full mt-4 w-60 border rounded-xl shadow-xl py-2 z-50 overflow-hidden transform origin-top-right hidden md:block
-              ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-green-800 border-gray-200"}`}
+              ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-800 border-gray-200"}`}
           >
             {user ? (
               <>
@@ -245,7 +245,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   whileHover={{ x: 5 }}
                   onClick={handleDashboardRedirect}
                   className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                    ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                    ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
                 >
                   <LayoutDashboard className="w-4 h-4" /> Dashboard
                 </motion.button>
@@ -254,7 +254,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/profile/general"
                     className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
                     onClick={() => setShowMenu(false)}
                   >
                     <Settings className="w-4 h-4" /> Manage Profile
@@ -277,7 +277,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/signin"
                     className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
                     onClick={() => setShowMenu(false)}
                   >
                     <LogIn className="w-4 h-4" /> Login
@@ -288,7 +288,7 @@ function ProfileMenu({ onCloseMobileHeaderMenu }) { // Removed 'user' prop as it
                   <Link
                     to="/select-role"
                     className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+                      ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
                     onClick={() => setShowMenu(false)}
                   >
                     <UserPlus className="w-4 h-4" /> Create Account

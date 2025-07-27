@@ -5,34 +5,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import AgentSidebar from '../../components/agent/Sidebar';
 import API_BASE_URL from '../../config';
-import { User, Home, MessageSquare, Menu, X } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-import Card from '../../components/ui/Card'; // Import the Card component
-import StatCard from '../../components/StatCard'; // Import Agent StatCard
-import { useSidebarState } from '../../hooks/useSidebarState'; // Import useSidebarState hook
+import { User, Home, MessageSquare, Menu, X, Briefcase, DollarSign, BarChart2, Users, Settings, UserCog, ListChecks, UserPlus, CheckCircle, Clock } from 'lucide-react';
+import { useTheme } from '../../layouts/AppShell';
+import Card from '../../components/ui/Card';
+import StatCard from '../../components/StatCard';
+import { useSidebarState } from '../../hooks/useSidebarState';
+import { useMessage } from '../../context/MessageContext'; // Import useMessage
 
 const AgentDashboard = () => {
   const [agent, setAgent] = useState(null);
   const navigate = useNavigate();
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage(); // Use the useMessage hook
 
-  // Use the useSidebarState hook to manage sidebar state centrally
   const { isCollapsed, setIsCollapsed, isMobile, setIsMobile, isSidebarOpen, setIsSidebarOpen } = useSidebarState();
 
-  // State for active section in the sidebar, consistent with AdminSidebar usage
-  const [activeSection, setActiveSection] = useState('dashboard'); // Default active section for Agent Dashboard
+  const [activeSection, setActiveSection] = useState('dashboard');
 
-  const [totalListings, setTotalListings] = useState('--'); // Separate state for total listings
-  const [totalClientInquiries, setTotalClientInquiries] = useState('--'); // New state for client inquiries
-  const [totalAgentResponses, setTotalAgentResponses] = useState('--');   // New state for agent responses
+  // Agent-specific stats
+  const [totalListings, setTotalListings] = useState('--');
+  const [underOfferListings, setUnderOfferListings] = useState('--');
+  const [soldListings, setSoldListings] = useState('--');
+  const [totalClientInquiries, setTotalClientInquiries] = useState('--');
+  const [totalAgentResponses, setTotalAgentResponses] = useState('--');
   const [activities, setActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
-  // Removed the local useEffect for window resize, as useSidebarState already handles this.
-  // This removes the "setIsMobile is not a function" error.
+  // Navigation functions for agent-specific routes
+  const goToListings = () => navigate('/agent/listings');
+  const goToUnderOfferListings = () => navigate('/agent/listings', { state: { statusFilter: 'under offer' } });
+  const goToSoldListings = () => navigate('/agent/listings', { state: { statusFilter: 'sold' } });
+  const goToClients = () => navigate('/agent/clients');
+  const goToSettings = () => navigate('/agent/settings');
+  const goToAddListing = () => navigate('/agent/add-listing');
+  const goToInquiries = () => navigate('/agent/inquiries');
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -40,44 +50,46 @@ const AgentDashboard = () => {
         const { data: profile } = await axios.get(`${API_BASE_URL}/users/profile`, { headers });
         setAgent(profile);
 
-        // Fetch individual stats
-        const [listingsRes, clientInquiriesRes, agentResponsesRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/agent/dashboard/stats`, { headers }), // Assuming totalListings is from here
-          axios.get(`${API_BASE_URL}/inquiries/agent/count/all-inquiries`, { headers }), // New API call
-          axios.get(`${API_BASE_URL}/inquiries/agent/count/agent-responses`, { headers }),   // New API call
+        // Fetch individual stats for the agent
+        const [listingsRes, inquiriesRes, responsesRes, activityRes, underOfferRes, soldRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/agent/dashboard/stats`, { headers }), // This now returns totalListings and totalInquiries
+          axios.get(`${API_BASE_URL}/inquiries/agent/count/all-inquiries`, { headers }),
+          axios.get(`${API_BASE_URL}/inquiries/agent/count/agent-responses`, { headers }),
+          axios.get(`${API_BASE_URL}/agent/dashboard/activity`, { headers }),
+          axios.get(`${API_BASE_URL}/agent/listings/under-offer/count`, { headers }), // New endpoint for agent's under offer listings
+          axios.get(`${API_BASE_URL}/agent/listings/sold/count`, { headers }), // New endpoint for agent's sold listings
         ]);
 
         setTotalListings(listingsRes.data.totalListings);
-        setTotalClientInquiries(clientInquiriesRes.data.count);
-        setTotalAgentResponses(agentResponsesRes.data.count);
+        setTotalClientInquiries(inquiriesRes.data.count);
+        setTotalAgentResponses(responsesRes.data.count);
+        setUnderOfferListings(underOfferRes.data.count); // Set agent's under offer listings
+        setSoldListings(soldRes.data.count); // Set agent's sold listings
 
-        // Fetch activity separately
-        const activityRes = await axios.get(`${API_BASE_URL}/agent/dashboard/activity`, { headers });
         const activityData = activityRes.data.activities.map((a) => {
-          let IconComponent = User; // Default: User icon component
-          let tag = 'User'; // Default label: User
-          let color = 'gray'; // Default color - will be overridden
+          let IconComponent = User;
+          let tag = 'User';
+          let color = 'gray';
 
           const msg = a.message?.toLowerCase() || '';
           const type = a.type?.toLowerCase() || '';
 
           if (type === 'inquiry' || msg.includes('inquiry')) {
-            IconComponent = MessageSquare; // MessageSquare icon for Inquiries
+            IconComponent = MessageSquare;
             tag = 'Inquiry';
-            color = 'blue'; // Blue for Inquiries
+            color = 'blue';
           } else if (type === 'listing' || msg.includes('listing') || msg.includes('property')) {
-            IconComponent = Home; // Home icon for Listings
+            IconComponent = Home;
             tag = 'Listing';
-            color = 'green'; // Green for Listings
+            color = 'green';
           } else {
-            // For all other types, assume User-related activity (including agent's own actions)
-            IconComponent = User; // User icon for User
+            IconComponent = User;
             tag = 'User';
-            color = 'green'; // Changed to green to match listing styling
+            color = 'green';
           }
 
           return {
-            icon: <IconComponent size={16} />, // Render the icon component
+            icon: <IconComponent size={16} />,
             tag,
             color,
             message: a.message || 'Activity update',
@@ -89,19 +101,13 @@ const AgentDashboard = () => {
       } catch (err) {
         console.error('Error fetching agent dashboard data:', err);
         if (err.response?.status === 401) navigate('/signin');
+        showMessage('Failed to load dashboard data. Please try again.', 'error');
       }
     };
 
     fetchDashboardData();
-  }, [navigate]);
+  }, [navigate, showMessage]);
 
-  // Define the main stats separately for clearer rendering logic
-  const mainStats = [
-    { label: 'Total Listings', value: totalListings, onClick: () => navigate('/agent/listings') },
-    // You can add other primary stats here if needed, before the combined inquiry card
-  ];
-
-  // Adjust contentShift based on isCollapsed and isMobile states, consistent with other pages
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
   const visibleActivities = showAllActivities ? activities.slice(0, 10) : activities.slice(0, 5);
 
@@ -109,7 +115,7 @@ const AgentDashboard = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {/* Mobile Sidebar Toggle Button - consistent with other pages */}
+      {/* Mobile Sidebar Toggle Button */}
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -132,24 +138,23 @@ const AgentDashboard = () => {
         </motion.button>
       )}
 
-      {/* AgentSidebar now receives collapsed, setCollapsed, activeSection, setActiveSection, isMobile, isSidebarOpen, setIsSidebarOpen */}
       <AgentSidebar
-        collapsed={isMobile ? false : isCollapsed} // Sidebar is never collapsed in mobile view
-        setCollapsed={isMobile ? () => {} : setIsCollapsed} // Disable setCollapsed on mobile
+        collapsed={isMobile ? false : isCollapsed}
+        setCollapsed={isMobile ? () => {} : setIsCollapsed}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
-        isMobile={isMobile} // Pass isMobile prop
-        isSidebarOpen={isSidebarOpen} // Pass isSidebarOpen prop
-        setIsSidebarOpen={setIsSidebarOpen} // Pass setIsSidebarOpen prop
+        isMobile={isMobile}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
 
       <motion.div
-        key={isMobile ? 'mobile' : 'desktop'} // Key for re-animation on mobile/desktop switch
+        key={isMobile ? 'mobile' : 'desktop'}
         animate={{ marginLeft: contentShift }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         initial={false}
         className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
-        style={{ minWidth: `calc(100% - ${contentShift}px)` }} // Ensure content doesn't shrink
+        style={{ minWidth: `calc(100% - ${contentShift}px)` }}
       >
         {/* Mobile-only H1 element */}
         <div className="md:hidden flex items-center justify-center mb-4">
@@ -165,48 +170,55 @@ const AgentDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {/* Stats Cards - Adjusted grid layout for desktop responsiveness */}
-          {/* Changed lg:grid-cols-4 to lg:grid-cols-2 to make each of the two primary cards equal width */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
-            {/* Main stats */}
-            {mainStats.map((stat, idx) => (
-              <Card key={idx} onClick={stat.onClick} className="cursor-pointer col-span-1"> {/* Each spans 1 column */}
-                <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>{stat.label}</h3>
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{stat.value}</p>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
+            {/* NEW: Listings Overview Card for Agent */}
+            <Card>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Listings Overview</h3>
+                <Home size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className="grid grid-cols-3 gap-4 w-full">
+                <StatCard label="Total" value={totalListings} onClick={goToListings} textCentered={true} icon={<Home size={20} />} />
+                <StatCard label="Under Offer" value={underOfferListings} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} />
+                <StatCard label="Sold" value={soldListings} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
+              </div>
+            </Card>
 
-            {/* Combined Inquiry Stats Card */}
-            {/* Now spans 1 column to match the other main cards, creating a 2-column layout */}
-            <Card
-              onClick={() => navigate('/agent/inquiries')} // Added onClick for navigation
-              className="cursor-pointer col-span-1" // Ensure it's clickable and spans one column
-            >
-              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Stats</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <StatCard label="Total Inquiries" value={totalClientInquiries} />
-                <StatCard label="Total Responses" value={totalAgentResponses} />
+            {/* Inquiry and Response Stats - Combined Card */}
+            <Card onClick={goToInquiries} className="cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Metrics</h3>
+                <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+              </div>
+              <div className="grid grid-cols-2 gap-4 w-full">
+                <StatCard label="Inquiries" value={totalClientInquiries} textCentered={true} />
+                <StatCard label="Responses" value={totalAgentResponses} textCentered={true} />
               </div>
             </Card>
           </div>
-          {/* Recent Activity */}
+
+          {/* Recent Activity Feed */}
           <Card>
             <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Activity</h2>
             <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              {visibleActivities.map((activity, idx) => (
-                <li key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-${activity.color}-500`}>{activity.icon}</span>
-                    <span>{activity.message}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600`}
-                    >
-                      {activity.tag}
-                    </span>
-                  </div>
-                  <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>{activity.formattedTime}</span>
-                </li>
-              ))}
+              {visibleActivities.length > 0 ? (
+                visibleActivities.map((activity, idx) => (
+                  <li key={idx} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className={`text-${activity.color}-500 flex-shrink-0`}>{activity.icon}</span>
+                      <span className="truncate">{activity.message}</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600 flex-shrink-0`}
+                      >
+                        {activity.tag}
+                      </span>
+                    </div>
+                    <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"} flex-shrink-0 ml-2`}>{activity.formattedTime}</span>
+                  </li>
+                ))
+              ) : (
+                <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No recent activity to display.</p>
+              )}
             </ul>
             {activities.length > 5 && (
               <div className="mt-4 text-center">
@@ -219,6 +231,76 @@ const AgentDashboard = () => {
               </div>
             )}
           </Card>
+
+          {/* Additional Sections/Features Suggestions */}
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Performance Overview</h2>
+              <ul className={`space-y-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <li className="truncate"><strong>Listing Performance:</strong> Track views, inquiries, and conversion rates for your listings.</li>
+                <li className="truncate"><strong>Inquiry Response Rate:</strong> Monitor how quickly you respond to client inquiries.</li>
+                <li className="truncate"><strong>Client Satisfaction:</strong> Gather feedback from your clients (requires client feedback system).</li>
+              </ul>
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => showMessage('Detailed reports coming soon!', 'info')}
+                  className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
+                >
+                  View Detailed Reports
+                </button>
+              </div>
+            </Card>
+
+            <Card>
+              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={goToAddListing}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                    ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                >
+                  <Home size={20} /> Add New Listing
+                </button>
+                <button
+                  onClick={goToClients}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                    ${darkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+                >
+                  <Users size={20} /> Manage Clients
+                </button>
+                <button
+                  onClick={goToSettings}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                    ${darkMode ? "bg-purple-700 hover:bg-purple-600 text-white" : "bg-purple-500 hover:bg-purple-600 text-white"}`}
+                >
+                  <Settings size={20} /> Settings
+                </button>
+                <button
+                  onClick={() => showMessage('Reporting feature under development!', 'info')}
+                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                    ${darkMode ? "bg-yellow-700 hover:bg-yellow-600 text-white" : "bg-yellow-500 hover:bg-yellow-600 text-white"}`}
+                >
+                  <BarChart2 size={20} /> Generate Report
+                </button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Financial Overview (Placeholder) - Agent specific, if applicable */}
+          <div className="mt-10">
+            <Card>
+              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Financial Snapshot</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StatCard label="Commission Earned (YTD)" value="$X,XXX" icon={<DollarSign size={20} />} />
+                <StatCard label="Pending Commission" value="$X,XXX" icon={<DollarSign size={20} />} />
+                <StatCard label="Marketing Spend" value="$X,XXX" icon={<DollarSign size={20} />} />
+              </div>
+              <p className={`mt-4 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                *Financial data is illustrative. Full integration with accounting systems coming soon.
+              </p>
+            </Card>
+          </div>
+
         </motion.div>
       </motion.div>
     </div>

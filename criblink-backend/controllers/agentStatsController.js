@@ -35,6 +35,37 @@ const getAgentDashboardStats = async (req, res) => {
   }
 };
 
+// ✅ NEW: Get count of listings with 'under offer' status for the logged-in agent
+const getAgentUnderOfferListingsCount = async (req, res) => {
+  try {
+    const agentId = req.user.user_id;
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM property_listings WHERE agent_id = $1 AND TRIM(LOWER(status)) = 'under offer'`,
+      [agentId]
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error fetching agent under offer listings count:', err);
+    res.status(500).json({ error: 'Failed to fetch agent under offer listings count' });
+  }
+};
+
+// ✅ NEW: Get count of listings with 'sold' status for the logged-in agent
+const getAgentSoldListingsCount = async (req, res) => {
+  try {
+    const agentId = req.user.user_id;
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM property_listings WHERE agent_id = $1 AND TRIM(LOWER(status)) = 'sold'`,
+      [agentId]
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error fetching agent sold listings count:', err);
+    res.status(500).json({ error: 'Failed to fetch agent sold listings count' });
+  }
+};
+
+
 // ✅ NEW: Recent activity relevant to agent
 const getAgentActivity = async (req, res) => {
   try {
@@ -62,4 +93,6 @@ module.exports = {
   getAllAgents,
   getAgentDashboardStats,
   getAgentActivity,
+  getAgentUnderOfferListingsCount, // Export the new function
+  getAgentSoldListingsCount,       // Export the new function
 };

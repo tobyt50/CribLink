@@ -1,16 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const { uploadLegalDocument, getLegalDocuments, deleteLegalDocument } = require('../controllers/documentController');
-// FIX: Changed 'authorize' to 'authorizeRoles' to match the export from authMiddleware.js
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Route to upload a new legal document
-router.post('/upload', authenticateToken, authorizeRoles(['admin', 'agent']), uploadLegalDocument);
+// Accessible to admin and agency_admin
+router.post('/upload', authenticateToken, authorizeRoles(['admin', 'agency_admin']), uploadLegalDocument);
 
 // Route to get all legal documents (with optional filters/pagination)
-router.get('/', authenticateToken, authorizeRoles(['admin', 'agent']), getLegalDocuments);
+// Accessible to admin and agency_admin
+router.get('/', authenticateToken, authorizeRoles(['admin', 'agency_admin']), getLegalDocuments);
 
 // Route to delete a legal document by ID
-router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'agent']), deleteLegalDocument);
+// Accessible to admin and agency_admin (with additional logic in controller for agency_admin)
+router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'agency_admin']), deleteLegalDocument);
 
 module.exports = router;

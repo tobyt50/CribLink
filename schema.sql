@@ -17,6 +17,30 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+DROP DATABASE IF EXISTS criblink_db;
+--
+-- Name: criblink_db; Type: DATABASE; Schema: -; Owner: postgres
+--
+
+CREATE DATABASE criblink_db WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en-US';
+
+
+ALTER DATABASE criblink_db OWNER TO postgres;
+
+\connect criblink_db
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -223,7 +247,7 @@ CREATE TABLE public.agency_members (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     message text,
     member_status character varying(50) DEFAULT 'regular'::character varying NOT NULL,
-    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('agent'::character varying)::text])))
+    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'agent'::character varying])::text[])))
 );
 
 
@@ -547,7 +571,9 @@ CREATE TABLE public.legal_documents (
     upload_date date,
     completion_date date,
     document_url text,
-    public_id character varying(255)
+    public_id character varying(255),
+    agent_id integer,
+    agency_id integer
 );
 
 
@@ -799,7 +825,7 @@ CREATE TABLE public.user_login_history (
     login_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     status character varying(20) NOT NULL,
     message text,
-    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY (ARRAY[('Success'::character varying)::text, ('Failed'::character varying)::text])))
+    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY ((ARRAY['Success'::character varying, 'Failed'::character varying])::text[])))
 );
 
 
@@ -887,8 +913,8 @@ CREATE TABLE public.users (
     profile_picture_public_id character varying(255),
     agency_id integer,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT valid_role CHECK (((role)::text = ANY (ARRAY[('client'::character varying)::text, ('agent'::character varying)::text, ('admin'::character varying)::text, ('agency_admin'::character varying)::text]))),
-    CONSTRAINT valid_status CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('deactivated'::character varying)::text])))
+    CONSTRAINT valid_role CHECK (((role)::text = ANY ((ARRAY['client'::character varying, 'agent'::character varying, 'admin'::character varying, 'agency_admin'::character varying])::text[]))),
+    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'deactivated'::character varying])::text[])))
 );
 
 
@@ -1561,6 +1587,22 @@ ALTER TABLE ONLY public.inquiries
 
 ALTER TABLE ONLY public.inquiries
     ADD CONSTRAINT inquiries_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(user_id) ON DELETE SET NULL;
+
+
+--
+-- Name: legal_documents legal_documents_agency_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.legal_documents
+    ADD CONSTRAINT legal_documents_agency_id_fkey FOREIGN KEY (agency_id) REFERENCES public.agencies(agency_id) ON DELETE SET NULL;
+
+
+--
+-- Name: legal_documents legal_documents_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.legal_documents
+    ADD CONSTRAINT legal_documents_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.users(user_id) ON DELETE SET NULL;
 
 
 --

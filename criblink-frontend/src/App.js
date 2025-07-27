@@ -38,7 +38,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
 import AgentPerformance from './pages/admin/AgentPerformance';
 import AdminSettings from './pages/admin/Settings';
-import LegalDocumentsAdmin from "./pages/admin/LegalDocuments"; // Import Admin's LegalDocuments
+// REMOVED: import LegalDocumentsAdmin from "./pages/admin/LegalDocuments";
 
 // Agent Pages
 import AgentDashboard from './pages/agent/Dashboard';
@@ -48,12 +48,14 @@ import ClientProfile from './pages/agent/ClientProfile';
 import AgentInquiries from './pages/agent/AgentInquiries';
 import Archive from './pages/agent/Archive'; // Renamed from ArchivedClients to Archive
 import AgentSettings from './pages/agent/Settings';
-import LegalDocumentsAgent from "./pages/agent/LegalDocuments"; // NEW: Import Agent's LegalDocuments
+// REMOVED: import LegalDocumentsAgent from "./pages/agent/LegalDocuments";
 
 // Client Pages
+import ClientDashboard from './pages/client/Dashboard'; // NEW: Import ClientDashboard
 import ClientInquiries from "./pages/client/ClientInquiries";
 import ClientSettings from "./pages/client/Settings";
 import AgentProfile from "./pages/client/AgentProfile";
+import Agents from './pages/client/Agents'; // NEW: Import Agents page for clients
 
 // Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
@@ -78,8 +80,11 @@ import Agencies from "./pages/Agencies";
 // NEW: AgencyProfile Page
 import AgencyProfile from "./pages/AgencyProfile"; // Import AgencyProfile
 
-// NEW: Import AddLegalDocument component (shared between admin and agent)
+// NEW: Import AddLegalDocument component (shared between admin and agency admin)
 import AddLegalDocument from "./pages/AddLegalDocument";
+// NEW: Import LegalDocuments component (shared between admin and agency admin)
+import LegalDocuments from "./pages/LegalDocuments";
+
 
 // NEW: Agency Admin Pages
 import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard'; // NEW: Import AgencyAdminDashboard
@@ -104,8 +109,8 @@ const adminRoutes = [
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
-  { path: "add-document", element: <AddLegalDocument /> },
-  { path: "documents", element: <LegalDocumentsAdmin /> }, // Admin's Legal Documents list
+  // REMOVED: { path: "add-document", element: <AddLegalDocument /> },
+  // REMOVED: { path: "documents", element: <LegalDocumentsAdmin /> },
   ...listingRoutes
 ];
 
@@ -117,15 +122,17 @@ const agentRoutes = [
   { path: "inquiries", element: <AgentInquiries /> },
   { path: "archive", element: <Archive /> }, // Updated route to "archive"
   { path: "settings", element: <AgentSettings /> },
-  { path: "add-document", element: <AddLegalDocument /> },
-  { path: "documents", element: <LegalDocumentsAgent /> }, // NEW: Agent's Legal Documents list
+  // REMOVED: { path: "add-document", element: <AddLegalDocument /> },
+  // REMOVED: { path: "documents", element: <LegalDocumentsAgent /> },
   ...listingRoutes
 ];
 
 const clientRoutes = [
+  { path: "dashboard", element: <ClientDashboard /> }, // NEW: Added ClientDashboard route
   { path: "inquiries", element: <ClientInquiries /> },
   { path: "settings", element: <ClientSettings /> },
   { path: "agent-profile/:agentId", element: <AgentProfile /> },
+  { path: "agents", element: <Agents /> }, // NEW: Added Agents page for clients
 ];
 
 // NEW: Agency Admin Routes
@@ -224,6 +231,12 @@ function AppContent() {
             {/* NEW: Agency Admin Profile page accessible to agency_admin, agents, and admin */}
             <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
               <Route index element={<AgencyAdminProfile />} />
+            </Route>
+
+            {/* SHARED Legal Document Routes for Admin and Agency Admin */}
+            <Route path="/documents" element={<RoleProtectedRoute allowedRole={["admin", "agency_admin"]} />}>
+                <Route index element={<LegalDocuments />} />
+                <Route path="add" element={<AddLegalDocument />} /> {/* Use a nested path like /documents/add */}
             </Route>
           </Route>
 

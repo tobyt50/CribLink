@@ -12,7 +12,7 @@ router.use(authenticateToken);
 
 // Overview Stats (combining existing and new)
 router.get('/stats/listings-count', adminStatsController.getListingsCount); // Existing
-router.get('/stats/inquiries-count', adminStatsController.getInquiriesCount); // Existing
+router.get('/stats/inquiries-count', adminStatsController.getAllInquiriesCount); // Corrected: Changed to getAllInquiriesCount
 router.get('/total-users-count', analyticsController.getTotalUsersCount); // New
 router.get('/revenue-sold-listings', analyticsController.getRevenueSoldListings); // New
 router.get('/total-deals-closed', analyticsController.getTotalDealsClosed); // New

@@ -9,6 +9,7 @@ import {
   Settings, // For Settings
   X,
   Shield,
+  FileText,
   Landmark, // For Agency Info
   MessageSquare // For Inquiries
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const MENU_ITEMS = [
   { name: 'Listings', to: '/agency/listings', icon: <LayoutGrid />, key: 'listings' }, // Updated path
   { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
   { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
+  { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' },
   { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' }, // NEW: Added Inquiries
   // Note: Properties route is not explicitly in App.js agencyAdminRoutes, but added here for completeness if it exists
   // { name: 'Properties', to: '/agency/properties', icon: <Home />, key: 'properties' },

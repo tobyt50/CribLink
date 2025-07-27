@@ -9,12 +9,14 @@ import {
   MessageSquare,
   Search,
   X,
+  Users, // NEW: Import Users icon for Agents page
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell.js'; // Ensure .js extension for consistency
 
 const MENU_ITEMS = [
   { name: 'Dashboard', to: '/client/dashboard', icon: <Home />, key: 'client-dashboard' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'client-favourites' },
+  { name: 'Agents', to: '/client/agents', icon: <Users />, key: 'client-agents' }, // NEW: Added Agents page link
   { name: 'Inquiries', to: '/client/inquiries', icon: <MessageSquare />, key: 'client-inquiries' },
   { name: 'Saved Searches', to: '/client/saved-searches', icon: <Search />, key: 'client-saved-searches' },
   { name: 'Settings', to: '/client/settings', icon: <Settings />, key: 'client-settings' },

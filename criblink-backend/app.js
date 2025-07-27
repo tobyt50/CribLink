@@ -68,6 +68,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 📦 Route imports
 const clientRoutes = require('./routes/clientRoutes');
+const clientStatsRoutes = require('./routes/clientStatsRoutes'); // NEW: Import client stats routes
 const documentRoutes = require('./routes/documentRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const listingsRoutes = require('./routes/listingsRoutes');
@@ -77,8 +78,8 @@ const adminUserRoutes = require('./routes/admin/users');
 const adminStaffRoutes = require('./routes/admin/staff');
 const inquiriesRoutes = require('./routes/inquiriesRoutes');
 const adminActivityRoutes = require('./routes/admin/activity');
-const adminAnalyticsRoutes = require('./routes/admin/analytics');
 const adminStatsRoutes = require('./routes/admin/adminStatsRoutes');
+const adminAnalyticsRoutes = require('./routes/admin/analytics');
 const agentStatsRoutes = require('./routes/agentStatsRoutes');
 const agentPerformanceRoutes = require('./routes/admin/agentPerformanceRoutes');
 const favouritesRoutes = require('./routes/favouritesRoutes');
@@ -90,8 +91,10 @@ const agencyRoutes = require('./routes/agencyRoutes'); // NEW: Import agency rou
 const agencyAdminRoutes = require('./routes/agencyAdminRoutes'); // NEW: Import agency admin routes
 const agencyStatsRoutes = require('./routes/agencyStatsRoutes'); // NEW: Import agency stats routes
 
+
 // 🚏 Route mounting
 app.use('/clients', clientRoutes);
+app.use('/client-stats', clientStatsRoutes); // NEW: Mount client stats routes
 app.use('/docs', documentRoutes);
 app.use('/finances', financeRoutes);
 app.use('/tickets', ticketRoutes);
@@ -114,6 +117,14 @@ app.use('/agencies', agencyRoutes); // NEW: Mount agency routes
 app.use('/agency-admins', agencyAdminRoutes); // NEW: Mount agency admin routes
 app.use('/agency-stats', agencyStatsRoutes); // NEW: Mount agency stats routes
 
-// 🟢 Launch server
+
+// Serve static files from the React app (if applicable, usually in production)
+// app.use(express.static(path.join(__dirname, '../../criblink-frontend/build')));
+
+// The "catchall" handler: for any request that doesn't match one above, send back React's index.html file.
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../../criblink-frontend/build/index.html'));
+// });
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

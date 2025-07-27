@@ -50,7 +50,7 @@ const AgencyProfile = () => {
     email: '',
     phone: '',
     website: '',
-    address: '',
+    address: '', // Added address
     description: '',
     logoBase64: null,
     logoOriginalname: null,
@@ -120,7 +120,7 @@ const AgencyProfile = () => {
         email: data.email || '',
         phone: data.phone || '',
         website: data.website || '',
-        address: data.address || '',
+        address: data.address || '', // Initialize address
         description: data.description || '',
         logoBase64: null, // Don't pre-fill base64, only set on new upload
         logoOriginalname: null,
@@ -666,7 +666,7 @@ const AgencyProfile = () => {
       email: agency.email || '',
       phone: agency.phone || '',
       website: agency.website || '',
-      address: agency.address || '',
+      address: agency.address || '', // Revert address
       description: agency.description || '',
       logoBase64: null,
       logoOriginalname: null,

@@ -1,21 +1,30 @@
 // src/components/Header.js
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import logo from "../assets/criblink-logo.png";
+import { Link, useLocation } from "react-router-dom";
+// Import both logos
+import lightLogo from "../assets/logo-light.svg";
+import darkLogo from "../assets/logo-dark.svg";
 import { Menu, X, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileMenu from "./ProfileMenu";
 import { useTheme } from "../layouts/AppShell";
-import { useAuth } from '../context/AuthContext'; // <--- NEW IMPORT
+import { useAuth } from "../context/AuthContext";
+
+const NAV_LINKS = [
+  { to: "/", label: "Listings" },
+  { to: "/agencies", label: "Agencies" },
+  { to: "/about", label: "About Us" },
+  { to: "/contact", label: "Contact Us" },
+];
 
 function Header() {
-  const { user } = useAuth(); // <--- Get user from AuthContext
+  const { user } = useAuth();
+  const { darkMode, setThemePreference } = useTheme();
+  const location = useLocation();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef(null);
 
-  const { darkMode, setThemePreference } = useTheme();
-
-  // No need for syncUser or direct localStorage listeners here, AuthContext handles it
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (mobileMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
@@ -27,72 +36,68 @@ function Header() {
   }, [mobileMenuOpen]);
 
   const handleToggleTheme = () => {
-    setThemePreference(darkMode ? 'light' : 'dark');
+    setThemePreference(darkMode ? "light" : "dark");
   };
 
+  // Determine which logo to use based on darkMode state
+  const currentLogo = darkMode ? darkLogo : lightLogo;
+
   return (
-    <header className={`fixed top-0 left-0 right-0 z-[100] shadow ${darkMode ? "bg-gray-800 text-white" : "bg-green-600 text-white"}`}>
-      <div className="flex items-center justify-between px-6 h-14">
+    <header
+      className={`fixed top-0 left-0 right-0 z-[100] backdrop-blur-md border-b shadow-sm ${
+        darkMode ? "bg-gray-900/80 text-white border-gray-800" : "bg-white/70 text-gray-900 border-gray-200"
+      }`}
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 flex justify-between items-center">
+        {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
-          <img src={logo} alt="CribLink Logo" className="h-9 w-auto" />
+          {/* Use the dynamically selected logo */}
+          <img src={currentLogo} alt="CribLink Logo" className="h-9 w-auto" />
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-stretch space-x-6 text-sm font-medium h-full">
-          {[
-            { to: "/", label: "Listings" },
-            // NEW: Agencies Link - now visible to all
-            { to: "/agencies", label: "Agencies" },
-            { to: "/about", label: "About Us" },
-            { to: "/contact", label: "Contact Us" },
-          ].map(({ to, label, roles }) => {
-            // Conditionally render link based on user role.
-            // If 'roles' are specified, and 'user' is not null AND user's role is NOT in allowedRoles, return null.
-            // If 'user' is null (unauthenticated), 'user && !roles.includes(user.role)' will be false,
-            // so the link will not render if 'roles' is defined.
-            // Removed the roles check for the Agencies link
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`relative px-3 group transition-all duration-300 ease-in-out overflow-hidden h-full flex items-center
-                  ${darkMode ? "text-gray-200 hover:text-yellow-300" : "text-white"}`}
-              >
-                {label}
-                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-yellow-300 transition-all duration-300 transform scale-x-0 group-hover:scale-x-100" />
-                <span className={`absolute inset-0 bg-gradient-to-t from-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity ${darkMode ? "from-gray-700" : ""}`} />
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Desktop Navigation */}
+<nav className="hidden md:flex items-center h-full text-sm font-medium">
+  {NAV_LINKS.map(({ to, label }) => {
+    const isActive = location.pathname === to;
+
+    return (
+      <Link
+        key={to}
+        to={to}
+        className={`relative h-full flex items-center px-4 transition-colors duration-300
+          ${isActive
+            ? "text-yellow-400 bg-yellow-400/10 border-b-2 border-yellow-400"
+            : darkMode
+              ? "text-gray-300 hover:text-yellow-300 hover:bg-white/5"
+              : "text-gray-700 hover:text-yellow-500 hover:bg-yellow-400/10"}
+        `}
+      >
+        {label}
+      </Link>
+    );
+  })}
+</nav>
+
 
         {/* Right-side actions */}
-        <div className="flex items-center space-x-4">
-          {/* Dark Mode Toggle - Desktop */}
+        <div className="flex items-center space-x-2">
+          {/* Dark Mode Toggle */}
           <button
             onClick={handleToggleTheme}
-            className="hidden md:inline-block text-white hover:text-yellow-300 transition"
+            className="p-2 rounded-md hover:bg-white/10 dark:hover:bg-gray-800 transition"
             title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          {/* Dark Mode Toggle - Mobile */}
-          <button
-            onClick={handleToggleTheme}
-            className="md:hidden text-white hover:text-yellow-300 transition"
-            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-
-          {/* Profile or Menu Toggle */}
+          {/* Desktop Profile */}
           <div className="hidden md:block">
-            <ProfileMenu user={user} /> {/* Pass user from AuthContext */}
+            <ProfileMenu user={user} />
           </div>
 
+          {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden text-white"
+            className="md:hidden p-2 rounded-md hover:bg-white/10 dark:hover:bg-gray-800 transition"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -103,33 +108,44 @@ function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <motion.div
-          ref={mobileMenuRef}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30, duration: 0.25 }}
-          className={`md:hidden px-6 py-4 space-y-4 text-sm font-medium shadow-inner relative z-[100]
-            ${darkMode ? "bg-gray-700 text-gray-200" : "bg-green-800 text-white"}`}
-        >
-          <Link to="/" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
-            Listings
-          </Link>
-          {/* NEW: Agencies Link for Mobile - now visible to all users */}
-          <Link to="/agencies" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
-            Agencies
-          </Link>
-          <Link to="/about" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
-            About Us
-          </Link>
-          <Link to="/contact" className={`block hover:text-yellow-300 ${darkMode ? "text-gray-200" : "text-white"}`} onClick={() => setMobileMenuOpen(false)}>
-            Contact Us
-          </Link>
+  <motion.div
+    ref={mobileMenuRef}
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.25, ease: "easeInOut" }}
+    className={`md:hidden px-6 py-4 space-y-4 text-sm font-medium shadow-inner z-[99] ${
+      darkMode ? "bg-gray-900 text-gray-100" : "bg-white text-gray-800"
+    }`}
+  >
+    <nav className="space-y-2">
+      {NAV_LINKS.map(({ to, label }) => {
+        const isActive = location.pathname === to;
 
-          <div className={`pt-2 border-t ${darkMode ? "border-gray-600" : "border-white/20"}`}>
-            <ProfileMenu user={user} onCloseMobileHeaderMenu={setMobileMenuOpen} /> {/* Pass user from AuthContext */}
-          </div>
-        </motion.div>
-      )}
+        return (
+          <Link
+            key={to}
+            to={to}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`relative block px-2 py-2 rounded transition-colors ${
+              isActive
+                ? "text-yellow-400 bg-yellow-400/10 border-r-4 border-yellow-400"
+                : darkMode
+                ? "text-gray-300 hover:text-yellow-300"
+                : "text-gray-700 hover:text-yellow-600"
+            }`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+
+    <div className={`pt-4 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+      <ProfileMenu user={user} onCloseMobileHeaderMenu={setMobileMenuOpen} />
+    </div>
+  </motion.div>
+)}
+
     </header>
   );
 }
