@@ -32,7 +32,7 @@ import LoadingSpinner from './components/LoadingSpinner'; // Import LoadingSpinn
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
-import AdminListings from './pages/admin/Listings';
+// import AdminListings from './pages/admin/Listings'; // REMOVED: Centralized Listings
 import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
@@ -42,7 +42,7 @@ import AdminSettings from './pages/admin/Settings';
 
 // Agent Pages
 import AgentDashboard from './pages/agent/Dashboard';
-import AgentListings from './pages/agent/Listings';
+// import AgentListings from './pages/agent/Listings'; // REMOVED: Centralized Listings
 import Clients from './pages/agent/Clients';
 import ClientProfile from './pages/agent/ClientProfile';
 import AgentInquiries from './pages/agent/AgentInquiries';
@@ -60,7 +60,7 @@ import Agents from './pages/client/Agents'; // NEW: Import Agents page for clien
 // Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
 import AddListing from "./pages/AddListing";
-import EditListing from './pages/EditListing';
+import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
 import Favourites from "./pages/Favourites";
 import SearchPage from "./pages/SearchPage";
@@ -85,45 +85,44 @@ import AddLegalDocument from "./pages/AddLegalDocument";
 // NEW: Import LegalDocuments component (shared between admin and agency admin)
 import LegalDocuments from "./pages/LegalDocuments";
 
-
 // NEW: Agency Admin Pages
 import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard'; // NEW: Import AgencyAdminDashboard
-import AgencyAdminListings from './pages/agencyadmin/Listings'; // NEW: Import AgencyAdminListings
+// import AgencyAdminListings from './pages/agencyadmin/Listings'; // REMOVED: Centralized Listings
 import Members from './pages/agencyadmin/Members'; // Renamed from Agents
 // import AgencyAdminProperties from './pages/agencyadmin/Properties';
 import AgencyAdminSettings from './pages/agencyadmin/Settings';
 import AgencyAdminProfile from './pages/agencyadmin/AgencyAdminProfile'; // Import the new AgencyAdminProfile component
 import AgencyInquiries from './pages/agencyadmin/AgencyInquiries'; // NEW: Import AgencyInquiries
 
+// CENTRALIZED LISTINGS PAGE
+import Listings from './pages/Listings';
+
 
 // Define routes for each role
 const listingRoutes = [
   { path: "add-listing", element: <AddListing /> },
+  { path: "edit-listing/:id", element: <EditListing /> }, // Added edit-listing here
 ];
 
 const adminRoutes = [
   { path: "dashboard", element: <AdminDashboard /> },
-  { path: "listings", element: <AdminListings /> },
+  { path: "listings", element: <Listings /> }, // Point to centralized Listings
   { path: "staff", element: <AdminStaff /> },
   { path: "users", element: <AdminUsers /> },
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
-  // REMOVED: { path: "add-document", element: <AddLegalDocument /> },
-  // REMOVED: { path: "documents", element: <LegalDocumentsAdmin /> },
   ...listingRoutes
 ];
 
 const agentRoutes = [
   { path: "dashboard", element: <AgentDashboard /> },
-  { path: "listings", element: <AgentListings /> },
+  { path: "listings", element: <Listings /> }, // Point to centralized Listings
   { path: "clients", element: <Clients /> },
   { path: "client-profile/:clientId", element: <ClientProfile /> },
   { path: "inquiries", element: <AgentInquiries /> },
   { path: "archive", element: <Archive /> }, // Updated route to "archive"
   { path: "settings", element: <AgentSettings /> },
-  // REMOVED: { path: "add-document", element: <AddLegalDocument /> },
-  // REMOVED: { path: "documents", element: <LegalDocumentsAgent /> },
   ...listingRoutes
 ];
 
@@ -138,15 +137,14 @@ const clientRoutes = [
 // NEW: Agency Admin Routes
 const agencyAdminRoutes = [
   { path: "dashboard", element: <AgencyAdminDashboard /> }, // NEW: Added AgencyAdminDashboard route
-  { path: "listings", element: <AgencyAdminListings /> }, // NEW: Added AgencyAdminListings route
+  { path: "listings", element: <Listings /> }, // Point to centralized Listings
   { path: "members", element: <Members /> }, // Updated to Members
   { path: "clients", element: <Clients /> }, // NEW: Added Clients route for agency admin
   { path: "client-profile/:clientId", element: <ClientProfile /> }, // NEW: Added ClientProfile route for agency admin
-  { path: "inquiries", element: <AgencyInquiries /> }, // NEW: Added AgencyInquiries route
+  { path: "inquiries", element: <AgencyInquiries /> }, // NEW: Import AgencyInquiries
   // { path: "properties", element: <AgencyAdminProperties /> },
   { path: "settings", element: <AgencyAdminSettings /> },
-  { path: "add-listing", element: <AddListing /> }, // Added AddListing for agency admin
-  { path: "edit-listing/:id", element: <EditListing /> }, // Added EditListing for agency admin
+  ...listingRoutes // Add common listing routes
 ];
 
 

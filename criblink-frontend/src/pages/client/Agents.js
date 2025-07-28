@@ -165,6 +165,9 @@ const Agents = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null); // Track the ID of the conversation currently open in the modal
 
+  // New state for favorite agents
+  const [favoriteAgentsStatus, setFavoriteAgentsStatus] = useState(new Set());
+
 
   // --- Data Fetching Callbacks ---
 
@@ -234,6 +237,26 @@ const Agents = () => {
     }
   }, [token, showMessage]);
 
+  // Fetch favorite agents
+  const fetchFavoriteAgents = useCallback(async () => {
+    if (!user?.user_id) {
+      setFavoriteAgentsStatus(new Set());
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/favourites/agents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const favoritedIds = new Set(response.data.favourites.map(fav => fav.user_id));
+      setFavoriteAgentsStatus(favoritedIds);
+    } catch (error) {
+      console.error("Error fetching favorite agents:", error.response?.data || error.message);
+      // showMessage("Failed to load favorite agents.", "error"); // Suppress for cleaner UX
+      setFavoriteAgentsStatus(new Set());
+    }
+  }, [user?.user_id]);
+
 
   // --- Initial Data Fetch on Component Mount ---
   useEffect(() => {
@@ -242,6 +265,10 @@ const Agents = () => {
     // Always fetch all agents initially, as the search will operate on this full list
     fetchAllAgents(1, '', false);
   }, [fetchConnectedAgents, fetchPendingRequests, fetchAllAgents]);
+
+  useEffect(() => {
+    fetchFavoriteAgents();
+  }, [fetchFavoriteAgents, user?.user_id]);
 
 
   // --- Helper to determine agent connection status ---
@@ -815,6 +842,40 @@ const Agents = () => {
     });
   };
 
+  // Handle adding/removing agent from favorites
+  const handleFavoriteToggle = useCallback(async (agentId, isCurrentlyFavorited) => {
+    if (!user?.user_id) {
+      showMessage("Please log in to add agents to favorites.", "info");
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+      if (isCurrentlyFavorited) {
+        await axios.delete(`${API_BASE_URL}/favourites/agents/${agentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFavoriteAgentsStatus(prev => {
+          const newState = new Set(prev);
+          newState.delete(agentId);
+          return newState;
+        });
+        showMessage("Agent removed from favorites!", "success");
+      } else {
+        await axios.post(`${API_BASE_URL}/favourites/agents`, { agent_id: agentId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFavoriteAgentsStatus(prev => new Set(prev).add(agentId));
+        showMessage("Agent added to favorites!", "success");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite agent status:", error.response?.data || error.message);
+      showMessage(`Failed to update favorite status: ${error.response?.data?.message || 'Please try again.'}`, "error");
+      fetchFavoriteAgents(); // Re-fetch to ensure UI consistency on error
+    }
+  }, [user?.user_id, showMessage, fetchFavoriteAgents]);
+
+
   // Modified handleScroll to listen to window scroll
   const handleScroll = useCallback(() => {
     // Only trigger load more if a search term is active
@@ -1011,6 +1072,8 @@ const Agents = () => {
                       onChatAgent={handleChatAgent} // Added this prop
                       // Pass request_id if it's a pending request
                       requestId={agent.requestId}
+                      onFavoriteToggle={handleFavoriteToggle} // Pass the new handler
+                      isFavorited={favoriteAgentsStatus.has(agent.user_id)} // Pass favorite status
                     />
                   ))}
                 </div>
@@ -1136,4 +1199,3 @@ const Agents = () => {
 };
 
 export default Agents;
-

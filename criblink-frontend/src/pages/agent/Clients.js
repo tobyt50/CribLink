@@ -171,6 +171,9 @@ const Clients = () => {
   const [conversationForModal, setConversationForModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
 
+  // New state for favorite clients
+  const [favoriteClientsStatus, setFavoriteClientsStatus] = useState(new Set());
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -270,10 +273,34 @@ const Clients = () => {
     }
   }, [currentUserId, userRole, agencyId, showMessage]);
 
+  // Fetch favorite clients
+  const fetchFavoriteClients = useCallback(async () => {
+    if (!currentUserId || (userRole !== 'agent' && userRole !== 'agency_admin')) {
+      setFavoriteClientsStatus(new Set());
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/favourites/clients`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const favoritedIds = new Set(response.data.favourites.map(fav => fav.user_id));
+      setFavoriteClientsStatus(favoritedIds);
+    } catch (error) {
+      console.error("Error fetching favorite clients:", error.response?.data || error.message);
+      // showMessage("Failed to load favorite clients.", "error"); // Suppress for cleaner UX
+      setFavoriteClientsStatus(new Set());
+    }
+  }, [currentUserId, userRole]);
+
 
   useEffect(() => {
     fetchClientsAndRequests();
   }, [fetchClientsAndRequests, activeTab, userRole]); // Added userRole to dependencies
+
+  useEffect(() => {
+    fetchFavoriteClients();
+  }, [fetchFavoriteClients, currentUserId, userRole]);
 
 
   // New: Fetch conversation for a specific client
@@ -712,6 +739,40 @@ const Clients = () => {
     }
   };
 
+  // Handle adding/removing client from favorites
+  const handleFavoriteToggle = useCallback(async (clientId, isCurrentlyFavorited) => {
+    if (!currentUserId || (userRole !== 'agent' && userRole !== 'agency_admin')) {
+      showMessage("Only agents and agency administrators can add clients to favorites.", "info");
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+      if (isCurrentlyFavorited) {
+        await axios.delete(`${API_BASE_URL}/favourites/clients/${clientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFavoriteClientsStatus(prev => {
+          const newState = new Set(prev);
+          newState.delete(clientId);
+          return newState;
+        });
+        showMessage("Client removed from favorites!", "success");
+      } else {
+        await axios.post(`${API_BASE_URL}/favourites/clients`, { client_id: clientId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFavoriteClientsStatus(prev => new Set(prev).add(clientId));
+        showMessage("Client added to favorites!", "success");
+      }
+    } catch (error) {
+      console.error("Error toggling favorite client status:", error.response?.data || error.message);
+      showMessage(`Failed to update favorite status: ${error.response?.data?.message || 'Please try again.'}`, "error");
+      fetchFavoriteClients(); // Re-fetch to ensure UI consistency on error
+    }
+  }, [currentUserId, userRole, showMessage, fetchFavoriteClients]);
+
+
   const handleSortClick = (key) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -950,7 +1011,7 @@ const Clients = () => {
           collapsed={isMobile ? false : isCollapsed}
           setCollapsed={isMobile ? () => {} : setIsCollapsed}
           activeSection={activeSection}
-          setActiveSection={setActiveSection}
+          setActiveSection={activeSection}
           isMobile={isMobile}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
@@ -1154,6 +1215,8 @@ const Clients = () => {
                       rejectAction={() => handleRejectRequest(request.request_id)}
                       isPendingRequestCard={true}
                       userRole={userRole}
+                      onFavoriteToggle={handleFavoriteToggle} // Pass the handler
+                      isFavorited={favoriteClientsStatus.has(request.client_id)} // Pass favorite status
                     />
                   ))}
                 </div>
@@ -1239,6 +1302,8 @@ const Clients = () => {
                       onSaveNote={handleSaveNote}
                       onCancelEdit={handleCancelEdit}
                       userRole={userRole}
+                      onFavoriteToggle={handleFavoriteToggle} // Pass the handler
+                      isFavorited={favoriteClientsStatus.has(client.user_id)} // Pass favorite status
                     />
                   ))}
                 </div>

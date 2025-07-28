@@ -1,5 +1,5 @@
 // src/pages/SearchPage.js
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ListingCard from "../components/ListingCard";
@@ -20,6 +20,8 @@ function SearchPage() {
   const searchInputRef = useRef(null); // Ref for the search input
   const { darkMode } = useTheme(); // Use the dark mode context
   const { showMessage } = useMessage(); // Initialize useMessage
+  const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+
 
   const [filters, setFilters] = useState({
     location: "",
@@ -36,6 +38,62 @@ function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20; // 20 items per page
 
+  // New function to fetch user's favorite listings
+  const fetchUserFavourites = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUserFavourites([]); // Clear favorites if not logged in
+      return;
+    }
+    try {
+      const response = await axiosInstance.get(`${API_BASE_URL}/favourites`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserFavourites(response.data.favourites.map(fav => fav.property_id));
+    } catch (error) {
+      console.error("Failed to fetch user favourites:", error);
+      setUserFavourites([]);
+    }
+  }, []);
+
+  // New function to handle adding/removing a listing from favorites
+  const handleFavoriteToggle = useCallback(async (propertyId, isCurrentlyFavorited) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showMessage("Please log in to manage your favorites.", "error");
+      navigate('/signin');
+      return;
+    }
+
+    try {
+      if (isCurrentlyFavorited) {
+        // Remove from favorites
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/${propertyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showMessage("Removed from favorites!", "success");
+      } else {
+        // Add to favorites
+        await axiosInstance.post(`${API_BASE_URL}/favourites`, { property_id: propertyId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showMessage("Added to favorites!", "success");
+      }
+      // Re-fetch user favorites to update the UI
+      fetchUserFavourites();
+    } catch (error) {
+      console.error("Failed to toggle favorite status:", error);
+      let errorMessage = 'Failed to update favorites. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  }, [fetchUserFavourites, showMessage, navigate]);
+
+
   useEffect(() => {
     const queryParam = new URLSearchParams(location.search).get("query") || "";
     setSearchTerm(queryParam);
@@ -45,7 +103,8 @@ function SearchPage() {
       setResults([]);
       setFilteredResults([]);
     }
-  }, [location.search]);
+    fetchUserFavourites(); // Fetch favorites when search page loads
+  }, [location.search, fetchUserFavourites]);
 
   useEffect(() => {
     // Reset to first page whenever filters or results change
@@ -219,7 +278,7 @@ function SearchPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {filteredResults.length} results for "{searchTerm}" 
+          {filteredResults.length} results for "{searchTerm}"
         </motion.div>
       )}
 
@@ -243,7 +302,11 @@ function SearchPage() {
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
               transition={{ duration: 0.4 }}
             >
-              <ListingCard listing={listing} />
+              <ListingCard
+                listing={listing}
+                isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
+                onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+              />
             </motion.div>
           ))
         ) : (

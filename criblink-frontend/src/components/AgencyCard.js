@@ -1,5 +1,5 @@
 // src/components/AgencyCard.js
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '../layouts/AppShell';
 import Card from './ui/Card'; // Assuming you have a Card component in ui folder
@@ -21,6 +21,8 @@ import { UserPlus, UserX, Hourglass, CheckCircle, X } from 'lucide-react'; // Im
  * @param {function} [props.onConnectClick] - Function to call when connect button is clicked (for agents).
  * @param {function} [props.onDisconnectClick] - Function to call when disconnect button is clicked (for agents).
  * @param {function} [props.onCancelRequestClick] - Function to call when cancel pending request button is clicked (for agents).
+ * @param {function} [props.onFavoriteToggle] - Function to call when favorite button is clicked.
+ * @param {boolean} [props.isFavorited=false] - Indicates if the agency is currently favorited.
  */
 function AgencyCard({
   agency,
@@ -34,8 +36,11 @@ function AgencyCard({
   onConnectClick,
   onDisconnectClick,
   onCancelRequestClick,
+  onFavoriteToggle, // New prop
+  isFavorited = false, // New prop
 }) {
   const { darkMode } = useTheme();
+  const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
 
   // Determine the current agent's affiliation status with THIS specific agency
   const currentAffiliation = agentMemberships.find(m => m.agency_id === agency.agency_id);
@@ -55,6 +60,13 @@ function AgencyCard({
   // Determine if the "Disconnect" button should be disabled for an admin
   const isDisconnectDisabledForAdmin = isThisAgencyCurrentUsersAdminAgency && isLastAdminOfOwnAgency;
 
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    if (onFavoriteToggle) {
+      onFavoriteToggle(agency.agency_id, isFavorited);
+    }
+  };
+
   return (
     <Card
       className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] max-w-md cursor-pointer" // Added cursor-pointer
@@ -63,7 +75,7 @@ function AgencyCard({
       {/* Agency Logo and Main Details Section */}
       <div className="flex flex-row-reverse items-start gap-4 mb-2">
         {/* Right side: Logo */}
-        <div className="flex-shrink-0 flex flex-col items-center mt-8"> {/* Increased pt- to lower logo further */}
+        <div className="flex-shrink-0 flex flex-col items-center mt-8 relative"> {/* Increased pt- to lower logo further */}
           {agency.logo_url ? (
             <img
               src={agency.logo_url}
@@ -76,6 +88,31 @@ function AgencyCard({
               ${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-600"}`}>
               {agency.name.charAt(0).toUpperCase()}
             </div>
+          )}
+          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
+            <button
+              onClick={handleFavoriteClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
+              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+                fill={
+                  isFavorited || isHovered // If favorited OR hovered, it's blue
+                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                    : "none" // Transparent fill when not favorited and not hovered
+                }
+                stroke={
+                  isFavorited || isHovered // If favorited OR hovered, no stroke
+                    ? "none"
+                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                }
+                strokeWidth={isFavorited || isHovered ? "0" : "1"}
+              >
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+              </svg>
+            </button>
           )}
         </div>
 

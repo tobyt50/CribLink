@@ -37,8 +37,11 @@ const ClientCard = ({
   rejectAction,
   isPendingRequestCard = false,
   userRole, // Pass userRole to control button visibility
+  onFavoriteToggle, // New prop
+  isFavorited = false, // New prop
 }) => {
   const { darkMode } = useTheme(); // Use the hook directly
+  const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
 
   const isEditing = editingNoteId === client.user_id; // Reverted to use editingNoteId prop
 
@@ -81,6 +84,13 @@ const ClientCard = ({
   const baseButtonClasses = `flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap h-6`;
   const iconOnlyButtonClasses = `flex items-center justify-center rounded-xl px-1.5 py-0.5 h-6 flex-shrink-0 text-[0.7rem]`;
 
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    if (onFavoriteToggle) {
+      onFavoriteToggle(client.user_id, isFavorited);
+    }
+  };
+
 
   return (
     <Card
@@ -88,7 +98,7 @@ const ClientCard = ({
       onClick={() => { !isPendingRequestCard && onViewProfile(client.user_id); }}
     >
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
-        <div className="flex-shrink-0 flex flex-col items-center">
+        <div className="flex-shrink-0 flex flex-col items-center relative">
           <img
             src={profilePicUrl || `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`}
             alt="Profile"
@@ -98,6 +108,31 @@ const ClientCard = ({
               e.target.src = `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`;
             }}
           />
+          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
+            <button
+              onClick={handleFavoriteClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
+              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+                fill={
+                  isFavorited || isHovered // If favorited OR hovered, it's blue
+                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                    : "none" // Transparent fill when not favorited and not hovered
+                }
+                stroke={
+                  isFavorited || isHovered // If favorited OR hovered, no stroke
+                    ? "none"
+                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                }
+                strokeWidth={isFavorited || isHovered ? "0" : "1"}
+              >
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+              </svg>
+            </button>
+          )}
           {/* Status aligned directly under profile picture with UserCard styling and distinct colors */}
           <div className="w-28 text-center text-xs font-medium mt-4"> {/* Increased mt-4 for more space */}
             <span className={

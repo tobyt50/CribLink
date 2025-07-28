@@ -3,13 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
 
-function ListingCard({ listing: initialListing }) {
+// Note: The ListingCard component receives `onFavoriteToggle` and `isFavorited` props
+// when used in the Favourites page. These are used here to control the favorite button's behavior and appearance.
+function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = false }) {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const cardRef = useRef(null);
 
   const [compactMode, setCompactMode] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
+  const [isHovered, setIsHovered] = useState(false); // State to track hover for the button
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -24,7 +27,7 @@ function ListingCard({ listing: initialListing }) {
     return () => observer.disconnect();
   }, []);
 
-  const listing = { ...initialListing, rating: 4.27 }; // Assuming rating is always 4.27 for now
+  const listing = { ...initialListing, rating: initialListing.rating || 4.27 }; // Use actual rating if available, otherwise default
 
   // Determine if the property is land
   const isLandProperty = listing.property_type?.toLowerCase() === 'land';
@@ -109,6 +112,13 @@ function ListingCard({ listing: initialListing }) {
 
   const handleClick = () => navigate(`/listings/${listing.property_id}`);
 
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    if (onFavoriteToggle) {
+      onFavoriteToggle(listing.property_id, isFavorited);
+    }
+  };
+
   return (
     <motion.div
       ref={cardRef}
@@ -182,14 +192,14 @@ function ListingCard({ listing: initialListing }) {
       )}
 
       {/* Details */}
-      <div className={`px-4 ${compactMode ? "pt-1 pb-2 gap-1" : "pt-2 pb-5 gap-2"} flex flex-col text-sm`}>
+      <div className={`px-4 ${compactMode ? "pt-1 pb-1 gap-1" : "pt-2 pb-2 gap-2"} flex flex-col text-sm`}> {/* Reduced pb-5 to pb-2, and pb-2 to pb-1 for compact */}
         <h3 className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={listing.title}>
           {listing.title}
         </h3>
 
         <div className={`flex justify-between text-xs ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
           <div className="flex flex-col gap-0.5 overflow-hidden max-w-[60%]">
-            <p className="truncate" title={`${listing.location}, ${listing.state}`}>📍 {listing.location}, {listing.state}</p>
+            <p className="truncate" title={`${listing.location}, ${listing.location}`}>📍 {listing.location}, {listing.state}</p>
             <p className="truncate" title={listing.property_type}>🏘️ {listing.property_type}</p>
           </div>
           <div className="flex flex-col gap-0.5 text-right min-w-[40%]">
@@ -207,7 +217,7 @@ function ListingCard({ listing: initialListing }) {
             {/* Display land-specific attributes if available */}
             {isLandProperty && listing.land_size && (
               <p className="whitespace-nowrap">
-                📐 {listing.land_size}
+                � {listing.land_size}
               </p>
             )}
             {isLandProperty && listing.zoning_type && (
@@ -223,15 +233,40 @@ function ListingCard({ listing: initialListing }) {
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-2">
+        <div className="flex justify-between items-center pt-1"> {/* Reduced pt-2 to pt-1 */}
           <p className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={formatPrice(listing.price, listing.purchase_category)}>
             {formatPrice(listing.price, listing.purchase_category)}
           </p>
-          {listing.rating && (
-            <p className={`text-xs ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>
-              ⭐ {listing.rating.toFixed(1)}
-            </p>
-          )}
+          <div className="flex items-center gap-2"> {/* Container for rating and favorite button */}
+            {listing.rating && (
+              <p className={`text-xs ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>
+                ⭐ {listing.rating.toFixed(1)}
+              </p>
+            )}
+            <button
+              onClick={handleFavoriteClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`transition-colors`}
+              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+                fill={
+                  isFavorited || isHovered // If favorited OR hovered, it's blue
+                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                    : "none" // Transparent fill when not favorited and not hovered
+                }
+                stroke={
+                  isFavorited || isHovered // If favorited OR hovered, no stroke
+                    ? "none"
+                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                }
+                strokeWidth={isFavorited || isHovered ? "0" : "1"}
+              >
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -239,4 +274,3 @@ function ListingCard({ listing: initialListing }) {
 }
 
 export default ListingCard;
-

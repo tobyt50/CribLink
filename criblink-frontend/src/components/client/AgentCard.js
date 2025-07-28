@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '../../layouts/AppShell';
 import { User, Phone, Mail, Landmark, Star, Users, Hourglass, UserRoundCheck, CheckCircle, UserPlus, XCircle, X as XIcon, Flag } from 'lucide-react'; // Import Flag icon, renamed X to XIcon to avoid conflict
 import { TrashIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'; // Import TrashIcon for disconnect, ChatBubbleLeftRightIcon for chat
@@ -22,9 +22,12 @@ const AgentCard = ({
   onDisconnectAgent,
   onReportAgent, // New prop for reporting
   onChatAgent, // New prop for chat
+  onFavoriteToggle, // New prop
+  isFavorited = false, // New prop
 }) => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
 
   // --- Console Log for Debugging ---
   useEffect(() => {
@@ -51,6 +54,13 @@ const AgentCard = ({
       navigate(`/agencies/${agent.agency_id}`); // Redirect to AgencyProfile page
     } else {
       console.warn("Cannot navigate to agency profile: agent.agency_id is missing or null.", agent);
+    }
+  };
+
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    if (onFavoriteToggle) {
+      onFavoriteToggle(agent.user_id, isFavorited);
     }
   };
 
@@ -166,7 +176,7 @@ const AgentCard = ({
       onClick={() => onViewProfile(agent.user_id)}
     >
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
-        <div className="flex-shrink-0 flex flex-col items-center">
+        <div className="flex-shrink-0 flex flex-col items-center relative">
           <img
             src={profilePicUrl || `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`}
             alt="Agent Profile"
@@ -176,6 +186,31 @@ const AgentCard = ({
               e.target.src = `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`;
             }}
           />
+          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
+            <button
+              onClick={handleFavoriteClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
+              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+                fill={
+                  isFavorited || isHovered // If favorited OR hovered, it's blue
+                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                    : "none" // Transparent fill when not favorited and not hovered
+                }
+                stroke={
+                  isFavorited || isHovered // If favorited OR hovered, no stroke
+                    ? "none"
+                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                }
+                strokeWidth={isFavorited || isHovered ? "0" : "1"}
+              >
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+              </svg>
+            </button>
+          )}
           {/* Agent Rating and Deals Closed */}
           {agent.avg_rating && (
             <div className="w-28 text-center text-xs font-medium mt-2">

@@ -32,6 +32,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
 
   const [showSearchContext, setShowSearchContext] = useState(false);
+  const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
 
   const [advancedFilters, setAdvancedFilters] = useState({
     location: "",
@@ -57,6 +58,66 @@ function Home() {
       }
     }
   }, []);
+
+  // New function to fetch user's favorite listings
+  const fetchUserFavourites = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUserFavourites([]); // Clear favorites if not logged in
+      return;
+    }
+    try {
+      const response = await axiosInstance.get(`${API_BASE_URL}/favourites`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Assuming the backend returns an array of favorite listing objects,
+      // we extract just the property_ids for easy lookup.
+      setUserFavourites(response.data.favourites.map(fav => fav.property_id));
+    } catch (error) {
+      console.error("Failed to fetch user favourites:", error);
+      // Optionally show a message to the user
+      // showMessage("Failed to load your favorites.", "error");
+      setUserFavourites([]);
+    }
+  }, []);
+
+  // New function to handle adding/removing a listing from favorites
+  const handleFavoriteToggle = useCallback(async (propertyId, isCurrentlyFavorited) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showMessage("Please log in to manage your favorites.", "error");
+      navigate('/signin');
+      return;
+    }
+
+    try {
+      if (isCurrentlyFavorited) {
+        // Remove from favorites
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/${propertyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showMessage("Removed from favorites!", "success");
+      } else {
+        // Add to favorites
+        await axiosInstance.post(`${API_BASE_URL}/favourites`, { property_id: propertyId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showMessage("Added to favorites!", "success");
+      }
+      // Re-fetch user favorites to update the UI
+      fetchUserFavourites();
+    } catch (error) {
+      console.error("Failed to toggle favorite status:", error);
+      let errorMessage = 'Failed to update favorites. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  }, [fetchUserFavourites, showMessage, navigate]);
+
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -118,10 +179,12 @@ function Home() {
     }
   }, [category, searchTerm, currentPage, sortBy, showMessage, advancedFilters]);
 
+  // Fetch listings and user favorites on component mount and relevant state changes
   useEffect(() => {
     setCurrentPage(1);
     fetchListings();
-  }, [category, searchTerm, sortBy, advancedFilters, fetchListings]);
+    fetchUserFavourites(); // Fetch favorites when listings are fetched
+  }, [category, searchTerm, sortBy, advancedFilters, fetchListings, fetchUserFavourites]);
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
@@ -310,21 +373,25 @@ function Home() {
             </h2>
             <div className="relative">
             <AnimatePresence mode="wait">
-  <motion.div
-    key={`page-${currentFeaturedPage}`}
-    initial={{ opacity: 0, x: 100 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -100 }}
-    transition={{ duration: 0.6, ease: "easeInOut" }}
-    className="grid grid-cols-2 gap-6 lg:grid-cols-4"
-  >
-    {displayedFeaturedListings.map((listing) => (
-      <div key={`featured-${listing.property_id}`} className="relative transform hover:scale-[1.03] transition-transform duration-200">
-        <ListingCard listing={listing} />
-      </div>
-    ))}
-  </motion.div>
-</AnimatePresence>
+              <motion.div
+                key={`page-${currentFeaturedPage}`}
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
+                className="grid grid-cols-2 gap-6 lg:grid-cols-4"
+              >
+                {displayedFeaturedListings.map((listing) => (
+                  <div key={`featured-${listing.property_id}`} className="relative transform hover:scale-[1.03] transition-transform duration-200">
+                    <ListingCard
+                      listing={listing}
+                      isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
+                      onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+                    />
+                  </div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
 
               {Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) > 1 && (
                 <div className="flex justify-center mt-6 space-x-4">
@@ -386,7 +453,11 @@ function Home() {
                 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
                 transition={{ duration: 0.4 }}
               >
-                <ListingCard listing={listing} />
+                <ListingCard
+                  listing={listing}
+                  isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
+                  onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+                />
               </motion.div>
             ))
           ) : (
