@@ -64,6 +64,9 @@ const AgentProfile = () => {
   const recommendedCarouselRef = useRef(null);
   const autoSwipeRecommendedIntervalRef = useRef(null);
 
+  // New state for the current user's (client's) favorite properties
+  const [clientFavoriteProperties, setClientFavoriteProperties] = useState([]);
+
 
   useEffect(() => {
     const handleResize = () => {
@@ -374,6 +377,69 @@ const AgentProfile = () => {
     }
   }, [conversationForModal, showMessage]);
 
+  // New: Function to fetch client's own favorite properties
+  const fetchClientFavoriteProperties = useCallback(async () => {
+    if (userRole === 'client' && currentUserId) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(response.data.favourites.map(fav => fav.property_id) || []);
+      } catch (error) {
+        console.error("Error fetching client's favorite properties:", error);
+        showMessage("Failed to load your favorite properties.", 'error');
+        setClientFavoriteProperties([]);
+      }
+    } else {
+      setClientFavoriteProperties([]);
+    }
+  }, [userRole, currentUserId, showMessage]);
+
+  // New: Function to toggle client's favorite status for a property
+  const handleToggleClientFavoriteProperty = async (propertyId, isCurrentlyFavorited) => {
+    console.log(`Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`); // Debug log
+    if (userRole !== 'client' || !currentUserId) {
+      showMessage('You must be logged in as a client to favorite properties.', 'info');
+      console.log('User is not a client or currentUserId is missing.'); // Debug log
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage("Authentication token not found. Please log in.", 'error');
+      console.log('Authentication token not found.'); // Debug log
+      return;
+    }
+
+    try {
+      if (isCurrentlyFavorited) {
+        console.log(`Sending DELETE request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(prev => prev.filter(id => id !== propertyId));
+        showMessage('Removed listing from your favorites!', 'info');
+      } else {
+        console.log(`Sending POST request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(prev => [...prev, propertyId]);
+        showMessage('Added listing to your favorites!', 'success');
+      }
+      console.log('Client favorite properties after toggle:', clientFavoriteProperties); // Debug log
+    } catch (err) {
+      console.error('Error toggling property favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update property favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
 
   useEffect(() => {
     if (currentUserId !== null || userRole === 'guest') {
@@ -385,10 +451,12 @@ const AgentProfile = () => {
   useEffect(() => {
     if (userRole === 'client' && currentUserId && agentId) {
       fetchRecommendedListings();
+      fetchClientFavoriteProperties(); // Fetch client's favorite properties
     } else {
       setRecommendedListings([]);
+      setClientFavoriteProperties([]); // Clear client's favorite properties
     }
-  }, [fetchRecommendedListings, userRole, currentUserId, agentId]);
+  }, [fetchRecommendedListings, fetchClientFavoriteProperties, userRole, currentUserId, agentId]);
 
 
   useEffect(() => {
@@ -862,7 +930,11 @@ const AgentProfile = () => {
                                     >
                                         {displayedRecommendedListings.map(listing => (
                                             <div key={listing.property_id} className="w-full">
-                                                <ListingCard listing={listing} />
+                                                <ListingCard
+                                                  listing={listing}
+                                                  isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                                  onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                />
                                             </div>
                                         ))}
                                     </motion.div>
@@ -930,6 +1002,8 @@ const AgentProfile = () => {
                                               darkMode={darkMode}
                                               onViewProperty={handleViewProperty}
                                               showAgentName={false}
+                                              isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                              onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
                                           />
                                       </div>
                                   ))}
@@ -1106,7 +1180,11 @@ const AgentProfile = () => {
                                     >
                                         {displayedRecommendedListings.map(listing => (
                                             <div key={listing.property_id} className="w-full">
-                                                <ListingCard listing={listing} />
+                                                <ListingCard
+                                                  listing={listing}
+                                                  isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                                  onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                />
                                             </div>
                                         ))}
                                     </motion.div>

@@ -237,36 +237,42 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
           <p className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={formatPrice(listing.price, listing.purchase_category)}>
             {formatPrice(listing.price, listing.purchase_category)}
           </p>
-          <div className="flex items-center gap-2"> {/* Container for rating and favorite button */}
-            {listing.rating && (
-              <p className={`text-xs ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>
-                ⭐ {listing.rating.toFixed(1)}
-              </p>
-            )}
-            <button
-              onClick={handleFavoriteClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className={`transition-colors`}
-              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
-                fill={
-                  isFavorited || isHovered // If favorited OR hovered, it's blue
-                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
-                    : "none" // Transparent fill when not favorited and not hovered
-                }
-                stroke={
-                  isFavorited || isHovered // If favorited OR hovered, no stroke
-                    ? "none"
-                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
-                }
-                strokeWidth={isFavorited || isHovered ? "0" : "1"}
-              >
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-              </svg>
-            </button>
-          </div>
+          <div className="flex items-center gap-[4px] ml-auto">
+  {listing.rating && (
+    <span className={`flex items-center text-[0.6rem] gap-[1px] ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}>
+      <span className="text-[0.6rem] relative top-[0.5px]">⭐</span>
+      <span className="relative top-[0.5px]">{listing.rating.toFixed(1)}</span>
+    </span>
+  )}
+  <button
+    onClick={handleFavoriteClick}
+    onMouseEnter={() => setIsHovered(true)}
+    onMouseLeave={() => setIsHovered(false)}
+    className="transition-colors p-2 -m-2"
+    title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-4 w-4 transition-all duration-200"
+      viewBox="0 0 20 20"
+      fill={
+        isFavorited || isHovered
+          ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)")
+          : "none"
+      }
+      stroke={
+        isFavorited || isHovered
+          ? "none"
+          : "rgb(156, 163, 175)"
+      }
+      strokeWidth={isFavorited || isHovered ? "0" : "1"}
+    >
+      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+    </svg>
+  </button>
+</div>
+
+
         </div>
       </div>
     </motion.div>

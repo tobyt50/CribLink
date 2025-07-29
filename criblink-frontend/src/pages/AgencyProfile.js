@@ -12,7 +12,7 @@ import {
   X, Edit, Trash2, UserPlus, UserMinus, Crown, Shield, Check, XCircle,
   Mail, Phone, Globe, MapPin, Users, UserCheck, UserX, Clock, Star, UserRound,
   FileText, Home as HomeIcon, EllipsisVertical, Image as ImageIcon,
-  Hourglass, UserRoundCheck, CheckCircle, Loader
+  Hourglass, UserRoundCheck, CheckCircle, Loader, Bookmark // Import Bookmark icon
 } from 'lucide-react';
 
 import {
@@ -59,6 +59,12 @@ const AgencyProfile = () => {
 
   // Loading state for agency details
   const [loadingAgencyDetails, setLoadingAgencyDetails] = useState(true);
+
+  // State for agency favorite status
+  const [isAgencyFavorited, setIsAgencyFavorited] = useState(false);
+
+  // New state for the current user's (client's) favorite properties
+  const [clientFavoriteProperties, setClientFavoriteProperties] = useState([]);
 
 
   // State for carousel functionality (copied from ListingDetails.js)
@@ -226,6 +232,131 @@ const AgencyProfile = () => {
     }
   }, [user?.user_id, user?.role, user?.agency_id, id, showMessage]);
 
+  // Function to check if agency is favorited
+  const checkFavoriteAgencyStatus = useCallback(async () => {
+    if (user?.user_id && id && user?.role === 'client') {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsAgencyFavorited(false);
+        return;
+      }
+      try {
+        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/agencies/status/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsAgencyFavorited(response.data.isFavorited);
+      } catch (error) {
+        console.error("Error checking favorite agency status:", error);
+        showMessage('Failed to check agency favorite status.', 'error');
+        setIsAgencyFavorited(false);
+      }
+    } else {
+      setIsAgencyFavorited(false);
+    }
+  }, [user?.user_id, id, user?.role, showMessage]);
+
+  // Function to toggle agency favorite status
+  const handleToggleFavoriteAgency = async () => {
+    if (!user?.user_id || !id || user?.role !== 'client') {
+      showMessage('Please log in as a client to add agencies to favorites.', 'info');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showMessage("Authentication token not found. Please log in.", 'error');
+        return;
+    }
+
+    try {
+      if (isAgencyFavorited) {
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/agencies/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsAgencyFavorited(false);
+        showMessage('Removed agency from favorites!', 'info');
+      } else {
+        await axiosInstance.post(`${API_BASE_URL}/favourites/agencies`, { agency_id: id }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsAgencyFavorited(true);
+        showMessage('Added agency to favorites!', 'success');
+      }
+    } catch (err) {
+      console.error('Error toggling agency favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update agency favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
+  // New: Function to fetch client's own favorite properties
+  const fetchClientFavoriteProperties = useCallback(async () => {
+    if (user?.role === 'client' && user?.user_id) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(response.data.favourites.map(fav => fav.property_id) || []);
+      } catch (error) {
+        console.error("Error fetching client's favorite properties:", error);
+        showMessage("Failed to load your favorite properties.", 'error');
+        setClientFavoriteProperties([]);
+      }
+    } else {
+      setClientFavoriteProperties([]);
+    }
+  }, [user?.role, user?.user_id, showMessage]);
+
+  // New: Function to toggle client's favorite status for a property
+  const handleToggleClientFavoriteProperty = async (propertyId, isCurrentlyFavorited) => {
+    console.log(`Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`); // Debug log
+    if (user?.role !== 'client' || !user?.user_id) {
+      showMessage('You must be logged in as a client to favorite properties.', 'info');
+      console.log('User is not a client or currentUserId is missing.'); // Debug log
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage("Authentication token not found. Please log in.", 'error');
+      console.log('Authentication token not found.'); // Debug log
+      return;
+    }
+
+    try {
+      if (isCurrentlyFavorited) {
+        console.log(`Sending DELETE request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(prev => prev.filter(id => id !== propertyId));
+        showMessage('Removed listing from your favorites!', 'info');
+      } else {
+        console.log(`Sending POST request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setClientFavoriteProperties(prev => [...prev, propertyId]);
+        showMessage('Added listing to your favorites!', 'success');
+      }
+      console.log('Client favorite properties after toggle:', clientFavoriteProperties); // Debug log
+    } catch (err) {
+      console.error('Error toggling property favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update property favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
 
   // Effects to trigger data fetching
   useEffect(() => {
@@ -243,7 +374,20 @@ const AgencyProfile = () => {
 
   useEffect(() => {
     fetchCurrentUserAgencyMemberships();
-  }, [fetchCurrentUserAgencyMemberships, user?.user_id, user?.role, id]);
+    if (user?.role === 'client' && user?.user_id) {
+      fetchClientFavoriteProperties(); // Fetch client's favorite properties
+    } else {
+      setClientFavoriteProperties([]); // Clear if not a client or not logged in
+    }
+  }, [fetchCurrentUserAgencyMemberships, fetchClientFavoriteProperties, user?.user_id, user?.role, id]);
+
+  useEffect(() => {
+    if (user?.role === 'client' && user?.user_id && id) {
+      checkFavoriteAgencyStatus(); // Check agency favorite status when component mounts or dependencies change
+    } else {
+      setIsAgencyFavorited(false); // Reset favorite status if not a client or no user/agency ID
+    }
+  }, [user?.role, user?.user_id, id, checkFavoriteAgencyStatus]);
 
 
   // Handle outside clicks for member options menu
@@ -766,7 +910,7 @@ const AgencyProfile = () => {
   );
 
 
-  const defaultLogo = `https://placehold.co/100x100/${darkMode ? "2D3748" : "E0F2F1"}/${darkMode ? "A0AEC0" : "047857"}?text=${agency?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'AG'}`;
+  const defaultLogo = `https://placehold.co/100x100/${darkMode ? "2D3748" : "E0F2F1"}/${darkMode ? "A0EC0" : "047857"}?text=${agency?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'AG'}`;
 
   // Styles for input fields, copied from Settings.js search bar
   const inputFieldStyle = `w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`;
@@ -795,6 +939,19 @@ const AgencyProfile = () => {
                 agency.name
               )}
             </h1>
+            {isAuthenticated && user?.role === 'client' && ( // Only show if logged in as client
+                <button
+                    onClick={handleToggleFavoriteAgency}
+                    className={`p-2 rounded-full shadow-md transition-all duration-200 ${
+                        isAgencyFavorited
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
+                    }`}
+                    title={isAgencyFavorited ? "Remove from Saved Agencies" : "Save Agency to Favourites"}
+                >
+                    <Bookmark size={20} fill={isAgencyFavorited ? "currentColor" : "none"} />
+                </button>
+            )}
           </div>
 
           <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
@@ -1335,7 +1492,12 @@ const AgencyProfile = () => {
                     console.log("Rendering ListingCard with listing:", listing);
                     return (
                       <div key={listing.property_id} className="w-full">
-                        <ListingCard listing={listing} darkMode={darkMode} />
+                        <ListingCard
+                          listing={listing}
+                          darkMode={darkMode}
+                          isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
+                          onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                        />
                       </div>
                     );
                   })}

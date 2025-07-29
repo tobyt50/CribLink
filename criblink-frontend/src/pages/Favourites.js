@@ -4,55 +4,24 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
   Squares2X2Icon,
-  TableCellsIcon,
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import AgentSidebar from '../components/agent/Sidebar'; // Changed path
-import AgencyAdminSidebar from '../components/agencyadmin/Sidebar'; // Changed path
-import ClientSidebar from '../components/client/Sidebar'; // Assuming you have a ClientSidebar // Changed path
-import API_BASE_URL from '../config'; // Changed path
-import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList } from 'lucide-react';
-import { useTheme } from '../layouts/AppShell'; // Changed path
-import { useMessage } from '../context/MessageContext'; // Changed path
-import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Changed path
-import { useSidebarState } from '../hooks/useSidebarState'; // Changed path
-import ListingCard from '../components/ListingCard'; // Import the actual ListingCard // Changed path
+import AgentSidebar from '../components/agent/Sidebar';
+import AgencyAdminSidebar from '../components/agencyadmin/Sidebar';
+import ClientSidebar from '../components/client/Sidebar';
+import API_BASE_URL from '../config';
+import { Menu, X, FileText, LayoutList } from 'lucide-react';
+import { useTheme } from '../layouts/AppShell';
+import { useMessage } from '../context/MessageContext';
+import { useConfirmDialog } from '../context/ConfirmDialogContext';
+import { useSidebarState } from '../hooks/useSidebarState';
+import ListingCard from '../components/ListingCard'; // Import the actual ListingCard
 
-// Placeholder Components (to be replaced with actual components if available)
-// The original ListingCard placeholder is removed as the actual component is imported.
-const AgentCard = ({ agent, onViewProfile, darkMode }) => {
-  return (
-    <div className={`rounded-2xl shadow-lg overflow-hidden flex flex-col items-center p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-      <img src={agent.profile_picture_url || "https://placehold.co/100x100/e0e0e0/555555?text=Agent"} alt={agent.full_name} className="w-24 h-24 rounded-full object-cover mb-4" />
-      <h3 className="font-semibold text-lg text-center">{agent.full_name}</h3>
-      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>{agent.email}</p>
-      {agent.agency_name && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} text-center`}>Agency: {agent.agency_name}</p>}
-      <button
-        onClick={() => onViewProfile(agent.user_id)}
-        className={`mt-4 px-3 py-1 rounded-lg text-sm font-medium ${darkMode ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'} text-white transition-colors`}
-      >
-        View Profile
-      </button>
-    </div>
-  );
-};
-
-const AgencyCard = ({ agency, onViewProfile, darkMode }) => {
-  return (
-    <div className={`rounded-2xl shadow-lg overflow-hidden flex flex-col items-center p-4 ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-      <img src={agency.logo_url || "https://placehold.co/100x100/e0e0e0/555555?text=Agency"} alt={agency.name} className="w-24 h-24 object-contain mb-4" />
-      <h3 className="font-semibold text-lg text-center">{agency.name}</h3>
-      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>{agency.email}</p>
-      <button
-        onClick={() => onViewProfile(agency.agency_id)}
-        className={`mt-4 px-3 py-1 rounded-lg text-sm font-medium ${darkMode ? 'bg-purple-700 hover:bg-purple-600' : 'bg-purple-500 hover:bg-purple-600'} text-white transition-colors`}
-      >
-        View Profile
-      </button>
-    </div>
-  );
-};
+// Import the actual AgentCard, ClientCard, and AgencyCard components
+import AgentCard from '../components/client/AgentCard'; // Correct path for AgentCard
+import ClientCard from '../components/agent/ClientCard'; // Correct path for ClientCard
+import AgencyCard from '../components/AgencyCard'; // Correct path for AgencyCard
 
 
 // Reusable Dropdown Component (embedded directly in Favourites.js)
@@ -163,7 +132,7 @@ const Favourites = () => {
   const [favouriteListings, setFavouriteListings] = useState([]);
   const [favouriteAgents, setFavouriteAgents] = useState([]);
   const [favouriteAgencies, setFavouriteAgencies] = useState([]);
-  const [favouriteClients, setFavouriteClients] = useState([]); // Added for agents/agency_admins
+  const [favouriteClients, setFavouriteClients] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('created_at'); // Default sort key for listings
@@ -184,15 +153,22 @@ const Favourites = () => {
   const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25); // Default to 25
-
-  // Update itemsPerPage based on mobile state
-  useEffect(() => {
-    setItemsPerPage(isMobile ? 20 : 25);
-  }, [isMobile]);
-
-  // Dynamic tab state based on user role
+  // Dynamic tab state based on user role - moved up for proper initialization
   const [activeTab, setActiveTab] = useState(''); // Will be set dynamically
+
+  const [itemsPerPage, setItemsPerPage] = useState(25); // Default to 25 items per page
+
+  // Update itemsPerPage based on the active tab and screen size
+  useEffect(() => {
+    if (activeTab === 'listings') {
+      // For listings: 20 items per page on mobile, 25 items per page on desktop
+      setItemsPerPage(isMobile ? 20 : 25);
+    } else {
+      // For Agents, Clients, Agencies: 15 items per page (existing logic)
+      setItemsPerPage(15);
+    }
+  }, [activeTab, isMobile]); // Depend on activeTab and isMobile
+
 
   const getTabsForRole = useCallback((role) => {
     if (role === 'client' || role === 'admin') {
@@ -204,14 +180,14 @@ const Favourites = () => {
     } else if (role === 'agent') {
       return [
         { id: 'listings', label: 'Listings' },
-        { id: 'clients', label: 'Clients' }, // Assuming agents can favorite clients
+        { id: 'clients', label: 'Clients' },
         { id: 'agencies', label: 'Agencies' },
       ];
     } else if (role === 'agency_admin') {
       return [
         { id: 'listings', label: 'Listings' },
-        { id: 'agents', label: 'Agents' }, // Agency admins can favorite agents
-        { id: 'clients', label: 'Clients' }, // Agency admins can favorite clients
+        { id: 'agents', label: 'Agents' },
+        { id: 'clients', label: 'Clients' },
       ];
     }
     return [{ id: 'listings', label: 'Listings' }]; // Default for guest or unknown roles
@@ -532,33 +508,49 @@ const Favourites = () => {
 
     if (viewMode === 'graphical') {
       return (
-        <div className="grid gap-6 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"> {/* Changed to 2 columns on mobile, 5 on 2xl */}
+        // Apply 2 columns for 'listings' on all mobile sizes, and 5 columns on desktop
+        // For 'agents', 'clients', 'agencies', maintain 1 column on smallest mobile, 2 on small, and 3 on medium/large screens
+        <div className={`grid gap-6 ${activeTab === 'listings' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3'}`}>
           {activeTab === 'listings' && paginatedData.map(item => (
             <ListingCard
               key={item.property_id}
               listing={item}
-              // The ListingCard component itself handles navigation to property details
-              // We pass a dummy function for onFavoriteToggle as it's not directly used by the imported ListingCard
-              // but rather by the Favourites page's logic.
               onFavoriteToggle={() => handleRemoveFavourite('listings', item.property_id)}
               isFavorited={true} // Always true as they are in favorites
               darkMode={darkMode}
             />
           ))}
-          {(activeTab === 'agents' || activeTab === 'clients') && paginatedData.map(item => (
-            <AgentCard // Reusing AgentCard for clients for now, assuming similar structure
+          {activeTab === 'agents' && paginatedData.map(item => (
+            <AgentCard
               key={item.user_id}
               agent={item}
               onViewProfile={handleViewProfile}
+              onFavoriteToggle={() => handleRemoveFavourite('agents', item.user_id)}
+              isFavorited={true}
               darkMode={darkMode}
+              // Pass other necessary props for AgentCard if needed, e.g., connectionStatus
+            />
+          ))}
+          {activeTab === 'clients' && paginatedData.map(item => (
+            <ClientCard
+              key={item.user_id}
+              client={item}
+              onViewProfile={handleViewProfile}
+              onFavoriteToggle={() => handleRemoveFavourite('clients', item.user_id)}
+              isFavorited={true}
+              darkMode={darkMode}
+              userRole={userRole} // Pass userRole to ClientCard
+              // Pass other necessary props for ClientCard if needed, e.g., editingNoteId, etc.
             />
           ))}
           {activeTab === 'agencies' && paginatedData.map(item => (
             <AgencyCard
               key={item.agency_id}
               agency={item}
-              onViewProfile={handleViewProfile}
-              darkMode={darkMode}
+              onClick={handleViewProfile} // AgencyCard uses onClick for view profile
+              onFavoriteToggle={() => handleRemoveFavourite('agencies', item.agency_id)}
+              isFavorited={true}
+              // Pass other necessary props for AgencyCard if needed, e.g., isCurrentUserAgent
             />
           ))}
         </div>
@@ -718,7 +710,7 @@ const Favourites = () => {
           collapsed={isMobile ? false : isCollapsed}
           setCollapsed={isMobile ? () => {} : setIsCollapsed}
           activeSection={activeSection}
-          setActiveSection={setActiveSection}
+          setActiveSection={activeSection}
           isMobile={isMobile}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
@@ -780,13 +772,14 @@ const Favourites = () => {
 
             {/* Tabs (Center) */}
             <div className="flex justify-center w-full max-w-[28rem] whitespace-nowrap">
-              {getTabsForRole(userRole).map(tab => (
+              {getTabsForRole(userRole).map((tab, index, arr) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-[11px] text-sm font-semibold truncate transition-colors duration-200
                     ${activeTab === tab.id ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}
-                    ${getTabsForRole(userRole).length > 1 ? (tab.id === getTabsForRole(userRole)[0].id ? 'rounded-l-xl' : (tab.id === getTabsForRole(userRole)[getTabsForRole(userRole).length - 1].id ? 'rounded-r-xl' : '')) : 'rounded-xl'}
+                            ${index === 0 ? 'rounded-l-xl' : ''} ${index === arr.length - 1 ? 'rounded-r-xl' : ''}
+                            ${arr.length === 1 ? 'rounded-xl' : ''}
                   `}
                 >
                   {tab.label}
@@ -856,7 +849,10 @@ const Favourites = () => {
                     </div>
                   )}
                 </div>
-                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultFavouritesView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <button
+                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultFavouritesView', 'simple'); }}
+                  className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                >
                   <LayoutList className="h-6 w-6" />
                 </button>
                 <button

@@ -49,17 +49,22 @@ exports.getAllListings = async (req, res) => {
         // Agents see their own listings regardless of status, plus public statuses
         conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
         values.push(['available', 'featured', 'sold', 'under offer'], userId);
+      } else if (userRole === 'agency_admin' && userAgencyId) {
+        // Agency admins see all listings for their agency AND public statuses for other agencies
+        conditions.push(`(
+          (pl.agency_id = $${valueIndex++}) OR
+          (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++}))
+        )`);
+        values.push(userAgencyId, userAgencyId, ['available', 'featured', 'sold']); // Added 'sold' as requested
       }
       // Admin has full access if no status is specified (no filtering needed based on status for admin)
     }
 
     // 3. Filter by agency_id if the user is an agency_admin
     // This ensures agency admins only see listings for their agency
-    if (userRole === 'agency_admin' && userAgencyId) {
-        conditions.push(`pl.agency_id = $${valueIndex++}`);
-        values.push(userAgencyId);
-    } else if (queryAgencyId) {
-        // Allow filtering by agency_id if provided in the query, for public agency profiles etc.
+    // NOTE: The more complex logic for agency_admin is now handled in section 2 (role-based default filtering)
+    // This block is primarily for general filtering by queryAgencyId or if a non-agency_admin user is trying to filter by agency.
+    if (userRole !== 'agency_admin' && queryAgencyId) { // Apply if not agency_admin, or if agency_admin but no specific agency_id in token (shouldn't happen)
         conditions.push(`pl.agency_id = $${valueIndex++}`);
         values.push(queryAgencyId);
     }

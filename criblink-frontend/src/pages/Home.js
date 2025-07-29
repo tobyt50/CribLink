@@ -67,7 +67,7 @@ function Home() {
       return;
     }
     try {
-      const response = await axiosInstance.get(`${API_BASE_URL}/favourites`, {
+      const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Assuming the backend returns an array of favorite listing objects,
@@ -93,13 +93,13 @@ function Home() {
     try {
       if (isCurrentlyFavorited) {
         // Remove from favorites
-        await axiosInstance.delete(`${API_BASE_URL}/favourites/${propertyId}`, {
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showMessage("Removed from favorites!", "success");
       } else {
         // Add to favorites
-        await axiosInstance.post(`${API_BASE_URL}/favourites`, { property_id: propertyId }, {
+        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showMessage("Added to favorites!", "success");
@@ -145,7 +145,27 @@ function Home() {
     const url = `${API_BASE_URL}/listings?${params.toString()}`;
     console.log("Fetching listings with URL:", url);
 
-    const featuredUrl = `${API_BASE_URL}/listings?status=Featured&limit=12`;
+    // Create separate params for featured listings to ensure consistency with filters
+    const featuredParams = new URLSearchParams();
+    featuredParams.append("status", "Featured");
+    featuredParams.append("limit", 12); // Keep the limit for featured carousel
+
+    // Apply advanced filters to featured listings query as well
+    if (advancedFilters.purchaseCategory) {
+        featuredParams.append("purchase_category", advancedFilters.purchaseCategory);
+    } else if (category) {
+        featuredParams.append("purchase_category", category);
+    }
+    if (searchTerm) featuredParams.append("search", searchTerm);
+    if (advancedFilters.location) featuredParams.append("location", advancedFilters.location);
+    if (advancedFilters.propertyType) featuredParams.append("property_type", advancedFilters.propertyType);
+    if (advancedFilters.bedrooms) featuredParams.append("bedrooms", advancedFilters.bedrooms);
+    if (advancedFilters.bathrooms) featuredParams.append("bathrooms", advancedFilters.bathrooms);
+    if (advancedFilters.minPrice) featuredParams.append("min_price", advancedFilters.minPrice);
+    if (advancedFilters.maxPrice) featuredParams.append("max_price", advancedFilters.maxPrice);
+
+    const featuredUrl = `${API_BASE_URL}/listings?${featuredParams.toString()}`;
+
     const token = localStorage.getItem("token");
     const headers = {};
     if (token) {
@@ -161,7 +181,16 @@ function Home() {
       const fetchedFeaturedListings = featuredResponse.data.listings || [];
       setFeaturedListings(fetchedFeaturedListings);
 
-      setListings(allListings);
+      // Ensure that all featured listings are present in the main listings array,
+      // if they are not already there due to pagination or other filters.
+      // This is a frontend merge to guarantee the visibility of all featured items.
+      const combinedListings = [...allListings];
+      fetchedFeaturedListings.forEach(featuredListing => {
+        if (!combinedListings.some(l => l.property_id === featuredListing.property_id)) {
+          combinedListings.push(featuredListing);
+        }
+      });
+      setListings(combinedListings); // Set the combined list
 
     } catch (error) {
       let errorMessage = 'Failed to fetch listings. Please try again.';

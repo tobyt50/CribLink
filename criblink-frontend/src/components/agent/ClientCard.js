@@ -108,31 +108,6 @@ const ClientCard = ({
               e.target.src = `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`;
             }}
           />
-          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
-            <button
-              onClick={handleFavoriteClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
-              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
-                fill={
-                  isFavorited || isHovered // If favorited OR hovered, it's blue
-                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
-                    : "none" // Transparent fill when not favorited and not hovered
-                }
-                stroke={
-                  isFavorited || isHovered // If favorited OR hovered, no stroke
-                    ? "none"
-                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
-                }
-                strokeWidth={isFavorited || isHovered ? "0" : "1"}
-              >
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-              </svg>
-            </button>
-          )}
           {/* Status aligned directly under profile picture with UserCard styling and distinct colors */}
           <div className="w-28 text-center text-xs font-medium mt-4"> {/* Increased mt-4 for more space */}
             <span className={
@@ -242,75 +217,101 @@ const ClientCard = ({
         </div>
       </div>
 
-      <div className="flex flex-nowrap justify-center gap-0.5 w-full pt-1 pb-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full"> {/* Changed pb-1 to pb-0 */}
-        {isPendingRequestCard ? (
-          <>
-            {!isAgencyAdmin && ( // Only agents can accept/reject requests
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); acceptAction(); }}
-                  className={`${baseButtonClasses} bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500`}
-                  title="Accept Request"
-                >
-                  <CheckCircleIcon className="h-4 w-4 mr-1" /> Accept
-                </button>
-                <Separator darkMode={darkMode} />
-                <button
-                  onClick={(e) => { e.stopPropagation(); rejectAction(); }}
-                  className={`${baseButtonClasses} bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500`}
-                  title="Reject Request"
-                >
-                  <XCircleIcon className="h-4 w-4 mr-1" /> Reject
-                </button>
-                <Separator darkMode={darkMode} />
-              </>
-            )}
-            {/* Removed Call button for pending requests */}
-            <button
+      <div className="flex flex-nowrap justify-between items-center gap-0.5 w-full pt-1 pb-0 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
+        <div className="flex gap-1 flex-nowrap overflow-x-auto"> {/* Removed pb-1 here */}
+          {isPendingRequestCard ? (
+            <>
+              {!isAgencyAdmin && ( // Only agents can accept/reject requests
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); acceptAction(); }}
+                    className={`${baseButtonClasses} bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500`}
+                    title="Accept Request"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-1" /> Accept
+                  </button>
+                  <Separator darkMode={darkMode} />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); rejectAction(); }}
+                    className={`${baseButtonClasses} bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500`}
+                    title="Reject Request"
+                  >
+                    <XCircleIcon className="h-4 w-4 mr-1" /> Reject
+                  </button>
+                  <Separator darkMode={darkMode} />
+                </>
+              )}
+              {/* Removed Call button for pending requests */}
+              <button
+                  onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
+                  className={`${iconOnlyButtonClasses} ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-gray-100"} border border-transparent ${darkMode ? '' : 'hover:border-blue-500'}`}
+                  title="Chat with client"
+              >
+                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
+              </button>
+            </>
+          ) : (
+            <div className="flex gap-1 flex-nowrap overflow-x-auto"> {/* Removed pb-1 here */}
+              <button
                 onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
                 className={`${iconOnlyButtonClasses} ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-gray-100"} border border-transparent ${darkMode ? '' : 'hover:border-blue-500'}`}
                 title="Chat with client"
-            >
+              >
                 <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
-            </button>
-          </>
-        ) : (
-          <div className="flex gap-1 flex-nowrap overflow-x-auto pb-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); onRespondInquiry(client); }}
-              className={`${iconOnlyButtonClasses} ${darkMode ? "text-blue-400 hover:bg-gray-700" : "text-blue-600 hover:bg-gray-100"} border border-transparent ${darkMode ? '' : 'hover:border-blue-500'}`}
-              title="Chat with client"
-            >
-              <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
-            </button>
-            <Separator darkMode={darkMode} />
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleStatus(client.user_id, client.client_status); }}
-              className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-yellow-300 cursor-not-allowed opacity-50' : (darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-yellow-500'}`}
-              title={isAgencyAdmin ? "Only assigned agent can change client status" : (client.client_status === 'vip' ? 'Make Regular' : 'Make VIP')}
-              disabled={isAgencyAdmin}
-            >
-              {client.client_status === 'vip' ? (
-                <>
-                  <UserCircleIcon className="h-4 w-4 mr-1" />Make Regular
-                </>
-              ) : (
-                <>
-                  <StarIcon className="h-4 w-4 mr-1" />Make VIP
-                </>
-              )}
-            </button>
-            <Separator darkMode={darkMode} />
-            <button
-              onClick={(e) => { e.stopPropagation(); onRemoveClient(client.user_id); }}
-              className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-red-300 cursor-not-allowed opacity-50' : (darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-red-500'}`}
-              title={isAgencyAdmin ? "Only assigned agent can remove client" : "Disconnect client"}
-              disabled={isAgencyAdmin}
-            >
-              <TrashIcon className="h-4 w-4 mr-1" />Disconnect
-            </button>
-          </div>
-        )}
+              </button>
+              <Separator darkMode={darkMode} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleStatus(client.user_id, client.client_status); }}
+                className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-yellow-300 cursor-not-allowed opacity-50' : (darkMode ? "text-yellow-400 hover:bg-gray-700" : "text-yellow-600 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-yellow-500'}`}
+                title={isAgencyAdmin ? "Only assigned agent can change client status" : (client.client_status === 'vip' ? 'Make Regular' : 'Make VIP')}
+                disabled={isAgencyAdmin}
+              >
+                {client.client_status === 'vip' ? (
+                  <>
+                    <UserCircleIcon className="h-4 w-4 mr-1" />Make Regular
+                  </>
+                ) : (
+                  <>
+                    <StarIcon className="h-4 w-4 mr-1" />Make VIP
+                  </>
+                )}
+              </button>
+              <Separator darkMode={darkMode} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemoveClient(client.user_id); }}
+                className={`${iconOnlyButtonClasses} ${isAgencyAdmin ? 'text-red-300 cursor-not-allowed opacity-50' : (darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-700 hover:bg-gray-100")} border border-transparent ${isAgencyAdmin ? '' : 'hover:border-red-500'}`}
+                title={isAgencyAdmin ? "Only assigned agent can remove client" : "Disconnect client"}
+                disabled={isAgencyAdmin}
+              >
+                <TrashIcon className="h-4 w-4 mr-1" />Disconnect
+              </button>
+            </div>
+          )}
+        </div>
+        {/* Bookmark icon - always present at the bottom, aligned to the right */}
+        <button
+          onClick={handleFavoriteClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={`p-1 rounded-full transition-colors flex-shrink-0`}
+          title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+            fill={
+              isFavorited || isHovered // If favorited OR hovered, it's blue
+                ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                : "none" // Transparent fill when not favorited and not hovered
+            }
+            stroke={
+              isFavorited || isHovered // If favorited OR hovered, no stroke
+                ? "none"
+                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+            }
+            strokeWidth={isFavorited || isHovered ? "0" : "1"}
+          >
+            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+          </svg>
+        </button>
       </div>
     </Card>
   );

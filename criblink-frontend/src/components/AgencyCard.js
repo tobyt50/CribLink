@@ -62,9 +62,15 @@ function AgencyCard({
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation(); // Prevent card click from triggering
-    if (onFavoriteToggle) {
+    if (onFavoriteToggle) { // Ensure onFavoriteToggle is provided
       onFavoriteToggle(agency.agency_id, isFavorited);
     }
+  };
+
+  // Helper function to get the first character of the agency name, or 'N/A' if undefined/null
+  const getAgencyInitial = (name) => {
+    const safeName = String(name || '');
+    return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
   };
 
   return (
@@ -81,38 +87,13 @@ function AgencyCard({
               src={agency.logo_url}
               alt={`${agency.name} Logo`}
               className="w-24 h-24 rounded-full object-cover border-2 border-green-500"
-              onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/96x96/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${agency.name.charAt(0).toUpperCase()}`; }}
+              onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/96x96/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getAgencyInitial(agency.name)}`; }}
             />
           ) : (
             <div className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold border-2 border-green-500
               ${darkMode ? "bg-gray-700 text-gray-400" : "bg-gray-200 text-gray-600"}`}>
-              {agency.name.charAt(0).toUpperCase()}
+              {getAgencyInitial(agency.name)}
             </div>
-          )}
-          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
-            <button
-              onClick={handleFavoriteClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
-              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
-                fill={
-                  isFavorited || isHovered // If favorited OR hovered, it's blue
-                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
-                    : "none" // Transparent fill when not favorited and not hovered
-                }
-                stroke={
-                  isFavorited || isHovered // If favorited OR hovered, no stroke
-                    ? "none"
-                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
-                }
-                strokeWidth={isFavorited || isHovered ? "0" : "1"}
-              >
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-              </svg>
-            </button>
           )}
         </div>
 
@@ -157,78 +138,104 @@ function AgencyCard({
       )}
 
       {/* Action Buttons */}
-      <div className="flex justify-center w-full border-t border-gray-200 dark:border-gray-700 pt-2">
-        {isCurrentUserAgent || isCurrentUserAgencyAdmin ? ( // Show buttons if user is agent or admin
-          <>
-            {isThisAgencyCurrentUsersAdminAgency ? ( // If the current user is an admin of THIS agency
-              <button
-                onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
-                disabled={isDisconnectDisabledForAdmin}
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                  ${isDisconnectDisabledForAdmin ? "opacity-50 cursor-not-allowed" : ""}
-                  ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
-                title={isDisconnectDisabledForAdmin ? "You are the last admin of this agency. Please assign another admin before disconnecting." : "Disconnect from Agency"}
-              >
-                <UserX className="h-4 w-4 mr-1" /> Disconnect
-              </button>
-            ) : isConnected ? ( // If connected as a regular agent
-              <button
-                onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                  ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
-                title="Disconnect from Agency"
-              >
-                <UserX className="h-4 w-4 mr-1" /> Disconnect
-              </button>
-            ) : isPending ? (
-              <div className="flex items-center space-x-2">
+      <div className="flex justify-between items-center w-full border-t border-gray-200 dark:border-gray-700 pt-2">
+        <div className="flex flex-nowrap gap-0.5 overflow-x-auto">
+          {isCurrentUserAgent || isCurrentUserAgencyAdmin ? ( // Show buttons if user is agent or admin
+            <>
+              {isThisAgencyCurrentUsersAdminAgency ? ( // If the current user is an admin of THIS agency
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
+                  disabled={isDisconnectDisabledForAdmin}
+                  className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                    ${isDisconnectDisabledForAdmin ? "opacity-50 cursor-not-allowed" : ""}
+                    ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
+                  title={isDisconnectDisabledForAdmin ? "You are the last admin of this agency. Please assign another admin before disconnecting." : "Disconnect from Agency"}
+                >
+                  <UserX className="h-4 w-4 mr-1" /> Disconnect
+                </button>
+              ) : isConnected ? ( // If connected as a regular agent
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDisconnectClick(agency.agency_id); }}
+                  className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                    ${darkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
+                  title="Disconnect from Agency"
+                >
+                  <UserX className="h-4 w-4 mr-1" /> Disconnect
+                </button>
+              ) : isPending ? (
+                <div className="flex items-center space-x-2">
+                  <button
+                    disabled
+                    className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center opacity-50 cursor-not-allowed
+                      ${darkMode ? "text-yellow-400 bg-gray-700" : "text-yellow-700 bg-gray-100"} border border-transparent`}
+                    title="Pending Request"
+                  >
+                    <Hourglass className="h-4 w-4 mr-1 animate-pulse" /> Pending
+                  </button>
+                  {onCancelRequestClick && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onCancelRequestClick(agency.agency_id, agency.name); }}
+                      className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                        ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"} border-transparent`}
+                      title="Cancel Pending Request"
+                    >
+                      <X className="h-4 w-4 mr-1" /> Cancel
+                    </button>
+                  )}
+                </div>
+              ) : isRejected ? (
                 <button
                   disabled
                   className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center opacity-50 cursor-not-allowed
-                    ${darkMode ? "text-yellow-400 bg-gray-700" : "text-yellow-700 bg-gray-100"} border border-transparent`}
-                  title="Pending Request"
+                    ${darkMode ? "text-red-400 bg-gray-700" : "text-red-700 bg-gray-100"} border border-transparent`}
+                  title="Request Rejected"
                 >
-                  <Hourglass className="h-4 w-4 mr-1 animate-pulse" /> Pending
+                  <UserX className="h-4 w-4 mr-1" /> Rejected
                 </button>
-                {onCancelRequestClick && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onCancelRequestClick(agency.agency_id, agency.name); }}
-                    className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                      ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"} border-transparent`}
-                    title="Cancel Pending Request"
-                  >
-                    <X className="h-4 w-4 mr-1" /> Cancel
-                  </button>
-                )}
-              </div>
-            ) : isRejected ? (
-              <button
-                disabled
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center opacity-50 cursor-not-allowed
-                  ${darkMode ? "text-red-400 bg-gray-700" : "text-red-700 bg-gray-100"} border border-transparent`}
-                title="Request Rejected"
-              >
-                <UserX className="h-4 w-4 mr-1" /> Rejected
-              </button>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onConnectClick(agency.agency_id); }}
-                disabled={isConnectDisabled}
-                className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
-                  ${isConnectDisabled ? "opacity-50 cursor-not-allowed" : ""}
-                  ${darkMode ? "text-green-400 hover:bg-gray-700 hover:border hover:border-green-500" : "text-green-700 hover:bg-gray-100 hover:border hover:border-green-500"} border-transparent`}
-                title={isConnectDisabled ? (hasReachedMaxAffiliations ? `You can only affiliate with ${maxAgencyAffiliations} agencies.` : "Already connected or pending with this agency.") : "Connect to Agency"}
-              >
-                <UserPlus className="h-4 w-4 mr-1" /> Connect
-              </button>
-            )}
-          </>
-        ) : (
-          // For non-agents/non-admins, the entire card is now clickable for navigation,
-          // so this "View Details" button is no longer needed.
-          // The parent <Card> component now handles the onClick.
-          null
-        )}
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onConnectClick(agency.agency_id); }}
+                  disabled={isConnectDisabled}
+                  className={`text-xs rounded-xl px-3 py-1 h-8 flex items-center justify-center
+                    ${isConnectDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                    ${darkMode ? "text-green-400 hover:bg-gray-700 hover:border hover:border-green-500" : "text-green-700 hover:bg-gray-100 hover:border hover:border-green-500"} border-transparent`}
+                  title={isConnectDisabled ? (hasReachedMaxAffiliations ? `You can only affiliate with ${maxAgencyAffiliations} agencies.` : "Already connected or pending with this agency.") : "Connect to Agency"}
+                >
+                  <UserPlus className="h-4 w-4 mr-1" /> Connect
+                </button>
+              )}
+            </>
+          ) : (
+            // For non-agents/non-admins, the entire card is now clickable for navigation,
+            // so this "View Details" button is no longer needed.
+            // The parent <Card> component now handles the onClick.
+            null
+          )}
+        </div>
+        {/* Bookmark icon - always present at the bottom, aligned to the right */}
+        <button
+          onClick={handleFavoriteClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={`p-1 rounded-full transition-colors flex-shrink-0`}
+          title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+            fill={
+              isFavorited || isHovered // If favorited OR hovered, it's blue
+                ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                : "none" // Transparent fill when not favorited and not hovered
+            }
+            stroke={
+              isFavorited || isHovered // If favorited OR hovered, no stroke
+                ? "none"
+                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+            }
+            strokeWidth={isFavorited || isHovered ? "0" : "1"}
+          >
+            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+          </svg>
+        </button>
       </div>
     </Card>
   );

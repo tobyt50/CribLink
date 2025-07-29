@@ -12,7 +12,7 @@ const Separator = ({ darkMode }) => (
 
 const AgentCard = ({
   agent,
-  onViewProfile,
+  onViewProfile, // This prop will now be used by card click
   onConnectAgent,
   onCancelRequest,
   connectionStatus,
@@ -48,7 +48,7 @@ const AgentCard = ({
 
   // Function to handle agency name click
   const handleAgencyClick = (e) => {
-    e.stopPropagation(); // Prevent card's onViewProfile from triggering
+    e.stopPropagation(); // Prevent any parent click handlers from triggering (like the card's onViewProfile)
     console.log("Agency click detected for agent:", agent.full_name, "Agency ID:", agent.agency_id);
     if (agent.agency_id) {
       navigate(`/agencies/${agent.agency_id}`); // Redirect to AgencyProfile page
@@ -172,8 +172,8 @@ const AgentCard = ({
 
   return (
     <Card
-      className="px-4 pt-4 pb-0 flex flex-col justify-between min-h-[200px] w-full lg:max-w-md break-words overflow-x-hidden cursor-pointer"
-      onClick={() => onViewProfile(agent.user_id)}
+      className="px-4 pt-4 pb-0 flex flex-col justify-between min-h-[200px] w-full lg:max-w-md break-words overflow-x-hidden cursor-pointer" // Added cursor-pointer for visual cue
+      onClick={() => onViewProfile(agent.user_id)} // Added onClick back to the Card
     >
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
         <div className="flex-shrink-0 flex flex-col items-center relative">
@@ -186,31 +186,6 @@ const AgentCard = ({
               e.target.src = `https://placehold.co/112x112/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`;
             }}
           />
-          {onFavoriteToggle && ( // Only show favorite button if onFavoriteToggle is provided
-            <button
-              onClick={handleFavoriteClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className={`absolute top-0 right-0 p-1 rounded-full transition-colors`}
-              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
-                fill={
-                  isFavorited || isHovered // If favorited OR hovered, it's blue
-                    ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
-                    : "none" // Transparent fill when not favorited and not hovered
-                }
-                stroke={
-                  isFavorited || isHovered // If favorited OR hovered, no stroke
-                    ? "none"
-                    : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
-                }
-                strokeWidth={isFavorited || isHovered ? "0" : "1"}
-              >
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-              </svg>
-            </button>
-          )}
           {/* Agent Rating and Deals Closed */}
           {agent.avg_rating && (
             <div className="w-28 text-center text-xs font-medium mt-2">
@@ -263,15 +238,15 @@ const AgentCard = ({
             )}
           </div>
 
-          {/* Bottom block: Agency Name and Address (combined and clickable) */}
+          {/* Bottom block: Agency Name and Address (combined) */}
           {(agent.agency_name || agent.agency_address) && (
-            <button
-              onClick={handleAgencyClick}
-              className={`text-left mt-auto pt-2 ${darkMode ? "text-gray-300 hover:text-green-400" : "text-gray-700 hover:text-green-700"} flex flex-col gap-0.5 transition-colors duration-200`}
-              title={`View ${agent.agency_name || 'Agency'} Profile`}
-            >
+            <div className="text-left mt-auto pt-2 flex flex-col gap-0.5">
               {agent.agency_name && (
-                <span className="text-xs font-semibold flex items-center gap-1">
+                <span
+                  onClick={handleAgencyClick} // This will open the agency profile
+                  className={`text-xs font-semibold flex items-center gap-1 cursor-pointer ${darkMode ? "text-gray-300 hover:text-green-400" : "text-gray-700 hover:text-green-700"} transition-colors duration-200`}
+                  title={`View ${agent.agency_name} Profile`}
+                >
                   <Landmark size={14} /> {agent.agency_name}
                 </span>
               )}
@@ -280,13 +255,37 @@ const AgentCard = ({
                   📍 {agent.agency_address}
                 </span>
               )}
-            </button>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="flex flex-nowrap justify-center items-center gap-0.5 w-full py-2 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
+      <div className="flex flex-nowrap justify-between items-center gap-0.5 w-full py-2 border-t border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full">
         {renderActionButton()}
+        {/* Bookmark icon - always present at the bottom */}
+        <button
+          onClick={handleFavoriteClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={`p-1 rounded-full transition-colors`}
+          title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-all duration-200" viewBox="0 0 20 20"
+            fill={
+              isFavorited || isHovered // If favorited OR hovered, it's blue
+                ? (darkMode ? "rgb(96, 165, 250)" : "rgb(59, 130, 246)") // Tailwind blue-400/500
+                : "none" // Transparent fill when not favorited and not hovered
+            }
+            stroke={
+              isFavorited || isHovered // If favorited OR hovered, no stroke
+                ? "none"
+                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+            }
+            strokeWidth={isFavorited || isHovered ? "0" : "1"}
+          >
+            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+          </svg>
+        </button>
       </div>
     </Card>
   );

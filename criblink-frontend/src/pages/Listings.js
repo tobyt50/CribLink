@@ -217,7 +217,7 @@ const Listings = () => {
             return;
         }
         try {
-            const response = await axios.get(`${API_BASE_URL}/favourites`, {
+            const response = await axios.get(`${API_BASE_URL}/favourites/properties`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setUserFavourites(response.data.favourites.map(fav => fav.property_id));
@@ -239,13 +239,13 @@ const Listings = () => {
         try {
             if (isCurrentlyFavorited) {
                 // Remove from favorites
-                await axios.delete(`${API_BASE_URL}/favourites/${propertyId}`, {
+                await axios.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 showMessage("Removed from favorites!", "success");
             } else {
                 // Add to favorites
-                await axios.post(`${API_BASE_URL}/favourites`, { property_id: propertyId }, {
+                await axios.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 showMessage("Added to favorites!", "success");

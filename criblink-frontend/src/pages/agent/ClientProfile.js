@@ -15,7 +15,7 @@ import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import {
   Menu,
   X,
-  BookmarkIcon,
+  BookmarkIcon, // Using BookmarkIcon from lucide-react
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
   StarIcon, } from 'lucide-react';
@@ -29,7 +29,7 @@ const ClientProfile = () => {
   const { showConfirm } = useConfirmDialog();
 
   const [client, setClient] = useState(null);
-  const [agentId, setAgentId] = useState(null);
+  const [agentId, setAgentId] = useState(null); // This will store the current authenticated agent's ID
   const [userRole, setUserRole] = useState('');
 
   const [isAgentInquiryModalOpen, setIsAgentInquiryModalOpen] = useState(false);
@@ -53,11 +53,17 @@ const ClientProfile = () => {
   const [showFavourites, setShowFavourites] = useState(false);
 
   const [favouriteListingStartIndex, setFavouriteListingStartIndex] = useState(0);
-  const listingsPerPage = 2;
+  const listingsPerPage = 2; // Always 2 for mobile and desktop for these sections
 
   const [recommendedListings, setRecommendedListings] = useState([]);
   const [recommendedListingStartIndex, setRecommendedListingStartIndex] = useState(0);
-  const recommendedListingsPerPage = 4;
+  const recommendedListingsPerPage = 4; // Always 4 for mobile and desktop for these sections
+
+  // State for client favorite status (for agents to favorite clients)
+  const [isClientFavorited, setIsClientFavorited] = useState(false);
+
+  // New state for the current agent's favorite properties
+  const [agentFavoriteProperties, setAgentFavoriteProperties] = useState([]);
 
 
   // Conditionally set contentShift to 0 if the user is not an agent
@@ -149,7 +155,7 @@ const ClientProfile = () => {
 
       if (clientShareFavourites) {
         try {
-          const favouritesRes = await axiosInstance.get(`${API_BASE_URL}/favourites`, {
+          const favouritesRes = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
             headers: {
               Authorization: `Bearer ${token}`,
               'X-Target-User-Id': clientId
@@ -446,6 +452,132 @@ const ClientProfile = () => {
     }
   }, [conversationForModal, fetchConversationForClient]);
 
+  // Function to check if client is favorited by the current agent
+  const checkFavoriteClientStatus = useCallback(async () => {
+    if (agentId && clientId && userRole === 'agent') {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsClientFavorited(false);
+        return;
+      }
+      try {
+        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/clients/status/${clientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsClientFavorited(response.data.isFavorited);
+      } catch (error) {
+        console.error("Error checking favorite client status:", error);
+        showMessage('Failed to check client favorite status.', 'error');
+        setIsClientFavorited(false);
+      }
+    } else {
+      setIsClientFavorited(false);
+    }
+  }, [agentId, clientId, userRole, showMessage]);
+
+  // Function to toggle client favorite status by the current agent
+  const handleToggleFavoriteClient = async () => {
+    if (!agentId || !clientId || userRole !== 'agent') {
+      showMessage('Please log in as an agent to add clients to favorites.', 'info');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        showMessage("Authentication token not found. Please log in.", 'error');
+        return;
+    }
+
+    try {
+      if (isClientFavorited) {
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/clients/${clientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsClientFavorited(false);
+        showMessage('Removed client from favorites!', 'info');
+      } else {
+        await axiosInstance.post(`${API_BASE_URL}/favourites/clients`, { client_id: clientId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsClientFavorited(true);
+        showMessage('Added client to favorites!', 'success');
+      }
+    } catch (err) {
+      console.error('Error toggling client favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update client favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
+  // New: Function to fetch agent's own favorite properties
+  const fetchAgentFavoriteProperties = useCallback(async () => {
+    if (userRole === 'agent' && agentId) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // Assuming the response data is an array of favorite property objects
+        setAgentFavoriteProperties(response.data.favourites.map(fav => fav.property_id) || []);
+      } catch (error) {
+        console.error("Error fetching agent's favorite properties:", error);
+        showMessage("Failed to load your favorite properties.", 'error');
+        setAgentFavoriteProperties([]);
+      }
+    } else {
+      setAgentFavoriteProperties([]);
+    }
+  }, [userRole, agentId, showMessage]);
+
+  // New: Function to toggle agent's favorite status for a property
+  const handleToggleAgentFavoriteProperty = async (propertyId, isCurrentlyFavorited) => {
+    console.log(`Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`); // Debug log
+    if (userRole !== 'agent' || !agentId) {
+      showMessage('You must be logged in as an agent to favorite properties.', 'info');
+      console.log('User is not an agent or agentId is missing.'); // Debug log
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage("Authentication token not found. Please log in.", 'error');
+      console.log('Authentication token not found.'); // Debug log
+      return;
+    }
+
+    try {
+      if (isCurrentlyFavorited) {
+        console.log(`Sending DELETE request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAgentFavoriteProperties(prev => prev.filter(id => id !== propertyId));
+        showMessage('Removed listing from your favorites!', 'info');
+      } else {
+        console.log(`Sending POST request for propertyId: ${propertyId}`); // Debug log
+        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAgentFavoriteProperties(prev => [...prev, propertyId]);
+        showMessage('Added listing to your favorites!', 'success');
+      }
+      console.log('Agent favorite properties after toggle:', agentFavoriteProperties); // Debug log
+    } catch (err) {
+      console.error('Error toggling property favorite status:', err.response?.data || err.message);
+      let errorMessage = 'Failed to update property favorite status. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      showMessage(errorMessage, 'error');
+    }
+  };
+
 
   useEffect(() => {
     if (clientId) {
@@ -453,6 +585,17 @@ const ClientProfile = () => {
       fetchRecommendedListings();
     }
   }, [clientId, fetchClientData, fetchRecommendedListings]);
+
+  useEffect(() => {
+    if (userRole === 'agent' && agentId && clientId) {
+      checkFavoriteClientStatus(); // Check client favorite status when component mounts or dependencies change
+      fetchAgentFavoriteProperties(); // Fetch agent's favorite properties
+    } else {
+      setIsClientFavorited(false); // Reset favorite status if not an agent or no user/client ID
+      setAgentFavoriteProperties([]); // Clear agent's favorite properties
+    }
+  }, [userRole, agentId, clientId, checkFavoriteClientStatus, fetchAgentFavoriteProperties]);
+
 
   const handleViewProperty = (propertyId) => {
     navigate(`/listings/${propertyId}`);
@@ -614,84 +757,99 @@ const ClientProfile = () => {
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <h2 className={`text-xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-                {client.full_name}
-              </h2>
+              {/* Client Name and Bookmark Button */}
+              <div className="flex justify-between items-center flex-wrap mb-4">
+                <h2 className={`text-xl md:text-2xl font-extrabold ${darkMode ? "text-green-400" : "text-green-800"} flex items-center`}>
+                  {client.full_name}
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                    ${client.client_status === 'vip' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}
+                    ${darkMode ? (client.client_status === 'vip' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-yellow-700 dark:text-yellow-200') : ''}`}>
+                    {client.client_status === 'vip' ? 'VIP' : 'Regular'}
+                  </span>
+                </h2>
+                {userRole === 'agent' && agentId && ( // Only show if logged in as agent
+                    <button
+                        onClick={handleToggleFavoriteClient}
+                        className={`p-2 rounded-full shadow-md transition-all duration-200 ${
+                            isClientFavorited
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
+                        }`}
+                        title={isClientFavorited ? "Remove from Saved Clients" : "Save Client to Favourites"}
+                    >
+                        <BookmarkIcon size={20} fill={isClientFavorited ? "currentColor" : "none"} />
+                    </button>
+                )}
+              </div>
 
-              <div className="flex items-center space-x-4 mb-6">
-  <img
-    src={client.profile_picture_url || `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(client.full_name)}`}
-    alt="Client Profile"
-    className="w-32 h-32 rounded-full object-cover border-2 border-green-500 shadow-md"
-    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(client.full_name)}`; }}
-  />
-  <div>
-    <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{client.full_name}</p>
-    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Client ID: {client.user_id}</p>
-    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-      Status:
-      <span className={`font-medium ${client.client_status === 'vip' ? 'text-green-600' : 'text-yellow-600'}`}>
-        {client.client_status === 'vip' ? ' VIP' : ' Regular'}
-      </span>
-    </p>
-  </div>
-</div>
+              <div className="flex items-start space-x-4 mb-6">
+                {/* Profile Picture */}
+                <img
+                  src={client.profile_picture_url || `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(client.full_name)}`}
+                  alt="Client Profile"
+                  className="w-32 h-32 rounded-full object-cover border-2 border-green-500 shadow-md"
+                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(client.full_name)}`; }}
+                />
+                {/* Client ID and Contact Information */}
+                <div className="flex-1">
+                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Client ID: {client.user_id}</p>
+                  <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
+                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      ✉️ <strong>Email:</strong> <a href={`mailto:${client.email}`} className="text-blue-500 hover:underline">{client.email}</a>
+                    </p>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      📞 <strong>Phone:</strong> {client.phone || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-<div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
-  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-    ✉️ <strong>Email:</strong> <a href={`mailto:${client.email}`} className="text-blue-500 hover:underline">{client.email}</a>
-  </p>
-  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-    📞 <strong>Phone:</strong> {client.phone || 'N/A'}
-  </p>
-</div>
+              <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Other Details</h3>
+                <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Date Joined:</strong> {new Date(client.date_joined).toLocaleDateString()}</p>
+                <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Last Login:</strong> {client.last_login ? new Date(client.last_login).toLocaleString() : 'N/A'}</p>
+              </div>
 
-<div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Other Details</h3>
-  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Date Joined:</strong> {new Date(client.date_joined).toLocaleDateString()}</p>
-  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Last Login:</strong> {client.last_login ? new Date(client.last_login).toLocaleString() : 'N/A'}</p>
-</div>
+              <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Notes</h3>
+                <div className="relative text-sm text-gray-500 dark:text-gray-400 pr-6">
+                  <span className="italic break-words block pl-4 leading-tight">{client.notes || 'No notes yet.'}</span>
+                </div>
+              </div>
 
-<div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Notes</h3>
-  <div className="relative text-sm text-gray-500 dark:text-gray-400 pr-6">
-    <span className="italic break-words block pl-4 leading-tight">{client.notes || 'No notes yet.'}</span>
-  </div>
-</div>
-
-{/* Property Preferences Section - Dynamically rendered based on client's privacy setting */}
-{canViewPropertyPreferences ? (
-  <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>
-      🏡 Property Preferences
-    </h3>
-    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-      🏘️ <strong>Property Type:</strong> {clientPreferences.preferred_property_type || 'Any'}
-    </p>
-    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-      📍 <strong>Location:</strong> {clientPreferences.preferred_location || 'Any'}
-    </p>
-    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-      💰 <strong>Price Range:</strong> {clientPreferences.min_price ? `₦${clientPreferences.min_price.toLocaleString()}` : 'Any'} - {clientPreferences.max_price ? `₦${clientPreferences.max_price.toLocaleString()}` : 'Any'}
-    </p>
-    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-      🛏️ <strong>Bedrooms:</strong> {clientPreferences.bedrooms > 0 ? clientPreferences.bedrooms : 'Any'}
-    </p>
-    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-      🛁 <strong>Bathrooms:</strong> {clientPreferences.bathrooms > 0 ? clientPreferences.bathrooms : 'Any'}
-    </p>
-  </div>
-) : (
-  <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>
-      🏡 Property Preferences
-    </h3>
-    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-      Client has chosen not to share their property preferences with agents.
-    </p>
-  </div>
-)}
+              {/* Property Preferences Section - Dynamically rendered based on client's privacy setting */}
+              {canViewPropertyPreferences ? (
+                <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    🏡 Property Preferences
+                  </h3>
+                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    🏘️ <strong>Property Type:</strong> {clientPreferences.preferred_property_type || 'Any'}
+                  </p>
+                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    📍 <strong>Location:</strong> {clientPreferences.preferred_location || 'Any'}
+                  </p>
+                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    💰 <strong>Price Range:</strong> {clientPreferences.min_price ? `₦${clientPreferences.min_price.toLocaleString()}` : 'Any'} - {clientPreferences.max_price ? `₦${clientPreferences.max_price.toLocaleString()}` : 'Any'}
+                  </p>
+                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    🛏️ <strong>Bedrooms:</strong> {clientPreferences.bedrooms > 0 ? clientPreferences.bedrooms : 'Any'}
+                  </p>
+                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    🛁 <strong>Bathrooms:</strong> {clientPreferences.bathrooms > 0 ? clientPreferences.bathrooms : 'Any'}
+                  </p>
+                </div>
+              ) : (
+                <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    🏡 Property Preferences
+                  </h3>
+                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    Client has chosen not to share their property preferences with agents.
+                  </p>
+                </div>
+              )}
 
 
             </motion.div>
@@ -732,7 +890,7 @@ const ClientProfile = () => {
               {showFavourites ? (
                 favouriteListings.length > 0 ? (
                   <div className="flex flex-col items-center w-full">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 p-2 -mx-2">
+                    <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 directly */}
                       {displayedFavouriteListings.map(listing => (
                         <div key={listing.property_id} className="w-full">
                           <ListingCard
@@ -740,6 +898,8 @@ const ClientProfile = () => {
                             darkMode={darkMode}
                             onViewProperty={handleViewProperty}
                             showAgentName={userRole === 'agent'}
+                            isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+                            onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
                           />
                         </div>
                       ))}
@@ -813,7 +973,7 @@ const ClientProfile = () => {
               </h2>
               {userRole === 'agent' && Array.isArray(recommendedListings) && recommendedListings.length > 0 ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4 p-2 -mx-2">
+                  <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 directly */}
                     {displayedRecommendedListings.map(listing => (
                       <div key={listing.property_id} className="w-full">
                         <ListingCard
@@ -822,6 +982,8 @@ const ClientProfile = () => {
                           darkMode={darkMode}
                           onViewProperty={handleViewProperty}
                           showAgentName={true}
+                          isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+                          onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
                         />
                       </div>
                     ))}

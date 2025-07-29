@@ -246,7 +246,7 @@ const ListingDetails = () => {
           return;
         }
         try {
-          const response = await axiosInstance.get(`${API_BASE_URL}/favourites/status/${listing.property_id}`, {
+          const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties/status/${listing.property_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setIsFavorited(response.data.isFavorited);
@@ -395,13 +395,13 @@ const ListingDetails = () => {
 
     try {
       if (isFavorited) {
-        await axiosInstance.delete(`${API_BASE_URL}/favourites/${listing.property_id}`, {
+        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${listing.property_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsFavorited(false);
         showMessage('Removed from favorites!', 'info');
       } else {
-        await axiosInstance.post(`${API_BASE_URL}/favourites`, { property_id: listing.property_id }, {
+        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: listing.property_id }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setIsFavorited(true);
