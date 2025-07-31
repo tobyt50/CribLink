@@ -1073,15 +1073,12 @@ const Listings = () => {
                                             listing={listing}
                                             isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
                                             onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
-                                            onDelete={handleDeleteListing} // Use direct delete handler as in AdminListings
-                                            onAction={async (id, action) => { // This will call the internal functions of Listings.js
-                                                if (action === 'approve') await handleApproveListing(id);
-                                                else if (action === 'reject') await handleRejectListing(id);
-                                                else if (action === 'mark_sold') await handleMarkAsSold(id); // Added mark_sold
-                                                else if (action === 'mark_failed') await handleMarkAsFailed(id); // Added mark_failed
-                                                else if (action === 'delete') await handleDeleteListing(id); // Use the Listings.js delete handler
-                                                else if (action === 'edit') navigate(`${getRoleBasePath()}/edit-listing/${id}`); // Direct navigation for edit
-                                            }}
+                                            // Pass user role, ID, and agency ID to ListingCard
+                                            userRole={userRole}
+                                            userId={userId}
+                                            userAgencyId={userAgencyId}
+                                            getRoleBasePath={getRoleBasePath} // Pass the function
+                                            onDeleteListing={handleDeleteListing} // Pass the delete function
                                         />
                                     </div>
                                 ))}
@@ -1128,7 +1125,7 @@ const Listings = () => {
                                     </thead>
                                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                                         {filteredAndSortedListings.map((listing) => (
-                                            <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                                            <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-50"}`}>
                                                 <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_id && listing.property_id.length > 10 ? listing.property_id : ''}>{listing.property_id}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.location && listing.location.length > 15 ? listing.location : ''}>{listing.location}</td>

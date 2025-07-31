@@ -9,6 +9,8 @@ import { SlidersHorizontal, Search } from "lucide-react"; // Import Search icon
 import { useTheme } from '../layouts/AppShell'; // Import useTheme hook
 import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
 import { useMessage } from '../context/MessageContext'; // Import useMessage hook
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook to get user role
+import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog
 
 function SearchPage() {
   const location = useLocation();
@@ -20,7 +22,22 @@ function SearchPage() {
   const searchInputRef = useRef(null); // Ref for the search input
   const { darkMode } = useTheme(); // Use the dark mode context
   const { showMessage } = useMessage(); // Initialize useMessage
+  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
   const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+
+  // Get user and role from AuthContext
+  const { user } = useAuth();
+  const userRole = user?.role || 'guest';
+  const userId = user?.user_id || null;
+  const userAgencyId = user?.agency_id || null;
+
+  // Determine the base path for add/edit listing based on role
+  const getRoleBasePath = () => {
+      if (userRole === 'admin') return '/admin';
+      if (userRole === 'agency_admin') return '/agency';
+      if (userRole === 'agent') return '/agent';
+      return ''; // Default or handle unauthorized access
+  };
 
 
   const [filters, setFilters] = useState({
@@ -92,6 +109,35 @@ function SearchPage() {
       showMessage(errorMessage, 'error');
     }
   }, [fetchUserFavourites, showMessage, navigate]);
+
+  // Function to handle deleting a listing
+  const handleDeleteListing = async (listingId) => {
+    showConfirm({
+        title: "Delete Listing",
+        message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
+        onConfirm: async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showMessage('Authentication token not found. Please sign in.', 'error');
+                return;
+            }
+            try {
+                await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showMessage('Listing deleted successfully!', 'success');
+                // Re-fetch results after deletion to update the list
+                const queryParam = new URLSearchParams(location.search).get("query") || "";
+                fetchResults(queryParam);
+            } catch (error) {
+                console.error('Error deleting listing:', error.response?.data || error.message);
+                showMessage('Failed to delete listing. Please try again.', 'error');
+            }
+        },
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel"
+    });
+  };
 
 
   useEffect(() => {
@@ -225,7 +271,7 @@ function SearchPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             // Removed placeholder text
-            className={`w-full py-2.5 px-3 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+            className={`w-full py-2.5 px-3 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
             darkMode
               ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
               : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"
@@ -306,6 +352,11 @@ function SearchPage() {
                 listing={listing}
                 isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
                 onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+                userRole={userRole} // Pass user role
+                userId={userId}     // Pass user ID
+                userAgencyId={userAgencyId} // Pass user agency ID
+                getRoleBasePath={getRoleBasePath} // Pass the function
+                onDeleteListing={handleDeleteListing} // Pass the delete function
               />
             </motion.div>
           ))

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowDownUp, Search, Star, ArrowLeftCircleIcon, ArrowRightCircleIcon, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext"; // Import useConfirmDialog
 import axiosInstance from '../api/axiosInstance';
 import HomeSearchFilters from "../components/HomeSearchFilters";
 
@@ -17,7 +18,7 @@ function Home() {
   const [category, setCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // State for user object
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("date_listed_desc");
   const searchInputRef = useRef(null);
@@ -25,6 +26,7 @@ function Home() {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
+  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
 
   const [currentFeaturedPage, setCurrentFeaturedPage] = useState(0);
   const featuredCarouselRef = useRef(null);
@@ -58,6 +60,20 @@ function Home() {
       }
     }
   }, []);
+
+  // Extract user details for passing to ListingCard
+  const currentUserRole = user?.role || 'guest';
+  const currentUserId = user?.user_id || null;
+  const currentUserAgencyId = user?.agency_id || null;
+
+  // Determine the base path for add/edit listing based on role
+  const getRoleBasePath = () => {
+      if (currentUserRole === 'admin') return '/admin';
+      if (currentUserRole === 'agency_admin') return '/agency';
+      if (currentUserRole === 'agent') return '/agent';
+      return ''; // Default or handle unauthorized access
+  };
+
 
   // New function to fetch user's favorite listings
   const fetchUserFavourites = useCallback(async () => {
@@ -117,6 +133,33 @@ function Home() {
       showMessage(errorMessage, 'error');
     }
   }, [fetchUserFavourites, showMessage, navigate]);
+
+  // Function to handle deleting a listing
+  const handleDeleteListing = async (listingId) => {
+    showConfirm({
+        title: "Delete Listing",
+        message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
+        onConfirm: async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showMessage('Authentication token not found. Please sign in.', 'error');
+                return;
+            }
+            try {
+                await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showMessage('Listing deleted successfully!', 'success');
+                fetchListings(); // Refresh the list after deletion
+            } catch (error) {
+                console.error('Error deleting listing:', error.response?.data || error.message);
+                showMessage('Failed to delete listing. Please try again.', 'error');
+            }
+        },
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel"
+    });
+  };
 
 
   const fetchListings = useCallback(async () => {
@@ -416,6 +459,11 @@ function Home() {
                       listing={listing}
                       isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
                       onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+                      userRole={currentUserRole} // Pass user role
+                      userId={currentUserId}   // Pass user ID
+                      userAgencyId={currentUserAgencyId} // Pass user agency ID
+                      getRoleBasePath={getRoleBasePath} // Pass the function
+                      onDeleteListing={handleDeleteListing} // Pass the delete function
                     />
                   </div>
                 ))}
@@ -486,6 +534,11 @@ function Home() {
                   listing={listing}
                   isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
                   onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
+                  userRole={currentUserRole} // Pass user role
+                  userId={currentUserId}   // Pass user ID
+                  userAgencyId={currentUserAgencyId} // Pass user agency ID
+                  getRoleBasePath={getRoleBasePath} // Pass the function
+                  onDeleteListing={handleDeleteListing} // Pass the delete function
                 />
               </motion.div>
             ))

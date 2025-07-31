@@ -2,17 +2,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
+import { Pencil, Trash2 } from "lucide-react"; // Import Lucide React icons
 
-// Note: The ListingCard component receives `onFavoriteToggle` and `isFavorited` props
-// when used in the Favourites page. These are used here to control the favorite button's behavior and appearance.
-function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = false }) {
+function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = false, userRole = 'guest', userId = null, userAgencyId = null, getRoleBasePath, onDeleteListing }) {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const cardRef = useRef(null);
+  const tagLeftRef = useRef(null); // Ref for the left tag
+  const tagRightRef = useRef(null); // Ref for the right tag
 
   const [compactMode, setCompactMode] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
-  const [isHovered, setIsHovered] = useState(false); // State to track hover for the button
+  const [isHovered, setIsHovered] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownSide, setDropdownSide] = useState('right'); // 'left' or 'right'
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -27,9 +31,36 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
     return () => observer.disconnect();
   }, []);
 
-  const listing = { ...initialListing, rating: initialListing.rating || 4.27 }; // Use actual rating if available, otherwise default
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // If the dropdown exists AND the click is NOT inside the dropdown
+      // AND the click is NOT on the left tag
+      // AND the click is NOT on the right tag, then close the dropdown.
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        tagLeftRef.current && !tagLeftRef.current.contains(event.target) && // Check if click is on left tag
+        tagRightRef.current && !tagRightRef.current.contains(event.target)    // Check if click is on right tag
+      ) {
+        setShowDropdown(false);
+      }
+    };
 
-  // Determine if the property is land
+    if (showDropdown) {
+      // Using requestAnimationFrame to ensure the event listener is added
+      // after the current event loop, preventing immediate re-closure.
+      requestAnimationFrame(() => {
+        document.addEventListener("mousedown", handleClickOutside);
+      });
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDropdown]); // Dependency array includes showDropdown to re-run effect when its state changes
+
+  const listing = { ...initialListing, rating: initialListing.rating || 4.27 };
+
   const isLandProperty = listing.property_type?.toLowerCase() === 'land';
 
   const allImages = listing.gallery_images?.length
@@ -65,7 +96,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
       case "sold": return "🔴 Sold";
       case "under offer": return "🤝 Under Offer";
       case "pending": return "⏳ Pending";
-      case "approved": "👍 Approved";
+      case "approved": return "👍 Approved";
       case "rejected": return "❌ Rejected";
       case "featured": return "⭐ Featured";
       default: return "❓";
@@ -113,10 +144,81 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
   const handleClick = () => navigate(`/listings/${listing.property_id}`);
 
   const handleFavoriteClick = (e) => {
-    e.stopPropagation(); // Prevent card click from triggering
+    e.stopPropagation();
     if (onFavoriteToggle) {
       onFavoriteToggle(listing.property_id, isFavorited);
     }
+  };
+
+  const canEdit = () => {
+    if (!initialListing) return false;
+    if (userRole === 'admin') return true;
+    if (userRole === 'agency_admin' && initialListing.agency_id === userAgencyId) return true;
+    if (userRole === 'agent' && initialListing.agent_id === userId) return true;
+    return false;
+  };
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    setShowDropdown(false);
+    // Use getRoleBasePath if provided, otherwise default to current behavior
+    const basePath = typeof getRoleBasePath === 'function' ? getRoleBasePath() : '';
+    navigate(`${basePath}/edit-listing/${listing.property_id}`);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    setShowDropdown(false);
+    // Call the onDeleteListing function passed from parent (Listings.js)
+    if (onDeleteListing) {
+      onDeleteListing(listing.property_id);
+    }
+  };
+
+  const handleTagClick = (e, side) => {
+    e.stopPropagation();
+    if (canEdit()) {
+      // If the menu is currently open AND on the same side, close it.
+      // Otherwise, set the side and open it.
+      if (showDropdown && dropdownSide === side) {
+        setShowDropdown(false);
+      } else {
+        setDropdownSide(side);
+        setShowDropdown(true);
+      }
+    }
+    // Removed the 'else' block here.
+    // If canEdit() is false, nothing happens on tag click.
+  };
+
+  // Variants for side menu animation based on side
+  const menuVariants = {
+    hidden: (side) => ({
+      opacity: 0,
+      x: side === 'left' ? '-100%' : '100%', // Animate from fully off-screen
+    }),
+    visible: {
+      opacity: 1,
+      x: 0, // Animate to flush with the edge
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 500,
+        damping: 30,
+        delayChildren: 0.05,
+        staggerChildren: 0.02,
+      },
+    },
+    exit: (side) => ({
+      opacity: 0,
+      x: side === 'left' ? '-100%' : '100%', // Animate out to fully off-screen
+      transition: { duration: 0.15, ease: "easeOut" }
+    }),
+  };
+
+  const itemVariants = {
+    hidden: { y: 10, opacity: 0 },
+    visible: { y: 0, opacity: 1 },
   };
 
   return (
@@ -125,11 +227,10 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
       onClick={handleClick}
       whileHover={{ scale: 1.03 }}
       transition={{ type: "spring", stiffness: 400 }}
-      className={`w-full max-w-md mx-auto flex flex-col overflow-hidden rounded-2xl border shadow-md hover:shadow-xl cursor-pointer ${
+      className={`w-full max-w-md mx-auto flex flex-col overflow-hidden rounded-2xl border shadow-md hover:shadow-xl cursor-pointer relative ${
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-green-200"
       }`}
     >
-      {/* Main Image - swipeable */}
       <div className={`relative w-full ${compactMode ? "aspect-[3/2.4]" : "aspect-[3/2]"} overflow-hidden`}>
         <AnimatePresence initial={false} custom={direction}>
           <motion.img
@@ -155,18 +256,25 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
 
         {/* Tags */}
         {listing.purchase_category && (
-          <div className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-600 max-w-[70%] truncate">
+          <div
+            ref={tagLeftRef} // Attach ref here
+            className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-600 max-w-[70%] truncate"
+            onClick={(e) => handleTagClick(e, 'left')} // Pass 'left' for purchase category
+          >
             {getCategoryIcon(listing.purchase_category)}
           </div>
         )}
         {listing.status && (
-          <div className={`absolute top-0 right-0 rounded-bl-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs ${getStatusColor(listing.status)} max-w-[70%] truncate`}>
+          <div
+            ref={tagRightRef} // Attach ref here
+            className={`absolute top-0 right-0 rounded-bl-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs ${getStatusColor(listing.status)} max-w-[70%] truncate`}
+            onClick={(e) => handleTagClick(e, 'right')} // Pass 'right' for status
+          >
             {getStatusIcon(listing.status)}
           </div>
         )}
       </div>
 
-      {/* Thumbnails - scrollable, hidden on narrow */}
       {!isNarrow && allImages.length > 1 && (
         <div className="flex overflow-x-auto px-2 pt-2 pb-1 gap-2 no-scrollbar">
           {allImages.map((img, idx) => (
@@ -191,8 +299,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         </div>
       )}
 
-      {/* Details */}
-      <div className={`px-4 ${compactMode ? "pt-1 pb-1 gap-1" : "pt-2 pb-2 gap-2"} flex flex-col text-sm`}> {/* Reduced pb-5 to pb-2, and pb-2 to pb-1 for compact */}
+      <div className={`px-4 ${compactMode ? "pt-1 pb-1 gap-1" : "pt-2 pb-2 gap-2"} flex flex-col text-sm`}>
         <h3 className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={listing.title}>
           {listing.title}
         </h3>
@@ -203,7 +310,6 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
             <p className="truncate" title={listing.property_type}>🏘️ {listing.property_type}</p>
           </div>
           <div className="flex flex-col gap-0.5 text-right min-w-[40%]">
-            {/* Conditionally display bedrooms and bathrooms */}
             {!isLandProperty && listing.bedrooms != null && (
               <p className="whitespace-nowrap">
                 🛏️ {listing.bedrooms} {isNarrow ? "Beds" : `Bedroom${listing.bedrooms !== 1 ? "s" : ""}`}
@@ -214,10 +320,9 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
                 🛁 {listing.bathrooms} {isNarrow ? "Baths" : `Bathroom${listing.bathrooms !== 1 ? "s" : ""}`}
               </p>
             )}
-            {/* Display land-specific attributes if available */}
             {isLandProperty && listing.land_size && (
               <p className="whitespace-nowrap">
-                � {listing.land_size}
+                 {listing.land_size}
               </p>
             )}
             {isLandProperty && listing.zoning_type && (
@@ -233,7 +338,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-1"> {/* Reduced pt-2 to pt-1 */}
+        <div className="flex justify-between items-center pt-1">
           <p className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`} title={formatPrice(listing.price, listing.purchase_category)}>
             {formatPrice(listing.price, listing.purchase_category)}
           </p>
@@ -275,6 +380,45 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
 
         </div>
       </div>
+
+      {/* Edit/Delete Side Menu */}
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            ref={dropdownRef}
+            // Pass dropdownSide as custom prop for variants
+            variants={menuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            custom={dropdownSide}
+            // Dynamic positioning based on dropdownSide and content width
+            className={`absolute top-5 z-50 border shadow-xl py-1 overflow-hidden h-fit
+              ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
+              ${dropdownSide === 'left' ? 'left-0 origin-left rounded-r-xl' : 'right-0 origin-right rounded-l-xl'}
+              w-fit max-w-xs
+              ${dropdownSide === 'left' ? 'rounded-tl-none rounded-bl-none' : 'rounded-tr-none rounded-br-none'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <motion.button
+              variants={itemVariants}
+              whileHover={{ x: 5 }}
+              onClick={handleEdit}
+              className={`w-full text-left flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-200 ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+            >
+              <Pencil size={16} /> Edit
+            </motion.button>
+            <motion.button
+              variants={itemVariants}
+              whileHover={{ x: 5 }}
+              onClick={handleDelete}
+              className={`w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 font-medium transition-colors duration-200 ${darkMode ? "hover:bg-red-900" : "hover:bg-red-50"}`}
+            >
+              <Trash2 size={16} /> Delete
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

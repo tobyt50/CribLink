@@ -148,6 +148,14 @@ const AgentProfile = () => {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
+  // Determine the base path for add/edit listing based on role
+  const getRoleBasePath = () => {
+      if (userRole === 'admin') return '/admin';
+      if (userRole === 'agency_admin') return '/agency';
+      if (userRole === 'agent') return '/agent';
+      return ''; // Default or handle unauthorized access
+  };
+
 
   const fetchAgentData = useCallback(async () => {
     if (!agentId) return;
@@ -438,6 +446,35 @@ const AgentProfile = () => {
       }
       showMessage(errorMessage, 'error');
     }
+  };
+
+  // Function to handle deleting a listing from either agent's listings or recommended lists
+  const handleDeleteListing = async (listingId) => {
+    showConfirm({
+        title: "Delete Listing",
+        message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
+        onConfirm: async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showMessage('Authentication token not found. Please sign in.', 'error');
+                return;
+            }
+            try {
+                await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showMessage('Listing deleted successfully!', 'success');
+                // Refresh both agent's listings and recommended lists after deletion
+                fetchAgentListings();
+                fetchRecommendedListings();
+            } catch (error) {
+                console.error('Error deleting listing:', error.response?.data || error.message);
+                showMessage('Failed to delete listing. Please try again.', 'error');
+            }
+        },
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel"
+    });
   };
 
 
@@ -934,6 +971,11 @@ const AgentProfile = () => {
                                                   listing={listing}
                                                   isFavorited={clientFavoriteProperties.includes(listing.property_id)}
                                                   onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                  userRole={userRole} // Pass user role
+                                                  userId={currentUserId} // Pass currentUserId as userId
+                                                  userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                                  getRoleBasePath={getRoleBasePath} // Pass the function
+                                                  onDeleteListing={handleDeleteListing} // Pass the delete function
                                                 />
                                             </div>
                                         ))}
@@ -1004,6 +1046,11 @@ const AgentProfile = () => {
                                               showAgentName={false}
                                               isFavorited={clientFavoriteProperties.includes(listing.property_id)}
                                               onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                              userRole={userRole} // Pass user role
+                                              userId={currentUserId} // Pass currentUserId as userId
+                                              userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                              getRoleBasePath={getRoleBasePath} // Pass the function
+                                              onDeleteListing={handleDeleteListing} // Pass the delete function
                                           />
                                       </div>
                                   ))}
@@ -1184,6 +1231,11 @@ const AgentProfile = () => {
                                                   listing={listing}
                                                   isFavorited={clientFavoriteProperties.includes(listing.property_id)}
                                                   onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                  userRole={userRole} // Pass user role
+                                                  userId={currentUserId} // Pass currentUserId as userId
+                                                  userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                                  getRoleBasePath={getRoleBasePath} // Pass the function
+                                                  onDeleteListing={handleDeleteListing} // Pass the delete function
                                                 />
                                             </div>
                                         ))}

@@ -23,15 +23,25 @@ cloudinary.config({
  */
 const uploadToCloudinary = async (fileBase64, originalname, folder, resourceType = 'image', explicitPublicId = null) => {
     try {
+        // Ensure fileBase64 is a valid string and contains the data URI prefix
+        if (!fileBase64 || typeof fileBase64 !== 'string' || !fileBase64.includes(';base64,')) {
+            throw new Error('Invalid or malformed base64 string provided. It must be a data URI.');
+        }
+
         // Extract the base64 data part (remove "data:mime/type;base64,")
         const base64Data = fileBase64.split(',')[1];
         if (!base64Data) {
-            throw new Error('Invalid base64 string provided.');
+            throw new Error('Invalid base64 string provided: missing data part after comma.');
         }
         const fileBuffer = Buffer.from(base64Data, 'base64');
 
+        // Ensure originalname is a string. Provide a fallback if it's not.
+        const safeOriginalname = typeof originalname === 'string' && originalname.length > 0
+            ? originalname
+            : 'untitled.png'; // Default filename to prevent mimer error
+
         // Convert buffer to data URI format (e.g., data:image/png;base64,...)
-        const fileUri = parser.format(originalname, fileBuffer).content;
+        const fileUri = parser.format(safeOriginalname, fileBuffer).content;
 
         // Determine public_id options based on resourceType and explicitPublicId
         let publicIdOption = {};
@@ -44,8 +54,8 @@ const uploadToCloudinary = async (fileBase64, originalname, folder, resourceType
             publicIdOption = { use_filename: true, unique_filename: false };
         } else if (resourceType === 'raw') {
             // For 'raw' files without an explicitPublicId, use the full original filename including extension.
-            const fileBaseName = path.parse(originalname).name;
-            const fileExtension = path.extname(originalname);
+            const fileBaseName = path.parse(safeOriginalname).name;
+            const fileExtension = path.extname(safeOriginalname);
             publicIdOption = { public_id: `${fileBaseName}${fileExtension}` };
         } else {
             // For 'auto' or other types without explicitPublicId, default to using filename.
@@ -115,7 +125,7 @@ const getCloudinaryPublicId = (url) => {
 
         // Remove the version number (e.g., 'v1234567890/') if present.
         // The regex /v\\d+\\// matches 'v' followed by one or more digits and a slash.
-        const publicIdWithoutVersion = publicIdWithExtension.replace(/v\\d+\\// '');
+        const publicIdWithoutVersion = publicIdWithExtension.replace(new RegExp('v\\d+\\/'), '');
 
         // Remove the file extension (e.g., '.jpg', '.png')
         // The substring(0, lastIndexOf('.')) method gets everything before the last dot.

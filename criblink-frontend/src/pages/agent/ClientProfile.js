@@ -87,6 +87,14 @@ const ClientProfile = () => {
     setUserRole(role);
   }, [getAuthenticatedUserInfo]);
 
+  // Determine the base path for add/edit listing based on role
+  const getRoleBasePath = () => {
+      if (userRole === 'admin') return '/admin';
+      if (userRole === 'agency_admin') return '/agency';
+      if (userRole === 'agent') return '/agent';
+      return ''; // Default or handle unauthorized access
+  };
+
   const getInitial = (name) => {
     const safeName = String(name || '');
     return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
@@ -558,7 +566,7 @@ const ClientProfile = () => {
         setAgentFavoriteProperties(prev => prev.filter(id => id !== propertyId));
         showMessage('Removed listing from your favorites!', 'info');
       } else {
-        console.log(`Sending POST request for propertyId: ${propertyId}`); // Debug log
+        console.log(`Sending POST request for propertyId: ${propertyId}`, { property_id: propertyId }); // Debug log
         await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -576,6 +584,35 @@ const ClientProfile = () => {
       }
       showMessage(errorMessage, 'error');
     }
+  };
+
+  // Function to handle deleting a listing from either favorite or recommended lists
+  const handleDeleteListing = async (listingId) => {
+    showConfirm({
+        title: "Delete Listing",
+        message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
+        onConfirm: async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showMessage('Authentication token not found. Please sign in.', 'error');
+                return;
+            }
+            try {
+                await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                showMessage('Listing deleted successfully!', 'success');
+                // Refresh both favourite and recommended lists after deletion
+                fetchClientData();
+                fetchRecommendedListings();
+            } catch (error) {
+                console.error('Error deleting listing:', error.response?.data || error.message);
+                showMessage('Failed to delete listing. Please try again.', 'error');
+            }
+        },
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel"
+    });
   };
 
 
@@ -900,6 +937,11 @@ const ClientProfile = () => {
                             showAgentName={userRole === 'agent'}
                             isFavorited={agentFavoriteProperties.includes(listing.property_id)}
                             onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                            userRole={userRole} // Pass user role
+                            userId={agentId}     // Pass agentId as userId
+                            userAgencyId={client?.agency_id} // Pass client's agency ID if available
+                            getRoleBasePath={getRoleBasePath} // Pass the function
+                            onDeleteListing={handleDeleteListing} // Pass the delete function
                           />
                         </div>
                       ))}
@@ -984,6 +1026,11 @@ const ClientProfile = () => {
                           showAgentName={true}
                           isFavorited={agentFavoriteProperties.includes(listing.property_id)}
                           onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                          userRole={userRole} // Pass user role
+                          userId={agentId}     // Pass agentId as userId
+                          userAgencyId={client?.agency_id} // Pass client's agency ID if available
+                          getRoleBasePath={getRoleBasePath} // Pass the function
+                          onDeleteListing={handleDeleteListing} // Pass the delete function
                         />
                       </div>
                     ))}
