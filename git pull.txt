@@ -1,3 +1,6 @@
 git fetch origin
 git reset --hard origin/main
 git clean -fd
+
+for resetting listings sequence
+SELECT setval('property_listings_property_id_seq', (SELECT MAX(property_id) FROM property_listings));

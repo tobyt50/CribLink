@@ -179,7 +179,6 @@ const AgencyProfile = () => {
     if (!id) return;
     try {
       const { data } = await axiosInstance.get(`${API_BASE_URL}/agencies/${id}/listings`);
-      console.log("Fetched agency listings data:", data); // Debugging: See what data is received
       setAgencyListings(data);
     } catch (error) {
       console.error("Error fetching agency listings:", error.response?.data || error.message);
@@ -1489,15 +1488,21 @@ const AgencyProfile = () => {
                   className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full absolute inset-0"
                 >
                   {displayedAgencyListings.map((listing) => {
-                    console.log("Rendering ListingCard with listing:", listing);
                     return (
                       <div key={listing.property_id} className="w-full">
                         <ListingCard
-                          listing={listing}
-                          darkMode={darkMode}
-                          isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
-                          onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                        />
+  listing={{ ...listing, agency_id: user?.agency_id }}
+  darkMode={darkMode}
+  userRole={user?.role}
+  userId={user?.user_id}
+  userAgencyId={user?.agency_id}
+  getRoleBasePath={() => '/agency'}
+  isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
+  onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
+    handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
+  }
+/>
+
                       </div>
                     );
                   })}

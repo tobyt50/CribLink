@@ -931,18 +931,17 @@ const ClientProfile = () => {
                       {displayedFavouriteListings.map(listing => (
                         <div key={listing.property_id} className="w-full">
                           <ListingCard
-                            listing={listing}
-                            darkMode={darkMode}
-                            onViewProperty={handleViewProperty}
-                            showAgentName={userRole === 'agent'}
-                            isFavorited={agentFavoriteProperties.includes(listing.property_id)}
-                            onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                            userRole={userRole} // Pass user role
-                            userId={agentId}     // Pass agentId as userId
-                            userAgencyId={client?.agency_id} // Pass client's agency ID if available
-                            getRoleBasePath={getRoleBasePath} // Pass the function
-                            onDeleteListing={handleDeleteListing} // Pass the delete function
-                          />
+  key={listing.property_id}
+  listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
+  userRole={userRole}
+  userId={agentId}
+  userAgencyId={null}
+  getRoleBasePath={getRoleBasePath}
+  onFavoriteToggle={handleToggleAgentFavoriteProperty}
+  isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+  onDeleteListing={handleDeleteListing}
+/>
+
                         </div>
                       ))}
                     </div>
@@ -1019,19 +1018,17 @@ const ClientProfile = () => {
                     {displayedRecommendedListings.map(listing => (
                       <div key={listing.property_id} className="w-full">
                         <ListingCard
-                          key={listing.property_id}
-                          listing={listing}
-                          darkMode={darkMode}
-                          onViewProperty={handleViewProperty}
-                          showAgentName={true}
-                          isFavorited={agentFavoriteProperties.includes(listing.property_id)}
-                          onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleAgentFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                          userRole={userRole} // Pass user role
-                          userId={agentId}     // Pass agentId as userId
-                          userAgencyId={client?.agency_id} // Pass client's agency ID if available
-                          getRoleBasePath={getRoleBasePath} // Pass the function
-                          onDeleteListing={handleDeleteListing} // Pass the delete function
-                        />
+  key={listing.property_id}
+  listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
+  userRole={userRole}
+  userId={agentId}
+  userAgencyId={null}
+  getRoleBasePath={getRoleBasePath}
+  onFavoriteToggle={handleToggleAgentFavoriteProperty}
+  isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+  onDeleteListing={handleDeleteListing}
+/>
+
                       </div>
                     ))}
                   </div>

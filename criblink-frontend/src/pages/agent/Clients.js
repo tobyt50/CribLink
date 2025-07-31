@@ -671,7 +671,9 @@ const Clients = () => {
 
 
   const handleViewProfile = (clientId) => {
-    navigate(`/agent/client-profile/${clientId}`);
+    // Dynamically determine the base path based on userRole
+    const basePath = userRole === 'agency_admin' ? '/agency' : '/agent';
+    navigate(`${basePath}/client-profile/${clientId}`);
   };
 
   const handleViewProperty = (propertyId) => {
@@ -1011,7 +1013,7 @@ const Clients = () => {
           collapsed={isMobile ? false : isCollapsed}
           setCollapsed={isMobile ? () => {} : setIsCollapsed}
           activeSection={activeSection}
-          setActiveSection={activeSection}
+          setActiveSection={setActiveSection}
           isMobile={isMobile}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
@@ -1038,15 +1040,13 @@ const Clients = () => {
           {/* Desktop View: Search, Tabs, View Mode on one line */}
           <div className="hidden md:grid grid-cols-3 items-center gap-4 mb-6 max-w-[1344px] mx-auto">
             {/* Search Bar (Left) */}
-            <div className="flex justify-start w-full">
-              <input
-                type="text"
-                placeholder={userRole === 'agency_admin' ? "Search clients by name, email, phone, or agent..." : "Search clients by name, email, or phone..."}
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className={`w-full max-w-[28rem] px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder={userRole === 'agency_admin' ? "Search clients by name, email, phone, or agent..." : "Search clients by name, email, or phone..."}
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className={`w-full max-w-[28rem] px-4 py-2 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+            />
 
             {/* Tabs for Your Clients / Pending Requests (Center) */}
             {userRole === 'agent' && (
@@ -1440,3 +1440,4 @@ const Clients = () => {
 };
 
 export default Clients;
+
