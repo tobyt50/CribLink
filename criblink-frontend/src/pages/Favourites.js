@@ -493,6 +493,15 @@ const Favourites = () => {
     navigate(`/listings/${propertyId}`);
   };
 
+  // Determine the base path for add/edit listing based on role
+  const getRoleBasePath = useCallback(() => {
+      if (userRole === 'admin') return '/admin';
+      if (userRole === 'agency_admin') return '/agency';
+      if (userRole === 'agent') return '/agent';
+      return ''; // Default or handle unauthorized access
+  }, [userRole]);
+
+
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedData = filteredData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
@@ -518,6 +527,11 @@ const Favourites = () => {
               onFavoriteToggle={() => handleRemoveFavourite('listings', item.property_id)}
               isFavorited={true} // Always true as they are in favorites
               darkMode={darkMode}
+              userRole={userRole} // Pass user role
+              userId={currentUserId} // Pass current user ID
+              userAgencyId={agencyId} // Pass agency ID
+              getRoleBasePath={getRoleBasePath} // Pass the function
+              onDeleteListing={() => handleRemoveFavourite('listings', item.property_id)} // Pass delete function
             />
           ))}
           {activeTab === 'agents' && paginatedData.map(item => (

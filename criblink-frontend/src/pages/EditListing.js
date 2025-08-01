@@ -1,18 +1,41 @@
+// EditListing.js
 import React, { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
 import API_BASE_URL from '../config';
 import { useTheme } from '../layouts/AppShell';
 import { ChevronDown } from 'lucide-react';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
 
-const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
+const Dropdown = ({ options, value, onChange, placeholder, className = "", refProp, programmaticOpen }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { darkMode } = useTheme();
+
+  // Combine the internal ref with the ref passed via refProp
+  const setRefs = (element) => {
+    dropdownRef.current = element;
+    if (refProp) {
+      if (typeof refProp === 'function') {
+        refProp(element);
+      } else {
+        refProp.current = element;
+      }
+    }
+  };
+
+  useEffect(() => {
+    // If programmaticOpen is true, open the dropdown.
+    // This effect only triggers when programmaticOpen changes to true.
+    if (programmaticOpen) {
+      setIsOpen(true);
+    }
+    // We do NOT set setIsOpen(false) here when programmaticOpen becomes false,
+    // as we want user interaction (click outside/on button) to close it.
+  }, [programmaticOpen]); // Depend only on programmaticOpen
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,7 +57,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, []);
+  }, []); // Empty dependency array means it runs once on mount
 
   const menuVariants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
@@ -61,7 +84,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative ${className}`} ref={setRefs}> {/* Use setRefs here */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -69,7 +92,9 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
           ${darkMode
             ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
             : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
-          }`}
+          }
+          ${isOpen ? (darkMode ? "border-green-500 ring-green-400" : "border-green-500 ring-green-600") : ""}
+        `}
       >
         <span>{selectedOptionLabel}</span>
         <motion.div
@@ -98,7 +123,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
               whileHover={{ x: 5 }}
               onClick={() => {
                 onChange(option.value);
-                setIsOpen(false);
+                setIsOpen(false); // Close dropdown on option selection
               }}
               className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
                 ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
@@ -118,6 +143,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 const EditListing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // Use useLocation to get query parameters
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -128,7 +154,7 @@ const EditListing = () => {
 
   const [purchaseCategory, setPurchaseCategory] = useState('');
   const [title, setTitle] = useState('');
-  const [location, setLocation] = useState('');
+  const [locationValue, setLocationValue] = useState(''); // Renamed to avoid conflict with useLocation
   const [stateValue, setStateValue] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
@@ -157,6 +183,14 @@ const EditListing = () => {
 
   const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // Can be a URL or the originalname of a new file
 
+  // Refs for the fields to scroll to and potentially open dropdowns
+  const purchaseCategoryRef = useRef(null);
+  const statusRef = useRef(null);
+
+  // States to control programmatic opening of dropdowns
+  const [purchaseCategoryDropdownOpen, setPurchaseCategoryDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
   // Determine if the current property type is 'Land'
   const isLandProperty = propertyType === 'Land';
 
@@ -179,7 +213,7 @@ const EditListing = () => {
 
         setPurchaseCategory(fetchedListing.purchase_category || '');
         setTitle(fetchedListing.title || '');
-        setLocation(fetchedListing.location || '');
+        setLocationValue(fetchedListing.location || ''); // Use locationValue
         setStateValue(fetchedListing.state || '');
         setPropertyType(fetchedListing.property_type || '');
         setBedrooms(fetchedListing.bedrooms || '');
@@ -241,6 +275,61 @@ const EditListing = () => {
     }
 
   }, [id, showMessage]);
+
+  // Effect to handle opening dropdown and scrolling based on URL query parameter
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const openFieldParam = queryParams.get('open');
+
+    // Reset dropdown open states (this is crucial for preventing persistent open)
+    // We only want to set them to true if the URL param is present.
+    // Otherwise, they should default to false.
+    setPurchaseCategoryDropdownOpen(false);
+    setStatusDropdownOpen(false);
+
+    if (openFieldParam) {
+      let targetRef = null;
+      let setOpenState = null;
+
+      switch (openFieldParam) {
+        case 'purchaseCategory':
+          targetRef = purchaseCategoryRef;
+          setOpenState = setPurchaseCategoryDropdownOpen;
+          break;
+        case 'status':
+          targetRef = statusRef;
+          setOpenState = setStatusDropdownOpen;
+          break;
+        default:
+          break;
+      }
+
+      if (targetRef && targetRef.current && setOpenState) {
+        // Scroll to the element first
+        targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Then, open the dropdown after a delay that allows scrolling to largely complete
+        const openTimer = setTimeout(() => {
+          setOpenState(true); // This will cause the dropdown to open
+        }, 400); // Increased delay to allow scroll animation to finish
+
+        // Clear the query parameter after a slight delay to ensure the programmaticOpen prop
+        // has been consumed by the Dropdown component. This will cause a re-render
+        // where programmaticOpen becomes false, allowing normal close behavior.
+        const clearParamTimer = setTimeout(() => {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('open');
+          window.history.replaceState({}, document.title, newUrl.toString());
+        }, 800); // Clear param after 800ms (ensures programmaticOpen is true for at least 300ms after it's set)
+
+        // Cleanup timers
+        return () => {
+          clearTimeout(openTimer);
+          clearTimeout(clearParamTimer);
+        };
+      }
+    }
+  }, [location.search, listing]); // Re-run when location.search changes or listing updates
 
   const onDrop = (acceptedFiles) => {
     acceptedFiles.forEach(file => {
@@ -325,7 +414,7 @@ const EditListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !location || !price || !status || !propertyType || !purchaseCategory) {
+    if (!title || !locationValue || !price || !status || !propertyType || !purchaseCategory) {
       showMessage('Please fill in all required fields (Title, Location, Price, Status, Property Type, Purchase Category).', 'error');
       return;
     }
@@ -348,7 +437,7 @@ const EditListing = () => {
 
     const payload = {
       title,
-      location,
+      location: locationValue, // Use locationValue
       state: stateValue,
       property_type: propertyType,
       price,
@@ -596,6 +685,8 @@ const EditListing = () => {
                 value={purchaseCategory}
                 onChange={setPurchaseCategory}
                 className="w-full"
+                refProp={purchaseCategoryRef} // Pass ref to Dropdown
+                programmaticOpen={purchaseCategoryDropdownOpen} // Pass the new state
               />
             </div>
 
@@ -614,8 +705,8 @@ const EditListing = () => {
               <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Location</label>
               <input
                 type="text"
-                value={location}
-                onChange={(e) => setLocation(capitalizeFirstLetter(e.target.value))}
+                value={locationValue} // Use locationValue
+                onChange={(e) => setLocationValue(capitalizeFirstLetter(e.target.value))} // Use setLocationValue
                 className={`block w-full ${inputStyles}`}
                 required
               />
@@ -688,6 +779,8 @@ const EditListing = () => {
                 value={status}
                 onChange={setStatus}
                 className="w-full"
+                refProp={statusRef} // Pass ref to Dropdown
+                programmaticOpen={statusDropdownOpen} // Pass the new state
               />
             </div>
 
@@ -846,7 +939,7 @@ const EditListing = () => {
                       ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
                       : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
                   }`}
-                  placeholder="Or add new image URL: https://example.com/image.jpg"
+                  placeholder="Or add new image URL: [https://example.com/image.jpg](https://example.com/image.jpg)"
                 />
                 <button type="button" onClick={handleAddImageUrl} className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 text-sm transition-all duration-200">Add URL</button>
               </div>
@@ -898,4 +991,3 @@ const EditListing = () => {
 };
 
 export default EditListing;
-

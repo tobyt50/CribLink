@@ -1,3 +1,4 @@
+// ListingCard.js
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +18,8 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownSide, setDropdownSide] = useState('right'); // 'left' or 'right'
   const dropdownRef = useRef(null);
+  // Removed highlightField state as it's no longer needed for visual highlight
+  // const [highlightField, setHighlightField] = useState(null); // State to store which field to highlight
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -43,6 +46,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         tagRightRef.current && !tagRightRef.current.contains(event.target)    // Check if click is on right tag
       ) {
         setShowDropdown(false);
+        // setHighlightField(null); // Clear highlight when dropdown closes - removed
       }
     };
 
@@ -158,18 +162,18 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
     return false;
   };
 
-  const handleEdit = (e) => {
+  // Modified handleEdit to pass the field to open the dropdown for
+  const handleEdit = (e, fieldToOpen = null) => {
     e.stopPropagation();
     setShowDropdown(false);
-    // Use getRoleBasePath if provided, otherwise default to current behavior
     const basePath = typeof getRoleBasePath === 'function' ? getRoleBasePath() : '';
-    navigate(`${basePath}/edit-listing/${listing.property_id}`);
+    // Pass the fieldToOpen as a query parameter
+    navigate(`${basePath}/edit-listing/${listing.property_id}${fieldToOpen ? `?open=${fieldToOpen}` : ''}`);
   };
 
   const handleDelete = (e) => {
     e.stopPropagation();
     setShowDropdown(false);
-    // Call the onDeleteListing function passed from parent (Listings.js)
     if (onDeleteListing) {
       onDeleteListing(listing.property_id);
     }
@@ -178,8 +182,6 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
   const handleTagClick = (e, side) => {
     e.stopPropagation();
     if (canEdit()) {
-      // If the menu is currently open AND on the same side, close it.
-      // Otherwise, set the side and open it.
       if (showDropdown && dropdownSide === side) {
         setShowDropdown(false);
       } else {
@@ -187,19 +189,16 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         setShowDropdown(true);
       }
     }
-    // Removed the 'else' block here.
-    // If canEdit() is false, nothing happens on tag click.
   };
 
-  // Variants for side menu animation based on side
   const menuVariants = {
     hidden: (side) => ({
       opacity: 0,
-      x: side === 'left' ? '-100%' : '100%', // Animate from fully off-screen
+      x: side === 'left' ? '-100%' : '100%',
     }),
     visible: {
       opacity: 1,
-      x: 0, // Animate to flush with the edge
+      x: 0,
       scale: 1,
       transition: {
         type: "spring",
@@ -211,7 +210,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
     },
     exit: (side) => ({
       opacity: 0,
-      x: side === 'left' ? '-100%' : '100%', // Animate out to fully off-screen
+      x: side === 'left' ? '-100%' : '100%',
       transition: { duration: 0.15, ease: "easeOut" }
     }),
   };
@@ -258,7 +257,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         {listing.purchase_category && (
           <div
             ref={tagLeftRef} // Attach ref here
-            className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-600 max-w-[70%] truncate"
+            className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-blue-400 max-w-[70%] truncate"
             onClick={(e) => handleTagClick(e, 'left')} // Pass 'left' for purchase category
           >
             {getCategoryIcon(listing.purchase_category)}
@@ -403,7 +402,8 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
             <motion.button
               variants={itemVariants}
               whileHover={{ x: 5 }}
-              onClick={handleEdit}
+              // Modified onClick to pass the specific field to open in EditListing
+              onClick={(e) => handleEdit(e, dropdownSide === 'left' ? 'purchaseCategory' : 'status')}
               className={`w-full text-left flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors duration-200 ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
             >
               <Pencil size={16} /> Edit
