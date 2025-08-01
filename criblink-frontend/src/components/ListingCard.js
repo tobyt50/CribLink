@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
-import { Pencil, Trash2 } from "lucide-react"; // Import Lucide React icons
+import { Pencil, Trash2 } from "lucide-react";
+
 
 function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = false, userRole = 'guest', userId = null, userAgencyId = null, getRoleBasePath, onDeleteListing }) {
   const navigate = useNavigate();
@@ -18,8 +19,6 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownSide, setDropdownSide] = useState('right'); // 'left' or 'right'
   const dropdownRef = useRef(null);
-  // Removed highlightField state as it's no longer needed for visual highlight
-  // const [highlightField, setHighlightField] = useState(null); // State to store which field to highlight
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -256,12 +255,14 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         {/* Tags */}
         {listing.purchase_category && (
           <div
-            ref={tagLeftRef} // Attach ref here
-            className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-blue-400 max-w-[70%] truncate"
-            onClick={(e) => handleTagClick(e, 'left')} // Pass 'left' for purchase category
-          >
-            {getCategoryIcon(listing.purchase_category)}
-          </div>
+          ref={tagLeftRef}
+          className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-blue-600/30 max-w-[70%] truncate"
+          onClick={(e) => handleTagClick(e, 'left')}
+        >
+          {getCategoryIcon(listing.purchase_category)}
+        </div>
+        
+        
         )}
         {listing.status && (
           <div
