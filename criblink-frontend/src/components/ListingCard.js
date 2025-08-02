@@ -256,11 +256,11 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         {listing.purchase_category && (
           <div
           ref={tagLeftRef}
-          className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-blue-600/30 max-w-[70%] truncate"
+          className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-600/70 max-w-[70%] truncate"
           onClick={(e) => handleTagClick(e, 'left')}
         >
           {getCategoryIcon(listing.purchase_category)}
-        </div>
+        </div>        
         
         
         )}

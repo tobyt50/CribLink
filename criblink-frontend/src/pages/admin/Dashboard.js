@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/admin/Sidebar';
-// import axios from 'axios'; // Not strictly needed if only using axiosInstance
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, User, Home, MessageSquare, X, Briefcase, DollarSign, BarChart2, Users, Settings, FileText, Building, CheckCircle, Clock } from 'lucide-react'; // Added Building and FileText icons
@@ -10,8 +9,7 @@ import Card from '../../components/ui/Card';
 import StatCard from '../../components/StatCard';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import axiosInstance from '../../api/axiosInstance'; // Correctly import axiosInstance
-// import API_BASE_URL from '../../config'; // Remove this import as it's not used directly with axiosInstance
+import axiosInstance from '../../api/axiosInstance';
 
 const AdminDashboard = () => {
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -24,7 +22,7 @@ const AdminDashboard = () => {
   const [totalUsersCount, setTotalUsersCount] = useState('--');
   const [agenciesCount, setAgenciesCount] = useState('--');
   const [agentsCount, setAgentsCount] = useState('--');
-  const [clientsCount, setClientsCount] = useState('--');
+  const [clientsCount, setClientsCount] = useState('--'); 
   const [totalListingsCount, setTotalListingsCount] = useState('--');
   const [availableListingsCount, setAvailableListingsCount] = useState('--');
   const [soldListingsCount, setSoldListingsCount] = useState('--');
