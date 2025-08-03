@@ -4,12 +4,6 @@ const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = requ
 
 exports.getAllListings = async (req, res) => {
   try {
-    const res = await pool.query(`
-        SELECT current_user, session_user, current_schema(), 
-               current_setting('search_path') AS search_path;
-      `);
-      console.log('DB context:', res.rows[0]);
-      
     const {
       purchase_category,
       search,
