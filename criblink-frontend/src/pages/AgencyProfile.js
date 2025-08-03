@@ -1111,8 +1111,18 @@ const AgencyProfile = () => {
               </div>
             ) : (
               <div className={`grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <p className="flex items-center gap-2"><Mail size={18} /> <strong>Email:</strong> {agency.email}</p>
-                <p className="flex items-center gap-2"><Phone size={18} /> <strong>Phone:</strong> {agency.phone}</p>
+                <p className="flex items-center gap-2">
+  <Mail size={18} /> <strong>Email:</strong>{" "}
+  <a href={`mailto:${agency.email}`} className="text-blue-500">
+    {agency.email}
+  </a>
+</p>
+<p className="flex items-center gap-2">
+  <Phone size={18} /> <strong>Phone:</strong>{" "}
+  <a href={`tel:${agency.phone}`} className="text-blue-500">
+    {agency.phone}
+  </a>
+</p>
                 {agency.website && (
                   <p className="flex items-center gap-2"><Globe size={18} /> <strong>Website:</strong> <a href={agency.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{agency.website}</a></p>
                 )}
@@ -1322,7 +1332,14 @@ const AgencyProfile = () => {
               {(isCurrentUserAgencyAdmin || user?.role === 'admin') && agencyMembers.length > 0 && (
                 <div className="mt-4 text-center">
                   <button
-                    onClick={() => navigate('/agency/members')} // Navigate to Members.js
+                    onClick={() => {
+                      // Conditionally navigate based on user role
+                      if (user?.role === 'admin') {
+                        navigate(`/admin/agencies/${id}/members`); // Navigate to admin-specific route
+                      } else {
+                        navigate('/agency/members'); // Navigate to agency_admin route
+                      }
+                    }}
                     className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors duration-300 shadow-md flex items-center justify-center gap-2 mx-auto"
                   >
                     <Users size={20} /> View All Members

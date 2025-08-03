@@ -11,14 +11,15 @@ import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import socket from '../../socket';
 import ListingCard from '../../components/ListingCard';
 
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'; // Added PencilIcon, CheckIcon, XMarkIcon
 import {
   Menu,
   X,
   BookmarkIcon, // Using BookmarkIcon from lucide-react
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
-  StarIcon, } from 'lucide-react';
+  StarIcon,
+} from 'lucide-react';
 import AgentSidebar from '../../components/agent/Sidebar';
 
 const ClientProfile = () => {
@@ -53,17 +54,21 @@ const ClientProfile = () => {
   const [showFavourites, setShowFavourites] = useState(false);
 
   const [favouriteListingStartIndex, setFavouriteListingStartIndex] = useState(0);
-  const listingsPerPage = 2; // Always 2 for mobile and desktop for these sections
+  const listingsPerPage = 4; // Changed to 4 for 2x2 layout
 
   const [recommendedListings, setRecommendedListings] = useState([]);
   const [recommendedListingStartIndex, setRecommendedListingStartIndex] = useState(0);
-  const recommendedListingsPerPage = 4; // Always 4 for mobile and desktop for these sections
+  const recommendedListingsPerPage = 4; // Changed to 4 for 2x2 layout
 
   // State for client favorite status (for agents to favorite clients)
   const [isClientFavorited, setIsClientFavorited] = useState(false);
 
   // New state for the current agent's favorite properties
   const [agentFavoriteProperties, setAgentFavoriteProperties] = useState([]);
+
+  // State for notes editing
+  const [editingNote, setEditingNote] = useState(false);
+  const [editedNoteContent, setEditedNoteContent] = useState('');
 
 
   // Conditionally set contentShift to 0 if the user is not an agent
@@ -112,6 +117,7 @@ const ClientProfile = () => {
 
       const clientRes = await axiosInstance.get(`${API_BASE_URL}/clients/${clientId}`, { headers });
       setClient(clientRes.data);
+      setEditedNoteContent(clientRes.data.notes || ''); // Initialize editedNoteContent
       console.log("Client data fetched:", clientRes.data);
 
       // Check if agent can view property preferences
@@ -373,11 +379,11 @@ const ClientProfile = () => {
     if (conversationToOpen.unreadCount > 0) {
       const token = localStorage.getItem('token');
       try {
-        await fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversationToOpen.id}`, {
+        await fetch(`${API_BASE_URL}/inquiries/agent/mark-read/${conversationToOpen.id}`, { // Use conversationToOpen.id
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        socket.emit('message_read', { conversationId: conversationForModal.id, userId: agentId, role: 'agent' });
+        socket.emit('message_read', { conversationId: conversationToOpen.id, userId: agentId, role: 'agent' }); // Use conversationToOpen.id
         setConversationForModal(prev => prev ? { ...prev, unreadCount: 0 } : null);
       } catch (error) {
         console.error("Failed to mark messages as read:", error);
@@ -566,8 +572,7 @@ const ClientProfile = () => {
         setAgentFavoriteProperties(prev => prev.filter(id => id !== propertyId));
         showMessage('Removed listing from your favorites!', 'info');
       } else {
-        console.log(`Sending POST request for propertyId: ${propertyId}`, { property_id: propertyId }); // Debug log
-        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
+        console.log(`Sending POST request for propertyId: ${propertyId}`, { property_id: propertyId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAgentFavoriteProperties(prev => [...prev, propertyId]);
@@ -613,6 +618,68 @@ const ClientProfile = () => {
         confirmLabel: "Delete",
         cancelLabel: "Cancel"
     });
+  };
+
+  // Function to toggle client status (VIP/Regular)
+  const handleToggleClientStatus = useCallback(async () => {
+    if (!client || !agentId || userRole !== 'agent') {
+      showMessage('You must be logged in as an agent to change client status.', 'info');
+      return;
+    }
+
+    const newStatus = client.client_status === 'vip' ? 'regular' : 'vip';
+    showConfirm({
+      title: "Change Client Status",
+      message: `Are you sure you want to change ${client.full_name}'s status to ${newStatus.toUpperCase()}?`,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          // Corrected endpoint for status update to match Clients.js
+          await axiosInstance.put(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}/vip`,
+            { status: newStatus },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setClient(prevClient => ({ ...prevClient, client_status: newStatus }));
+          showMessage(`Client status updated to ${newStatus.toUpperCase()}!`, 'success');
+        } catch (error) {
+          console.error('Error updating client status:', error.response?.data || error.message);
+          showMessage('Failed to update client status. Please try again.', 'error');
+        }
+      }
+    });
+  }, [client, clientId, agentId, userRole, showConfirm, showMessage]);
+
+  // Handle editing notes
+  const handleEditNote = () => {
+    setEditingNote(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (userRole !== 'agent') {
+      showMessage('Only agents can save client notes.', 'error');
+      setEditingNote(false);
+      setEditedNoteContent(client.notes || '');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      // Corrected endpoint for notes update to match Clients.js
+      await axiosInstance.put(`${API_BASE_URL}/clients/agent/${agentId}/clients/${clientId}/note`,
+        { note: editedNoteContent },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setClient(prevClient => ({ ...prevClient, notes: editedNoteContent }));
+      setEditingNote(false);
+      showMessage('Client notes updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error saving notes:', error.response?.data || error.message);
+      showMessage('Failed to save notes. Please try again.', 'error');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedNoteContent(client.notes || ''); // Revert to original notes
+    setEditingNote(false);
   };
 
 
@@ -798,11 +865,23 @@ const ClientProfile = () => {
               <div className="flex justify-between items-center flex-wrap mb-4">
                 <h2 className={`text-xl md:text-2xl font-extrabold ${darkMode ? "text-green-400" : "text-green-800"} flex items-center`}>
                   {client.full_name}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
-                    ${client.client_status === 'vip' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}
-                    ${darkMode ? (client.client_status === 'vip' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-yellow-700 dark:text-yellow-200') : ''}`}>
-                    {client.client_status === 'vip' ? 'VIP' : 'Regular'}
-                  </span>
+                  {userRole === 'agent' ? ( // Only agents can click to change status
+                    <span
+                      onClick={handleToggleClientStatus}
+                      className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer
+                        ${client.client_status === 'vip' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}
+                        ${darkMode ? (client.client_status === 'vip' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-yellow-700 dark:text-yellow-200') : ''}`}
+                      title={client.client_status === 'vip' ? 'Click to make Regular' : 'Click to make VIP'}
+                    >
+                      {client.client_status === 'vip' ? 'VIP' : 'Regular'}
+                    </span>
+                  ) : ( // For non-agents, display without clickability
+                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                      ${client.client_status === 'vip' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}
+                      ${darkMode ? (client.client_status === 'vip' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-yellow-700 dark:text-yellow-200') : ''}`}>
+                      {client.client_status === 'vip' ? 'VIP' : 'Regular'}
+                    </span>
+                  )}
                 </h2>
                 {userRole === 'agent' && agentId && ( // Only show if logged in as agent
                     <button
@@ -833,10 +912,13 @@ const ClientProfile = () => {
                   <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
                     <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
                     <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      ✉️ <strong>Email:</strong> <a href={`mailto:${client.email}`} className="text-blue-500 hover:underline">{client.email}</a>
+                      ✉️ <strong className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>Email:</strong> <a href={`mailto:${client.email}`} className="text-blue-500 hover:underline">{client.email}</a>
                     </p>
                     <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      📞 <strong>Phone:</strong> {client.phone || 'N/A'}
+                      📞 <strong className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>Phone:</strong>
+                      {client.phone ? (
+                        <a href={`tel:${client.phone}`} className="text-blue-500 hover:underline">{client.phone}</a>
+                      ) : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -849,11 +931,54 @@ const ClientProfile = () => {
               </div>
 
               <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Notes</h3>
-                <div className="relative text-sm text-gray-500 dark:text-gray-400 pr-6">
-                  <span className="italic break-words block pl-4 leading-tight">{client.notes || 'No notes yet.'}</span>
-                </div>
-              </div>
+  <div className="flex items-center gap-2">
+    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Notes</h3>
+    {userRole === 'agent' && !editingNote && (
+      <button
+        onClick={handleEditNote}
+        className={`p-1 rounded-full ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
+        title="Edit Note"
+        aria-label="Edit Note"
+      >
+        <PencilIcon className="h-5 w-5" />
+      </button>
+    )}
+  </div>
+
+  {editingNote ? (
+    <div className="flex flex-col w-full">
+      <textarea
+        className={`w-full p-2 border rounded-md text-sm resize-none scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800 overflow-y-auto ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "border-gray-300 text-gray-800"}`}
+        value={editedNoteContent}
+        onChange={(e) => setEditedNoteContent(e.target.value)}
+        rows="4"
+      />
+      <div className="flex gap-2 mt-2">
+        <button
+          onClick={handleSaveNote}
+          className={`p-1 rounded-full ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-700"}`}
+          title="Save Note"
+          aria-label="Save Note"
+        >
+          <CheckIcon className="h-5 w-5" />
+        </button>
+        <button
+          onClick={handleCancelEdit}
+          className={`p-1 rounded-full ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-700"}`}
+          title="Cancel Edit"
+          aria-label="Cancel Edit"
+        >
+          <XMarkIcon className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="relative text-sm text-gray-500 dark:text-gray-400">
+      <span className="italic break-words block leading-tight">{client.notes || 'No notes yet.'}</span>
+    </div>
+  )}
+</div>
+
 
               {/* Property Preferences Section - Dynamically rendered based on client's privacy setting */}
               {canViewPropertyPreferences ? (
@@ -927,21 +1052,20 @@ const ClientProfile = () => {
               {showFavourites ? (
                 favouriteListings.length > 0 ? (
                   <div className="flex flex-col items-center w-full">
-                    <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 directly */}
+                    <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 for mobile and desktop */}
                       {displayedFavouriteListings.map(listing => (
                         <div key={listing.property_id} className="w-full">
                           <ListingCard
-  key={listing.property_id}
-  listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
-  userRole={userRole}
-  userId={agentId}
-  userAgencyId={null}
-  getRoleBasePath={getRoleBasePath}
-  onFavoriteToggle={handleToggleAgentFavoriteProperty}
-  isFavorited={agentFavoriteProperties.includes(listing.property_id)}
-  onDeleteListing={handleDeleteListing}
-/>
-
+                            key={listing.property_id}
+                            listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
+                            userRole={userRole}
+                            userId={agentId}
+                            userAgencyId={null}
+                            getRoleBasePath={getRoleBasePath}
+                            onFavoriteToggle={handleToggleAgentFavoriteProperty}
+                            isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+                            onDeleteListing={handleDeleteListing}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1014,21 +1138,20 @@ const ClientProfile = () => {
               </h2>
               {userRole === 'agent' && Array.isArray(recommendedListings) && recommendedListings.length > 0 ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 directly */}
+                  <div className="grid grid-cols-2 gap-4 p-2 -mx-2"> {/* Changed to grid-cols-2 for mobile and desktop */}
                     {displayedRecommendedListings.map(listing => (
                       <div key={listing.property_id} className="w-full">
                         <ListingCard
-  key={listing.property_id}
-  listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
-  userRole={userRole}
-  userId={agentId}
-  userAgencyId={null}
-  getRoleBasePath={getRoleBasePath}
-  onFavoriteToggle={handleToggleAgentFavoriteProperty}
-  isFavorited={agentFavoriteProperties.includes(listing.property_id)}
-  onDeleteListing={handleDeleteListing}
-/>
-
+                          key={listing.property_id}
+                          listing={{ ...listing, agent_id: agentId }} // <-- inject agentId
+                          userRole={userRole}
+                          userId={agentId}
+                          userAgencyId={null}
+                          getRoleBasePath={getRoleBasePath}
+                          onFavoriteToggle={handleToggleAgentFavoriteProperty}
+                          isFavorited={agentFavoriteProperties.includes(listing.property_id)}
+                          onDeleteListing={handleDeleteListing}
+                        />
                       </div>
                     ))}
                   </div>

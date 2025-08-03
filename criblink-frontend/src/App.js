@@ -112,6 +112,8 @@ const adminRoutes = [
   { path: "analytics", element: <AdminAnalytics /> },
   { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
+  // NEW: Route for admin to view members of a specific agency
+  { path: "agencies/:agencyId/members", element: <Members /> },
   ...listingRoutes
 ];
 
@@ -258,7 +260,7 @@ function AppContent() {
           </Route>
 
           {/* NEW: Agency Admin Routes */}
-          <Route path="/agency" element={<RoleProtectedRoute allowedRole="agency_admin" />}>
+          <Route path="/agency" element={<RoleProtectedRoute allowedRole={["agency_admin", "admin"]} />}>
             {agencyAdminRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}

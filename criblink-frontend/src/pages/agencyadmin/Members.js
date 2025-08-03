@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom'; // Import useParams
 import {
   Squares2X2Icon,
   TableCellsIcon,
@@ -141,11 +141,23 @@ const Members = () => {
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
   const { user } = useAuth();
-  const agencyId = user?.agency_id;
+  // NEW: Get agencyId from URL params if present (for admin role)
+  const { agencyId: paramAgencyId } = useParams();
+  // Determine the agencyId to use: if user is 'admin', use paramAgencyId, else use user's agency_id
+  const agencyId = user?.role === 'admin' ? paramAgencyId : user?.agency_id;
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+  // Conditionally use useSidebarState based on user role
+  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = user?.role === 'agency_admin' ? useSidebarState() : {
+    isMobile: false, // Assume not mobile if no sidebar
+    isSidebarOpen: false,
+    setIsSidebarOpen: () => {},
+    isCollapsed: false,
+    setIsCollapsed: () => {}
+  };
+
   const [activeSection, setActiveSection] = useState('members');
 
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
@@ -197,7 +209,6 @@ const Members = () => {
   }, []);
   
 
-
   // Effect to set initial role filter or show pending requests from navigation state
   useEffect(() => {
     if (location.state?.roleFilter) {
@@ -212,8 +223,12 @@ const Members = () => {
 
 
   const fetchMembersAndRequests = useCallback(async () => {
+    // Ensure agencyId is available before fetching
     if (!agencyId) {
+      // If an admin navigates directly without an agencyId, or agency_admin has no agencyId
       showMessage('Agency ID not available. Cannot fetch members.', 'error');
+      setMembers([]);
+      setPendingRequests([]);
       return;
     }
 
@@ -246,13 +261,21 @@ const Members = () => {
       console.error('Failed to fetch agency members or requests:', err);
       showMessage('Failed to fetch agency members or requests. Please try again.', 'error');
     }
-  }, [agencyId, showMessage]);
+  }, [agencyId, showMessage]); // Dependency on agencyId
 
   useEffect(() => {
+    // Fetch data only if agencyId is available
     if (agencyId) {
       fetchMembersAndRequests();
+    } else if (user?.role === 'admin' && !paramAgencyId) {
+        // If it's a super admin, but no agencyId is provided in params,
+        // we might want to show a message or redirect.
+        // For now, just ensure no fetch happens.
+        showMessage('Please select an agency to view its members.', 'info');
+        setMembers([]);
+        setPendingRequests([]);
     }
-  }, [fetchMembersAndRequests, agencyId]);
+  }, [fetchMembersAndRequests, agencyId, user?.role, paramAgencyId, showMessage]); // Dependencies updated
 
   useEffect(() => {
     if (!showPendingRequests) {
@@ -384,7 +407,9 @@ const Members = () => {
     showMessage("Data exported successfully!", 'success');
   };
 
-  const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+  // Calculate contentShift based on user role
+  const contentShift = (user?.role === 'agency_admin' && !isMobile) ? (isCollapsed ? 80 : 256) : 0;
+
 
   const handleAcceptRequest = async (requestId, memberIdToApprove) => {
     showConfirm({
@@ -580,37 +605,42 @@ const Members = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {isMobile && (
-        <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
-          initial={false}
-          animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 90 }}
-              transition={{ duration: 0.2 }}
+      {/* Conditionally render sidebar for agency_admin role */}
+      {user?.role === 'agency_admin' && (
+        <>
+          {isMobile && (
+            <motion.button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+              initial={false}
+              animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
+              transition={{ duration: 0.3 }}
             >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={isSidebarOpen ? 'close' : 'menu'}
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                </motion.div>
+              </AnimatePresence>
+            </motion.button>
+          )}
 
-      <AgencyAdminSidebar
-        collapsed={isMobile ? false : isCollapsed}
-        setCollapsed={isMobile ? () => {} : setIsCollapsed}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        isMobile={isMobile}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-      />
+          <AgencyAdminSidebar
+            collapsed={isMobile ? false : isCollapsed}
+            setCollapsed={isMobile ? () => {} : setIsCollapsed}
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+            isMobile={isMobile}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
+        </>
+      )}
       <motion.div
         key={isMobile ? 'mobile' : 'desktop'}
         animate={{ marginLeft: contentShift }}
