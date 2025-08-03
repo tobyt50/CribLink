@@ -25,7 +25,7 @@ const ListingOverview = ({
         <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(listing.status)}`}>
           {getStatusLabel(listing.status)}
         </span>
-        <span className="bg-green-600/70 max-w-[70%] text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm">
+        <span className="bg-green-400 text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm">
           {getCategoryLabel(listing.purchase_category)}
         </span>
         {userRole !== 'guest' && (
