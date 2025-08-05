@@ -109,8 +109,56 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton for General section
+const GeneralSectionSkeleton = ({ darkMode }) => (
+    <div className="space-y-8">
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="flex flex-col md:flex-row md:space-x-8 mb-6">
+                <div className="md:w-1/2 mb-6 md:mb-0">
+                    <div className={`h-4 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-2`}></div>
+                    <div className="flex flex-col items-center space-y-4 mt-2">
+                        <div className={`w-32 h-32 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                        <div className={`h-8 w-full rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                        <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                </div>
+                <div className="md:w-1/2">
+                    <div className={`h-4 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-2`}></div>
+                    <div className={`h-32 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(6)].map((_, i) => (
+                    <div key={i}>
+                        <div className={`h-4 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-2`}></div>
+                        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
 
-function General({ form, handleChange, handleUpdate, updating, userInfo, onProfilePictureDataChange }) {
+        {/* Agency Section Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className={`h-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+
+        {/* Social Media Section Skeleton */}
+        <div className={`pb-6 mb-6 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className={`h-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+
+        {/* Save Changes Button Skeleton */}
+        <div className="flex justify-center pt-8">
+            <div className={`h-12 w-48 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+    </div>
+);
+
+
+function General({ form, handleChange, handleUpdate, updating, userInfo, onProfilePictureDataChange, loading }) {
     const { darkMode } = useTheme();
     const { showMessage } = useMessage();
     const { showConfirm } = useConfirmDialog();
@@ -612,6 +660,9 @@ function General({ form, handleChange, handleUpdate, updating, userInfo, onProfi
     const pendingOrRejectedMembership = agentMemberships.find(m => m.request_status === 'pending' || m.request_status === 'rejected');
     const hasAnyAffiliation = isAgencyAdminConnected || connectedAgentMembership || pendingOrRejectedMembership;
 
+    if (loading) {
+        return <GeneralSectionSkeleton darkMode={darkMode} />;
+    }
 
     return (
         <motion.div

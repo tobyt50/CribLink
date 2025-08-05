@@ -124,6 +124,36 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton for a Listing Card (graphical view)
+const ListingCardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className={`w-full h-32 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className="flex justify-between items-center">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
+// Skeleton for a Listing Table Row (simple view)
+const ListingTableRowSkeleton = ({ darkMode }) => (
+  <tr className={`border-t animate-pulse ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+    <td className="py-2 px-2"><div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-28 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-20 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-16 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-28 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-12 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2"><div className={`h-4 w-12 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+    <td className="py-2 px-2 flex gap-2"><div className={`h-8 w-16 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div><div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+  </tr>
+);
+
 
 const Listings = () => {
     const [listings, setListings] = useState([]); // Raw listings from API (paginated)
@@ -145,6 +175,9 @@ const Listings = () => {
     const { showMessage } = useMessage(); // Initialize useMessage
     const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
     const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+
+    // Loading state
+    const [loading, setLoading] = useState(true);
 
 
     // Use the useSidebarState hook for mobile/sidebar state
@@ -272,6 +305,7 @@ const Listings = () => {
             console.log("User role not yet available, skipping fetchListings.");
             return;
         }
+        setLoading(true); // Start loading
 
         try {
             const params = new URLSearchParams();
@@ -333,6 +367,8 @@ const Listings = () => {
             if (err.response && err.response.status === 401) {
                 navigate('/signin');
             }
+        } finally {
+            setLoading(false); // End loading
         }
     }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, userRole, userId, userAgencyId, navigate, showMessage]); // All filters, pagination, and user-related dependencies
 
@@ -376,7 +412,7 @@ const Listings = () => {
             if (typeA === 'string' && typeB === 'string') {
                 return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             } else if (typeA === 'number' && typeB === 'number') {
-                return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+                return sortDirection === 'asc' ? aValue - bValue : bBvalue - aValue;
             } else {
                 const numA = parseFloat(aValue);
                 const numB = parseFloat(bValue);
@@ -1057,6 +1093,44 @@ const Listings = () => {
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                 Loading user data...
                             </div>
+                        ) : loading ? (
+                            viewMode === 'graphical' ? (
+                                <motion.div
+                                    layout
+                                    className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-5"
+                                >
+                                    {[...Array(limit)].map((_, i) => <ListingCardSkeleton key={i} darkMode={darkMode} />)}
+                                </motion.div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                        <thead>
+                                            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                                {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
+                                                    <th
+                                                        key={key}
+                                                        className={`py-2 px-2 whitespace-nowrap`}
+                                                    >
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="truncate">
+                                                                {{
+                                                                    property_id: 'ID',
+                                                                    property_type: 'Type',
+                                                                    purchase_category: 'Category',
+                                                                    actions: 'Actions'
+                                                                }[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                            </span>
+                                                        </div>
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                                            {[...Array(limit)].map((_, i) => <ListingTableRowSkeleton key={i} darkMode={darkMode} />)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
                         ) : filteredAndSortedListings.length === 0 ? (
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                 No listings found matching your criteria.

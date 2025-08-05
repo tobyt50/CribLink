@@ -25,13 +25,10 @@ const ProtectedBaseRoute = () => {
     }
   }, [isAuthenticated, loading, navigate, showMessage]);
 
+  // If authentication status is still loading, return null to render nothing visually.
+  // The component will still wait for 'loading' to become false before proceeding.
   if (loading) {
-    // Show a loading indicator while authentication status is being determined
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-lg text-gray-500 dark:text-gray-400">Loading authentication...</p>
-      </div>
-    );
+    return null;
   }
 
   // If not authenticated after loading, redirect to sign-in page

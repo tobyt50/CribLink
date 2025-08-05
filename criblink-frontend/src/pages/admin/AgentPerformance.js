@@ -115,6 +115,42 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton component for Agent Performance
+const AgentPerformanceSkeleton = ({ darkMode, limit }) => (
+    <div className={`overflow-x-auto animate-pulse ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+        <table className={`w-full mt-4 text-sm table-fixed min-w-max`}>
+            <thead>
+                <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    {[
+                        'ID', 'Agent Name', 'Deals', 'Revenue', 'Rating',
+                        'Properties', 'Region', 'Commission', 'Actions'
+                    ].map((header, idx) => (
+                        <th key={idx} className="py-2 px-2 whitespace-nowrap">
+                            <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                {[...Array(limit)].map((_, rowIndex) => (
+                    <tr key={rowIndex} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                        {[...Array(9)].map((_, colIndex) => (
+                            <td key={colIndex} className="py-2 px-2">
+                                <div className={`h-4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} ${colIndex === 1 ? 'w-3/4' : 'w-1/2'}`}></div>
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+        <div className="flex justify-center items-center space-x-4 mt-4">
+            <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}></div>
+            <div className={`h-6 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}></div>
+        </div>
+    </div>
+);
+
 
 const AgentPerformance = () => {
     const [performanceData, setPerformanceData] = useState([]);
@@ -130,6 +166,7 @@ const AgentPerformance = () => {
     const { darkMode } = useTheme();
     const { showMessage } = useMessage();
     const { showConfirm } = useConfirmDialog();
+    const [loading, setLoading] = useState(true); // New loading state
 
     // Use the useSidebarState hook
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -140,18 +177,6 @@ const AgentPerformance = () => {
 
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDesktopFilterModalOpen, setIsDesktopFilterModalOpen] = useState(false);
-
-    // No longer need this useEffect as useSidebarState handles it
-    // useEffect(() => {
-    //     const handleResize = () => {
-    //         const mobile = window.innerWidth < 768;
-    //         setIsMobile(mobile);
-    //         setIsSidebarOpen(!mobile);
-    //     };
-
-    //     window.addEventListener('resize', handleResize);
-    //     return () => window.removeEventListener('resize', handleResize);
-    // }, []);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -164,6 +189,7 @@ const AgentPerformance = () => {
     }, []);
 
     const fetchAgentPerformance = useCallback(async () => {
+        setLoading(true); // Start loading
         const params = new URLSearchParams();
         if (searchTerm) {
             params.append('search', searchTerm);
@@ -196,6 +222,8 @@ const AgentPerformance = () => {
             setFilteredPerformance([]);
             setTotalEntries(0);
             setTotalPages(1);
+        } finally {
+            setLoading(false); // End loading
         }
     }, [searchTerm, page, limit, showMessage]);
 
@@ -503,7 +531,9 @@ const AgentPerformance = () => {
                             </div>
                         )}
 
-                        {filteredPerformance.length === 0 ? (
+                        {loading ? (
+                            <AgentPerformanceSkeleton darkMode={darkMode} limit={limit} />
+                        ) : filteredPerformance.length === 0 ? (
                             <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                 No agent performance data found.
                             </div>

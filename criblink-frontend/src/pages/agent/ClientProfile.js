@@ -22,6 +22,52 @@ import {
 } from 'lucide-react';
 import AgentSidebar from '../../components/agent/Sidebar';
 
+// Skeleton for a general content block
+const ContentBlockSkeleton = ({ darkMode, height = 'h-40' }) => (
+  <div className={`p-6 rounded-2xl shadow-xl animate-pulse ${darkMode ? "bg-gray-800" : "bg-white"} ${height}`}>
+    <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+    <div className={`h-4 w-5/6 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+  </div>
+);
+
+// Skeleton for Client Info section
+const ClientInfoSkeleton = ({ darkMode }) => (
+  <div className={`p-6 rounded-2xl shadow-xl animate-pulse ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+    <div className="flex justify-between items-center mb-4">
+      <div className={`h-8 w-48 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-10 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+    <div className="flex items-start space-x-4 mb-6">
+      <div className={`w-32 h-32 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className="flex-1">
+        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+        <div className={`h-6 w-48 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mt-4 mb-2`}></div>
+        <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+        <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </div>
+    <div className={`h-6 w-40 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+  </div>
+);
+
+// Skeleton for Listing Card (used in Favourites and Recommended)
+const ListingCardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className={`w-full h-32 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className="flex justify-between items-center">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
+
 const ClientProfile = () => {
   const { clientId } = useParams();
   const navigate = useNavigate();
@@ -70,6 +116,9 @@ const ClientProfile = () => {
   const [editingNote, setEditingNote] = useState(false);
   const [editedNoteContent, setEditedNoteContent] = useState('');
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
 
   // Conditionally set contentShift to 0 if the user is not an agent
   const contentShift = userRole === 'agent' && !isMobile ? (isCollapsed ? 80 : 256) : 0;
@@ -110,6 +159,7 @@ const ClientProfile = () => {
       console.log('Client ID not available, skipping client profile fetch.');
       return;
     }
+    setLoading(true); // Start loading
 
     try {
       const token = localStorage.getItem('token');
@@ -209,6 +259,8 @@ const ClientProfile = () => {
         bedrooms: null,
         bathrooms: null,
       });
+    } finally {
+      setLoading(false); // End loading
     }
   }, [clientId, showMessage]);
 
@@ -796,10 +848,42 @@ const ClientProfile = () => {
   );
 
 
-  if (!client) {
+  if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? "bg-gray-900" : "bg-gray-50"} text-gray-400`}>
-        Loading client profile...
+      <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+        {/* Sidebar placeholder */}
+        {userRole === 'agent' && (
+          <div className={`fixed top-0 left-0 h-full ${isCollapsed ? 'w-20' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transition-all duration-300`}>
+            <div className={`h-full animate-pulse flex flex-col p-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`h-8 w-3/4 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-6`}></div>
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className={`h-10 w-full rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-3`}></div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <motion.div
+          animate={{ marginLeft: contentShift }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          initial={false}
+          className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+          style={{ minWidth: `calc(100% - ${contentShift}px)` }}
+        >
+          <div className={`h-10 w-1/2 md:w-1/4 rounded mx-auto mb-6 animate-pulse ${darkMode ? "bg-gray-800" : "bg-gray-200"}`}></div>
+
+          <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
+            <div className="w-full lg:w-3/5 space-y-8">
+              <ClientInfoSkeleton darkMode={darkMode} />
+              {isMobile && userRole === 'agent' && <ContentBlockSkeleton darkMode={darkMode} height="h-32" />}
+              <ContentBlockSkeleton darkMode={darkMode} height="h-64" /> {/* Favourites */}
+            </div>
+            <div className="w-full lg:w-2/5 space-y-8">
+              {!isMobile && userRole === 'agent' && <ContentBlockSkeleton darkMode={darkMode} height="h-32" />}
+              <ContentBlockSkeleton darkMode={darkMode} height="h-64" /> {/* Recommended */}
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }

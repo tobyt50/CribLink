@@ -134,6 +134,54 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton loader for ClientCard
+const ClientCardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className="flex items-center mb-4">
+      <div className={`w-12 h-12 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className="ml-3 flex-1">
+        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+        <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </div>
+    </div>
+    <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-5/6 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-4`}></div>
+    <div className="flex justify-between gap-2">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
+// Skeleton loader for Client Table Row
+const ClientTableRowSkeleton = ({ darkMode, userRole }) => (
+  <tr className={`border-t animate-pulse ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+    <td className="px-1 py-2">
+      <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-1 py-2">
+      <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-1 py-2">
+      <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    {userRole === 'agency_admin' && (
+      <td className="px-1 py-2">
+        <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </td>
+    )}
+    <td className="px-1 py-2">
+      <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-1 py-2 flex gap-1 flex-wrap">
+      <div className={`h-8 w-16 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-16 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-16 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+  </tr>
+);
+
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -174,6 +222,9 @@ const Clients = () => {
   // New state for favorite clients
   const [favoriteClientsStatus, setFavoriteClientsStatus] = useState(new Set());
 
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -200,6 +251,7 @@ const Clients = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true); // Start loading
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -224,6 +276,8 @@ const Clients = () => {
         console.error("Failed to fetch user profile:", err);
         showMessage('Failed to load user profile. Please sign in.', 'error');
         navigate('/signin');
+      } finally {
+        setLoading(false); // End loading
       }
     };
     fetchProfile();
@@ -233,6 +287,7 @@ const Clients = () => {
     if (!currentUserId) {
       return;
     }
+    setLoading(true); // Start loading for data fetch
 
     try {
       const token = localStorage.getItem('token');
@@ -252,6 +307,7 @@ const Clients = () => {
         // If not agent or agency_admin, clear clients and return
         setClients([]);
         setPendingRequests([]);
+        setLoading(false); // End loading
         return;
       }
 
@@ -270,6 +326,8 @@ const Clients = () => {
     } catch (err) {
       console.error('Failed to fetch data:', err);
       showMessage('Failed to fetch clients or requests. Please try again.', 'error');
+    } finally {
+      setLoading(false); // End loading
     }
   }, [currentUserId, userRole, agencyId, showMessage]);
 
@@ -1179,227 +1237,261 @@ const Clients = () => {
           </div>
 
 
-          {activeTab === 'pending_requests' && userRole === 'agent' ? (
-            paginatedData.length === 0 ? (
-              <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                No pending connection requests found.
+          {loading ? (
+            // Render skeletons when loading
+            viewMode === 'graphical' ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(itemsPerPage)].map((_, i) => (
+                  <ClientCardSkeleton key={i} darkMode={darkMode} />
+                ))}
               </div>
             ) : (
-              viewMode === 'graphical' ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {paginatedData.map(request => (
-                    <ClientCard
-                      key={request.request_id}
-                      client={{
-                        user_id: request.client_id,
-                        full_name: request.client_name,
-                        email: request.client_email,
-                        phone: request.client_phone,
-                        profile_picture_url: request.client_profile_picture_url,
-                        date_joined: request.created_at,
-                        status: request.status,
-                        client_status: 'pending',
-                        notes: request.message,
-                      }}
-                      onViewProfile={handleViewProfile}
-                      onCallClient={handleCallClient}
-                      onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
-                      onToggleStatus={() => showMessage('Cannot toggle status for pending requests.', 'info')}
-                      onRemoveClient={() => handleRejectRequest(request.request_id)}
-                      editingNoteId={null}
-                      editedNoteContent={''}
-                      onEditNote={() => showMessage('Cannot edit notes for pending requests.', 'info')}
-                      onSaveNote={() => { }}
-                      onCancelEdit={() => { }}
-                      acceptAction={() => handleAcceptRequest(request.request_id, request.client_id)}
-                      rejectAction={() => handleRejectRequest(request.request_id)}
-                      isPendingRequestCard={true}
-                      userRole={userRole}
-                      onFavoriteToggle={handleFavoriteToggle} // Pass the handler
-                      isFavorited={favoriteClientsStatus.has(request.client_id)} // Pass favorite status
-                    />
-                  ))}
+              <div className="overflow-x-auto">
+                <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name</th>
+                      <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Email</th>
+                      <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
+                      {userRole === 'agency_admin' && (
+                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Agent</th>
+                      )}
+                      <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status</th>
+                      <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '30%' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {[...Array(itemsPerPage)].map((_, i) => (
+                      <ClientTableRowSkeleton key={i} darkMode={darkMode} userRole={userRole} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            // Render actual data when not loading
+            activeTab === 'pending_requests' && userRole === 'agent' ? (
+              paginatedData.length === 0 ? (
+                <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                  No pending connection requests found.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <thead>
-                      <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('client_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Name {renderSortIcon('client_name')}</th>
-                        <th onClick={() => handleSortClick('client_email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Email {renderSortIcon('client_email')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
-                        <th onClick={() => handleSortClick('created_at')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Requested At {renderSortIcon('created_at')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                      {paginatedData.map(request => (
-                        <tr
-                          key={request.request_id}
-                          className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
-                          onClick={() => handleViewProfile(request.client_id)}
-                        >
-                          <td className="px-1 py-2" title={request.client_name}>{request.client_name}</td>
-                          <td className="px-1 py-2" title={request.client_email}>{request.client_email}</td>
-                          <td className="px-1 py-2" title={request.client_phone}>{request.client_phone || 'N/A'}</td>
-                          <td className="px-1 py-2">{new Date(request.created_at).toLocaleDateString()}</td>
-                          <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                            <button className="text-green-600 hover:border-green-700 p-1 border border-transparent" onClick={() => handleAcceptRequest(request.request_id, request.client_id)} title="Accept Request">
-                              <CheckCircleIcon className="h-6 w-6" />
-                            </button>
-                            <button className="text-red-600 hover:border-red-700 p-1 border border-transparent" onClick={() => handleRejectRequest(request.request_id)} title="Reject Request">
-                              <XCircleIcon className="h-6 w-6" />
-                            </button>
-                            {request.client_phone && (
+                viewMode === 'graphical' ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {paginatedData.map(request => (
+                      <ClientCard
+                        key={request.request_id}
+                        client={{
+                          user_id: request.client_id,
+                          full_name: request.client_name,
+                          email: request.client_email,
+                          phone: request.client_phone,
+                          profile_picture_url: request.client_profile_picture_url,
+                          date_joined: request.created_at,
+                          status: request.status,
+                          client_status: 'pending',
+                          notes: request.message,
+                        }}
+                        onViewProfile={handleViewProfile}
+                        onCallClient={handleCallClient}
+                        onRespondInquiry={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
+                        onToggleStatus={() => showMessage('Cannot toggle status for pending requests.', 'info')}
+                        onRemoveClient={() => handleRejectRequest(request.request_id)}
+                        editingNoteId={null}
+                        editedNoteContent={''}
+                        onEditNote={() => showMessage('Cannot edit notes for pending requests.', 'info')}
+                        onSaveNote={() => { }}
+                        onCancelEdit={() => { }}
+                        acceptAction={() => handleAcceptRequest(request.request_id, request.client_id)}
+                        rejectAction={() => handleRejectRequest(request.request_id)}
+                        isPendingRequestCard={true}
+                        userRole={userRole}
+                        onFavoriteToggle={handleFavoriteToggle} // Pass the handler
+                        isFavorited={favoriteClientsStatus.has(request.client_id)} // Pass favorite status
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <thead>
+                        <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <th onClick={() => handleSortClick('client_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Name {renderSortIcon('client_name')}</th>
+                          <th onClick={() => handleSortClick('client_email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '20%' }}>Email {renderSortIcon('client_email')}</th>
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
+                          <th onClick={() => handleSortClick('created_at')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Requested At {renderSortIcon('created_at')}</th>
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '25%' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                        {paginatedData.map(request => (
+                          <tr
+                            key={request.request_id}
+                            className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                            onClick={() => handleViewProfile(request.client_id)}
+                          >
+                            <td className="px-1 py-2" title={request.client_name}>{request.client_name}</td>
+                            <td className="px-1 py-2" title={request.client_email}>{request.client_email}</td>
+                            <td className="px-1 py-2" title={request.client_phone}>{request.client_phone || 'N/A'}</td>
+                            <td className="px-1 py-2">{new Date(request.created_at).toLocaleDateString()}</td>
+                            <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                              <button className="text-green-600 hover:border-green-700 p-1 border border-transparent" onClick={() => handleAcceptRequest(request.request_id, request.client_id)} title="Accept Request">
+                                <CheckCircleIcon className="h-6 w-6" />
+                              </button>
+                              <button className="text-red-600 hover:border-red-700 p-1 border border-transparent" onClick={() => handleRejectRequest(request.request_id)} title="Reject Request">
+                                <XCircleIcon className="h-6 w-6" />
+                              </button>
+                              {request.client_phone && (
+                                <button
+                                    onClick={() => handleCallClient(request.client_phone)}
+                                    className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
+                                    text-green-500 hover:border-green-600 border border-transparent`}
+                                    title="Call client"
+                                >
+                                    <PhoneIcon className="h-4 w-4 mr-1" />Call
+                                </button>
+                              )}
                               <button
-                                  onClick={() => handleCallClient(request.client_phone)}
+                                  onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
+                                  className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
+                                  text-blue-500 hover:border-blue-600 border border-transparent`}
+                                  title="Chat with client"
+                              >
+                                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              )
+            ) : (
+              paginatedData.length === 0 ? (
+                <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                  No clients found matching your criteria.
+                </div>
+              ) : (
+                viewMode === 'graphical' ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {paginatedData.map(client => (
+                      <ClientCard
+                        key={client.user_id}
+                        client={client}
+                        onViewProfile={handleViewProfile}
+                        onCallClient={handleCallClient}
+                        onRespondInquiry={() => handleOpenChat(client)}
+                        onToggleStatus={handleToggleStatus}
+                        onRemoveClient={handleRemoveClient}
+                        editingNoteId={editingNoteId}
+                        editedNoteContent={editedNoteContent}
+                        onEditNote={(id, content) => {
+                          setEditingNoteId(id);
+                          setEditedNoteContent(content);
+                        }}
+                        onSaveNote={handleSaveNote}
+                        onCancelEdit={handleCancelEdit}
+                        userRole={userRole}
+                        onFavoriteToggle={handleFavoriteToggle} // Pass the handler
+                        isFavorited={favoriteClientsStatus.has(client.user_id)} // Pass favorite status
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <thead>
+                        <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name {renderSortIcon('full_name')}</th>
+                          <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Email {renderSortIcon('email')}</th>
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
+                          {userRole === 'agency_admin' && (
+                            <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Agent {renderSortIcon('agent_name')}</th>
+                          )}
+                          <th onClick={() => handleSortClick('client_status')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status {renderSortIcon('client_status')}</th>
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '30%' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                        {paginatedData.map(client => (
+                          <tr
+                            key={client.user_id}
+                            className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                            onClick={() => handleViewProfile(client.user_id)}
+                          >
+                            <td className="px-1 py-2" title={client.full_name}>{client.full_name}</td>
+                            <td className="px-1 py-2" title={client.email}>{client.email}</td>
+                            <td className="px-1 py-2" title={client.phone}>{client.phone || 'N/A'}</td>
+                            {userRole === 'agency_admin' && (
+                              <td className="px-1 py-2" title={client.agent_name}>{client.agent_name || 'N/A'}</td>
+                            )}
+                            <td className={`px-1 py-2 font-semibold ${
+                              client.client_status === 'vip'
+                                ? 'text-green-600'
+                                : (darkMode ? 'text-gray-300' : 'text-gray-600')
+                              }`} title={client.client_status || 'regular'}>{client.client_status || 'regular'}</td>
+                            <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => handleSendEmail(client)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>
+                                <EnvelopeIcon className="h-4 w-4 mr-1" />Email
+                              </button>
+                              {client.phone && (
+                                <button
+                                  onClick={() => handleCallClient(client.phone)}
                                   className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
                                   text-green-500 hover:border-green-600 border border-transparent`}
                                   title="Call client"
-                              >
+                                >
                                   <PhoneIcon className="h-4 w-4 mr-1" />Call
-                              </button>
-                            )}
-                            <button
-                                onClick={() => handleOpenChat({ user_id: request.client_id, full_name: request.client_name, email: request.client_email, phone: request.client_phone, agent_id: currentUserId })}
-                                className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
-                                text-blue-500 hover:border-blue-600 border border-transparent`}
-                                title="Chat with client"
-                            >
-                                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            )
-          ) : (
-            paginatedData.length === 0 ? (
-              <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                No clients found matching your criteria.
-              </div>
-            ) : (
-              viewMode === 'graphical' ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {paginatedData.map(client => (
-                    <ClientCard
-                      key={client.user_id}
-                      client={client}
-                      onViewProfile={handleViewProfile}
-                      onCallClient={handleCallClient}
-                      onRespondInquiry={() => handleOpenChat(client)}
-                      onToggleStatus={handleToggleStatus}
-                      onRemoveClient={handleRemoveClient}
-                      editingNoteId={editingNoteId}
-                      editedNoteContent={editedNoteContent}
-                      onEditNote={(id, content) => {
-                        setEditingNoteId(id);
-                        setEditedNoteContent(content);
-                      }}
-                      onSaveNote={handleSaveNote}
-                      onCancelEdit={handleCancelEdit}
-                      userRole={userRole}
-                      onFavoriteToggle={handleFavoriteToggle} // Pass the handler
-                      isFavorited={favoriteClientsStatus.has(client.user_id)} // Pass favorite status
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <thead>
-                      <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name {renderSortIcon('full_name')}</th>
-                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Email {renderSortIcon('email')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th>
-                        {userRole === 'agency_admin' && (
-                          <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Agent {renderSortIcon('agent_name')}</th>
-                        )}
-                        <th onClick={() => handleSortClick('client_status')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '10%' }}>Status {renderSortIcon('client_status')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '25%' : '30%' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                      {paginatedData.map(client => (
-                        <tr
-                          key={client.user_id}
-                          className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
-                          onClick={() => handleViewProfile(client.user_id)}
-                        >
-                          <td className="px-1 py-2" title={client.full_name}>{client.full_name}</td>
-                          <td className="px-1 py-2" title={client.email}>{client.email}</td>
-                          <td className="px-1 py-2" title={client.phone}>{client.phone || 'N/A'}</td>
-                          {userRole === 'agency_admin' && (
-                            <td className="px-1 py-2" title={client.agent_name}>{client.agent_name || 'N/A'}</td>
-                          )}
-                          <td className={`px-1 py-2 font-semibold ${
-                            client.client_status === 'vip'
-                              ? 'text-green-600'
-                              : (darkMode ? 'text-gray-300' : 'text-gray-600')
-                            }`} title={client.client_status || 'regular'}>{client.client_status || 'regular'}</td>
-                          <td className="px-1 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => handleSendEmail(client)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`}>
-                              <EnvelopeIcon className="h-4 w-4 mr-1" />Email
-                            </button>
-                            {client.phone && (
+                                </button>
+                              )}
                               <button
-                                onClick={() => handleCallClient(client.phone)}
-                                className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
-                                text-green-500 hover:border-green-600 border border-transparent`}
-                                title="Call client"
+                                  onClick={() => handleOpenChat(client)}
+                                  className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
+                                  text-blue-500 hover:border-blue-600 border border-transparent`}
+                                  title="Chat with client"
                               >
-                                <PhoneIcon className="h-4 w-4 mr-1" />Call
+                                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
                               </button>
-                            )}
-                            <button
-                                onClick={() => handleOpenChat(client)}
-                                className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center
-                                text-blue-500 hover:border-blue-600 border border-transparent`}
-                                title="Chat with client"
-                            >
-                                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
-                            </button>
-                            {userRole === 'agent' && (
-                              <>
-                                <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`}>
-                                  {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
-                                </button>
-                                <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
-                                  <TrashIcon className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                            {userRole === 'agency_admin' && (
-                              <>
-                                <button
-                                  className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-300 border border-transparent cursor-not-allowed opacity-50`}
-                                  title="Only assigned agent can change client status"
-                                  disabled
-                                >
-                                  {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
-                                </button>
-                                <button
-                                  title="Only assigned agent can remove client"
-                                  className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-300 border border-transparent cursor-not-allowed opacity-50`}
-                                  disabled
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              {userRole === 'agent' && (
+                                <>
+                                  <button onClick={() => handleToggleStatus(client.user_id, client.client_status)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`}>
+                                    {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+                                  </button>
+                                  <button onClick={() => handleRemoveClient(client.user_id)} title="Remove client" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                              {userRole === 'agency_admin' && (
+                                <>
+                                  <button
+                                    className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-300 border border-transparent cursor-not-allowed opacity-50`}
+                                    title="Only assigned agent can change client status"
+                                    disabled
+                                  >
+                                    {client.client_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+                                  </button>
+                                  <button
+                                    title="Only assigned agent can remove client"
+                                    className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-300 border border-transparent cursor-not-allowed opacity-50`}
+                                    disabled
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               )
             )
           )}
-          {totalItems > 0 && (
+          {totalItems > 0 && !loading && (
             <div className="flex justify-center items-center space-x-4 mt-4">
               <button
                 onClick={() => setPage(prev => Math.max(prev - 1, 1))}
@@ -1440,4 +1532,3 @@ const Clients = () => {
 };
 
 export default Clients;
-

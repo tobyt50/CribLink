@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom'; // Import useNavigate
 import AdminSidebar from '../../components/admin/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Menu, X, Search, FileText, LayoutGrid, LayoutList } from 'lucide-react';
@@ -114,6 +114,68 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
+// Skeleton component for Users page
+const UsersSkeleton = ({ darkMode, viewMode }) => (
+  <div className={`animate-pulse space-y-4`}>
+    {/* Controls Skeleton */}
+    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className="flex gap-2">
+        <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </div>
+
+    {/* Content Skeleton based on viewMode */}
+    {viewMode === 'graphical' ? (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(9)].map((_, i) => ( // 9 skeleton cards for graphical view
+          <div key={i} className={`rounded-xl p-4 shadow-sm h-48 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex flex-col items-center justify-center h-full space-y-3">
+              <div className={`w-20 h-20 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className={`w-full mt-4 text-sm table-fixed min-w-max`}>
+          <thead>
+            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              {[...Array(7)].map((_, i) => ( // 7 skeleton table headers (including role dropdown and actions)
+                <th key={i} className={`py-2 px-2`}>
+                  <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+            {[...Array(10)].map((_, i) => ( // 10 skeleton table rows
+              <tr key={i} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                {[...Array(7)].map((_, j) => ( // 7 skeleton cells per row
+                  <td key={j} className="py-2 px-2">
+                    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {/* Pagination Skeleton */}
+    <div className="flex justify-center items-center space-x-4 mt-4">
+      <div className={`h-8 w-16 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-16 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
 
 const Users = () => {
   // State for user data and table controls
@@ -124,6 +186,8 @@ const Users = () => {
   const [sortDirection, setSortDirection] = useState('desc');
   const [page, setPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
+
 
   // Initialize viewMode from localStorage based on 'defaultListingsView'
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
@@ -133,6 +197,7 @@ const Users = () => {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Sidebar state management using the custom hook
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -162,10 +227,27 @@ const Users = () => {
   };
 
   /**
+   * Handles row/card click and redirects to the appropriate profile page.
+   * @param {object} user - The user object that was clicked.
+   */
+  const handleUserClick = (user) => {
+    if (user.role === 'agent') {
+      navigate(`/agent-profile/${user.user_id}`); // Assuming agent profiles are under /client/agent-profile
+    } else if (user.role === 'agency_admin') {
+      navigate(`/agency-admin-profile/${user.user_id}`); // Assuming agency admin profiles are under /agency/agency-admin-profile
+    } else if (user.role === 'client' || user.role === 'user') { // 'user' role is treated as 'client'
+      navigate(`/client-profile/${user.user_id}`); // Assuming client profiles are under /agent/client-profile
+    } else if (user.role === 'admin') {
+      navigate(`/admin/admin-profile/${user.user_id}`); // Admin profile page (to be created)
+    }
+  };
+
+  /**
    * Fetches users from the backend API based on current filters, search, sorting, and pagination.
    * Displays success or error messages using the MessageContext.
    */
   const fetchUsers = useCallback(async () => {
+    setIsLoading(true); // Set loading to true when fetching starts
     // Construct query parameters
     const params = new URLSearchParams({ search, role: roleFilter, page, limit, sort: sortKey, direction: sortDirection });
     const token = localStorage.getItem('token'); // Retrieve auth token from local storage
@@ -203,6 +285,8 @@ const Users = () => {
       showMessage(errorMessage, 'error'); // Display error message
       setUsers([]); // Clear users on error
       setTotalUsers(0); // Reset total users on error
+    } finally {
+        setIsLoading(false); // Set loading to false when fetching is complete (success or error)
     }
   }, [search, roleFilter, page, limit, sortKey, sortDirection, showMessage, darkMode]); // Added darkMode to dependencies
 
@@ -512,6 +596,7 @@ const Users = () => {
     { value: "admin", label: "Admin" },
     { value: "agent", label: "Agent" },
     { value: "client", label: "Client" },
+    { value: "agency_admin", label: "Agency Admin" }, // Added agency_admin
   ];
 
   return (
@@ -661,7 +746,9 @@ const Users = () => {
             </div>
           )}
 
-          {users.length === 0 ? (
+          {isLoading ? ( // Conditionally render skeleton when loading
+            <UsersSkeleton darkMode={darkMode} viewMode={viewMode} />
+          ) : users.length === 0 ? (
             <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               No users found matching your criteria.
             </div>
@@ -675,6 +762,7 @@ const Users = () => {
                     onActionApply={(user, action) => handleActionApply(user, action)}
                     actionSelections={actionSelections}
                     setActionSelections={setActionSelections}
+                    onCardClick={handleUserClick} // Pass the click handler
                   />
                 ))}
               </div>
@@ -718,7 +806,11 @@ const Users = () => {
                   <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                     {users.length > 0 ? (
                       users.map(user => (
-                        <tr key={user.user_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                        <tr
+                          key={user.user_id}
+                          className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                          onClick={() => handleUserClick(user)} // Add onClick to the table row
+                        >
                           <td className="py-2 px-2 max-w-[90px] truncate" title={user.user_id && user.user_id.length > 10 ? user.user_id : ''}>{user.user_id}</td>
                           <td title={user.full_name && user.full_name.length > 15 ? user.full_name : ''} className="py-2 px-2 max-w-[120px] truncate">{user.full_name}</td>
                           <td title={user.email && user.email.length > 20 ? user.email : ''} className="py-2 px-2 max-w-[160px] truncate">{user.email}</td>
@@ -731,17 +823,18 @@ const Users = () => {
                             }`} title={user.status && user.status.length > 10 ? user.status : ''}>{user.status || 'active'}</td>
                           <td className="py-2 px-2 max-w-[120px] truncate" title={formatDate(user.date_joined) && formatDate(user.date_joined).length > 15 ? formatDate(user.date_joined) : ''}>{formatDate(user.date_joined)}</td>
                           <td className="py-2 px-2 max-w-[90px] truncate" title={user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1) && user.role.length > 10 ? user.role : ''}>{user.role === 'user' ? 'Client' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
-                          <td className="py-2 px-2 space-x-2 max-w-[150px]">
+                          <td className="py-2 px-2 space-x-2 max-w-[150px]" onClick={(e) => e.stopPropagation()}> {/* Prevent row click when interacting with dropdown */}
                             <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
                               <Dropdown
                                 placeholder="Select Action"
                                 options={[
                                   { value: "", label: "Select Action" },
                                   // Role change options
-                                  ...(user.role === 'client' || user.role === 'agent' ? [{ value: "role:admin", label: "Promote to Admin" }] : []),
+                                  ...(user.role === 'client' || user.role === 'agent' || user.role === 'agency_admin' ? [{ value: "role:admin", label: "Promote to Admin" }] : []),
                                   ...(user.role === 'client' ? [{ value: "role:agent", label: "Promote to Agent" }] : []),
-                                  ...(user.role === 'admin' ? [{ value: "role:agent", label: "Demote to Agent" }] : []),
-                                  ...(user.role === 'admin' || user.role === 'agent' ? [{ value: "role:client", label: "Demote to Client" }] : []),
+                                  ...(user.role === 'admin' || user.role === 'agency_admin' ? [{ value: "role:agent", label: "Demote to Agent" }] : []),
+                                  ...(user.role === 'admin' || user.role === 'agent' || user.role === 'agency_admin' ? [{ value: "role:client", label: "Demote to Client" }] : []),
+                                  ...(user.role === 'admin' || user.role === 'agent' || user.role === 'client' ? [{ value: "role:agency_admin", label: "Promote to Agency Admin" }] : []),
                                   // Status change options
                                   ...(user.status === 'deactivated' ? [{ value: "reactivate", label: "Reactivate" }] : []),
                                   { value: user.status === 'banned' ? 'unban' : 'ban', label: user.status === 'banned' ? 'Unban' : 'Ban' },

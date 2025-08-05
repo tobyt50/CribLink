@@ -10,6 +10,7 @@ import {
 import AgentSidebar from '../components/agent/Sidebar';
 import AgencyAdminSidebar from '../components/agencyadmin/Sidebar';
 import ClientSidebar from '../components/client/Sidebar';
+import AdminSidebar from '../components/admin/Sidebar'; // Import AdminSidebar
 import API_BASE_URL from '../config';
 import { Menu, X, FileText, LayoutList } from 'lucide-react';
 import { useTheme } from '../layouts/AppShell';
@@ -127,6 +128,30 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton for a general card (graphical view)
+const CardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className={`w-full h-32 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className="flex justify-between items-center">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
+// Skeleton for a general table row
+const TableRowSkeleton = ({ darkMode, numCols }) => (
+  <tr className={`border-t animate-pulse ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+    {[...Array(numCols)].map((_, i) => (
+      <td key={i} className="px-1 py-2">
+        <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </td>
+    ))}
+  </tr>
+);
+
 
 const Favourites = () => {
   const [favouriteListings, setFavouriteListings] = useState([]);
@@ -157,6 +182,10 @@ const Favourites = () => {
   const [activeTab, setActiveTab] = useState(''); // Will be set dynamically
 
   const [itemsPerPage, setItemsPerPage] = useState(25); // Default to 25 items per page
+
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
 
   // Update itemsPerPage based on the active tab and screen size
   useEffect(() => {
@@ -255,6 +284,7 @@ const Favourites = () => {
     if (!currentUserId || !userRole) {
       return;
     }
+    setLoading(true); // Start loading
 
     try {
       const token = localStorage.getItem('token');
@@ -283,6 +313,8 @@ const Favourites = () => {
     } catch (err) {
       console.error('Failed to fetch favourites:', err);
       showMessage('Failed to fetch favourites. Please try again.', 'error');
+    } finally {
+      setLoading(false); // End loading
     }
   }, [currentUserId, userRole, showMessage]);
 
@@ -507,6 +539,65 @@ const Favourites = () => {
   const paginatedData = filteredData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const renderContent = () => {
+    if (loading) {
+        if (viewMode === 'graphical') {
+            return (
+                <div className={`grid gap-6 ${activeTab === 'listings' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3'}`}>
+                    {[...Array(itemsPerPage)].map((_, i) => <CardSkeleton key={i} darkMode={darkMode} />)}
+                </div>
+            );
+        } else { // Simple (Table) View
+            let numCols;
+            if (activeTab === 'listings') numCols = 6;
+            else if (activeTab === 'agents' || activeTab === 'clients') numCols = 5;
+            else if (activeTab === 'agencies') numCols = 5;
+            else numCols = 5; // Default
+
+            return (
+                <div className="overflow-x-auto">
+                    <table className={`w-full text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                        <thead>
+                            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                                {activeTab === 'listings' && (
+                                    <>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Title</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Location</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Price</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Type</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Favourited At</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Actions</th>
+                                    </>
+                                )}
+                                {(activeTab === 'agents' || activeTab === 'clients') && (
+                                    <>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Name</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Email</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Phone</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Favourited At</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Actions</th>
+                                    </>
+                                )}
+                                {activeTab === 'agencies' && (
+                                    <>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Name</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Email</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Phone</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Favourited At</th>
+                                        <th className="text-left py-2 px-1 whitespace-nowrap">Actions</th>
+                                    </>
+                                )}
+                            </tr>
+                        </thead>
+                        <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                            {[...Array(itemsPerPage)].map((_, i) => <TableRowSkeleton key={i} darkMode={darkMode} numCols={numCols} />)}
+                        </tbody>
+                    </table>
+                </div>
+            );
+        }
+    }
+
+
     if (paginatedData.length === 0) {
       return (
         <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -724,7 +815,7 @@ const Favourites = () => {
           collapsed={isMobile ? false : isCollapsed}
           setCollapsed={isMobile ? () => {} : setIsCollapsed}
           activeSection={activeSection}
-          setActiveSection={activeSection}
+          setActiveSection={setActiveSection}
           isMobile={isMobile}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
@@ -741,8 +832,8 @@ const Favourites = () => {
           setIsSidebarOpen={setIsSidebarOpen}
         />
       )}
-      {userRole === 'admin' && ( // Assuming 'admin' uses AgencyAdminSidebar or a generic one
-        <AgencyAdminSidebar
+      {userRole === 'admin' && ( // Conditional rendering for AdminSidebar
+        <AdminSidebar
           collapsed={isMobile ? false : isCollapsed}
           setCollapsed={isMobile ? () => {} : setIsCollapsed}
           activeSection={activeSection}
@@ -897,7 +988,7 @@ const Favourites = () => {
 
           {renderContent()}
 
-          {totalItems > 0 && (
+          {totalItems > 0 && !loading && (
             <div className="flex justify-center items-center space-x-4 mt-4">
               <button
                 onClick={() => setPage(prev => Math.max(prev - 1, 1))}

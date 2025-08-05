@@ -130,6 +130,81 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton component for Members page
+const MembersSkeleton = ({ darkMode, viewMode }) => (
+  <div className={`animate-pulse space-y-4`}>
+    {/* Controls Skeleton */}
+    <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
+      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className="flex gap-2">
+        <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </div>
+
+    {/* Content Skeleton */}
+    {viewMode === 'graphical' ? (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => ( // 6 skeleton cards
+          <div key={i} className={`p-4 rounded-xl shadow-md h-56 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex items-center mb-4">
+              <div className={`w-16 h-16 rounded-full mr-4 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className="flex-1 space-y-2">
+                <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className="flex justify-end mt-4 space-x-2">
+              <div className={`h-8 w-20 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-8 w-8 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className={`w-full text-sm min-w-max`}>
+          <thead>
+            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              {[...Array(7)].map((_, i) => ( // 7 skeleton table headers
+                <th key={i} className={`py-2 px-2`}>
+                  <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+            {[...Array(10)].map((_, i) => ( // 10 skeleton table rows
+              <tr key={i} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                {[...Array(7)].map((_, j) => ( // 7 skeleton cells per row
+                  <td key={j} className="py-2 px-2">
+                    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {/* Pagination Skeleton */}
+    <div className="flex justify-center items-center space-x-4 mt-4">
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
+
 const Members = () => {
   const [members, setMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
@@ -176,6 +251,7 @@ const Members = () => {
 
   const [memberStatusFilter, setMemberStatusFilter] = useState('all');
   const [memberRoleFilter, setMemberRoleFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
   // Helper to capitalize the first letter of a string
   const capitalizeFirstLetter = (string) => {
@@ -223,12 +299,14 @@ const Members = () => {
 
 
   const fetchMembersAndRequests = useCallback(async () => {
+    setIsLoading(true); // Set loading to true
     // Ensure agencyId is available before fetching
     if (!agencyId) {
       // If an admin navigates directly without an agencyId, or agency_admin has no agencyId
       showMessage('Agency ID not available. Cannot fetch members.', 'error');
       setMembers([]);
       setPendingRequests([]);
+      setIsLoading(false); // Stop loading if no agencyId
       return;
     }
 
@@ -260,6 +338,8 @@ const Members = () => {
     } catch (err) {
       console.error('Failed to fetch agency members or requests:', err);
       showMessage('Failed to fetch agency members or requests. Please try again.', 'error');
+    } finally {
+      setIsLoading(false); // Set loading to false
     }
   }, [agencyId, showMessage]); // Dependency on agencyId
 
@@ -274,6 +354,7 @@ const Members = () => {
         showMessage('Please select an agency to view its members.', 'info');
         setMembers([]);
         setPendingRequests([]);
+        setIsLoading(false); // Stop loading immediately
     }
   }, [fetchMembersAndRequests, agencyId, user?.role, paramAgencyId, showMessage]); // Dependencies updated
 
@@ -331,7 +412,7 @@ const Members = () => {
         const aValue = a[sortKey];
         const bValue = b[sortKey];
         if (typeof aValue === 'string') return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-        return sortDirection === 'asc' ? aValue - bValue : bBValue - aValue;
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       });
 
       setFilteredPendingRequests(currentRequests);
@@ -898,7 +979,9 @@ const Members = () => {
             </div>
           </div>
 
-          {showPendingRequests ? (
+          {isLoading ? ( // Conditionally render skeleton when loading
+            <MembersSkeleton darkMode={darkMode} viewMode={viewMode} />
+          ) : showPendingRequests ? (
             paginatedData.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 No pending member join requests found for your agency.

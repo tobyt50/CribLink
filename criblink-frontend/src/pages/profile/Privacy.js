@@ -7,7 +7,63 @@ import API_BASE_URL from '../../config';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
-function Privacy({ form, handleChange, handleUpdate, updating }) {
+// Skeleton for Privacy section
+const PrivacySectionSkeleton = ({ darkMode }) => (
+    <div className="space-y-8">
+        {/* Data Collection & Usage Transparency Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2, 3, 4].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3">
+                        <div className={`h-5 w-5 rounded-md ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Cookie Preferences Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2, 3, 4].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3">
+                        <div className={`h-5 w-5 rounded-md ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Communication Preferences Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2, 3].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3">
+                        <div className={`h-5 w-5 rounded-md ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Data Export Skeleton */}
+        <div className={`pb-6 mb-6 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+
+        {/* Save Changes Button Skeleton */}
+        <div className="flex justify-center pt-8">
+            <div className={`h-12 w-48 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+    </div>
+);
+
+
+function Privacy({ form, handleChange, handleUpdate, updating, loading }) {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -67,10 +123,10 @@ function Privacy({ form, handleChange, handleUpdate, updating }) {
   }, [token, showMessage]);
 
   useEffect(() => {
-    if (token) {
+    if (token && !loading) { // Only fetch if main profile is not loading
       fetchPrivacySettings();
     }
-  }, [token, fetchPrivacySettings]);
+  }, [token, fetchPrivacySettings, loading]); // Added loading to dependency array
 
   const handlePrivacyChange = (e) => {
     const { name, type, checked, value } = e.target;
@@ -120,6 +176,10 @@ function Privacy({ form, handleChange, handleUpdate, updating }) {
       cancelLabel: "Cancel"
     });
   };
+
+  if (loading) {
+    return <PrivacySectionSkeleton darkMode={darkMode} />;
+  }
 
   return (
     <motion.div

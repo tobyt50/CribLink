@@ -24,6 +24,89 @@ import {
 } from '@heroicons/react/24/outline';
 import { Menu, X } from 'lucide-react';
 
+// Skeleton component for AgentProfile page
+const AgentProfileSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-8`}>
+
+    <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
+      {/* Left Column Skeleton */}
+      <div className="w-full lg:w-3/5 space-y-8">
+        {/* Agent Info Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-3/4 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className="flex items-start space-x-4 mb-6">
+            <div className={`w-40 h-40 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className="flex-1 space-y-2">
+              <div className={`h-4 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+              <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+              <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+              <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            </div>
+          </div>
+          <div className={`h-6 w-1/4 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-20 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+
+        {/* Agent Listings Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-1/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className={`h-48 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            ))}
+          </div>
+          <div className="flex justify-center mt-4 space-x-4">
+            <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          </div>
+        </div>
+
+        {/* Client Reviews Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-1/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-20 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+      </div>
+
+      {/* Right Column Skeleton */}
+      <div className="w-full lg:w-2/5 space-y-8">
+        {/* Chat with Agent Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl h-40 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-2/3 mx-auto rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-10 w-1/2 mx-auto rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+
+        {/* Agency Overview Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-2/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className={`w-16 h-16 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          </div>
+          <div className={`h-4 w-full rounded mb-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-4 w-full rounded mb-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+
+        {/* Recommended for You Skeleton */}
+        <div className={`p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+          <div className={`h-8 w-2/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className={`h-48 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            ))}
+          </div>
+          <div className="flex justify-center mt-4 space-x-4">
+            <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+
 const AgentProfile = () => {
   const { agentId } = useParams();
   const navigate = useNavigate();
@@ -37,6 +120,7 @@ const AgentProfile = () => {
   const [currentUserName, setCurrentUserName] = useState('');
   const [currentUserEmail, setCurrentUserEmail] = useState('');
   const [currentUserPhone, setCurrentUserPhone] = useState('');
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
   // State for expanded profile picture
   const [isProfilePicExpanded, setIsProfilePicExpanded] = useState(false);
@@ -159,64 +243,47 @@ const AgentProfile = () => {
 
   const fetchAgentData = useCallback(async () => {
     if (!agentId) return;
+    setIsLoading(true); // Set loading to true at the start of the main fetch
 
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const agentRes = await axiosInstance.get(`${API_BASE_URL}/agents/profile/${agentId}`, {
-        headers: headers,
-      });
+      const [agentRes, agentListingsRes, recommendedListingsRes, clientFavoritesRes] = await Promise.all([
+        axiosInstance.get(`${API_BASE_URL}/agents/profile/${agentId}`, { headers: headers }),
+        axiosInstance.get(`${API_BASE_URL}/listings?agent_id=${agentId}`, { headers }),
+        userRole === 'client' && currentUserId
+          ? axiosInstance.get(`${API_BASE_URL}/clients/${currentUserId}/recommendations/agent/${agentId}`, { headers })
+          : Promise.resolve({ data: { recommendations: [] } }), // Resolve immediately if not client or no userId
+        userRole === 'client' && currentUserId
+          ? axiosInstance.get(`${API_BASE_URL}/favourites/properties`, { headers })
+          : Promise.resolve({ data: { favourites: [] } }), // Resolve immediately if not client or no userId
+      ]);
+
       setAgent(agentRes.data);
+      setAgentListings(agentListingsRes.data.listings || []);
+      setRecommendedListings(recommendedListingsRes.data.recommendations || []);
+      setClientFavoriteProperties(clientFavoritesRes.data.favourites?.map(fav => fav.property_id) || []);
 
     } catch (error) {
-      console.error("Error fetching agent profile:", error);
+      console.error("Error fetching agent profile or related data:", error);
       if (error.response) {
         showMessage(`Failed to load agent profile: ${error.response.data.message || 'Server error'}`, 'error');
       } else {
         showMessage('Failed to load agent profile. Please try again.', 'error');
       }
       setAgent(null);
-    }
-  }, [agentId, showMessage]);
-
-
-  const fetchRecommendedListings = useCallback(async () => {
-    if (agentId && userRole === 'client' && currentUserId) {
-      try {
-        const token = localStorage.getItem('token');
-        // Removed limit and page parameters to fetch all recommendations
-        const response = await axiosInstance.get(`${API_BASE_URL}/clients/${currentUserId}/recommendations/agent/${agentId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        setRecommendedListings(response.data.recommendations || []);
-      } catch (error) {
-        console.error("Error fetching recommended listings:", error.response?.data || error.message);
-        showMessage('Failed to load recommended listings.', 'error');
-        setRecommendedListings([]);
-      }
-    } else {
+      setAgentListings([]);
       setRecommendedListings([]);
+      setClientFavoriteProperties([]);
+    } finally {
+      setIsLoading(false); // Set loading to false after all data is fetched or an error occurs
     }
   }, [agentId, userRole, currentUserId, showMessage]);
 
 
-  const fetchAgentListings = useCallback(async () => {
-    if (!agentId) return;
-    try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      // Fetch listings specifically for this agent, removed limit and page parameters
-      const response = await axiosInstance.get(`${API_BASE_URL}/listings?agent_id=${agentId}`, { headers });
-      setAgentListings(response.data.listings || []);
-    } catch (error) {
-      console.error("Error fetching agent's listings:", error);
-      showMessage("Failed to load agent's listings.", 'error'); // Added error message for user
-      setAgentListings([]);
-    }
-  }, [agentId, showMessage]); // Added showMessage to dependencies
-
+  // Removed individual fetch functions for recommended listings, agent listings, and client favorites
+  // as they are now part of fetchAgentData.
 
   const fetchConversationForAgent = useCallback(async () => {
     if (!currentUserId || !agentId) {
@@ -385,25 +452,6 @@ const AgentProfile = () => {
     }
   }, [conversationForModal, showMessage]);
 
-  // New: Function to fetch client's own favorite properties
-  const fetchClientFavoriteProperties = useCallback(async () => {
-    if (userRole === 'client' && currentUserId) {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setClientFavoriteProperties(response.data.favourites.map(fav => fav.property_id) || []);
-      } catch (error) {
-        console.error("Error fetching client's favorite properties:", error);
-        showMessage("Failed to load your favorite properties.", 'error');
-        setClientFavoriteProperties([]);
-      }
-    } else {
-      setClientFavoriteProperties([]);
-    }
-  }, [userRole, currentUserId, showMessage]);
-
   // New: Function to toggle client's favorite status for a property
   const handleToggleClientFavoriteProperty = async (propertyId, isCurrentlyFavorited) => {
     console.log(`Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`); // Debug log
@@ -428,7 +476,7 @@ const AgentProfile = () => {
         setClientFavoriteProperties(prev => prev.filter(id => id !== propertyId));
         showMessage('Removed listing from your favorites!', 'info');
       } else {
-        console.log(`Sending POST request for propertyId: ${propertyId}`); // Debug log
+        console.log(`Sending POST request for propertyId: ${propertyId}`, { property_id: propertyId }); // Debug log
         await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -465,8 +513,7 @@ const AgentProfile = () => {
                 });
                 showMessage('Listing deleted successfully!', 'success');
                 // Refresh both agent's listings and recommended lists after deletion
-                fetchAgentListings();
-                fetchRecommendedListings();
+                fetchAgentData(); // Re-fetch all data
             } catch (error) {
                 console.error('Error deleting listing:', error.response?.data || error.message);
                 showMessage('Failed to delete listing. Please try again.', 'error');
@@ -481,19 +528,8 @@ const AgentProfile = () => {
   useEffect(() => {
     if (currentUserId !== null || userRole === 'guest') {
       fetchAgentData();
-      fetchAgentListings(); // Ensure this is called
     }
-  }, [currentUserId, userRole, fetchAgentData, fetchAgentListings]);
-
-  useEffect(() => {
-    if (userRole === 'client' && currentUserId && agentId) {
-      fetchRecommendedListings();
-      fetchClientFavoriteProperties(); // Fetch client's favorite properties
-    } else {
-      setRecommendedListings([]);
-      setClientFavoriteProperties([]); // Clear client's favorite properties
-    }
-  }, [fetchRecommendedListings, fetchClientFavoriteProperties, userRole, currentUserId, agentId]);
+  }, [currentUserId, userRole, fetchAgentData]);
 
 
   useEffect(() => {
@@ -715,14 +751,6 @@ const AgentProfile = () => {
   }, [handleNextRecommendedAgent, handlePrevRecommendedAgent]);
 
 
-  if (!agent) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? "bg-gray-900 text-gray-400" : "bg-gray-50 text-gray-500"}`}>
-        Loading agent profile...
-      </div>
-    );
-  }
-
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
       <motion.div
@@ -734,544 +762,523 @@ const AgentProfile = () => {
       >
         <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Profile</h1>
 
-        <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
-          {/* Left Column */}
-          <div className="w-full lg:w-3/5 space-y-8">
-            <motion.div
-              className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} space-y-4 ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              {/* Agent Name and Status */}
-              <h2 className={`text-xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-800"} flex items-center`}>
-                {agent.full_name}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
-                  ${agent.user_status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
-                  ${darkMode ? (agent.user_status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
-                  {toSentenceCase(agent.user_status) || 'N/A'}
-                </span>
-              </h2>
-
-              <div className="flex items-start space-x-4 mb-6">
-                {/* Profile Picture */}
-                <div className="relative cursor-pointer" onClick={() => setIsProfilePicExpanded(true)}>
-                  <img
-                    src={agent.profile_picture_url || `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
-                    alt="Agent Profile"
-                    className="w-40 h-40 rounded-full object-cover border-2 border-green-500 shadow-md"
-                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`; }}
-                  />
-                </div>
-                {/* Agent ID, Agency, and Contact Information */}
-                <div className="flex-1">
-                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agent ID: {agent.user_id}</p>
-                  {agent.agency && <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agency: {agent.agency}</p>}
-
-                  <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
-                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
-                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      ✉️ <strong>Email:</strong> <a href={`mailto:${agent.email}`} className="text-blue-500 hover:underline">{agent.email}</a>
-                    </p>
-                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      📞 <strong>Phone:</strong> {agent.phone || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded Profile Picture Modal */}
-              <AnimatePresence>
-                {isProfilePicExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-                    onClick={() => setIsProfilePicExpanded(false)} // Close on click outside
-                  >
-                    <motion.img
-                      ref={profilePicRef}
-                      src={agent.profile_picture_url || `https://placehold.co/400x400/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
-                      alt="Agent Profile Expanded"
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="max-w-full max-h-[90vh] rounded-lg shadow-2xl cursor-pointer"
-                      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image itself
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-
-              <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>About {agent.full_name}</h3>
-                {agent.bio && (
-                  <p className={`${darkMode ? "text-gray-300" : "text-gray-700"} leading-relaxed`}>
-                    {agent.bio}
-                  </p>
-                )}
-                {agent.location && (
-                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <MapPinIcon className="h-5 w-5 text-green-500" /> <strong>Based In:</strong> {agent.location}
-                  </p>
-                )}
-              </div>
-
-              {agent.deals_closed !== undefined && (
-                <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
-                  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Performance Overview</h3>
-                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <UsersIcon className="h-5 w-5 text-green-500" /> <strong>Deals Closed:</strong> {agent.deals_closed || 0}
-                  </p>
-                  <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <StarIcon className="h-5 w-5 text-green-500" /> <strong>Average Rating:</strong> {agent.avg_rating || 'N/A'}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Revenue Generated:</strong> {agent.revenue ? `₦${agent.revenue.toLocaleString()}` : 'N/A'}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>General Information</h3>
-                <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Joined Platform:</strong> {new Date(agent.date_joined).toLocaleDateString()}</p>
-                <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Last Active:</strong> {agent.last_login ? new Date(agent.last_login).toLocaleString() : 'N/A'}</p>
-              </div>
-            </motion.div>
-
-            {/* Chat with Agent section for mobile */}
-            {isMobile && (
-                <motion.div
-                    className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col items-center justify-center text-center ${isMobile ? 'mt-8' : (darkMode ? "bg-gray-800" : "bg-white")}`}
-                    initial={{ x: 50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                    style={{ minHeight: isMobile ? 'auto' : '150px' }}
-                >
-                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                  <ChatBubbleLeftRightIcon className="h-6 w-6 inline-block mr-2" />
-                        Chat with {agent.full_name}
-                    </h2>
-                    {userRole === 'client' ? (
-                        <>
-                            <button
-                                onClick={handleOpenChat}
-                                disabled={userRole !== 'client' || !agentId || !currentUserId}
-                                className={`py-2 px-6 rounded-xl transition font-semibold shadow ${userRole !== 'client' || !agentId || !currentUserId ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                            >
-                                Open Chat
-                            </button>
-                        </>
-                    ) : (
-                        <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                            Please <a href="/signin" className="text-blue-500 hover:underline">log in</a> as a client to interact with this agent.
-                        </p>
-                    )}
-                </motion.div>
-            )}
-
-            {/* Agency Overview Panel - Moved here for mobile */}
-            {isMobile && agent.agency_info && (
+        {isLoading ? ( // Conditionally render skeleton when loading
+          <AgentProfileSkeleton darkMode={darkMode} />
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
+            {/* Left Column */}
+            <div className="w-full lg:w-3/5 space-y-8">
               <motion.div
-                // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
-                // They are now applied only on medium (md) screens and up.
                 className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} space-y-4 ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
-                initial={{ x: 50, opacity: 0 }}
+                initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                  <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                {/* Agent Name and Status */}
+                <h2 className={`text-xl md:text-2xl font-extrabold mb-4 ${darkMode ? "text-green-400" : "text-green-800"} flex items-center`}>
+                  {agent.full_name}
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                    ${agent.user_status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                    ${darkMode ? (agent.user_status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                    {toSentenceCase(agent.user_status) || 'N/A'}
+                  </span>
                 </h2>
-                {agent.agency_info ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-4">
-                    {agent.agency_info.logo_url ? (
-                      <img
-                        src={agent.agency_info.logo_url}
-                        alt={`${agent.agency_info.agency_name} Logo`}
-                        className="w-16 h-16 rounded-full object-cover border border-gray-300"
-                        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
-                      />
-                    ) : (
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
-                        {getInitial(agent.agency_info.agency_name)}
-                      </div>
-                    )}
-                    <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
-                      {agent.agency_info.agency_name}
-                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
-                        ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
-                        ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
-                        {toSentenceCase(agent.agency_info.status) || 'N/A'}
-                      </span>
-                    </p>
+
+                <div className="flex items-start space-x-4 mb-6">
+                  {/* Profile Picture */}
+                  <div className="relative cursor-pointer" onClick={() => setIsProfilePicExpanded(true)}>
+                    <img
+                      src={agent.profile_picture_url || `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`}
+                      alt="Agent Profile"
+                      className="w-40 h-40 rounded-full object-cover border-2 border-green-500 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/150x150/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.full_name)}`; }}
+                    />
                   </div>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
-                  </p>
-                  <div className="flex justify-center"> {/* Centering the button */}
-                    <button
-                      onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
-                      className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                    >
-                      View Agency Profile
-                    </button>
+                  {/* Agent ID, Agency, and Contact Information */}
+                  <div className="flex-1">
+                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agent ID: {agent.user_id}</p>
+                    {agent.agency && <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agency: {agent.agency}</p>}
+
+                    <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
+                      <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
+                      <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                        ✉️ <strong>Email:</strong> <a href={`mailto:${agent.email}`} className="text-blue-500 hover:underline">{agent.email}</a>
+                      </p>
+                      <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                        📞 <strong>Phone:</strong> {agent.phone || 'N/A'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
-              )}
-              </motion.div>
-            )}
 
-            {/* "Recommended for You" section for mobile */}
-            {isMobile && userRole === 'client' && (
+
+                <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>About {agent.full_name}</h3>
+                  {agent.bio && (
+                    <p className={`${darkMode ? "text-gray-300" : "text-gray-700"} leading-relaxed`}>
+                      {agent.bio}
+                    </p>
+                  )}
+                  {agent.location && (
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <MapPinIcon className="h-5 w-5 text-green-500" /> <strong>Based In:</strong> {agent.location}
+                    </p>
+                  )}
+                </div>
+
+                {agent.deals_closed !== undefined && (
+                  <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Performance Overview</h3>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <UsersIcon className="h-5 w-5 text-green-500" /> <strong>Deals Closed:</strong> {agent.deals_closed || 0}
+                    </p>
+                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <StarIcon className="h-5 w-5 text-green-500" /> <strong>Average Rating:</strong> {agent.avg_rating || 'N/A'}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Revenue Generated:</strong> {agent.revenue ? `₦${agent.revenue.toLocaleString()}` : 'N/A'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>General Information</h3>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Joined Platform:</strong> {new Date(agent.date_joined).toLocaleDateString()}</p>
+                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}><strong>Last Active:</strong> {agent.last_login ? new Date(agent.last_login).toLocaleString() : 'N/A'}</p>
+                </div>
+              </motion.div>
+
+              {/* Chat with Agent section for mobile */}
+              {isMobile && (
+                  <motion.div
+                      className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col items-center justify-center text-center ${isMobile ? 'mt-8' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                      initial={{ x: 50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                      style={{ minHeight: isMobile ? 'auto' : '150px' }}
+                  >
+                  <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 inline-block mr-2" />
+                          Chat with {agent.full_name}
+                      </h2>
+                      {userRole === 'client' ? (
+                          <>
+                              <button
+                                  onClick={handleOpenChat}
+                                  disabled={userRole !== 'client' || !agentId || !currentUserId}
+                                  className={`py-2 px-6 rounded-xl transition font-semibold shadow ${userRole !== 'client' || !agentId || !currentUserId ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                              >
+                                  Open Chat
+                              </button>
+                          </>
+                      ) : (
+                          <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                              Please <a href="/signin" className="text-blue-500 hover:underline">log in</a> as a client to interact with this agent.
+                          </p>
+                      )}
+                  </motion.div>
+              )}
+
+              {/* Agency Overview Panel - Moved here for mobile */}
+              {isMobile && agent.agency_info && (
                 <motion.div
-                  className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                  // Refactored: Removed bg-white, rounded-2xl, and shadow-xl for mobile view.
+                  // They are now applied only on medium (md) screens and up.
+                  className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} space-y-4 ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  ref={recommendedCarouselRef}
-                  onTouchStart={handleTouchStartRecommended}
-                  onTouchMove={handleTouchMoveRecommended}
-                  onTouchEnd={handleTouchEndRecommended}
+                  transition={{ duration: 0.5, delay: 0.5 }}
                 >
-                    <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                        Recommended for You by {agent.full_name}
-                    </h2>
-                    {recommendedListings.length > 0 ? (
-                        <div className="flex flex-col items-center w-full">
-                            {/* Removed fixed height container for auto-swipe */}
-                            <div className="relative w-full overflow-hidden">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={`recommended-page-${recommendedListingStartIndex}`}
-                                        initial={{ opacity: 0, x: 100 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -100 }}
-                                        transition={{ duration: 0.6, ease: "easeInOut" }}
-                                        className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
-                                    >
-                                        {displayedRecommendedListings.map(listing => (
-                                            <div key={listing.property_id} className="w-full">
-                                                <ListingCard
-                                                  listing={listing}
-                                                  isFavorited={clientFavoriteProperties.includes(listing.property_id)}
-                                                  onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                                                  userRole={userRole} // Pass user role
-                                                  userId={currentUserId} // Pass currentUserId as userId
-                                                  userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
-                                                  getRoleBasePath={getRoleBasePath} // Pass the function
-                                                  onDeleteListing={handleDeleteListing} // Pass the delete function
-                                                />
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
-                            <div className="flex justify-center mt-4 space-x-4">
-                                <button
-                                    onClick={handlePrevRecommendedAgent}
-                                    disabled={recommendedListingStartIndex === 0}
-                                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                                        ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                        ${recommendedListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <ArrowLeftCircleIcon className="h-8 w-8" />
-                                </button>
-                                <button
-                                    onClick={handleNextRecommendedAgent}
-                                    disabled={recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage}
-                                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                                        ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                        ${recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <ArrowRightCircleIcon className="h-8 w-8" />
-                                </button>
-                            </div>
+                  <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                  </h2>
+                  {agent.agency_info ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      {agent.agency_info.logo_url ? (
+                        <img
+                          src={agent.agency_info.logo_url}
+                          alt={`${agent.agency_info.agency_name} Logo`}
+                          className="w-16 h-16 rounded-full object-cover border border-gray-300"
+                          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
+                        />
+                      ) : (
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
+                          {getInitial(agent.agency_info.agency_name)}
                         </div>
-                    ) : (
-                        <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                            No listings recommended by this agent yet.
-                        </p>
-                    )}
-                </motion.div>
-            )}
-
-            <motion.div
-              className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              ref={agentCarouselRef}
-              onTouchStart={handleTouchStartAgent}
-              onTouchMove={handleTouchMoveAgent}
-              onTouchEnd={handleTouchEndAgent}
-            >
-              <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                Agent's Listings
-              </h2>
-              {agentListings.length > 0 ? (
-                  <div className="flex flex-col items-center w-full">
-                      {/* Removed fixed height container for auto-swipe */}
-                      <div className="relative w-full overflow-hidden">
-                          <AnimatePresence mode="wait">
-                              <motion.div
-                                  key={`agent-page-${agentListingStartIndex}`}
-                                  initial={{ opacity: 0, x: 100 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  exit={{ opacity: 0, x: -100 }}
-                                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                                  className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
-                              >
-                                  {displayedAgentListings.map(listing => (
-                                      <div key={listing.property_id} className="w-full">
-                                          <ListingCard
-                                              listing={listing}
-                                              darkMode={darkMode}
-                                              onViewProperty={handleViewProperty}
-                                              showAgentName={false}
-                                              isFavorited={clientFavoriteProperties.includes(listing.property_id)}
-                                              onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                                              userRole={userRole} // Pass user role
-                                              userId={currentUserId} // Pass currentUserId as userId
-                                              userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
-                                              getRoleBasePath={getRoleBasePath} // Pass the function
-                                              onDeleteListing={handleDeleteListing} // Pass the delete function
-                                          />
-                                      </div>
-                                  ))}
-                              </motion.div>
-                          </AnimatePresence>
-                      </div>
-                      <div className="flex justify-center mt-4 space-x-4">
-                          <button
-                              onClick={handlePrevAgentListing}
-                              disabled={agentListingStartIndex === 0}
-                              className={`p-2 rounded-full shadow-md transition-all duration-200
-                                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                  ${agentListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                              <ArrowLeftCircleIcon className="h-8 w-8" />
-                          </button>
-                          <button
-                              onClick={handleNextAgentListing}
-                              disabled={agentListingStartIndex >= agentListings.length - agentListingsPerPage}
-                              className={`p-2 rounded-full shadow-md transition-all duration-200
-                                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                  ${agentListingStartIndex >= agentListings.length - agentListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                              <ArrowRightCircleIcon className="h-8 w-8" />
-                          </button>
-                      </div>
+                      )}
+                      <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
+                        {agent.agency_info.agency_name}
+                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                          ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                          ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                          {toSentenceCase(agent.agency_info.status) || 'N/A'}
+                        </span>
+                      </p>
+                    </div>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
+                    </p>
+                    <div className="flex justify-center"> {/* Centering the button */}
+                      <button
+                        onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
+                        className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                      >
+                        View Agency Profile
+                      </button>
+                    </div>
                   </div>
-              ) : (
-                  <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                      No listings available from this agent yet.
-                  </p>
+                ) : (
+                  <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
+                )}
+                </motion.div>
               )}
-            </motion.div>
 
-            <motion.div
-              className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                Client Reviews
-              </h2>
-              <div className={`p-4 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
-                  <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                      Client reviews for this agent will appear here. (Requires new API endpoint)
-                  </p>
-              </div>
-            </motion.div>
-
-          </div>
-
-          {/* Right Column */}
-          <div className="w-full lg:w-2/5 space-y-8">
-            {!isMobile && (
-                <motion.div
-                    className={'p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center text-center ' + (darkMode ? "bg-gray-800" : "bg-white")}
+              {/* "Recommended for You" section for mobile */}
+              {isMobile && userRole === 'client' && (
+                  <motion.div
+                    className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
-                    style={{ minHeight: '150px' }}
-                >
-                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                  <ChatBubbleLeftRightIcon className="h-6 w-6 inline-block mr-2" />
-                        Chat with {agent.full_name}
-                    </h2>
-                    {userRole === 'client' ? (
-                        <>
-                            <button
-                                onClick={handleOpenChat}
-                                disabled={userRole !== 'client' || !agentId || !currentUserId}
-                                className={`py-2 px-6 rounded-xl transition font-semibold shadow ${userRole !== 'client' || !agentId || !currentUserId ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                            >
-                                Open Chat
-                            </button>
-                        </>
-                    ) : (
-                        <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                            Please <a href="/signin" className="text-blue-500 hover:underline">log in</a> as a client to interact with this agent.
-                        </p>
-                    )}
-                </motion.div>
-            )}
+                    ref={recommendedCarouselRef}
+                    onTouchStart={handleTouchStartRecommended}
+                    onTouchMove={handleTouchMoveRecommended}
+                    onTouchEnd={handleTouchEndRecommended}
+                  >
+                      <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                          Recommended for You by {agent.full_name}
+                      </h2>
+                      {recommendedListings.length > 0 ? (
+                          <div className="flex flex-col items-center w-full">
+                              {/* Removed fixed height container for auto-swipe */}
+                              <div className="relative w-full overflow-hidden">
+                                  <AnimatePresence mode="wait">
+                                      <motion.div
+                                          key={`recommended-page-${recommendedListingStartIndex}`}
+                                          initial={{ opacity: 0, x: 100 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          exit={{ opacity: 0, x: -100 }}
+                                          transition={{ duration: 0.6, ease: "easeInOut" }}
+                                          className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                                      >
+                                          {displayedRecommendedListings.map(listing => (
+                                              <div key={listing.property_id} className="w-full">
+                                                  <ListingCard
+                                                    listing={listing}
+                                                    isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                                    onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                    userRole={userRole} // Pass user role
+                                                    userId={currentUserId} // Pass currentUserId as userId
+                                                    userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                                    getRoleBasePath={getRoleBasePath} // Pass the function
+                                                    onDeleteListing={handleDeleteListing} // Pass the delete function
+                                                  />
+                                              </div>
+                                          ))}
+                                      </motion.div>
+                                  </AnimatePresence>
+                              </div>
+                              <div className="flex justify-center mt-4 space-x-4">
+                                  <button
+                                      onClick={handlePrevRecommendedAgent}
+                                      disabled={recommendedListingStartIndex === 0}
+                                      className={`p-2 rounded-full shadow-md transition-all duration-200
+                                          ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                          ${recommendedListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                      <ArrowLeftCircleIcon className="h-8 w-8" />
+                                  </button>
+                                  <button
+                                      onClick={handleNextRecommendedAgent}
+                                      disabled={recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage}
+                                      className={`p-2 rounded-full shadow-md transition-all duration-200
+                                          ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                          ${recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                      <ArrowRightCircleIcon className="h-8 w-8" />
+                                  </button>
+                              </div>
+                          </div>
+                      ) : (
+                          <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              No listings recommended by this agent yet.
+                          </p>
+                      )}
+                  </motion.div>
+              )}
 
-            {/* Agency Overview Panel - Moved here for desktop */}
-            {!isMobile && agent.agency_info && (
               <motion.div
-                className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
-                initial={{ x: 50, opacity: 0 }}
+                className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                ref={agentCarouselRef}
+                onTouchStart={handleTouchStartAgent}
+                onTouchMove={handleTouchMoveAgent}
+                onTouchEnd={handleTouchEndAgent}
               >
                 <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                  <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                  Agent's Listings
                 </h2>
-                {agent.agency_info ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-4">
-                    {agent.agency_info.logo_url ? (
-                      <img
-                        src={agent.agency_info.logo_url}
-                        alt={`${agent.agency_info.agency_name} Logo`}
-                        className="w-16 h-16 rounded-full object-cover border border-gray-300"
-                        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
-                      />
-                    ) : (
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
-                        {getInitial(agent.agency_info.agency_name)}
-                      </div>
-                    )}
-                    <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
-                      {agent.agency_info.agency_name}
-                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
-                        ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
-                        ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
-                        {toSentenceCase(agent.agency_info.status) || 'N/A'}
-                      </span>
+                {agentListings.length > 0 ? (
+                    <div className="flex flex-col items-center w-full">
+                        {/* Removed fixed height container for auto-swipe */}
+                        <div className="relative w-full overflow-hidden">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={`agent-page-${agentListingStartIndex}`}
+                                    initial={{ opacity: 0, x: 100 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -100 }}
+                                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                                    className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                                >
+                                    {displayedAgentListings.map(listing => (
+                                        <div key={listing.property_id} className="w-full">
+                                            <ListingCard
+                                                listing={listing}
+                                                darkMode={darkMode}
+                                                onViewProperty={handleViewProperty}
+                                                showAgentName={false}
+                                                isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                                onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                userRole={userRole} // Pass user role
+                                                userId={currentUserId} // Pass currentUserId as userId
+                                                userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                                getRoleBasePath={getRoleBasePath} // Pass the function
+                                                onDeleteListing={handleDeleteListing} // Pass the delete function
+                                            />
+                                        </div>
+                                    ))}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                        <div className="flex justify-center mt-4 space-x-4">
+                            <button
+                                onClick={handlePrevAgentListing}
+                                disabled={agentListingStartIndex === 0}
+                                className={`p-2 rounded-full shadow-md transition-all duration-200
+                                    ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                    ${agentListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <ArrowLeftCircleIcon className="h-8 w-8" />
+                            </button>
+                            <button
+                                onClick={handleNextAgentListing}
+                                disabled={agentListingStartIndex >= agentListings.length - agentListingsPerPage}
+                                className={`p-2 rounded-full shadow-md transition-all duration-200
+                                    ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                    ${agentListingStartIndex >= agentListings.length - agentListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <ArrowRightCircleIcon className="h-8 w-8" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                        No listings available from this agent yet.
                     </p>
-                  </div>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
-                  </p>
-                  <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
-                  </p>
-                  <div className="flex justify-center"> {/* Centering the button */}
-                    <button
-                      onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
-                      className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                    >
-                      View Agency Profile
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
-              )}
+                )}
               </motion.div>
-            )}
 
-            {/* "Recommended for You" section for desktop */}
-            {!isMobile && userRole === 'client' && (
+              <motion.div
+                className={`${isMobile ? '' : 'p-6 rounded-2xl shadow-xl'} flex flex-col ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
+                initial={{ x: -50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+              >
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                  Client Reviews
+                </h2>
+                <div className={`p-4 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+                    <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                        Client reviews for this agent will appear here. (Requires new API endpoint)
+                    </p>
+                </div>
+              </motion.div>
+
+            </div>
+
+            {/* Right Column */}
+            <div className="w-full lg:w-2/5 space-y-8">
+              {!isMobile && (
+                  <motion.div
+                      className={'p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center text-center ' + (darkMode ? "bg-gray-800" : "bg-white")}
+                      initial={{ x: 50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                      style={{ minHeight: '150px' }}
+                  >
+                  <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 inline-block mr-2" />
+                          Chat with {agent.full_name}
+                      </h2>
+                      {userRole === 'client' ? (
+                          <>
+                              <button
+                                  onClick={handleOpenChat}
+                                  disabled={userRole !== 'client' || !agentId || !currentUserId}
+                                  className={`py-2 px-6 rounded-xl transition font-semibold shadow ${userRole !== 'client' || !agentId || !currentUserId ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                              >
+                                  Open Chat
+                              </button>
+                          </>
+                      ) : (
+                          <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                              Please <a href="/signin" className="text-blue-500 hover:underline">log in</a> as a client to interact with this agent.
+                          </p>
+                      )}
+                  </motion.div>
+              )}
+
+              {/* Agency Overview Panel - Moved here for desktop */}
+              {!isMobile && agent.agency_info && (
                 <motion.div
-                  className={'p-6 rounded-2xl shadow-xl flex flex-col ' + (darkMode ? "bg-gray-800" : "bg-white")}
+                  className={`p-6 rounded-2xl shadow-xl space-y-4 ${darkMode ? "bg-gray-800" : "bg-white"}`}
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  ref={recommendedCarouselRef}
-                  onTouchStart={handleTouchStartRecommended}
-                  onTouchMove={handleTouchMoveRecommended}
-                  onTouchEnd={handleTouchEndRecommended}
+                  transition={{ duration: 0.5, delay: 0.5 }}
                 >
-                    <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                        Recommended for You by {agent.full_name}
-                    </h2>
-                    {recommendedListings.length > 0 ? (
-                        <div className="flex flex-col items-center w-full">
-                            {/* Removed fixed height container for auto-swipe */}
-                            <div className="relative w-full overflow-hidden">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={`recommended-page-${recommendedListingStartIndex}`}
-                                        initial={{ opacity: 0, x: 100 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -100 }}
-                                        transition={{ duration: 0.6, ease: "easeInOut" }}
-                                        className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
-                                    >
-                                        {displayedRecommendedListings.map(listing => (
-                                            <div key={listing.property_id} className="w-full">
-                                                <ListingCard
-                                                  listing={listing}
-                                                  isFavorited={clientFavoriteProperties.includes(listing.property_id)}
-                                                  onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
-                                                  userRole={userRole} // Pass user role
-                                                  userId={currentUserId} // Pass currentUserId as userId
-                                                  userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
-                                                  getRoleBasePath={getRoleBasePath} // Pass the function
-                                                  onDeleteListing={handleDeleteListing} // Pass the delete function
-                                                />
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
-                            <div className="flex justify-center mt-4 space-x-4">
-                                <button
-                                    onClick={handlePrevRecommendedAgent}
-                                    disabled={recommendedListingStartIndex === 0}
-                                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                                        ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                        ${recommendedListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <ArrowLeftCircleIcon className="h-8 w-8" />
-                                </button>
-                                <button
-                                    onClick={handleNextRecommendedAgent}
-                                    disabled={recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage}
-                                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                                        ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                                        ${recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <ArrowRightCircleIcon className="h-8 w-8" />
-                                </button>
-                            </div>
+                  <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    <BuildingOfficeIcon className="h-6 w-6 inline-block mr-2" /> Agency Overview
+                  </h2>
+                  {agent.agency_info ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      {agent.agency_info.logo_url ? (
+                        <img
+                          src={agent.agency_info.logo_url}
+                          alt={`${agent.agency_info.agency_name} Logo`}
+                          className="w-16 h-16 rounded-full object-cover border border-gray-300"
+                          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/64x64/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(agent.agency_info.agency_name)}`; }}
+                        />
+                      ) : (
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${darkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
+                          {getInitial(agent.agency_info.agency_name)}
                         </div>
-                    ) : (
-                        <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                            No listings recommended by this agent yet.
-                        </p>
-                    )}
+                      )}
+                      <p className={`text-lg font-semibold ${darkMode ? "text-gray-200" : "text-gray-800"} flex items-center`}>
+                        {agent.agency_info.agency_name}
+                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                          ${agent.agency_info.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}
+                          ${darkMode ? (agent.agency_info.status === 'active' ? 'dark:bg-green-700 dark:text-green-200' : 'dark:bg-red-700 dark:text-red-200') : ''}`}>
+                          {toSentenceCase(agent.agency_info.status) || 'N/A'}
+                        </span>
+                      </p>
+                    </div>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Location:</strong> {agent.agency_info.location || 'N/A'}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Date Founded:</strong> {formatDate(agent.agency_info.date_founded)}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Total Agents:</strong> {agent.agency_info.total_agents || 'N/A'}
+                    </p>
+                    <p className={`text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <strong>Total Listings:</strong> {agent.agency_info.total_listings || 'N/A'}
+                    </p>
+                    <div className="flex justify-center"> {/* Centering the button */}
+                      <button
+                        onClick={() => navigate(`/agencies/${agent.agency_info.agency_id}`)} /* Link to agency profile page */
+                        className={`mt-4 py-2 px-4 rounded-xl transition font-semibold shadow ${darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                      >
+                        View Agency Profile
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>No agency information available.</p>
+                )}
                 </motion.div>
-            )}
+              )}
+
+              {/* "Recommended for You" section for desktop */}
+              {!isMobile && userRole === 'client' && (
+                  <motion.div
+                    className={'p-6 rounded-2xl shadow-xl flex flex-col ' + (darkMode ? "bg-gray-800" : "bg-white")}
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    ref={recommendedCarouselRef}
+                    onTouchStart={handleTouchStartRecommended}
+                    onTouchMove={handleTouchMoveRecommended}
+                    onTouchEnd={handleTouchEndRecommended}
+                  >
+                      <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                          Recommended for You by {agent.full_name}
+                      </h2>
+                      {recommendedListings.length > 0 ? (
+                          <div className="flex flex-col items-center w-full">
+                              {/* Removed fixed height container for auto-swipe */}
+                              <div className="relative w-full overflow-hidden">
+                                  <AnimatePresence mode="wait">
+                                      <motion.div
+                                          key={`recommended-page-${recommendedListingStartIndex}`}
+                                          initial={{ opacity: 0, x: 100 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          exit={{ opacity: 0, x: -100 }}
+                                          transition={{ duration: 0.6, ease: "easeInOut" }}
+                                          className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                                      >
+                                          {displayedRecommendedListings.map(listing => (
+                                              <div key={listing.property_id} className="w-full">
+                                                  <ListingCard
+                                                    listing={listing}
+                                                    isFavorited={clientFavoriteProperties.includes(listing.property_id)}
+                                                    onFavoriteToggle={(propertyId, isCurrentlyFavorited) => handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)}
+                                                    userRole={userRole} // Pass user role
+                                                    userId={currentUserId} // Pass currentUserId as userId
+                                                    userAgencyId={agent?.agency_id} // Pass agent's agency ID if available
+                                                    getRoleBasePath={getRoleBasePath} // Pass the function
+                                                    onDeleteListing={handleDeleteListing} // Pass the delete function
+                                                  />
+                                              </div>
+                                          ))}
+                                      </motion.div>
+                                  </AnimatePresence>
+                              </div>
+                              <div className="flex justify-center mt-4 space-x-4">
+                                  <button
+                                      onClick={handlePrevRecommendedAgent}
+                                      disabled={recommendedListingStartIndex === 0}
+                                      className={`p-2 rounded-full shadow-md transition-all duration-200
+                                          ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                          ${recommendedListingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                      <ArrowLeftCircleIcon className="h-8 w-8" />
+                                  </button>
+                                  <button
+                                      onClick={handleNextRecommendedAgent}
+                                      disabled={recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage}
+                                      className={`p-2 rounded-full shadow-md transition-all duration-200
+                                          ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
+                                          ${recommendedListingStartIndex >= recommendedListings.length - recommendedListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                      <ArrowRightCircleIcon className="h-8 w-8" />
+                                  </button>
+                              </div>
+                          </div>
+                      ) : (
+                          <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              No listings recommended by this agent yet.
+                          </p>
+                      )}
+                  </motion.div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
       <AnimatePresence>

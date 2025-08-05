@@ -76,6 +76,7 @@ const AgencyProfile = () => {
 
   const agencyListingsCarouselRef = useRef(null);
   const autoSwipeAgencyListingsIntervalRef = useRef(null);
+  const initialScrollSetAgencyListings = useRef(false); // New ref for initial scroll
 
   // Determine if the current user is an admin of this agency
   useEffect(() => {
@@ -818,20 +819,58 @@ const AgencyProfile = () => {
 
 
   // Carousel navigation for agency listings
+  const scrollAgencyListings = useCallback((direction) => {
+    if (agencyListingsCarouselRef.current && agencyListings.length > 0) {
+      const carousel = agencyListingsCarouselRef.current;
+      const currentScrollLeft = carousel.scrollLeft;
+
+      const itemElement = carousel.querySelector('.agency-listing-card-item');
+      if (!itemElement) return;
+
+      const itemStyle = window.getComputedStyle(itemElement);
+      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+      const itemMarginRight = parseFloat(itemStyle.marginRight);
+      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+
+      const numOriginalItems = agencyListings.length;
+      const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+
+      let newScrollTarget = currentScrollLeft;
+
+      if (direction === 'next') {
+        newScrollTarget += itemWidthWithMargins;
+        // If we've scrolled past the end of the second set (into the third set)
+        if (newScrollTarget >= 2 * totalOriginalListWidth) {
+          // Instantly snap back to the equivalent position in the second set
+          carousel.scrollLeft = currentScrollLeft - totalOriginalListWidth;
+          newScrollTarget = carousel.scrollLeft + itemWidthWithMargins; // Adjust target based on new snapped position
+        }
+      } else { // 'prev'
+        newScrollTarget -= itemWidthWithMargins;
+        // If we've scrolled before the beginning of the second set (into the first set)
+        if (newScrollTarget < totalOriginalListWidth) {
+          // Instantly snap forward to the equivalent position in the second set
+          carousel.scrollLeft = currentScrollLeft + totalOriginalListWidth;
+          newScrollTarget = carousel.scrollLeft - itemWidthWithMargins; // Adjust target based on new snapped position
+        }
+      }
+
+      carousel.scrollTo({
+        left: newScrollTarget,
+        behavior: 'smooth',
+      });
+    }
+  }, [agencyListings.length]);
+
   const handlePrevListing = useCallback(() => {
-    setListingStartIndex((prevIndex) => Math.max(0, prevIndex - currentListingsPerPage));
+    scrollAgencyListings('prev');
     clearInterval(autoSwipeAgencyListingsIntervalRef.current); // Stop auto-swipe on manual interaction
-  }, [currentListingsPerPage]);
+  }, [scrollAgencyListings]);
 
   const handleNextListing = useCallback(() => {
-    setListingStartIndex((prevIndex) => {
-      const totalPages = Math.ceil(agencyListings.length / currentListingsPerPage);
-      const currentPage = prevIndex / currentListingsPerPage;
-      const nextPage = (currentPage + 1) % totalPages;
-      return nextPage * currentListingsPerPage;
-    });
+    scrollAgencyListings('next');
     clearInterval(autoSwipeAgencyListingsIntervalRef.current); // Stop auto-swipe on manual interaction
-  }, [agencyListings.length, currentListingsPerPage]);
+  }, [scrollAgencyListings]);
 
   // Auto-swipe for agency listings
   useEffect(() => {
@@ -840,15 +879,10 @@ const AgencyProfile = () => {
       clearInterval(autoSwipeAgencyListingsIntervalRef.current);
     }
 
-    if (agencyListings.length > currentListingsPerPage) {
+    if (agencyListings.length > 0) { // Only auto-swipe if there are listings
       autoSwipeAgencyListingsIntervalRef.current = setInterval(() => {
-        setListingStartIndex((prevIndex) => {
-          const totalPages = Math.ceil(agencyListings.length / currentListingsPerPage);
-          const currentPage = prevIndex / currentListingsPerPage;
-          const nextPage = (currentPage + 1) % totalPages;
-          return nextPage * currentListingsPerPage;
-        });
-      }, 5000); // Change every 5 seconds (adjust as needed)
+        scrollAgencyListings('next');
+      }, 3000); // Change every 3 seconds
     }
 
     // Cleanup function: clear interval when component unmounts or dependencies change
@@ -857,7 +891,7 @@ const AgencyProfile = () => {
         clearInterval(autoSwipeAgencyListingsIntervalRef.current);
       }
     };
-  }, [agencyListings, currentListingsPerPage]);
+  }, [agencyListings.length, scrollAgencyListings]);
 
   // Touch event handlers for carousel
   const handleTouchStartAgencyListings = useCallback((e) => {
@@ -889,11 +923,26 @@ const AgencyProfile = () => {
     agencyListingsCarouselRef.current.startX = undefined;
   }, [handleNextListing, handlePrevListing]);
 
-  // Listings to display in the current carousel view
-  const displayedAgencyListings = agencyListings.slice(
-    listingStartIndex,
-    listingStartIndex + currentListingsPerPage
-  );
+  // Effect to set initial scroll position to the middle set of duplicated items
+  useEffect(() => {
+    if (agencyListingsCarouselRef.current && agencyListings.length > 0 && !initialScrollSetAgencyListings.current) {
+      const carousel = agencyListingsCarouselRef.current;
+      const itemElement = carousel.querySelector('.agency-listing-card-item');
+      if (itemElement) {
+        const itemStyle = window.getComputedStyle(itemElement);
+        const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+        const itemMarginRight = parseFloat(itemStyle.marginRight);
+        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+
+        const numOriginalItems = agencyListings.length;
+        const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+
+        // Scroll to the beginning of the second set of items
+        carousel.scrollLeft = totalOriginalListWidth;
+        initialScrollSetAgencyListings.current = true; // Mark as set
+      }
+    }
+  }, [agencyListings.length]); // Re-run if the number of agency listings changes
 
   // Determine the current user's affiliation status with THIS agency
   const currentUserAffiliationWithThisAgency = currentUserMemberships.find(
@@ -1367,9 +1416,7 @@ const AgencyProfile = () => {
                         />
                         <div>
                           <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{request.agent_name}</p>
-                          <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                            {request.agent_email}
-                          </p>
+                          <p className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>{request.agent_email}</p>
                           <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Requested: {new Date(request.requested_at).toLocaleDateString()}</p>
                         </div>
                       </div>
@@ -1481,68 +1528,73 @@ const AgencyProfile = () => {
       {/* Agency Listings Section */}
       {agencyListings.length > 0 && (
         <motion.div
-          className={`max-w-7xl mx-auto mt-12 space-y-6 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}
+          className={`max-w-7xl mx-auto mt-12 space-y-6 p-0 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
+            darkMode ? "bg-white border-gray-200" : "bg-white border-gray-200"
+          }`}
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          ref={agencyListingsCarouselRef}
           onTouchStart={handleTouchStartAgencyListings}
           onTouchMove={handleTouchMoveAgencyListings}
           onTouchEnd={handleTouchEndAgencyListings}
         >
-          <h2 className={`text-xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"} flex items-center justify-center gap-2`}>
+          <h2 className={`text-xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
+            darkMode ? "text-green-400" : "text-green-800"
+          }`}>
             <HomeIcon size={24} /> Listings by {agency?.name || 'Agency'}
           </h2>
-          <div className="flex flex-col items-center w-full">
-            <div className="relative w-full overflow-hidden min-h-[650px] md:min-h-[350px]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`agency-listing-page-${listingStartIndex}`}
-                  initial={{ opacity: 0, x: 100 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full absolute inset-0"
-                >
-                  {displayedAgencyListings.map((listing) => {
-                    return (
-                      <div key={listing.property_id} className="w-full">
-                        <ListingCard
-  listing={{ ...listing, agency_id: user?.agency_id }}
-  darkMode={darkMode}
-  userRole={user?.role}
-  userId={user?.user_id}
-  userAgencyId={user?.agency_id}
-  getRoleBasePath={() => '/agency'}
-  isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
-  onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
-    handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
-  }
-/>
-
-                      </div>
-                    );
-                  })}
-                </motion.div>
-              </AnimatePresence>
+          <style>{`
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            /* Hide scrollbar for IE, Edge and Firefox */
+            .no-scrollbar {
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+            }
+          `}</style>
+          <div className="relative">
+            <div
+              ref={agencyListingsCarouselRef}
+              className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
+            >
+              {/* Duplicate listings three times to create a continuous loop effect */}
+              {[...agencyListings, ...agencyListings, ...agencyListings].map((listing, index) => {
+                return (
+                  <div
+                    key={`agency-listing-${listing.property_id}-${index}`} // Unique key for duplicated items
+                    className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 agency-listing-card-item"
+                  >
+                    <ListingCard
+                      listing={{ ...listing, agency_id: user?.agency_id }}
+                      darkMode={darkMode}
+                      userRole={user?.role}
+                      userId={user?.user_id}
+                      userAgencyId={user?.agency_id}
+                      getRoleBasePath={() => '/agency'}
+                      isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
+                      onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
+                        handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div className="flex justify-center mt-4 space-x-4">
               <button
                 onClick={handlePrevListing}
-                disabled={listingStartIndex === 0}
                 className={`p-2 rounded-full shadow-md transition-all duration-200
-                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                  ${listingStartIndex === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}`}
               >
                 <ArrowLeftCircleIcon className="h-8 w-8" />
               </button>
 
               <button
                 onClick={handleNextListing}
-                disabled={listingStartIndex >= agencyListings.length - currentListingsPerPage}
                 className={`p-2 rounded-full shadow-md transition-all duration-200
-                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                  ${listingStartIndex >= agencyListings.length - currentListingsPerPage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}`}
               >
                 <ArrowRightCircleIcon className="h-8 w-8" />
               </button>

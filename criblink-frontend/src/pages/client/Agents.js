@@ -26,6 +26,75 @@ import { useAuth } from '../../context/AuthContext';
 import ClientInquiryModal from '../../components/ClientInquiryModal'; // Added this import
 import socket from '../../socket'; // Import socket
 
+// Skeleton component for Agents page
+const AgentsSkeleton = ({ darkMode, viewMode }) => (
+  <div className={`animate-pulse space-y-4`}>
+    
+
+    {/* Content Skeleton based on viewMode */}
+    {viewMode === 'graphical' ? (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => ( // 6 skeleton cards
+          <div key={i} className={`p-4 rounded-xl shadow-md h-64 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center">
+                <div className={`w-16 h-16 rounded-full mr-4 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                <div className={`h-6 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              </div>
+              <div className={`h-6 w-16 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className="space-y-2 mt-4">
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className="flex justify-end mt-4 space-x-2">
+              <div className={`h-8 w-20 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-8 w-20 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          <thead>
+            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              <th className="py-2 px-2" style={{ width: '18%' }}>Name</th>
+              <th className="py-2 px-2" style={{ width: '22%' }}>Email</th>
+              <th className="py-2 px-2" style={{ width: '15%' }}>Phone</th>
+              <th className="py-2 px-2" style={{ width: '18%' }}>Agency</th>
+              <th className="py-2 px-2" style={{ width: '27%' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+            {[...Array(5)].map((_, i) => ( // 5 skeleton rows
+              <tr key={i} className={`${darkMode ? "bg-gray-700" : "bg-gray-100"} h-16`}>
+                <td className="px-2 py-2"><div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+                <td className="px-2 py-2"><div className={`h-6 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+                <td className="px-2 py-2"><div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+                <td className="px-2 py-2"><div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div></td>
+                <td className="px-2 py-2 flex gap-2">
+                  <div className={`h-8 w-16 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                  <div className={`h-8 w-16 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {/* Pagination Skeleton */}
+    <div className="flex justify-center items-center space-x-4 mt-4">
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
+
 // Reusable Dropdown Component (embedded directly, similar to Clients.js)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -158,7 +227,7 @@ const Agents = () => {
   // Ref for infinite scroll (no longer used for in-container scroll)
   const scrollContainerRef = useRef(null);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Added isLoading state
 
   // State for chat modal
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -211,7 +280,7 @@ const Agents = () => {
 
   const fetchAllAgents = useCallback(async (pageToFetch, search, append = false) => {
     if (!token) return;
-    setIsLoading(true);
+    setIsLoading(true); // Set loading to true
     const headers = { Authorization: `Bearer ${token}` };
     try {
       const response = await axios.get(`${API_BASE_URL}/clients/all-agents?page=${pageToFetch}&limit=${itemsPerPage}&search=${search}`, { headers });
@@ -233,7 +302,7 @@ const Agents = () => {
       console.error("Error fetching all agents:", error);
       showMessage("Failed to load agents.", "error");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Set loading to false
     }
   }, [token, showMessage]);
 
@@ -927,7 +996,7 @@ const Agents = () => {
 
       <ClientSidebar
         collapsed={isMobile ? false : isCollapsed}
-        setCollapsed={isMobile ? () => {} : setIsCollapsed}
+        setCollapsed={isCollapsed}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         isMobile={isMobile}
@@ -963,7 +1032,7 @@ const Agents = () => {
     placeholder="Search agents by name, email, phone, or agency..."
     value={searchTerm}
     onChange={handleSearchChange}
-    className={`w-full max-w-[28rem] px-4 py-2 border rounded-xl shadow-sm ...`}
+    className={`w-full max-w-[28rem] px-4 py-2 border rounded-xl shadow-sm ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
   />
 </div>
 
@@ -1047,113 +1116,117 @@ const Agents = () => {
           </div>
 
           {/* Displayed Agents List (combined, filtered, and sorted) */}
-          {displayedAgents.length === 0 && !isLoading ? (
-            <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-              {searchTerm ? "No agents found matching your search criteria." : "No agents in this category."}
-            </div>
+          {isLoading ? ( // Conditionally render skeleton when loading
+            <AgentsSkeleton darkMode={darkMode} viewMode={viewMode} />
           ) : (
-            <div
-              // Removed ref={scrollContainerRef} and onScroll={handleScroll}
-              className="space-y-6 pr-2" // Removed max-h-[70vh] and overflow-y-auto
-            >
-              {viewMode === 'graphical' ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {displayedAgents.map(agent => (
-                    <AgentCard
-                      key={agent.user_id}
-                      agent={agent}
-                      onViewProfile={handleViewProfile}
-                      connectionStatus={agent.connectionStatus} // Use the status derived in useMemo
-                      onConnectAgent={handleConnectAgent}
-                      onCancelRequest={handleCancelRequest}
-                      onAcceptRequest={handleAcceptIncomingRequest}
-                      onRejectRequest={handleRejectIncomingRequest}
-                      onDisconnectAgent={handleDisconnectAgent}
-                      onChatAgent={handleChatAgent} // Added this prop
-                      // Pass request_id if it's a pending request
-                      requestId={agent.requestId}
-                      onFavoriteToggle={handleFavoriteToggle} // Pass the new handler
-                      isFavorited={favoriteAgentsStatus.has(agent.user_id)} // Pass favorite status
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                    <thead>
-                      <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '18%' }}>Name {renderSortIcon('full_name')}</th>
-                        <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '22%' }}>Email {renderSortIcon('email')}</th>
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th> {/* New Phone Header */}
-                        <th onClick={() => handleSortClick('agency_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '18%' }}>Agency {renderSortIcon('agency_name')}</th>
-                        {/* Removed Status column header */}
-                        <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '27%' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                      {displayedAgents.map(agent => (
-                        <tr
-                          key={agent.user_id}
-                          className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
-                          onClick={() => handleViewProfile(agent.user_id)} // Make row clickable
-                        >
-                          <td className="px-1 py-2" title={agent.full_name}>{agent.full_name}</td>
-                          <td className="px-1 py-2" title={agent.email}>{agent.email}</td>
-                          <td className="px-1 py-2" title={agent.phone}>{agent.phone || 'N/A'}</td> {/* New Phone Data */}
-                          <td className="px-1 py-2" title={agent.agency_name}>{agent.agency_name || 'N/A'}</td>
-                          {/* Removed Status column data */}
-                          <td className="px-1 py-2 flex gap-1" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for action buttons */}
-                            {/* Actions based on connection status */}
-                            {agent.connectionStatus === 'none' && (
-                              <button onClick={() => handleConnectAgent(agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-purple-500 hover:border-purple-600 border border-transparent`} title="Send Connection Request">
-                                <Plus className="h-4 w-4 mr-1" />Connect
-                              </button>
-                            )}
-                            {agent.connectionStatus === 'pending_sent' && (
-                              <button onClick={() => handleCancelRequest(agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`} title="Cancel Sent Request">
-                                <XMarkIcon className="h-4 w-4 mr-1" />Cancel
-                              </button>
-                            )}
-                            {agent.connectionStatus === 'pending_received' && (
-                              <>
-                                <button onClick={() => handleAcceptIncomingRequest(agent.requestId, agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`} title="Accept Incoming Request">
-                                  <CheckCircleIcon className="h-4 w-4 mr-1" />Accept
-                                </button>
-                                <button onClick={() => handleRejectIncomingRequest(agent.requestId)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`} title="Reject Incoming Request">
-                                  <XCircleIcon className="h-4 w-4 mr-1" />Reject
-                                </button>
-                              </>
-                            )}
-                            {agent.connectionStatus === 'connected' && (
-                              <>
-                                <button onClick={() => handleSendEmail(agent)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`} title="Send Email">
-                                  <EnvelopeIcon className="h-4 w-4 mr-1" />Email
-                                </button>
-                                {agent.phone && (
-                                  <button onClick={() => handleCallAgent(agent.phone)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`} title="Call Agent">
-                                    <PhoneIcon className="h-4 w-4 mr-1" />Call
-                                  </button>
-                                )}
-                                <button onClick={() => handleChatAgent(agent)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`} title="Chat with Agent">
-                                  <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
-                                </button>
-                                <button onClick={() => handleDisconnectAgent(agent.user_id)} className={`text-sm rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`} title="Disconnect">
-                                  <TrashIcon className="h-5 w-5" /> {/* Icon only for disconnect */}
-                                </button>
-                              </>
-                            )}
-                          </td>
+            displayedAgents.length === 0 ? (
+              <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                {searchTerm ? "No agents found matching your search criteria." : "No agents in this category."}
+              </div>
+            ) : (
+              <div
+                // Removed ref={scrollContainerRef} and onScroll={handleScroll}
+                className="space-y-6 pr-2" // Removed max-h-[70vh] and overflow-y-auto
+              >
+                {viewMode === 'graphical' ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {displayedAgents.map(agent => (
+                      <AgentCard
+                        key={agent.user_id}
+                        agent={agent}
+                        onViewProfile={handleViewProfile}
+                        connectionStatus={agent.connectionStatus} // Use the status derived in useMemo
+                        onConnectAgent={handleConnectAgent}
+                        onCancelRequest={handleCancelRequest}
+                        onAcceptRequest={handleAcceptIncomingRequest}
+                        onRejectRequest={handleRejectIncomingRequest}
+                        onDisconnectAgent={handleDisconnectAgent}
+                        onChatAgent={handleChatAgent} // Added this prop
+                        // Pass request_id if it's a pending request
+                        requestId={agent.requestId}
+                        onFavoriteToggle={handleFavoriteToggle} // Pass the new handler
+                        isFavorited={favoriteAgentsStatus.has(agent.user_id)} // Pass favorite status
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <thead>
+                        <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '18%' }}>Name {renderSortIcon('full_name')}</th>
+                          <th onClick={() => handleSortClick('email')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '22%' }}>Email {renderSortIcon('email')}</th>
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Phone</th> {/* New Phone Header */}
+                          <th onClick={() => handleSortClick('agency_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '18%' }}>Agency {renderSortIcon('agency_name')}</th>
+                          {/* Removed Status column header */}
+                          <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: '27%' }}>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {isLoading && <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Loading more agents...</p>}
-              {!hasMore && !isLoading && displayedAgents.length > 0 && searchTerm && (
-                <p className={`text-center text-sm ${darkMode ? "text-gray-500" : "text-gray-400"}`}>End of list.</p>
-              )}
-            </div>
+                      </thead>
+                      <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                        {displayedAgents.map(agent => (
+                          <tr
+                            key={agent.user_id}
+                            className={`border-t cursor-pointer break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}
+                            onClick={() => handleViewProfile(agent.user_id)} // Make row clickable
+                          >
+                            <td className="px-1 py-2" title={agent.full_name}>{agent.full_name}</td>
+                            <td className="px-1 py-2" title={agent.email}>{agent.email}</td>
+                            <td className="px-1 py-2" title={agent.phone}>{agent.phone || 'N/A'}</td> {/* New Phone Data */}
+                            <td className="px-1 py-2" title={agent.agency_name}>{agent.agency_name || 'N/A'}</td>
+                            {/* Removed Status column data */}
+                            <td className="px-1 py-2 flex gap-1" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for action buttons */}
+                              {/* Actions based on connection status */}
+                              {agent.connectionStatus === 'none' && (
+                                <button onClick={() => handleConnectAgent(agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-purple-500 hover:border-purple-600 border border-transparent`} title="Send Connection Request">
+                                  <Plus className="h-4 w-4 mr-1" />Connect
+                                </button>
+                              )}
+                              {agent.connectionStatus === 'pending_sent' && (
+                                <button onClick={() => handleCancelRequest(agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-yellow-500 hover:border-yellow-600 border border-transparent`} title="Cancel Sent Request">
+                                  <XMarkIcon className="h-4 w-4 mr-1" />Cancel
+                                </button>
+                              )}
+                              {agent.connectionStatus === 'pending_received' && (
+                                <>
+                                  <button onClick={() => handleAcceptIncomingRequest(agent.requestId, agent.user_id)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`} title="Accept Incoming Request">
+                                    <CheckCircleIcon className="h-4 w-4 mr-1" />Accept
+                                  </button>
+                                  <button onClick={() => handleRejectIncomingRequest(agent.requestId)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`} title="Reject Incoming Request">
+                                    <XCircleIcon className="h-4 w-4 mr-1" />Reject
+                                  </button>
+                                </>
+                              )}
+                              {agent.connectionStatus === 'connected' && (
+                                <>
+                                  <button onClick={() => handleSendEmail(agent)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`} title="Send Email">
+                                    <EnvelopeIcon className="h-4 w-4 mr-1" />Email
+                                  </button>
+                                  {agent.phone && (
+                                    <button onClick={() => handleCallAgent(agent.phone)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-green-500 hover:border-green-600 border border-transparent`} title="Call Agent">
+                                      <PhoneIcon className="h-4 w-4 mr-1" />Call
+                                    </button>
+                                  )}
+                                  <button onClick={() => handleChatAgent(agent)} className={`text-sm rounded-xl px-2 py-1 h-8 flex items-center justify-center text-blue-500 hover:border-blue-600 border border-transparent`} title="Chat with Agent">
+                                    <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />Chat
+                                  </button>
+                                  <button onClick={() => handleDisconnectAgent(agent.user_id)} className={`text-sm rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`} title="Disconnect">
+                                    <TrashIcon className="h-5 w-5" /> {/* Icon only for disconnect */}
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {isLoading && <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Loading more agents...</p>}
+                {!hasMore && !isLoading && displayedAgents.length > 0 && searchTerm && (
+                  <p className={`text-center text-sm ${darkMode ? "text-gray-500" : "text-gray-400"}`}>End of list.</p>
+                )}
+              </div>
+            )
           )}
 
           {/* Pagination for the unified list (only visible when search is active) */}

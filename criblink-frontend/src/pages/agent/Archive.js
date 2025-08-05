@@ -12,6 +12,81 @@ import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
 import AgentInquiryModal from '../../components/AgentInquiryModal'; // Import AgentInquiryModal
 
+// Skeleton loader for a single client row
+const ClientTableRowSkeleton = ({ darkMode }) => (
+  <tr className={`border-t animate-pulse ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+    <td className="px-2 py-2">
+      <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-2 py-2">
+      <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-2 py-2">
+      <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-2 py-2">
+      <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="px-2 py-2 flex gap-2">
+      <div className={`h-8 w-16 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+  </tr>
+);
+
+// Skeleton loader for a single inquiry card (mobile view)
+const InquiryCardSkeleton = ({ darkMode }) => (
+  <div className={`p-4 rounded-xl shadow-md animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center">
+        <div className={`w-12 h-12 rounded-full mr-4 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+        <div className={`h-6 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </div>
+      <div className={`h-6 w-20 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-1`}></div>
+    <div className={`h-4 w-2/3 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-1`}></div>
+    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-1`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    <div className="mt-2 flex gap-2 justify-end">
+      <div className={`h-8 w-16 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
+// Skeleton loader for a single inquiry table row (desktop view)
+const InquiryTableRowSkeleton = ({ darkMode }) => (
+  <tr className={`border-t animate-pulse ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+    <td className="py-2 px-2">
+      <div className="flex items-center">
+        <div className={`w-8 h-8 rounded-full mr-3 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+        <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </div>
+    </td>
+    <td className="py-2 px-2">
+      <div className={`h-4 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="py-2 px-2">
+      <div className={`h-4 w-40 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="py-2 px-2">
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="py-2 px-2">
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="py-2 px-2">
+      <div className={`h-4 w-20 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+    <td className="py-2 px-2 flex gap-2">
+      <div className={`h-8 w-16 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </td>
+  </tr>
+);
+
+
 const Archive = () => {
   const [clients, setClients] = useState([]);
   const [inquiries, setInquiries] = useState([]); // New state for archived inquiries
@@ -44,6 +119,11 @@ const Archive = () => {
   const [expandedProfilePicName, setExpandedProfilePicName] = useState('');
   const profilePicRef = useRef(null);
 
+  // Loading states
+  const [loadingClients, setLoadingClients] = useState(true);
+  const [loadingInquiries, setLoadingInquiries] = useState(true);
+
+
   // Memoize selected conversation for the modal
   const selectedConversation = useMemo(() => {
     if (!selectedConversationId) return null;
@@ -75,6 +155,7 @@ const Archive = () => {
 
   const fetchArchivedClients = useCallback(async () => {
     if (!agentId) return;
+    setLoadingClients(true); // Start loading for clients
     const token = localStorage.getItem('token');
     try {
       const { data } = await axios.get(`${API_BASE_URL}/clients/agent/${agentId}/archived-clients`, {
@@ -84,11 +165,14 @@ const Archive = () => {
     } catch (err) {
       console.error('Fetch archived clients error:', err);
       showMessage('Failed to fetch archived clients.', 'error');
+    } finally {
+      setLoadingClients(false); // End loading for clients
     }
   }, [agentId, showMessage]);
 
   const fetchArchivedInquiries = useCallback(async () => {
     if (!agentId) return;
+    setLoadingInquiries(true); // Start loading for inquiries
     const token = localStorage.getItem('token');
     try {
       // Assuming a new endpoint for archived inquiries for the agent
@@ -101,6 +185,8 @@ const Archive = () => {
     } catch (err) {
       console.error('Fetch archived inquiries error:', err);
       showMessage('Failed to fetch archived inquiries.', 'error');
+    } finally {
+      setLoadingInquiries(false); // End loading for inquiries
     }
   }, [agentId, showMessage, sortKeyInquiries, sortDirectionInquiries]);
 
@@ -472,280 +558,199 @@ const Archive = () => {
           </div>
 
           {activeTab === 'clients' ? (
-            <div className="overflow-x-auto">
-              <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <thead>
-                  <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                    {['full_name', 'email', 'client_status', 'archived_at', 'Actions'].map((key) => (
-                        <th
-                            key={key}
-                            onClick={key !== 'Actions' ? () => handleSortClick(key, 'clients') : undefined}
-                            className={`text-left px-2 py-2 whitespace-nowrap ${key !== 'Actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
-                        >
-                            <div className="flex items-center gap-1">
-                                <span className="truncate">
-                                    {{
-                                        full_name: 'Name',
-                                        client_status: 'Status',
-                                        archived_at: 'Archived',
-                                    }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </span>
-                                {renderSortIcon(key, 'clients')}
-                            </div>
-                        </th>
+            loadingClients ? (
+              <div className="overflow-x-auto">
+                <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      <th className="text-left px-2 py-2 whitespace-nowrap">Name</th>
+                      <th className="text-left px-2 py-2 whitespace-nowrap">Email</th>
+                      <th className="text-left px-2 py-2 whitespace-nowrap">Status</th>
+                      <th className="text-left px-2 py-2 whitespace-nowrap">Archived</th>
+                      <th className="text-left px-2 py-2 whitespace-nowrap">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {[...Array(5)].map((_, i) => <ClientTableRowSkeleton key={i} darkMode={darkMode} />)}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      {['full_name', 'email', 'client_status', 'archived_at', 'Actions'].map((key) => (
+                          <th
+                              key={key}
+                              onClick={key !== 'Actions' ? () => handleSortClick(key, 'clients') : undefined}
+                              className={`text-left px-2 py-2 whitespace-nowrap ${key !== 'Actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
+                          >
+                              <div className="flex items-center gap-1">
+                                  <span className="truncate">
+                                      {{
+                                          full_name: 'Name',
+                                          client_status: 'Status',
+                                          archived_at: 'Archived',
+                                      }[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  </span>
+                                  {renderSortIcon(key, 'clients')}
+                              </div>
+                          </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {sortedClients.map(client => (
+                      <tr key={client.user_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
+                        <td className="px-2 py-2 whitespace-nowrap max-w-[150px] truncate" title={client.full_name}>
+                          {/* Client Name clickable */}
+                          {client.user_id ? (
+                              <span
+                                  className="cursor-pointer hover:underline"
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/agent/client-profile/${client.user_id}`); }}
+                              >
+                                  {client.full_name}
+                              </span>
+                          ) : (
+                              <span>{client.full_name}</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap max-w-[200px] truncate" title={client.email}>{client.email}</td>
+                        <td className={`px-2 py-2 whitespace-nowrap max-w-[100px] truncate ${
+                            client.client_status === 'vip' ? 'text-green-600' :
+                            client.client_status === 'regular' ? 'text-gray-600' :
+                            (darkMode ? 'text-gray-300' : 'text-gray-700')
+                        }`} title={client.client_status}>{client.client_status}</td>
+                        <td className="px-2 py-2 whitespace-nowrap max-w-[120px] truncate" title={new Date(client.archived_at).toLocaleDateString()}>{new Date(client.archived_at).toLocaleDateString()}</td>
+                        <td className="px-2 py-2 whitespace-nowrap flex items-center gap-2">
+                          <button
+                            onClick={() => handleRestoreClient(client.user_id)}
+                            className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
+                          >
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClientPermanently(client.user_id)}
+                            className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
+                            title="Permanently Delete Client"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                  {sortedClients.map(client => (
-                    <tr key={client.user_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"}`}>
-                      <td className="px-2 py-2 whitespace-nowrap max-w-[150px] truncate" title={client.full_name}>
-                        {/* Client Name clickable */}
-                        {client.user_id ? (
-                            <span
-                                className="cursor-pointer hover:underline"
-                                onClick={(e) => { e.stopPropagation(); navigate(`/agent/client-profile/${client.user_id}`); }}
-                            >
-                                {client.full_name}
-                            </span>
-                        ) : (
-                            <span>{client.full_name}</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap max-w-[200px] truncate" title={client.email}>{client.email}</td>
-                      <td className={`px-2 py-2 whitespace-nowrap max-w-[100px] truncate ${
-                          client.client_status === 'vip' ? 'text-green-600' :
-                          client.client_status === 'regular' ? 'text-gray-600' :
-                          (darkMode ? 'text-gray-300' : 'text-gray-700')
-                      }`} title={client.client_status}>{client.client_status}</td>
-                      <td className="px-2 py-2 whitespace-nowrap max-w-[120px] truncate" title={new Date(client.archived_at).toLocaleDateString()}>{new Date(client.archived_at).toLocaleDateString()}</td>
-                      <td className="px-2 py-2 whitespace-nowrap flex items-center gap-2">
-                        <button
-                          onClick={() => handleRestoreClient(client.user_id)}
-                          className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
-                        >
-                          Restore
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClientPermanently(client.user_id)}
-                          className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
-                          title="Permanently Delete Client"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {sortedClients.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className={`text-center py-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        No archived clients found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    {sortedClients.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className={`text-center py-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          No archived clients found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : (
             // Inquiries tab content
-            <>
-              {isMobile ? (
-                // Mobile-friendly list view for inquiries
+            loadingInquiries ? (
+              isMobile ? (
                 <div className="space-y-4">
-                  {sortedInquiries.length > 0 ? (
-                    sortedInquiries.map(inq => {
-                      const isReassignedFromMe = inq.isReassignedFromMe; // Use the flag from the backend
-                      return (
-                        <div
-                          key={inq.id}
-                          className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isReassignedFromMe ? 'opacity-60 border-l-4 border-yellow-500' : ''}`}
-                          onClick={() => handleViewConversation(inq)}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center">
-                              <img
-                                src={inq.clientProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`}
-                                alt="Client Profile"
-                                className="w-12 h-12 rounded-full mr-4 object-cover cursor-pointer"
-                                onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`; }}
-                                onClick={(e) => { e.stopPropagation(); handleProfilePicClick(inq.clientProfilePictureUrl, inq.clientName); }}
-                              />
-                              <h4 className={`text-lg font-semibold`}>
-                                {/* Client Name clickable */}
-                                {inq.client_id ? (
-                                    <span
-                                        className="cursor-pointer hover:underline"
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/agent/client-profile/${inq.client_id}`); }}
-                                    >
-                                        {inq.clientName}
-                                    </span>
-                                ) : (
-                                    <span>{inq.clientName}</span>
-                                )}
-                              </h4>
-                            </div>
-                            {isReassignedFromMe && (
-                              <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                Reassigned
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              <Building size={14} className="inline-block mr-1" />
-                              <span className="font-medium">{inq.propertyTitle || 'General Inquiry'}</span>
-                              {inq.property_id && (
-                                <button
-                                  onClick={e => { e.stopPropagation(); navigate(`/listings/${inq.property_id}`); }}
-                                  className="ml-2 py-0.5 px-1.5 bg-blue-500 text-white rounded-md text-xs"
-                                >
-                                  View Property
-                                </button>
-                              )}
-                            </p>
-                            <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              <User size={14} className="inline-block mr-1" />
-                              Archived By: {/* Agent Name clickable */}
-                              <span
-                                className={`font-medium ${inq.agent_id ? 'cursor-pointer hover:underline' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (inq.agent_id) navigate(`/agent-profile/${inq.agent_id}`);
-                                }}
-                              >
-                                {inq.agent_name || 'N/A'}
-                              </span>
-                            </p>
-                            {isReassignedFromMe && inq.reassigned_by_admin_name && inq.reassigned_at && (
-                              <p className={`text-xs mb-1 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-                                <Tag size={12} className="inline-block mr-1" />
-                                Reassigned to {inq.agent_name} by {/* Admin Name clickable */}
-                                {inq.reassigned_by_admin_id ? (
-                                    <span
-                                        className="cursor-pointer hover:underline"
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/agency-admin-profile/${inq.reassigned_by_admin_id}`); }}
-                                    >
-                                        {inq.reassigned_by_admin_name}
-                                    </span>
-                                ) : (
-                                    <span>{inq.reassigned_by_admin_name}</span>
-                                )}
-                                on {new Date(inq.reassigned_at).toLocaleDateString()}
-                              </p>
-                            )}
-                            <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              <MessageSquare size={14} className="inline-block mr-1" />
-                              Last Message: {inq.lastMessage || 'No messages yet'}
-                            </p>
-                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              <Clock size={12} className="inline-block mr-1" />
-                              {new Date(inq.lastMessageTimestamp).toLocaleString()}
-                            </p>
-                            <div className="mt-2 flex gap-2 justify-end">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleRestoreInquiry(inq.id); }}
-                                    className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
-                                >
-                                    Restore
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(inq.id, isReassignedFromMe); }}
-                                    className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
-                                    title="Delete Inquiry"
-                                >
-                                    <TrashIcon className="h-5 w-5" />
-                                </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No archived inquiries found.</p>
-                  )}
+                  {[...Array(5)].map((_, i) => <InquiryCardSkeleton key={i} darkMode={darkMode} />)}
                 </div>
               ) : (
-                // Desktop table view for inquiries (existing code)
                 <div className="overflow-x-auto">
                   <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                        {[{key: 'clientName', label: 'Client'}, {key: 'propertyTitle', label: 'Property'}, {key: 'lastMessage', label: 'Last Message'}, {key: 'lastMessageTimestamp', label: 'Last Activity'}, {key: 'agent_name', label: 'Archived By'}, {key: 'reassigned_at', label: 'Reassigned At'}, {key: 'Actions', label: 'Actions'}].map(c => (
-                            <th
-                                key={c.key}
-                                onClick={c.key !== 'Actions' ? () => handleSortClick(c.key, 'inquiries') : undefined}
-                                className={`text-left px-2 py-2 whitespace-nowrap ${c.key !== 'Actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
-                            >
-                                <div className="flex items-center gap-1">
-                                    <span className="truncate">{c.label}</span>
-                                    {renderSortIcon(c.key, 'inquiries')}
-                                </div>
-                            </th>
-                        ))}
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Client</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Property</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Last Message</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Last Activity</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Archived By</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Reassigned At</th>
+                        <th className="text-left px-2 py-2 whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                      {sortedInquiries.map(inq => {
+                      {[...Array(5)].map((_, i) => <InquiryTableRowSkeleton key={i} darkMode={darkMode} />)}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              <>
+                {isMobile ? (
+                  // Mobile-friendly list view for inquiries
+                  <div className="space-y-4">
+                    {sortedInquiries.length > 0 ? (
+                      sortedInquiries.map(inq => {
                         const isReassignedFromMe = inq.isReassignedFromMe; // Use the flag from the backend
                         return (
-                          <tr key={inq.id} className={`border-t cursor-pointer max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isReassignedFromMe ? 'opacity-60 bg-yellow-100 dark:bg-yellow-900' : ''}`} onClick={() => handleViewConversation(inq)}>
-                            <td className="px-2 py-2 truncate" title={inq.clientName}>
+                          <div
+                            key={inq.id}
+                            className={`p-4 rounded-xl shadow-md cursor-pointer ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} ${isReassignedFromMe ? 'opacity-60 border-l-4 border-yellow-500' : ''}`}
+                            onClick={() => handleViewConversation(inq)}
+                          >
+                            <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center">
-                                  <img
-                                      src={inq.clientProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`}
-                                      alt="Client Profile"
-                                      className="w-8 h-8 rounded-full mr-3 object-cover cursor-pointer"
-                                      onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`; }}
-                                      onClick={(e) => { e.stopPropagation(); handleProfilePicClick(inq.clientProfilePictureUrl, inq.clientName); }}
-                                  />
-                                  <span className="flex items-center">
-                                    {/* Client Name clickable */}
-                                    {inq.client_id ? (
-                                        <span
-                                            className="cursor-pointer hover:underline"
-                                            onClick={e => { e.stopPropagation(); navigate(`/agent/client-profile/${inq.client_id}`) }}
-                                        >
-                                            {inq.clientName}
-                                        </span>
-                                    ) : (
-                                        <span>{inq.clientName}</span>
-                                    )}
-                                    {isReassignedFromMe && (
-                                      <span className="ml-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                        Reassigned
-                                      </span>
-                                    )}
-                                  </span>
-                              </div> {/* Closing div for flex items-center */}
-                            </td>
-                            <td className="px-2 py-2 truncate" title={inq.propertyTitle}>
-                              <span className="flex items-center">{inq.propertyTitle || 'General Inquiry'}
-                                  {inq.property_id && (
-                                      <button
-                                          onClick={e => { e.stopPropagation(); navigate(`/listings/${inq.property_id}`); }}
-                                          className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs"
+                                <img
+                                  src={inq.clientProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`}
+                                  alt="Client Profile"
+                                  className="w-12 h-12 rounded-full mr-4 object-cover cursor-pointer"
+                                  onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`; }}
+                                  onClick={(e) => { e.stopPropagation(); handleProfilePicClick(inq.clientProfilePictureUrl, inq.clientName); }}
+                                />
+                                <h4 className={`text-lg font-semibold`}>
+                                  {/* Client Name clickable */}
+                                  {inq.client_id ? (
+                                      <span
+                                          className="cursor-pointer hover:underline"
+                                          onClick={(e) => { e.stopPropagation(); navigate(`/agent/client-profile/${inq.client_id}`); }}
                                       >
-                                          View
-                                      </button>
+                                          {inq.clientName}
+                                      </span>
+                                  ) : (
+                                      <span>{inq.clientName}</span>
                                   )}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2 truncate" title={inq.lastMessage}>{inq.lastMessage || 'No messages'}</td>
-                            <td className="px-2 py-2 truncate">{new Date(inq.lastMessageTimestamp).toLocaleString()}</td>
-                            <td className="px-2 py-2 truncate" title={inq.agent_name}>
-                              {/* Agent Name clickable */}
-                              <span
-                                className={`font-medium ${inq.agent_id ? 'cursor-pointer hover:underline' : ''}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (inq.agent_id) navigate(`/agent-profile/${inq.agent_id}`);
-                                }}
-                              >
-                                {inq.agent_name || 'N/A'}
-                              </span>
+                                </h4>
+                              </div>
+                              {isReassignedFromMe && (
+                                <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                  Reassigned
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                <Building size={14} className="inline-block mr-1" />
+                                <span className="font-medium">{inq.propertyTitle || 'General Inquiry'}</span>
+                                {inq.property_id && (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); navigate(`/listings/${inq.property_id}`); }}
+                                    className="ml-2 py-0.5 px-1.5 bg-blue-500 text-white rounded-md text-xs"
+                                  >
+                                    View Property
+                                  </button>
+                                )}
+                              </p>
+                              <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                <User size={14} className="inline-block mr-1" />
+                                Archived By: {/* Agent Name clickable */}
+                                <span
+                                  className={`font-medium ${inq.agent_id ? 'cursor-pointer hover:underline' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (inq.agent_id) navigate(`/agent-profile/${inq.agent_id}`);
+                                  }}
+                                >
+                                  {inq.agent_name || 'N/A'}
+                                </span>
+                              </p>
                               {isReassignedFromMe && inq.reassigned_by_admin_name && inq.reassigned_at && (
-                                <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-                                  (from {inq.original_agent_name} by {/* Admin Name clickable */}
+                                <p className={`text-xs mb-1 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                                  <Tag size={12} className="inline-block mr-1" />
+                                  Reassigned to {inq.agent_name} by {/* Admin Name clickable */}
                                   {inq.reassigned_by_admin_id ? (
                                       <span
                                           className="cursor-pointer hover:underline"
@@ -756,41 +761,168 @@ const Archive = () => {
                                   ) : (
                                       <span>{inq.reassigned_by_admin_name}</span>
                                   )}
-                                  )
+                                  on {new Date(inq.reassigned_at).toLocaleDateString()}
                                 </p>
                               )}
-                            </td>
-                            <td className="px-2 py-2 truncate">{inq.reassigned_at ? new Date(inq.reassigned_at).toLocaleDateString() : 'N/A'}</td>
-                            <td className="px-2 py-2 whitespace-nowrap flex items-center gap-2">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleRestoreInquiry(inq.id); }}
-                                className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
+                              <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                <MessageSquare size={14} className="inline-block mr-1" />
+                                Last Message: {inq.lastMessage || 'No messages yet'}
+                              </p>
+                              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <Clock size={12} className="inline-block mr-1" />
+                                {new Date(inq.lastMessageTimestamp).toLocaleString()}
+                              </p>
+                              <div className="mt-2 flex gap-2 justify-end">
+                                  <button
+                                      onClick={(e) => { e.stopPropagation(); handleRestoreInquiry(inq.id); }}
+                                      className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
+                                  >
+                                      Restore
+                                  </button>
+                                  <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(inq.id, isReassignedFromMe); }}
+                                      className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
+                                      title="Delete Inquiry"
+                                  >
+                                      <TrashIcon className="h-5 w-5" />
+                                  </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No archived inquiries found.</p>
+                    )}
+                  </div>
+                ) : (
+                  // Desktop table view for inquiries (existing code)
+                  <div className="overflow-x-auto">
+                    <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                      <thead>
+                        <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                          {[{key: 'clientName', label: 'Client'}, {key: 'propertyTitle', label: 'Property'}, {key: 'lastMessage', label: 'Last Message'}, {key: 'lastMessageTimestamp', label: 'Last Activity'}, {key: 'agent_name', label: 'Archived By'}, {key: 'reassigned_at', label: 'Reassigned At'}, {key: 'Actions', label: 'Actions'}].map(c => (
+                              <th
+                                  key={c.key}
+                                  onClick={c.key !== 'Actions' ? () => handleSortClick(c.key, 'inquiries') : undefined}
+                                  className={`text-left px-2 py-2 whitespace-nowrap ${c.key !== 'Actions' ? 'cursor-pointer hover:text-green-700' : ''}`}
                               >
-                                Restore
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(inq.id, isReassignedFromMe); }}
-                                className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
-                                title="Delete Inquiry"
-                              >
-                                <TrashIcon className="h-5 w-5" />
-                              </button>
+                                  <div className="flex items-center gap-1">
+                                      <span className="truncate">{c.label}</span>
+                                      {renderSortIcon(c.key, 'inquiries')}
+                                  </div>
+                              </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                        {sortedInquiries.map(inq => {
+                          const isReassignedFromMe = inq.isReassignedFromMe; // Use the flag from the backend
+                          return (
+                            <tr key={inq.id} className={`border-t cursor-pointer max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isReassignedFromMe ? 'opacity-60 bg-yellow-100 dark:bg-yellow-900' : ''}`} onClick={() => handleViewConversation(inq)}>
+                              <td className="px-2 py-2 truncate" title={inq.clientName}>
+                                <div className="flex items-center">
+                                    <img
+                                        src={inq.clientProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`}
+                                        alt="Client Profile"
+                                        className="w-8 h-8 rounded-full mr-3 object-cover cursor-pointer"
+                                        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(inq.clientName)}`; }}
+                                        onClick={(e) => { e.stopPropagation(); handleProfilePicClick(inq.clientProfilePictureUrl, inq.clientName); }}
+                                    />
+                                    <span className="flex items-center">
+                                      {/* Client Name clickable */}
+                                      {inq.client_id ? (
+                                          <span
+                                              className="cursor-pointer hover:underline"
+                                              onClick={e => { e.stopPropagation(); navigate(`/agent/client-profile/${inq.client_id}`) }}
+                                          >
+                                              {inq.clientName}
+                                          </span>
+                                      ) : (
+                                          <span>{inq.clientName}</span>
+                                      )}
+                                      {isReassignedFromMe && (
+                                        <span className="ml-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                          Reassigned
+                                        </span>
+                                      )}
+                                    </span>
+                                </div> {/* Closing div for flex items-center */}
+                              </td>
+                              <td className="px-2 py-2 truncate" title={inq.propertyTitle}>
+                                <span className="flex items-center">{inq.propertyTitle || 'General Inquiry'}
+                                    {inq.property_id && (
+                                        <button
+                                            onClick={e => { e.stopPropagation(); navigate(`/listings/${inq.property_id}`); }}
+                                            className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs"
+                                        >
+                                            View
+                                        </button>
+                                    )}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 truncate" title={inq.lastMessage}>{inq.lastMessage || 'No messages'}</td>
+                              <td className="px-2 py-2 truncate">{new Date(inq.lastMessageTimestamp).toLocaleString()}</td>
+                              <td className="px-2 py-2 truncate" title={inq.agent_name}>
+                                {/* Agent Name clickable */}
+                                <span
+                                  className={`font-medium ${inq.agent_id ? 'cursor-pointer hover:underline' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (inq.agent_id) navigate(`/agent-profile/${inq.agent_id}`);
+                                  }}
+                                >
+                                  {inq.agent_name || 'N/A'}
+                                </span>
+                                {isReassignedFromMe && inq.reassigned_by_admin_name && inq.reassigned_at && (
+                                  <p className={`text-xs ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                                    (from {inq.original_agent_name} by {/* Admin Name clickable */}
+                                    {inq.reassigned_by_admin_id ? (
+                                        <span
+                                            className="cursor-pointer hover:underline"
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/agency-admin-profile/${inq.reassigned_by_admin_id}`); }}
+                                        >
+                                            {inq.reassigned_by_admin_name}
+                                        </span>
+                                    ) : (
+                                        <span>{inq.reassigned_by_admin_name}</span>
+                                    )}
+                                    )
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-2 py-2 truncate">{inq.reassigned_at ? new Date(inq.reassigned_at).toLocaleDateString() : 'N/A'}</td>
+                              <td className="px-2 py-2 whitespace-nowrap flex items-center gap-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleRestoreInquiry(inq.id); }}
+                                  className={`text-sm hover:underline ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-700 hover:text-green-800"}`}
+                                >
+                                  Restore
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(inq.id, isReassignedFromMe); }}
+                                  className={`p-1 ${darkMode ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-800"}`}
+                                  title="Delete Inquiry"
+                                >
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {sortedInquiries.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className={`text-center py-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              No archived inquiries found.
                             </td>
                           </tr>
-                        );
-                      })}
-                      {sortedInquiries.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className={`text-center py-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                            No archived inquiries found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )
           )}
         </motion.div>
       </motion.div>

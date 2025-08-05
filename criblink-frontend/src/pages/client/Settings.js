@@ -158,6 +158,76 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
     );
 };
 
+// Loading Skeleton Component
+const LoadingSkeleton = ({ darkMode, userRole }) => {
+    const skeletonBgClass = darkMode ? "bg-gray-700" : "bg-gray-200";
+    const skeletonPulseClass = "animate-pulse";
+
+    const renderSectionSkeleton = (title, items, isGrid = true) => (
+        <div className="space-y-6">
+            <div className={`h-8 w-48 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Section Title */}
+            <div className={`${isGrid ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'space-y-6'}`}>
+                {items.map((item, index) => (
+                    <div key={index} className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                        <div className={`h-6 w-3/4 rounded-md mb-3 ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Label */}
+                        {item.type === 'dropdown' && (
+                            <div className={`h-10 w-full rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+                        )}
+                        {item.type === 'switch' && (
+                            <div className="flex items-center justify-between">
+                                <div className={`h-6 w-3/4 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+                                <div className={`h-6 w-11 rounded-full ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+                            </div>
+                        )}
+                        {item.type === 'input' && (
+                            <div className={`h-10 w-full rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+                        )}
+                        <div className={`h-4 w-1/2 rounded-md mt-2 ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Description */}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className={`${darkMode ? "bg-gray-800" : "bg-white"} rounded-3xl p-6 shadow space-y-8 max-w-full`}
+        >
+            {/* General Settings Skeleton */}
+            {renderSectionSkeleton("General", [
+                { type: 'dropdown' }, { type: 'dropdown' }, { type: 'switch' }, { type: 'dropdown' },
+                { type: 'dropdown' }, { type: 'dropdown' }, { type: 'dropdown' }, { type: 'dropdown' }
+            ])}
+
+            {/* Notifications Skeleton */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700 space-y-6">
+                {renderSectionSkeleton("Notifications", [
+                    { type: 'switch' }, { type: 'switch' }, { type: 'switch' },
+                    { type: 'switch' }, { type: 'switch' }
+                ], true)}
+            </div>
+
+            {/* Property Preferences Skeleton (only for client role) */}
+            {userRole === 'client' && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700 space-y-6">
+                    <div className={`h-8 w-64 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Property Preferences Title */}
+                    <div className={`h-4 w-3/4 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Description */}
+                    {renderSectionSkeleton("Property Preferences", [
+                        { type: 'dropdown' }, { type: 'input' }, { type: 'input' },
+                        { type: 'input' }, { type: 'dropdown' }, { type: 'dropdown' }
+                    ], true)}
+                    <div className="flex justify-center mt-6">
+                        <div className={`h-12 w-64 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div> {/* Save Button */}
+                    </div>
+                </div>
+            )}
+        </motion.div>
+    );
+};
+
 
 const ClientSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
@@ -641,8 +711,50 @@ const ClientSettings = () => {
 
     if (loading || userSettingsLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">Loading settings...</div>
+            <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+                {isMobile && (
+                    <motion.button
+                        onClick={() => setIsSidebarOpen(prev => !prev)}
+                        className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                        initial={false}
+                        animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <AnimatePresence mode="wait" initial={false}>
+                            <motion.div key={isSidebarOpen ? 'close' : 'menu'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+                                {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                            </motion.div>
+                        </AnimatePresence>
+                    </motion.button>
+                )}
+
+                <ClientSidebar
+                    collapsed={isMobile ? false : isCollapsed}
+                    setCollapsed={setIsCollapsed}
+                    activeSection={activeSection}
+                    setActiveSection={setActiveSection}
+                    isMobile={isMobile}
+                    isSidebarOpen={isSidebarOpen}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                />
+
+                <motion.div
+                    key={isMobile ? 'mobile' : 'desktop'}
+                    animate={{ marginLeft: contentShift }}
+                    transition={{ duration: 0.3 }}
+                    initial={false}
+                    className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+                    style={{ minWidth: `calc(100% - ${contentShift}px)` }}
+                >
+                    <div className="md:hidden flex items-center justify-center mb-4">
+                        <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Settings</h1>
+                    </div>
+
+                    <div className="hidden md:block mb-6">
+                        <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Settings</h1>
+                    </div>
+                    <LoadingSkeleton darkMode={darkMode} userRole={user?.role} />
+                </motion.div>
             </div>
         );
     }

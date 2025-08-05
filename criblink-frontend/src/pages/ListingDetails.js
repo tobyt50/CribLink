@@ -20,6 +20,137 @@ import LocationMap from '../components/ListingDetails/LocationMap';
 import SimilarListingsCarousel from '../components/ListingDetails/SimilarListingsCarousel';
 import ModalsContainer from '../components/ListingDetails/ModalsContainer'; // New component for modals
 
+// Loading Skeleton Component for Listing Details
+const ListingDetailsSkeleton = ({ darkMode }) => {
+  const skeletonBgClass = darkMode ? "bg-gray-700" : "bg-gray-200";
+  const skeletonPulseClass = "animate-pulse";
+
+  return (
+    <motion.div
+      className={`min-h-screen pt-0 -mt-6 px-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
+        {/* Left Column Skeleton */}
+        <motion.div
+          className={`w-full lg:w-3/5 space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}
+          initial={{ x: -50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          {/* Title Skeleton */}
+          <div className={`h-8 w-3/4 rounded-md ${skeletonBgClass} ${skeletonPulseClass} mt-0 mb-1`}></div>
+
+          {/* Image Gallery Skeleton */}
+          <div className={`relative w-full h-80 md:h-96 rounded-xl overflow-hidden mb-4 shadow-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className={`h-16 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            ))}
+          </div>
+
+          {/* Listing Overview Skeleton */}
+          <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+            <div className="flex gap-2 items-center flex-wrap">
+              <div className={`h-6 w-24 rounded-full ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-6 w-24 rounded-full ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-8 w-10 rounded-full ${skeletonBgClass} ${skeletonPulseClass} ml-2`}></div>
+              <div className={`h-8 w-10 rounded-full ${skeletonBgClass} ${skeletonPulseClass} ml-2`}></div>
+            </div>
+            <div className={`h-8 w-1/2 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+              <div className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            </div>
+          </div>
+
+          {/* Property Features Skeleton */}
+          <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
+            <div className={`h-8 w-48 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="flex flex-wrap gap-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className={`h-6 w-24 rounded-full ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              ))}
+            </div>
+            <div className={`h-8 w-48 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className={`h-6 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Description Skeleton */}
+          <div className="space-y-2">
+            <div className={`h-8 w-32 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className={`h-4 w-full rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className={`h-4 w-11/12 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className={`h-4 w-5/6 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+          </div>
+        </motion.div>
+
+        {/* Right Column Skeleton */}
+        <motion.div
+          className="w-full lg:w-2/5 space-y-8 p-4 md:p-0"
+          initial={{ x: 50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          {/* Agent Contact Card Skeleton */}
+          <div className={`space-y-4 p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className={`h-8 w-48 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="flex items-center space-x-4">
+              <div className={`w-16 h-16 rounded-full ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className="flex flex-col space-y-2">
+                <div className={`h-6 w-32 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+                <div className={`h-4 w-24 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className={`h-16 w-24 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              ))}
+            </div>
+          </div>
+
+          {/* More Actions Skeleton */}
+          <div className={`space-y-4 p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className={`h-8 w-32 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <div className={`h-10 w-48 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            </div>
+          </div>
+
+          {/* Location Map Skeleton */}
+          <div className={`space-y-4 p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className={`h-8 w-48 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className={`flex-1 block w-full h-48 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+              <div className={`flex-1 block w-full h-48 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Similar Listings Carousel Skeleton */}
+      <div className={`max-w-7xl mx-auto mt-12 space-y-6 p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+        <div className={`h-8 w-64 rounded-md mx-auto ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+        <div className="flex overflow-x-hidden gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`flex-shrink-0 w-64 h-80 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+
 const ListingDetails = () => {
   const { id } = useParams();
   const [listing, setListing] = useState(null);
@@ -45,11 +176,6 @@ const ListingDetails = () => {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const optionsMenuRef = useRef(null);
 
-  const [similarListingStartIndex, setSimilarListingStartIndex] = useState(0);
-  const listingsPerPageDesktop = 5;
-  const listingsPerPageMobile = 4;
-  const [currentListingsPerPage, setCurrentListingsPerPage] = useState(listingsPerPageDesktop);
-
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [agentClients, setAgentClients] = useState([]);
 
@@ -57,24 +183,9 @@ const ListingDetails = () => {
   const [conversationForClientModal, setConversationForClientModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
 
-  const similarCarouselRef = useRef(null);
-  const autoSwipeSimilarIntervalRef = useRef(null);
+  const [loading, setLoading] = useState(true); // Added loading state
 
   const isLandProperty = listing?.property_type?.toLowerCase() === 'land';
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setCurrentListingsPerPage(listingsPerPageMobile);
-      } else {
-        setCurrentListingsPerPage(listingsPerPageDesktop);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -141,6 +252,7 @@ const ListingDetails = () => {
   const fetchListing = useCallback(async () => {
     if (!id || userRole === '') return;
 
+    setLoading(true); // Set loading to true at the start of fetch
     try {
       const { data } = await axiosInstance.get(`${API_BASE_URL}/listings/${id}`);
       setListing(data);
@@ -182,6 +294,8 @@ const ListingDetails = () => {
       setListing(null);
       setSimilarListings([]);
       setAgentInfo(null);
+    } finally {
+      setLoading(false); // Set loading to false after fetch completes
     }
   }, [id, darkMode, showMessage, userRole]);
 
@@ -397,72 +511,6 @@ const ListingDetails = () => {
       showMessage(errorMessage, 'error');
     }
   };
-
-  const handlePrevSimilar = useCallback(() => {
-    setSimilarListingStartIndex((prevIndex) => Math.max(0, prevIndex - currentListingsPerPage));
-    clearInterval(autoSwipeSimilarIntervalRef.current);
-  }, [currentListingsPerPage]);
-
-  const handleNextSimilar = useCallback(() => {
-    setSimilarListingStartIndex((prevIndex) => {
-      const totalPages = Math.ceil(similarListings.length / currentListingsPerPage);
-      const nextPage = (prevIndex / currentListingsPerPage + 1) % totalPages;
-      return nextPage * currentListingsPerPage;
-    });
-    clearInterval(autoSwipeSimilarIntervalRef.current);
-  }, [similarListings.length, currentListingsPerPage]);
-
-  useEffect(() => {
-    if (autoSwipeSimilarIntervalRef.current) {
-      clearInterval(autoSwipeSimilarIntervalRef.current);
-    }
-
-    if (similarListings.length > currentListingsPerPage) {
-      autoSwipeSimilarIntervalRef.current = setInterval(() => {
-        setSimilarListingStartIndex((prevIndex) => {
-          const totalPages = Math.ceil(similarListings.length / currentListingsPerPage);
-          const currentPage = prevIndex / currentListingsPerPage;
-          const nextPage = (currentPage + 1) % totalPages;
-          return nextPage * currentListingsPerPage;
-        });
-      }, 5000);
-    }
-
-    return () => {
-      if (autoSwipeSimilarIntervalRef.current) {
-        clearInterval(autoSwipeSimilarIntervalRef.current);
-      }
-    };
-  }, [similarListings, currentListingsPerPage]);
-
-  const handleTouchStartSimilar = useCallback((e) => {
-    clearInterval(autoSwipeSimilarIntervalRef.current);
-    if (similarCarouselRef.current) {
-      similarCarouselRef.current.startX = e.touches[0].clientX;
-    }
-  }, []);
-
-  const handleTouchMoveSimilar = useCallback((e) => {
-    if (!similarCarouselRef.current || similarCarouselRef.current.startX === undefined) return;
-    const currentX = e.touches[0].clientX;
-    const diffX = similarCarouselRef.current.startX - currentX;
-    if (Math.abs(diffX) > 10) {
-      e.preventDefault();
-    }
-  }, []);
-
-  const handleTouchEndSimilar = useCallback((e) => {
-    if (!similarCarouselRef.current || similarCarouselRef.current.startX === undefined) return;
-    const endX = e.changedTouches[0].clientX;
-    const diffX = similarCarouselRef.current.startX - endX;
-    const swipeThreshold = 50;
-    if (diffX > swipeThreshold) {
-      handleNextSimilar();
-    } else if (diffX < -swipeThreshold) {
-      handlePrevSimilar();
-    }
-    similarCarouselRef.current.startX = undefined;
-  }, [handleNextSimilar, handlePrevSimilar]);
 
   const handleSendConnectionRequest = async () => {
     if (userRole !== 'client' || !userId || !agentInfo || !agentInfo.id) {
@@ -834,7 +882,11 @@ const ListingDetails = () => {
   }, [conversationForClientModal, openedConversationId, userId, fetchConversationForClientAndAgent]);
 
 
-  if (!listing) return <div className={`p-6 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Loading listing...</div>;
+  if (loading) { // Use the loading state to conditionally render the skeleton
+    return <ListingDetailsSkeleton darkMode={darkMode} />;
+  }
+
+  if (!listing) return <div className={`p-6 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Listing not found or an error occurred.</div>;
 
   return (
     <motion.div
@@ -939,14 +991,6 @@ const ListingDetails = () => {
         <SimilarListingsCarousel
           similarListings={similarListings}
           darkMode={darkMode}
-          similarListingStartIndex={similarListingStartIndex}
-          currentListingsPerPage={currentListingsPerPage}
-          handlePrevSimilar={handlePrevSimilar}
-          handleNextSimilar={handleNextSimilar}
-          handleTouchStartSimilar={handleTouchStartSimilar}
-          handleTouchMoveSimilar={handleTouchMoveSimilar}
-          handleTouchEndSimilar={handleTouchEndSimilar}
-          similarCarouselRef={similarCarouselRef}
         />
       )}
 

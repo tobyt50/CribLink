@@ -136,6 +136,93 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
     );
 };
 
+// Skeleton component for Agency Admin Settings
+const AgencyAdminSettingsSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-8`}>
+    {/* Search Bar Skeleton */}
+    <div className="flex justify-end items-center mb-6">
+      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+
+    {/* Agency Information Skeleton */}
+    <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className={`h-8 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-5`}></div>
+      <div className="flex flex-col items-center mb-6">
+        <div className={`w-32 h-32 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+        <div className={`h-4 w-1/2 rounded mt-4 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[...Array(6)].map((_, i) => ( // 6 input fields
+          <div key={i} className="space-y-2">
+            <div className={`h-4 w-1/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end space-x-4 mt-6">
+        <div className={`h-10 w-24 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-32 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </div>
+
+    {/* Agency Members Skeleton */}
+    <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className={`h-8 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-5`}></div>
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => ( // 3 member items
+          <div key={i} className={`flex items-center justify-between p-4 rounded-xl h-20 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex items-center space-x-4">
+              <div className={`w-10 h-10 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className="space-y-2">
+                <div className={`h-4 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                <div className={`h-3 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              </div>
+            </div>
+            <div className={`h-8 w-20 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Pending Join Requests Skeleton */}
+    <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className={`h-8 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-5`}></div>
+      <div className="space-y-4">
+        {[...Array(2)].map((_, i) => ( // 2 request items
+          <div key={i} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl h-24 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex items-center space-x-4 mb-3 md:mb-0">
+              <div className={`w-10 h-10 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className="space-y-2">
+                <div className={`h-4 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                <div className={`h-3 w-24 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                <div className={`h-3 w-40 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <div className={`h-10 w-24 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-10 w-24 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* General Settings Skeleton (example for one section) */}
+    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[...Array(4)].map((_, i) => ( // 4 general setting items
+          <div key={i} className={`p-6 rounded-xl h-32 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+            <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            <div className={`h-3 w-3/4 rounded mt-2 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 
 const AgencyAdminSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
@@ -162,6 +249,7 @@ const AgencyAdminSettings = () => {
 
     const [agencyMembers, setAgencyMembers] = useState([]);
     const [pendingRequests, setPendingRequests] = useState([]);
+    const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
     const mainContentRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -339,6 +427,7 @@ const AgencyAdminSettings = () => {
     const fetchAgencyInfo = useCallback(async () => {
         if (!user?.agency_id) {
             showMessage("You are not associated with an agency.", "info");
+            setIsLoading(false); // Stop loading if no agency
             return;
         }
         try {
@@ -362,6 +451,8 @@ const AgencyAdminSettings = () => {
         } catch (error) {
             console.error("Error fetching agency info:", error);
             showMessage("Failed to load agency information.", "error");
+        } finally {
+            setIsLoading(false); // Stop loading after fetch
         }
     }, [user, showMessage]);
 
@@ -418,10 +509,19 @@ const AgencyAdminSettings = () => {
 
     useEffect(() => {
         if (user?.agency_id && isAuthenticated && user?.role === 'agency_admin') {
-            fetchAgencyInfo();
-            fetchAgencyMembers();
-            fetchPendingRequests();
-            fetchUserSettings(); // Fetch user settings for general options
+            setIsLoading(true); // Start loading when component mounts and conditions are met
+            Promise.all([
+                fetchAgencyInfo(),
+                fetchAgencyMembers(),
+                fetchPendingRequests(),
+                fetchUserSettings()
+            ]).then(() => {
+                setIsLoading(false); // End loading after all fetches are complete
+            }).catch(() => {
+                setIsLoading(false); // Ensure loading stops even if one fails
+            });
+        } else if (!user?.agency_id || user?.role !== 'agency_admin') {
+            setIsLoading(false); // Stop loading immediately if conditions not met
         }
     }, [user, isAuthenticated, fetchAgencyInfo, fetchAgencyMembers, fetchPendingRequests, fetchUserSettings]);
 
@@ -845,456 +945,462 @@ const AgencyAdminSettings = () => {
                     transition={{ duration: 0.3 }}
                     className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-8 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                 >
-                    {/* Search Bar */}
-                    <div className="flex justify-end items-center mb-6">
-                        <div className="relative w-full md:w-1/3">
-                            <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
-                            <input
-                                type="text"
-                                placeholder="Search settings..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Agency Information Section */}
-                    {filterSection("agencyInfo") && agencyInfo && (
-                        <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                                <Landmark className="mr-3 text-orange-500" size={24} /> Agency Information
-                            </h3>
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="space-y-6"
-                            >
-                                <div className="flex flex-col items-center mb-6">
-                                    <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                        {newLogoPreview ? (
-                                            <img src={newLogoPreview} alt="Agency Logo" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <Landmark className="w-16 h-16 text-gray-400" />
-                                        )}
-                                        {editingAgencyInfo && newLogoPreview && (
-                                            <button
-                                                type="button"
-                                                onClick={handleClearLogo}
-                                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                                                aria-label="Clear agency logo"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        )}
-                                    </div>
-                                    {editingAgencyInfo && (
-                                        <input
-                                            type="file"
-                                            id="agency_logo"
-                                            name="agency_logo"
-                                            accept="image/*"
-                                            onChange={handleLogoChange}
-                                            className={`mt-4 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${darkMode ? "file:bg-green-600 file:text-white file:hover:bg-green-700 text-gray-300" : "file:bg-green-50 file:text-green-700 hover:file:bg-green-100 text-gray-700"}`}
-                                        />
-                                    )}
+                    {isLoading ? ( // Conditionally render skeleton when loading
+                        <AgencyAdminSettingsSkeleton darkMode={darkMode} />
+                    ) : (
+                        <>
+                            {/* Search Bar */}
+                            <div className="flex justify-end items-center mb-6">
+                                <div className="relative w-full md:w-1/3">
+                                    <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search settings..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Agency Name</label>
-                                        {editingAgencyInfo ? (
-                                            <input type="text" name="name" value={agencyForm.name} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.name}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Email</label>
-                                        {editingAgencyInfo ? (
-                                            <input type="email" name="email" value={agencyForm.email} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.email}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Phone</label>
-                                        {editingAgencyInfo ? (
-                                            <input type="tel" name="phone" value={agencyForm.phone} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.phone}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Website</label>
-                                        {editingAgencyInfo ? (
-                                            <input type="url" name="website" value={agencyForm.website} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.website || 'N/A'}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Address</label> {/* Added Address field */}
-                                        {editingAgencyInfo ? (
-                                            <input type="text" name="address" value={agencyForm.address} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.address || 'N/A'}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Description</label>
-                                        {editingAgencyInfo ? (
-                                            <textarea name="description" value={agencyForm.description} onChange={handleAgencyFormChange} className={`${inputFieldStyles} min-h-[100px]`} rows="4"></textarea>
-                                        ) : (
-                                            <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.description || 'N/A'}</p>
-                                        )}
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                        <label className={labelStyles}>Agency ID</label>
-                                        <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.agency_id}</p>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end space-x-4 mt-6">
-                                    {editingAgencyInfo ? (
-                                        <>
-                                            <button
-                                                onClick={() => {
-                                                    setEditingAgencyInfo(false);
-                                                    fetchAgencyInfo(); // Revert changes
-                                                }}
-                                                className={`px-6 py-2 rounded-full font-semibold transition duration-200 ${darkMode ? "bg-gray-600 hover:bg-gray-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={handleUpdateAgencyInfo}
-                                                disabled={updatingAgency}
-                                                className={`px-6 py-2 font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center
-                                                    ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                                            >
-                                                {updatingAgency ? <Loader size={20} className="animate-spin mr-2" /> : <Save size={20} className="mr-2" />}
-                                                {updatingAgency ? "Saving..." : "Save Changes"}
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <button
-                                            onClick={() => setEditingAgencyInfo(true)}
-                                            className={`px-6 py-2 rounded-full font-semibold transition duration-200 flex items-center
-                                                ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                                        >
-                                            <PencilIcon size={20} className="mr-2" />
-                                            Edit Info
-                                        </button>
-
-                                    )}
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-
-                    {/* Agency Members Section */}
-                    {filterSection("members") && (
-                        <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                                <UserRoundCheck className="mr-3 text-blue-500" size={24} /> Agency Members
-                            </h3>
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="space-y-4"
-                            >
-                                {agencyMembers.length > 0 ? (
-                                    <ul className="space-y-4">
-                                        {agencyMembers.map(member => (
-                                            <li key={member.user_id} className={`flex items-center justify-between p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                                <div className="flex items-center space-x-4">
-                                                    <img
-                                                        src={member.profile_picture_url || `https://placehold.co/40x40/${darkMode ? '374151' : 'e5e7eb'}/${darkMode ? 'd1d5db' : '6b7280'}?text=${member.full_name.charAt(0)}`}
-                                                        alt={member.full_name}
-                                                        className="w-10 h-10 rounded-full object-cover"
-                                                    />
-                                                    <div>
-                                                        <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{member.full_name} ({member.agency_role})</p>
-                                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{member.email}</p>
-                                                    </div>
-                                                </div>
-                                                {member.user_id !== user.user_id && ( // Cannot remove self from here
+                            {/* Agency Information Section */}
+                            {filterSection("agencyInfo") && agencyInfo && (
+                                <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                                        <Landmark className="mr-3 text-orange-500" size={24} /> Agency Information
+                                    </h3>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className="flex flex-col items-center mb-6">
+                                            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                                {newLogoPreview ? (
+                                                    <img src={newLogoPreview} alt="Agency Logo" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Landmark className="w-16 h-16 text-gray-400" />
+                                                )}
+                                                {editingAgencyInfo && newLogoPreview && (
                                                     <button
-                                                        onClick={() => handleRemoveAgent(member.user_id, member.full_name)}
-                                                        className={`px-3 py-1 rounded-full text-sm font-semibold transition duration-200 ${darkMode ? "bg-red-600 hover:bg-red-700 text-white" : "bg-red-100 hover:bg-red-200 text-red-600"}`}
+                                                        type="button"
+                                                        onClick={handleClearLogo}
+                                                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                                                        aria-label="Clear agency logo"
                                                     >
-                                                        Remove
+                                                        <X size={16} />
                                                     </button>
                                                 )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No agents currently in your agency.</p>
-                                )}
-                            </motion.div>
-                        </div>
-                    )}
+                                            </div>
+                                            {editingAgencyInfo && (
+                                                <input
+                                                    type="file"
+                                                    id="agency_logo"
+                                                    name="agency_logo"
+                                                    accept="image/*"
+                                                    onChange={handleLogoChange}
+                                                    className={`mt-4 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${darkMode ? "file:bg-green-600 file:text-white file:hover:bg-green-700 text-gray-300" : "file:bg-green-50 file:text-green-700 hover:file:bg-green-100 text-gray-700"}`}
+                                                />
+                                            )}
+                                        </div>
 
-                    {/* Pending Join Requests Section */}
-                    {filterSection("requests") && (
-                        <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                                <Hourglass className="mr-3 text-yellow-500" size={24} /> Pending Join Requests
-                            </h3>
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="space-y-4"
-                            >
-                                {pendingRequests.length > 0 ? (
-                                    <ul className="space-y-4">
-                                        {pendingRequests.map(request => (
-                                            <li key={request.request_id} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                                <div className="flex items-center space-x-4 mb-3 md:mb-0">
-                                                    <img
-                                                        src={request.agent_profile_picture_url || `https://placehold.co/40x40/${darkMode ? '374151' : 'e5e7eb'}/${darkMode ? 'd1d5db' : '6b7280'}?text=${request.agent_name.charAt(0)}`}
-                                                        alt={request.agent_name}
-                                                        className="w-10 h-10 rounded-full object-cover"
-                                                    />
-                                                    <div>
-                                                        <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{request.agent_name}</p>
-                                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{request.agent_email}</p>
-                                                        {/* Safely access request.message */}
-                                                        {request.message && <p className={`text-xs italic ${darkMode ? "text-gray-500" : "text-gray-500"}`}>"{request.message}"</p>}
-                                                    </div>
-                                                </div>
-                                                <div className="flex space-x-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Agency Name</label>
+                                                {editingAgencyInfo ? (
+                                                    <input type="text" name="name" value={agencyForm.name} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.name}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Email</label>
+                                                {editingAgencyInfo ? (
+                                                    <input type="email" name="email" value={agencyForm.email} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.email}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Phone</label>
+                                                {editingAgencyInfo ? (
+                                                    <input type="tel" name="phone" value={agencyForm.phone} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.phone}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Website</label>
+                                                {editingAgencyInfo ? (
+                                                    <input type="url" name="website" value={agencyForm.website} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.website || 'N/A'}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Address</label> {/* Added Address field */}
+                                                {editingAgencyInfo ? (
+                                                    <input type="text" name="address" value={agencyForm.address} onChange={handleAgencyFormChange} className={inputFieldStyles} />
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.address || 'N/A'}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Description</label>
+                                                {editingAgencyInfo ? (
+                                                    <textarea name="description" value={agencyForm.description} onChange={handleAgencyFormChange} className={`${inputFieldStyles} min-h-[100px]`} rows="4"></textarea>
+                                                ) : (
+                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.description || 'N/A'}</p>
+                                                )}
+                                            </div>
+                                            <div className={inputGroupStyles}>
+                                                <label className={labelStyles}>Agency ID</label>
+                                                <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.agency_id}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end space-x-4 mt-6">
+                                            {editingAgencyInfo ? (
+                                                <>
                                                     <button
-                                                        onClick={() => handleApproveRequest(request.request_id)}
-                                                        className={`px-4 py-2 rounded-full text-sm font-semibold transition duration-200 flex items-center ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                                                        onClick={() => {
+                                                            setEditingAgencyInfo(false);
+                                                            fetchAgencyInfo(); // Revert changes
+                                                        }}
+                                                        className={`px-6 py-2 rounded-full font-semibold transition duration-200 ${darkMode ? "bg-gray-600 hover:bg-gray-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
                                                     >
-                                                        <CheckCircle size={16} className="mr-1" /> Approve
+                                                        Cancel
                                                     </button>
                                                     <button
-                                                        onClick={() => handleRejectRequest(request.request_id)}
-                                                        className={`px-4 py-2 rounded-full text-sm font-semibold transition duration-200 flex items-center ${darkMode ? "bg-red-600 hover:bg-red-700 text-white" : "bg-red-100 hover:bg-red-200 text-red-600"}`}
+                                                        onClick={handleUpdateAgencyInfo}
+                                                        disabled={updatingAgency}
+                                                        className={`px-6 py-2 font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center
+                                                            ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
                                                     >
-                                                        <X size={16} className="mr-1" /> Reject
+                                                        {updatingAgency ? <Loader size={20} className="animate-spin mr-2" /> : <Save size={20} className="mr-2" />}
+                                                        {updatingAgency ? "Saving..." : "Save Changes"}
                                                     </button>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No pending join requests.</p>
-                                )}
-                            </motion.div>
-                        </div>
-                    )}
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingAgencyInfo(true)}
+                                                    className={`px-6 py-2 rounded-full font-semibold transition duration-200 flex items-center
+                                                        ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                                                >
+                                                    <PencilIcon size={20} className="mr-2" />
+                                                    Edit Info
+                                                </button>
 
-                    {/* General Settings Section */}
-                    {filterSection("general") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>General Settings</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Theme Setting */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
-                                    <Dropdown placeholder="Select Theme" options={darkModeOptions} value={themePreference} onChange={handleThemeChange} className="w-full" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your preferred theme.</p>
+                                            )}
+                                        </div>
+                                    </motion.div>
                                 </div>
-                                {/* Default Listings Display */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Listings Display</label>
-                                    <Dropdown placeholder="Select View Mode" options={defaultListingsViewOptions} value={defaultListingsView} onChange={handleDefaultListingsViewChange} className="w-full" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
-                                </div>
-                                {/* Sidebar Toggle */}
-                                <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+                            )}
 
-                                {/* General App Settings from ProfileSettings.js */}
-                                {/* Language */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="language">Language</label>
-                                    <Dropdown
-                                        options={languageOptions}
-                                        value={userSettings.language}
-                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
-                                        placeholder="Select Language"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
-                                </div>
-
-                                {/* Timezone */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="timezone">Timezone</label>
-                                    <Dropdown
-                                        options={timezoneOptions}
-                                        value={userSettings.timezone}
-                                        onChange={(value) => handleUserSettingsUpdate('timezone', value)}
-                                        placeholder="Select Timezone"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
-                                </div>
-
-                                {/* Currency */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="currency">Default Currency</label>
-                                    <Dropdown
-                                        options={currencyOptions}
-                                        value={userSettings.currency}
-                                        onChange={(value) => handleUserSettingsUpdate('currency', value)}
-                                        placeholder="Select Currency"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
-                                </div>
-
-                                {/* Default Landing Page */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
-                                    <Dropdown
-                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
-                                        value={userSettings.default_landing_page}
-                                        onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
-                                        placeholder="Select Landing Page"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
-                                        Choose the page you see after logging in.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Notification Settings Section */}
-                    {filterSection("notifications") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Notification Settings</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <Switch label="Email Notifications" description="Receive updates via email." isOn={emailNotifications} handleToggle={handleEmailNotificationsToggle} />
-                                <Switch label="SMS Notifications" description="Get alerts on your phone." isOn={smsNotifications} handleToggle={handleSmsNotificationsToggle} />
-                                <Switch label="In-App Notifications" description="See notifications in the dashboard." isOn={inAppNotifications} handleToggle={handleInAppNotificationsToggle} />
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("email") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Email Settings</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="senderEmail" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Sender Email Address</label>
-                                    <input type="email" id="senderEmail" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., noreply@yourdomain.com" />
-                                </div>
-                                <div>
-                                    <label htmlFor="smtpHost" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>SMTP Host</label>
-                                    <input type="text" id="smtpHost" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., smtp.gmail.com" />
-                                </div>
-                            </div>
-                            <button onClick={handleSaveSettings('Email settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Email Settings</button>
-                        </div>
-                    )}
-
-                    {filterSection("security") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Require 2FA for Admin Login" description="Enhance security for all admin accounts." isOn={require2FA} handleToggle={handleRequire2FAToggle} />
-                                <div>
-                                    <label htmlFor="minPasswordLength" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Minimum Password Length</label>
-                                    <input type="number" id="minPasswordLength" value={minPasswordLength} onChange={(e) => setMinPasswordLength(parseInt(e.target.value))} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} min="1" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum characters for user passwords.</p>
-                                    <button onClick={handleSaveSettings('Password policy')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Policy</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("integrations") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Integrations</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Enable CRM Integration" description="Sync data with your external CRM." isOn={crmIntegrationEnabled} handleToggle={handleCrmIntegrationToggle} />
-                                <div>
-                                    <label htmlFor="analyticsId" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Google Analytics ID</label>
-                                    <input type="text" id="analyticsId" value={analyticsId} onChange={(e) => setAnalyticsId(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="UA-XXXXX-Y" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Integrate Google Analytics for traffic monitoring.</p>
-                                    <button onClick={handleSaveSettings('Analytics settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Analytics</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("contentModeration") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Auto-Approve New Listings" description="Approve new agent listings automatically." isOn={autoApproveListings} handleToggle={handleAutoApproveListingsToggle} />
-                                <Switch label="Enable User Comments" description="Allow comments on property listings." isOn={enableComments} handleToggle={handleEnableCommentsToggle} />
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("system") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>System & Maintenance</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Switch label="Enable Maintenance Mode" description="Take the site offline for updates." isOn={maintenanceMode} handleToggle={handleMaintenanceModeToggle} />
-                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Application Cache</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Clear temporary data.</p>
-                                    </div>
-                                    <button onClick={handleClearCache} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Clear</button>
-                                </div>
-                                <Switch label="Automated Database Backups" description="Schedule regular database backups." isOn={databaseBackupScheduled} handleToggle={handleToggleDatabaseBackupScheduling} />
-                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Manual Backup</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Create an on-demand backup.</p>
-                                    </div>
-                                    <button onClick={handleBackupDatabase} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Backup</button>
-                                </div>
-                                <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>View Error Logs</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Access system error logs for debugging.</p>
-                                    </div>
-                                    <button onClick={handleViewErrorLogs} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">View Logs</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("dangerZone") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Danger Zone</h3>
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="space-y-6"
-                            >
-                                <div className={`p-6 rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950`}>
-                                    <h3 className={`text-xl font-bold mb-4 flex items-center ${darkMode ? "text-red-300" : "text-red-800"}`}>
-                                        <ShieldAlert className="mr-2" size={24} /> Delete Agency
+                            {/* Agency Members Section */}
+                            {filterSection("members") && (
+                                <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                                        <UserRoundCheck className="mr-3 text-blue-500" size={24} /> Agency Members
                                     </h3>
-                                    <p className={`mb-4 ${darkMode ? "text-red-200" : "text-red-700"}`}>
-                                        Permanently delete your agency and all associated data. This action cannot be undone.
-                                        All agents currently linked to this agency will be unlinked, and your role will be reverted to a regular agent.
-                                    </p>
-                                    <button
-                                        onClick={handleDeleteAgency}
-                                        className={`px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-md hover:bg-red-700 transition duration-200 flex items-center`}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                        className="space-y-4"
                                     >
-                                        <Trash2 size={20} className="mr-2" /> Delete Agency Permanently
-                                    </button>
+                                        {agencyMembers.length > 0 ? (
+                                            <ul className="space-y-4">
+                                                {agencyMembers.map(member => (
+                                                    <li key={member.user_id} className={`flex items-center justify-between p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                                        <div className="flex items-center space-x-4">
+                                                            <img
+                                                                src={member.profile_picture_url || `https://placehold.co/40x40/${darkMode ? '374151' : 'e5e7eb'}/${darkMode ? 'd1d5db' : '6b7280'}?text=${member.full_name.charAt(0)}`}
+                                                                alt={member.full_name}
+                                                                className="w-10 h-10 rounded-full object-cover"
+                                                            />
+                                                            <div>
+                                                                <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{member.full_name} ({member.agency_role})</p>
+                                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{member.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        {member.user_id !== user.user_id && ( // Cannot remove self from here
+                                                            <button
+                                                                onClick={() => handleRemoveAgent(member.user_id, member.full_name)}
+                                                                className={`px-3 py-1 rounded-full text-sm font-semibold transition duration-200 ${darkMode ? "bg-red-600 hover:bg-red-700 text-white" : "bg-red-100 hover:bg-red-200 text-red-600"}`}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No agents currently in your agency.</p>
+                                        )}
+                                    </motion.div>
                                 </div>
-                            </motion.div>
-                        </div>
+                            )}
+
+                            {/* Pending Join Requests Section */}
+                            {filterSection("requests") && (
+                                <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                                        <Hourglass className="mr-3 text-yellow-500" size={24} /> Pending Join Requests
+                                    </h3>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                        className="space-y-4"
+                                    >
+                                        {pendingRequests.length > 0 ? (
+                                            <ul className="space-y-4">
+                                                {pendingRequests.map(request => (
+                                                    <li key={request.request_id} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                                        <div className="flex items-center space-x-4 mb-3 md:mb-0">
+                                                            <img
+                                                                src={request.agent_profile_picture_url || `https://placehold.co/40x40/${darkMode ? '374151' : 'e5e7eb'}/${darkMode ? 'd1d5db' : '6b7280'}?text=${request.agent_name.charAt(0)}`}
+                                                                alt={request.agent_name}
+                                                                className="w-10 h-10 rounded-full object-cover"
+                                                            />
+                                                            <div>
+                                                                <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>{request.agent_name}</p>
+                                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{request.agent_email}</p>
+                                                                {/* Safely access request.message */}
+                                                                {request.message && <p className={`text-xs italic ${darkMode ? "text-gray-500" : "text-gray-500"}`}>"{request.message}"</p>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex space-x-2">
+                                                            <button
+                                                                onClick={() => handleApproveRequest(request.request_id)}
+                                                                className={`px-4 py-2 rounded-full text-sm font-semibold transition duration-200 flex items-center ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                                                            >
+                                                                <CheckCircle size={16} className="mr-1" /> Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRejectRequest(request.request_id)}
+                                                                className={`px-4 py-2 rounded-full text-sm font-semibold transition duration-200 flex items-center ${darkMode ? "bg-red-600 hover:bg-red-700 text-white" : "bg-red-100 hover:bg-red-200 text-red-600"}`}
+                                                            >
+                                                                <X size={16} className="mr-1" /> Reject
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No pending join requests.</p>
+                                        )}
+                                    </motion.div>
+                                </div>
+                            )}
+
+                            {/* General Settings Section */}
+                            {filterSection("general") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>General Settings</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Theme Setting */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
+                                            <Dropdown placeholder="Select Theme" options={darkModeOptions} value={themePreference} onChange={handleThemeChange} className="w-full" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your preferred theme.</p>
+                                        </div>
+                                        {/* Default Listings Display */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Listings Display</label>
+                                            <Dropdown placeholder="Select View Mode" options={defaultListingsViewOptions} value={defaultListingsView} onChange={handleDefaultListingsViewChange} className="w-full" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
+                                        </div>
+                                        {/* Sidebar Toggle */}
+                                        <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+
+                                        {/* General App Settings from ProfileSettings.js */}
+                                        {/* Language */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="language">Language</label>
+                                            <Dropdown
+                                                options={languageOptions}
+                                                value={userSettings.language}
+                                                onChange={(value) => handleUserSettingsUpdate('language', value)}
+                                                placeholder="Select Language"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
+                                        </div>
+
+                                        {/* Timezone */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="timezone">Timezone</label>
+                                            <Dropdown
+                                                options={timezoneOptions}
+                                                value={userSettings.timezone}
+                                                onChange={(value) => handleUserSettingsUpdate('timezone', value)}
+                                                placeholder="Select Timezone"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
+                                        </div>
+
+                                        {/* Currency */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="currency">Default Currency</label>
+                                            <Dropdown
+                                                options={currencyOptions}
+                                                value={userSettings.currency}
+                                                onChange={(value) => handleUserSettingsUpdate('currency', value)}
+                                                placeholder="Select Currency"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
+                                        </div>
+
+                                        {/* Default Landing Page */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
+                                            <Dropdown
+                                                options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                                value={userSettings.default_landing_page}
+                                                onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
+                                                placeholder="Select Landing Page"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
+                                                Choose the page you see after logging in.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Notification Settings Section */}
+                            {filterSection("notifications") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Notification Settings</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <Switch label="Email Notifications" description="Receive updates via email." isOn={emailNotifications} handleToggle={handleEmailNotificationsToggle} />
+                                        <Switch label="SMS Notifications" description="Get alerts on your phone." isOn={smsNotifications} handleToggle={handleSmsNotificationsToggle} />
+                                        <Switch label="In-App Notifications" description="See notifications in the dashboard." isOn={inAppNotifications} handleToggle={handleInAppNotificationsToggle} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("email") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Email Settings</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label htmlFor="senderEmail" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Sender Email Address</label>
+                                            <input type="email" id="senderEmail" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., noreply@yourdomain.com" />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="smtpHost" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>SMTP Host</label>
+                                            <input type="text" id="smtpHost" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., smtp.gmail.com" />
+                                        </div>
+                                    </div>
+                                    <button onClick={handleSaveSettings('Email settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Email Settings</button>
+                                </div>
+                            )}
+
+                            {filterSection("security") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Require 2FA for Admin Login" description="Enhance security for all admin accounts." isOn={require2FA} handleToggle={handleRequire2FAToggle} />
+                                        <div>
+                                            <label htmlFor="minPasswordLength" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Minimum Password Length</label>
+                                            <input type="number" id="minPasswordLength" value={minPasswordLength} onChange={(e) => setMinPasswordLength(parseInt(e.target.value))} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} min="1" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum characters for user passwords.</p>
+                                            <button onClick={handleSaveSettings('Password policy')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Policy</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("integrations") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Integrations</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Enable CRM Integration" description="Sync data with your external CRM." isOn={crmIntegrationEnabled} handleToggle={handleCrmIntegrationToggle} />
+                                        <div>
+                                            <label htmlFor="analyticsId" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Google Analytics ID</label>
+                                            <input type="text" id="analyticsId" value={analyticsId} onChange={(e) => setAnalyticsId(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="UA-XXXXX-Y" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Integrate Google Analytics for traffic monitoring.</p>
+                                            <button onClick={handleSaveSettings('Analytics settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Analytics</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("contentModeration") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Auto-Approve New Listings" description="Approve new agent listings automatically." isOn={autoApproveListings} handleToggle={handleAutoApproveListingsToggle} />
+                                        <Switch label="Enable User Comments" description="Allow comments on property listings." isOn={enableComments} handleToggle={handleEnableCommentsToggle} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("system") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>System & Maintenance</h3>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Switch label="Enable Maintenance Mode" description="Take the site offline for updates." isOn={maintenanceMode} handleToggle={handleMaintenanceModeToggle} />
+                                        <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Application Cache</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Clear temporary data.</p>
+                                            </div>
+                                            <button onClick={handleClearCache} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Clear</button>
+                                        </div>
+                                        <Switch label="Automated Database Backups" description="Schedule regular database backups." isOn={databaseBackupScheduled} handleToggle={handleToggleDatabaseBackupScheduling} />
+                                        <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Manual Backup</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Create an on-demand backup.</p>
+                                            </div>
+                                            <button onClick={handleBackupDatabase} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Backup</button>
+                                        </div>
+                                        <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>View Error Logs</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Access system error logs for debugging.</p>
+                                            </div>
+                                            <button onClick={handleViewErrorLogs} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">View Logs</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("dangerZone") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Danger Zone</h3>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className={`p-6 rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950`}>
+                                            <h3 className={`text-xl font-bold mb-4 flex items-center ${darkMode ? "text-red-300" : "text-red-800"}`}>
+                                                <ShieldAlert className="mr-2" size={24} /> Delete Agency
+                                            </h3>
+                                            <p className={`mb-4 ${darkMode ? "text-red-200" : "text-red-700"}`}>
+                                                Permanently delete your agency and all associated data. This action cannot be undone.
+                                                All agents currently linked to this agency will be unlinked, and your role will be reverted to a regular agent.
+                                            </p>
+                                            <button
+                                                onClick={handleDeleteAgency}
+                                                className={`px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-md hover:bg-red-700 transition duration-200 flex items-center`}
+                                            >
+                                                <Trash2 size={20} className="mr-2" /> Delete Agency Permanently
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </motion.div>
             </motion.div>

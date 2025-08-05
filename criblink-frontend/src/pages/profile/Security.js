@@ -7,7 +7,63 @@ import API_BASE_URL from '../../config';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 
-function Security({ form, handleChange, handleUpdate, updating, currentSessionIdFromToken }) {
+// Skeleton for Security section
+const SecuritySectionSkeleton = ({ darkMode }) => (
+    <div className="space-y-8">
+        {/* Change Password Section Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2, 3].map((_, i) => (
+                    <div key={i}>
+                        <div className={`h-4 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-2`}></div>
+                        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Two-Factor Authentication Section Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className={`h-32 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+
+        {/* Active Sessions Section Skeleton */}
+        <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2].map((_, i) => (
+                    <div key={i} className={`p-4 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse h-24`}></div>
+                ))}
+            </div>
+        </div>
+
+        {/* Login History Section Skeleton */}
+        <div className={`pb-6 mb-6 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className="space-y-4">
+                {[1, 2].map((_, i) => (
+                    <div key={i} className={`p-4 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse h-20`}></div>
+                ))}
+            </div>
+        </div>
+
+        {/* Account Deactivation Section Skeleton */}
+        <div className={`pb-6 mb-6 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-5`}></div>
+            <div className={`h-32 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+
+        {/* Save Changes Button Skeleton */}
+        <div className="flex justify-center pt-8">
+            <div className={`h-12 w-48 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+    </div>
+);
+
+
+function Security({ form, handleChange, handleUpdate, updating, currentSessionIdFromToken, loading }) {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -69,11 +125,11 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
   }, [token, showMessage]);
 
   useEffect(() => {
-    if (token) {
+    if (token && !loading) { // Only fetch if main profile is not loading
       fetchActiveSessions();
       fetchLoginHistory();
     }
-  }, [token, fetchActiveSessions, fetchLoginHistory]);
+  }, [token, fetchActiveSessions, fetchLoginHistory, loading]); // Added loading to dependency array
 
   // Styles for form elements (unchanged)
   const inputFieldStyles =
@@ -168,6 +224,10 @@ function Security({ form, handleChange, handleUpdate, updating, currentSessionId
     const date = new Date(timestamp);
     return date.toLocaleString();
   };
+
+  if (loading) {
+    return <SecuritySectionSkeleton darkMode={darkMode} />;
+  }
 
   return (
     <motion.div

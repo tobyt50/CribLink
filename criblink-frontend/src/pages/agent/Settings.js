@@ -155,6 +155,29 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
     );
 };
 
+// Skeleton for a dropdown input
+const DropdownSkeleton = ({ darkMode }) => (
+  <div className={`h-10 w-full rounded-xl animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+);
+
+// Skeleton for a switch component
+const SwitchSkeleton = ({ darkMode }) => (
+  <div className={`flex items-center justify-between p-4 rounded-xl border animate-pulse h-full ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+    <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+  </div>
+);
+
+// Skeleton for a textarea and button
+const TextAreaWithButtonSkeleton = ({ darkMode }) => (
+  <div>
+    <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-24 w-full rounded-xl animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-4`}></div>
+    <div className={`h-10 w-32 rounded-xl animate-pulse ${darkMode ? "bg-green-700" : "bg-green-200"}`}></div>
+  </div>
+);
+
 
 const AgentSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
@@ -409,7 +432,7 @@ const AgentSettings = () => {
                  payload = {
                     theme: settings.display.theme,
                     default_list_view: settings.display.defaultListView,
-                    sidebar_permanently_expanded: settings.display.sidebarPermanentlyExpanded,
+                    sidebar_permanently_expanded: settings.display.sidebarPermanently_expanded,
                     language: settings.display.language,
                  };
             }
@@ -611,8 +634,68 @@ const AgentSettings = () => {
 
     if (loading || userSettingsLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">Loading settings...</div>
+            <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+                {/* Sidebar placeholder */}
+                <div className={`fixed top-0 left-0 h-full ${isCollapsed ? 'w-20' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transition-all duration-300`}>
+                  <div className={`h-full animate-pulse flex flex-col p-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className={`h-8 w-3/4 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-6`}></div>
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className={`h-10 w-full rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} mb-3`}></div>
+                    ))}
+                  </div>
+                </div>
+
+                <motion.div
+                    animate={{ marginLeft: contentShift }}
+                    transition={{ duration: 0.3 }}
+                    initial={false}
+                    className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+                    style={{ minWidth: `calc(100% - ${contentShift}px)` }}
+                >
+                    <div className={`h-10 w-1/2 md:w-1/4 rounded mx-auto mb-6 animate-pulse ${darkMode ? "bg-gray-800" : "bg-gray-200"}`}></div>
+
+                    <div className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-6 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}>
+                        <div className="flex justify-between items-center">
+                            <div className={`h-8 w-32 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                            <div className={`h-10 w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                        </div>
+
+                        {/* General Settings Skeleton */}
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <SwitchSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                                <DropdownSkeleton darkMode={darkMode} />
+                            </div>
+                        </div>
+
+                        {/* Notifications Skeleton */}
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <div className={`h-8 w-40 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <SwitchSkeleton darkMode={darkMode} />
+                                <SwitchSkeleton darkMode={darkMode} />
+                                <SwitchSkeleton darkMode={darkMode} />
+                                <SwitchSkeleton darkMode={darkMode} />
+                            </div>
+                        </div>
+
+                        {/* Agent Preferences Skeleton */}
+                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <div className={`h-8 w-48 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <SwitchSkeleton darkMode={darkMode} />
+                                <TextAreaWithButtonSkeleton darkMode={darkMode} />
+                                <SwitchSkeleton darkMode={darkMode} />
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
         );
     }

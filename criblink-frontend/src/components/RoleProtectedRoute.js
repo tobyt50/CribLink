@@ -34,15 +34,8 @@ const RoleProtectedRoute = ({ allowedRole }) => {
     }
   }, [currentUserRole, allowedRolesArray, navigate, showMessage, loading, isAuthenticated]);
 
-  if (loading) {
-    // Show a loading indicator while authentication status is being determined
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-lg text-gray-500 dark:text-gray-400">Loading permissions...</p>
-      </div>
-    );
-  }
-
+  // Removed the loading screen block.
+  // The component will now immediately evaluate the authentication and role status.
   // If not authenticated (handled by ProtectedBaseRoute) or user role does not match allowed roles, redirect
   if (!isAuthenticated || !allowedRolesArray.includes(currentUserRole)) {
     return <Navigate to="/signin" replace />;

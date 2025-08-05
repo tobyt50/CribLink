@@ -1,17 +1,69 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ClientSidebar from '../../components/client/Sidebar'; // Assuming you have a client sidebar
+import ClientSidebar from '../../components/client/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, User, Home, MessageSquare, X, Heart, Search, Phone, Mail, Star, Settings, UserPlus, Landmark, ArrowLeft, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical } from 'lucide-react'; // Added Star icon for recommended listings and Settings, plus icons for agent selection modal
+import { Menu, User, Home, MessageSquare, X, Heart, Search, Phone, Mail, Star, Settings, UserPlus, Landmark, ArrowLeft, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card';
-import StatCard from '../../components/StatCard'; // Re-using StatCard for simple stats
+import StatCard from '../../components/StatCard';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { useAuth } from '../../context/AuthContext'; // To get client user details
-import FindAgentModal from '../../components/client/FindAgentModal'; // NEW: Import the new modal component
+import { useAuth } from '../../context/AuthContext';
+import FindAgentModal from '../../components/client/FindAgentModal';
+
+// Skeleton component for the Client Dashboard
+const ClientDashboardSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-6`}>
+    {/* Welcome Message Skeleton */}
+    <div className={`h-10 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-6`}></div>
+
+    {/* Stat Cards Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i}>
+          <div className="flex items-center justify-between mb-2">
+            <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          </div>
+          <div className={`h-16 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </Card>
+      ))}
+    </div>
+
+    {/* Recent Activity Feed Skeleton */}
+    <Card>
+      <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+      <ul className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <li key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden w-full">
+              <div className={`h-4 w-4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-1/4 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className={`h-4 w-1/5 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} ml-2`}></div>
+          </li>
+        ))}
+      </ul>
+      <div className={`mt-4 h-6 w-1/4 rounded mx-auto ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </Card>
+
+    {/* Quick Actions Skeleton */}
+    <div className="mt-10">
+      <Card>
+        <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`h-12 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  </div>
+);
+
 
 const ClientDashboard = () => {
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -19,67 +71,57 @@ const ClientDashboard = () => {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const navigate = useNavigate();
-  const { user } = useAuth(); // Get authenticated user details
+  const { user } = useAuth();
 
   const [recentActivities, setRecentActivities] = useState([]);
   const [totalInquiries, setTotalInquiries] = useState('--');
   const [savedListingsCount, setSavedListingsCount] = useState('--');
-  const [connectedAgents, setConnectedAgents] = useState([]); // Changed to an array for multiple agents
-  const [recommendedListingsCount, setRecommendedListingsCount] = useState('--'); // New state for recommended listings
+  const [connectedAgents, setConnectedAgents] = useState([]);
+  const [recommendedListingsCount, setRecommendedListingsCount] = useState('--');
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [loading, setLoading] = useState(true); // New loading state
 
-  const [isFindAgentModalOpen, setIsFindAgentModalOpen] = useState(false); // State for agent modal
-  // Removed agent-related states that are now managed inside FindAgentModal:
-  // allAgents, filteredAgents, agentSearchTerm, selectedAgentForConnection, selectedAgentConnectionStatus
+  const [isFindAgentModalOpen, setIsFindAgentModalOpen] = useState(false);
 
-  // Fetch token once from localStorage
   const token = localStorage.getItem('token');
 
-  // Navigation functions
   const goToInquiries = () => navigate('/client/inquiries');
-  const goToSavedListings = () => navigate('/favourites'); // Assuming /favourites is client's saved listings
+  const goToSavedListings = () => navigate('/favourites');
   const goToSearch = () => navigate('/search');
   const goToAgentProfile = (agentId) => navigate(`/client/agent-profile/${agentId}`);
   const goToSettings = () => navigate('/client/settings');
   const goToRecommendedListings = () => {
-    if (connectedAgents.length > 0) { // Check if any agent is connected
-      // For simplicity, navigate to the first connected agent's profile, or a generic recommendations page
-      // A more robust solution might be a dedicated recommendations page that aggregates from all agents
+    if (connectedAgents.length > 0) {
       navigate(`/client/agent-profile/${connectedAgents[0].user_id}`, { state: { scrollTo: 'recommended-listings' } });
     } else {
       showMessage('Connect with an agent to see recommended listings!', 'info');
     }
   };
 
-  // The fetchAllAgents, handleFindAgentClick, handleAgentSearchChange, handleSelectAgentForConnection,
-  // and handleSendConnectionRequest functions are now managed inside FindAgentModal.
-  // We only need handleFindAgentClick to open the modal.
   const handleFindAgentClick = () => {
     setIsFindAgentModalOpen(true);
   };
 
 
   const fetchClientDashboardData = useCallback(async () => {
+    setLoading(true); // Start loading
     if (!user || !token) {
       console.log("No user or token found, skipping client dashboard data fetch.");
+      setLoading(false); // End loading if no user or token
       return;
     }
-    // Define headers inside the useCallback to avoid re-creation on every render
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
-      // Fetch client-specific stats
       const [inquiriesRes, savedListingsRes] = await Promise.all([
-        // Corrected endpoint path to include /client-stats
         axiosInstance.get(`/client-stats/inquiries/client/count/all-inquiries`, { headers }),
-        axiosInstance.get(`/client-stats/saved-listings/count`, { headers }), // Using new client-stats endpoint
+        axiosInstance.get(`/client-stats/saved-listings/count`, { headers }),
       ]);
 
       setTotalInquiries(inquiriesRes.data.count);
       setSavedListingsCount(savedListingsRes.data.count);
 
-      // Fetch recent activities for the client
-      const activityRes = await axiosInstance.get(`/client-stats/activity/recent-activity`, { headers }); // Using new client-stats endpoint
+      const activityRes = await axiosInstance.get(`/client-stats/activity/recent-activity`, { headers });
       const formattedActivities = activityRes.data.activities.map(a => {
         let IconComponent = User;
         let tag = 'Activity';
@@ -97,7 +139,7 @@ const ClientDashboard = () => {
           tag = 'Match';
           color = 'green';
         } else if (type === 'agent_message' || message.includes('message from agent')) {
-          IconComponent = User; // Or a specific agent icon if available
+          IconComponent = User;
           tag = 'Agent Msg';
           color = 'purple';
         } else if (type === 'agent_connection' || message.includes('agent connected')) {
@@ -116,12 +158,10 @@ const ClientDashboard = () => {
       });
       setRecentActivities(formattedActivities);
 
-      // Fetch ALL connected agents details from clientController
       const agentConnectionRes = await axiosInstance.get(`/clients/${user.user_id}/connected-agent`, { headers });
       if (agentConnectionRes.data.agents && agentConnectionRes.data.agents.length > 0) {
-        setConnectedAgents(agentConnectionRes.data.agents); // Set the array of agents
+        setConnectedAgents(agentConnectionRes.data.agents);
 
-        // Calculate total recommended listings from all connected agents
         let totalRecs = 0;
         for (const agent of agentConnectionRes.data.agents) {
           try {
@@ -133,7 +173,7 @@ const ClientDashboard = () => {
         }
         setRecommendedListingsCount(totalRecs);
       } else {
-        setConnectedAgents([]); // No agents connected
+        setConnectedAgents([]);
         setRecommendedListingsCount(0);
       }
 
@@ -146,6 +186,8 @@ const ClientDashboard = () => {
       } else {
         showMessage('Failed to load client dashboard data.', 'error', 3000);
       }
+    } finally {
+      setLoading(false); // End loading
     }
   }, [navigate, showMessage, user, token]);
 
@@ -221,146 +263,149 @@ const ClientDashboard = () => {
           <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Client Dashboard</h1>
         </div>
 
-        {/* Welcome Message - No Card Container */}
-        <h2 className={`text-xl font-semibold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-          Welcome, {clientFirstName}! <span className={`${darkMode ? "text-gray-300" : "text-gray-700"} text-base font-normal`}>Here's a quick overview of your activity and connections.</span>
-        </h2>
+        {loading ? (
+            <ClientDashboardSkeleton darkMode={darkMode} />
+        ) : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            {/* Welcome Message - No Card Container */}
+            <h2 className={`text-xl font-semibold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                Welcome, {clientFirstName}! <span className={`${darkMode ? "text-gray-300" : "text-gray-700"} text-base font-normal`}>Here's a quick overview of your activity and connections.</span>
+            </h2>
 
-        {/* Stat Cards */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10"> {/* Changed to 4 columns */}
+            {/* Stat Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                {/* My Inquiries */}
+                <Card onClick={goToInquiries} className="cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>My Inquiries</h3>
+                    <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="flex items-center justify-center h-full">
+                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalInquiries}</p>
+                </div>
+                </Card>
 
-            {/* My Inquiries */}
-            <Card onClick={goToInquiries} className="cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>My Inquiries</h3>
-                <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              <div className="flex items-center justify-center h-full">
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalInquiries}</p>
-              </div>
-            </Card>
+                {/* Saved Listings */}
+                <Card onClick={goToSavedListings} className="cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Saved Listings</h3>
+                    <Heart size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="flex items-center justify-center h-full">
+                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{savedListingsCount}</p>
+                </div>
+                </Card>
 
-            {/* Saved Listings */}
-            <Card onClick={goToSavedListings} className="cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Saved Listings</h3>
-                <Heart size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              <div className="flex items-center justify-center h-full">
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{savedListingsCount}</p>
-              </div>
-            </Card>
+                {/* Connected Agents */}
+                <Card onClick={handleFindAgentClick} className="cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Connected Agents</h3>
+                    <User size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{connectedAgents.length}</p>
+                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    {connectedAgents.length === 1 ? 'agent' : 'agents'}
+                    </p>
+                    <button
+                    onClick={handleFindAgentClick}
+                    className={`mt-2 text-sm hover:underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+                    >
+                    Manage Agents
+                    </button>
+                </div>
+                </Card>
 
-            {/* Connected Agents */}
-            <Card onClick={handleFindAgentClick} className="cursor-pointer"> {/* Now opens modal */}
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Connected Agents</h3> {/* Pluralized title */}
-                <User size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{connectedAgents.length}</p> {/* Display count */}
-                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  {connectedAgents.length === 1 ? 'agent' : 'agents'}
-                </p>
-                <button
-                  onClick={handleFindAgentClick}
-                  className={`mt-2 text-sm hover:underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-                >
-                  Manage Agents
-                </button>
-              </div>
-            </Card>
+                {/* Recommended Listings */}
+                <Card onClick={goToRecommendedListings} className="cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Recommended Listings</h3>
+                    <Star size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{recommendedListingsCount}</p>
+                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    {connectedAgents.length > 0 ? `from ${connectedAgents.length} agent(s)` : 'Connect to see recommendations'}
+                    </p>
+                </div>
+                </Card>
 
-            {/* Recommended Listings */}
-            <Card onClick={goToRecommendedListings} className="cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Recommended Listings</h3>
-                <Star size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{recommendedListingsCount}</p>
-                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  {connectedAgents.length > 0 ? `from ${connectedAgents.length} agent(s)` : 'Connect to see recommendations'}
-                </p>
-              </div>
-            </Card>
+            </div>
 
-          </div>
-
-          {/* Recent Activity Feed */}
-          <Card>
-            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Activity</h2>
-            <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              {visibleActivities.length > 0 ? (
-                visibleActivities.map((activity, idx) => (
-                  <li key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <span className={`text-${activity.color}-500 flex-shrink-0`}>{activity.icon}</span>
-                      <span className="truncate">{activity.message}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600 flex-shrink-0`}
-                      >
-                        {activity.tag}
-                      </span>
-                    </div>
-                    <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"} flex-shrink-0 ml-2`}>{activity.formattedTime}</span>
-                  </li>
-                ))
-              ) : (
-                <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No recent activity to display.</p>
-              )}
-            </ul>
-            {recentActivities.length > 5 && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => setShowAllActivities(prev => !prev)}
-                  className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
-                >
-                  {showAllActivities ? 'Show Less' : 'Show More'}
-                </button>
-              </div>
-            )}
-          </Card>
-
-          {/* Quick Actions */}
-          <div className="mt-10">
+            {/* Recent Activity Feed */}
             <Card>
-              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"> {/* Changed to 4 columns on large screens */}
-                <button
-                  onClick={goToSearch}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                >
-                  <Search size={20} /> Search for Listings
-                </button>
-                <button
-                  onClick={goToInquiries}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
-                >
-                  <MessageSquare size={20} /> View My Inquiries
-                </button>
-                <button
-                  onClick={goToSavedListings}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-purple-700 hover:bg-purple-600 text-white" : "bg-purple-500 hover:bg-purple-600 text-white"}`}
-                >
-                  <Heart size={20} /> My Favourites
-                </button>
-                <button
-                  onClick={goToSettings}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-500 hover:bg-gray-600 text-white"}`}
-                >
-                  <Settings size={20} /> Settings
-                </button>
-              </div>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Activity</h2>
+                <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                {visibleActivities.length > 0 ? (
+                    visibleActivities.map((activity, idx) => (
+                    <li key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                        <span className={`text-${activity.color}-500 flex-shrink-0`}>{activity.icon}</span>
+                        <span className="truncate">{activity.message}</span>
+                        <span
+                            className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600 flex-shrink-0`}
+                        >
+                            {activity.tag}
+                        </span>
+                        </div>
+                        <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"} flex-shrink-0 ml-2`}>{activity.formattedTime}</span>
+                    </li>
+                    ))
+                ) : (
+                    <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No recent activity to display.</p>
+                )}
+                </ul>
+                {recentActivities.length > 5 && (
+                <div className="mt-4 text-center">
+                    <button
+                    onClick={() => setShowAllActivities(prev => !prev)}
+                    className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
+                    >
+                    {showAllActivities ? 'Show Less' : 'Show More'}
+                    </button>
+                </div>
+                )}
             </Card>
-          </div>
 
-        </motion.div>
+            {/* Quick Actions */}
+            <div className="mt-10">
+                <Card>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button
+                    onClick={goToSearch}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                    >
+                    <Search size={20} /> Search for Listings
+                    </button>
+                    <button
+                    onClick={goToInquiries}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+                    >
+                    <MessageSquare size={20} /> View My Inquiries
+                    </button>
+                    <button
+                    onClick={goToSavedListings}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-purple-700 hover:bg-purple-600 text-white" : "bg-purple-500 hover:bg-purple-600 text-white"}`}
+                    >
+                    <Heart size={20} /> My Favourites
+                    </button>
+                    <button
+                    onClick={goToSettings}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-500 hover:bg-gray-600 text-white"}`}
+                    >
+                    <Settings size={20} /> Settings
+                    </button>
+                </div>
+                </Card>
+            </div>
+
+            </motion.div>
+        )}
       </motion.div>
 
       {/* Agent Connection Modal */}

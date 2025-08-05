@@ -12,6 +12,43 @@ import { useSidebarState } from '../../hooks/useSidebarState';
 import socket from '../../socket';
 import API_BASE_URL from '../../config';
 
+// Skeleton component for ClientInquiries page
+const ClientInquiriesSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-4`}>
+
+    {/* Content Skeleton (mimicking graphical view for simplicity) */}
+    <div className="space-y-4">
+      {[...Array(5)].map((_, i) => ( // 5 skeleton cards
+        <div key={i} className={`p-4 rounded-xl shadow-md h-48 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center">
+              <div className={`w-12 h-12 rounded-full mr-4 ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-6 w-32 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className={`h-6 w-16 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+          <div className="space-y-2">
+            <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+          <div className="flex justify-end mt-3">
+            <div className={`h-8 w-24 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Pagination Skeleton */}
+    <div className="flex justify-center items-center space-x-4 mt-4">
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-20 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
+
 const ClientInquiries = () => {
   const [groupedConversations, setGroupedConversations] = useState([]);
   const [search, setSearch] = useState('');
@@ -29,6 +66,7 @@ const ClientInquiries = () => {
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
   // State for expanded profile picture
   const [isProfilePicExpanded, setIsProfilePicExpanded] = useState(false);
@@ -55,6 +93,7 @@ const ClientInquiries = () => {
   }, [selectedConversationId, groupedConversations]);
 
   const fetchInquiries = useCallback(async () => {
+    setIsLoading(true); // Set loading to true
     const params = new URLSearchParams({ search, sort: sortKey, direction: sortDirection, page, limit });
     try {
       const token = localStorage.getItem('token');
@@ -73,6 +112,8 @@ const ClientInquiries = () => {
     } catch (err) {
       console.error('Failed to fetch inquiries:', err);
       showMessage('Failed to fetch inquiries. Please try again.', 'error');
+    } finally {
+      setIsLoading(false); // Set loading to false
     }
   }, [search, page, sortKey, sortDirection, showMessage, navigate]);
 
@@ -213,7 +254,7 @@ const ClientInquiries = () => {
     if (!selectedConversation) return;
     showConfirm({
       title: "Delete Conversation",
-      message: `Are you sure you want to delete this conversation with ${selectedConversation.agentName}? This action cannot be undone.`,
+      message: `Are you sure you want to delete this conversation with ${selectedConversation.agentName}? This is irreversible.`,
       onConfirm: async () => {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_BASE_URL}/inquiries/client/delete-conversation/${selectedConversation.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -352,119 +393,14 @@ const ClientInquiries = () => {
               </button>
             )}
           </div>
-          {isMobile ? (
-            // Mobile-friendly list view
-            <div className="space-y-4">
-              {groupedConversations.length > 0 ? (
-                groupedConversations.map(conv => {
-                  // Determine if the conversation has unread messages FOR THE CLIENT
-                  const hasUnreadMessagesForClient = conv.messages.some(msg => 
-                    msg.sender_id === conv.agent_id && !msg.read
-                  );
-                  
-                  // Determine the sender of the very last message in the conversation
-                  const lastMessageSender = conv.messages.length > 0 
-                                            ? conv.messages[conv.messages.length - 1].sender
-                                            : null;
-
-                  // Determine display status based on the last message sender
-                  let displayStatus;
-                  if (lastMessageSender === 'Client') {
-                    displayStatus = 'Responded';
-                  } else {
-                    displayStatus = 'New Message';
-                  }
-
-                  // Text bolding logic: bold if new message status AND modal is not open for this conversation
-                  const isBold = hasUnreadMessagesForClient && openedConversationId !== conv.id;
-
-                  return (
-                    <div
-                      key={conv.id}
-                      className={`p-4 rounded-xl shadow-md cursor-pointer relative ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} border-l-4 border-green-500`}
-                      onClick={() => handleViewConversation(conv)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <img
-                            src={conv.agentProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`}
-                            alt="Agent Profile"
-                            className="w-12 h-12 rounded-full mr-4 object-cover cursor-pointer" // Increased size and margin
-                            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
-                            onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
-                          />
-                          <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''} ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
-                            {/* Agent Name clickable */}
-                            {conv.agent_id ? (
-                                <span
-                                    className="cursor-pointer hover:underline"
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`); }}
-                                >
-                                    {conv.agentName}
-                                </span>
-                            ) : (
-                                <span>{conv.agentName}</span>
-                            )}
-                          </h4>
-                        </div>
-                        {/* Status tag moved to top right and made conditional */}
-                        <div className="absolute top-2 right-2">
-                            <span className={`${displayStatus === 'New Message' ? 'bg-red-500' : 'bg-green-500'} text-white text-xs font-bold px-2 py-1 rounded-full`}>
-                                {displayStatus}
-                            </span>
-                        </div>
-                      </div>
-                      <div> {/* No ml-16 here */}
-                        <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          <Building size={14} className="inline-block mr-1" />
-                          <span className="font-medium">{conv.propertyTitle || 'General Inquiry'}</span>
-                          {conv.property_id && (
-                            <button
-                              onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`); }}
-                              className="ml-2 py-0.5 px-1.5 bg-blue-500 text-white rounded-md text-xs"
-                            >
-                              View Property
-                            </button>
-                          )}
-                        </p>
-                        <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          <MessageSquare size={14} className="inline-block mr-1" />
-                          Last Message: <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
-                        </p>
-                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <Clock size={12} className="inline-block mr-1" />
-                          {new Date(conv.lastMessageTimestamp).toLocaleString()}
-                        </p>
-                        <div className="mt-2 flex gap-2 justify-end">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(conv.id); }}
-                                className={`p-1 rounded-full ${darkMode ? "text-gray-400 hover:text-red-300" : "text-gray-600 hover:text-red-700"}`}
-                                title="Delete Conversation"
-                            >
-                                <TrashIcon className="h-5 w-5" />
-                            </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No conversations found.</p>
-              )}
-            </div>
+          {isLoading ? ( // Conditionally render skeleton when loading
+            <ClientInquiriesSkeleton darkMode={darkMode} />
           ) : (
-            // Desktop table view
-            <div className="overflow-x-auto">
-              <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <thead>
-                  <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                    {[{ key: 'agent_name', label: 'Agent' }, { key: 'property_title', label: 'Property' }, { key: 'last_message', label: 'Last Message' }, { key: 'last_message_timestamp', label: 'Last Activity' }, { key: 'status', label: 'Status' }].map(c => (
-                      <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{ width: c.key === 'last_message' ? '200px' : '150px' }}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
-                  {groupedConversations.length > 0 ? groupedConversations.map(conv => {
+            isMobile ? (
+              // Mobile-friendly list view
+              <div className="space-y-4">
+                {groupedConversations.length > 0 ? (
+                  groupedConversations.map(conv => {
                     // Determine if the conversation has unread messages FOR THE CLIENT
                     const hasUnreadMessagesForClient = conv.messages.some(msg => 
                       msg.sender_id === conv.agent_id && !msg.read
@@ -472,8 +408,8 @@ const ClientInquiries = () => {
                     
                     // Determine the sender of the very last message in the conversation
                     const lastMessageSender = conv.messages.length > 0 
-                                              ? conv.messages[conv.messages.length - 1].sender
-                                              : null;
+                                            ? conv.messages[conv.messages.length - 1].sender
+                                            : null;
 
                     // Determine display status based on the last message sender
                     let displayStatus;
@@ -487,33 +423,142 @@ const ClientInquiries = () => {
                     const isBold = hasUnreadMessagesForClient && openedConversationId !== conv.id;
 
                     return (
-                      <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold ? 'font-bold' : 'font-normal'}`} onClick={() => handleViewConversation(conv)}>
-                        <td className="py-2 px-2 truncate" title={conv.agentName}>
+                      <div
+                        key={conv.id}
+                        className={`p-4 rounded-xl shadow-md cursor-pointer relative ${darkMode ? "bg-gray-700 text-gray-200" : "bg-white text-gray-800"} border-l-4 border-green-500`}
+                        onClick={() => handleViewConversation(conv)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center">
                             <img
                               src={conv.agentProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`}
                               alt="Agent Profile"
-                              className="w-8 h-8 rounded-full mr-3 object-cover cursor-pointer"
+                              className="w-12 h-12 rounded-full mr-4 object-cover cursor-pointer" // Increased size and margin
                               onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
                               onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
                             />
-                            <span className={`flex items-center ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            <h4 className={`text-lg font-semibold ${isBold ? 'text-green-400' : ''} ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                              {/* Agent Name clickable */}
+                              {conv.agent_id ? (
+                                  <span
+                                      className="cursor-pointer hover:underline"
+                                      onClick={(e) => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`); }}
+                                  >
+                                      {conv.agentName}
+                                  </span>
+                              ) : (
+                                  <span>{conv.agentName}</span>
+                              )}
+                            </h4>
                           </div>
-                        </td>
-                        <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General Inquiry'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
-                        <td className="py-2 px-2 truncate" title={conv.lastMessage}>
-                          <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>
-                            {conv.lastMessage || 'No messages yet.'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 truncate" title={new Date(conv.lastMessageTimestamp).toLocaleString()}>{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
-                        <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (darkMode ? 'text-green-400' : 'text-green-700')}`}>{displayStatus}</td>
-                      </tr>
-                    )
-                  }) : <tr><td colSpan="5" className="py-8 text-center text-gray-500">No conversations found.</td></tr>}
-                </tbody>
-              </table>
-            </div>
+                          {/* Status tag moved to top right and made conditional */}
+                          <div className="absolute top-2 right-2">
+                              <span className={`${displayStatus === 'New Message' ? 'bg-red-500' : 'bg-green-500'} text-white text-xs font-bold px-2 py-1 rounded-full`}>
+                                  {displayStatus}
+                              </span>
+                          </div>
+                        </div>
+                        <div> {/* No ml-16 here */}
+                          <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            <Building size={14} className="inline-block mr-1" />
+                            <span className="font-medium">{conv.propertyTitle || 'General Inquiry'}</span>
+                            {conv.property_id && (
+                              <button
+                                onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`); }}
+                                className="ml-2 py-0.5 px-1.5 bg-blue-500 text-white rounded-md text-xs"
+                              >
+                                View Property
+                              </button>
+                            )}
+                          </p>
+                          <p className={`text-sm mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            <MessageSquare size={14} className="inline-block mr-1" />
+                            Last Message: <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>{conv.lastMessage || 'No messages yet'}</span>
+                          </p>
+                          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <Clock size={12} className="inline-block mr-1" />
+                            {new Date(conv.lastMessageTimestamp).toLocaleString()}
+                          </p>
+                          <div className="mt-2 flex gap-2 justify-end">
+                              <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteInquiry(conv.id); }}
+                                  className={`p-1 rounded-full ${darkMode ? "text-gray-400 hover:text-red-300" : "text-gray-600 hover:text-red-700"}`}
+                                  title="Delete Conversation"
+                              >
+                                  <TrashIcon className="h-5 w-5" />
+                              </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className={`py-8 text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No conversations found.</p>
+                )}
+              </div>
+            ) : (
+              // Desktop table view
+              <div className="overflow-x-auto">
+                <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <thead>
+                    <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      {[{ key: 'agent_name', label: 'Agent' }, { key: 'property_title', label: 'Property' }, { key: 'last_message', label: 'Last Message' }, { key: 'last_message_timestamp', label: 'Last Activity' }, { key: 'status', label: 'Status' }].map(c => (
+                        <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{ width: c.key === 'last_message' ? '200px' : '150px' }}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+                    {groupedConversations.length > 0 ? groupedConversations.map(conv => {
+                      // Determine if the conversation has unread messages FOR THE CLIENT
+                      const hasUnreadMessagesForClient = conv.messages.some(msg => 
+                        msg.sender_id === conv.agent_id && !msg.read
+                      );
+                      
+                      // Determine the sender of the very last message in the conversation
+                      const lastMessageSender = conv.messages.length > 0 
+                                              ? conv.messages[conv.messages.length - 1].sender
+                                              : null;
+
+                      // Determine display status based on the last message sender
+                      let displayStatus;
+                      if (lastMessageSender === 'Client') {
+                        displayStatus = 'Responded';
+                      } else {
+                        displayStatus = 'New Message';
+                      }
+
+                      // Text bolding logic: bold if new message status AND modal is not open for this conversation
+                      const isBold = hasUnreadMessagesForClient && openedConversationId !== conv.id;
+
+                      return (
+                        <tr key={conv.id} className={`border-t cursor-pointer ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"} ${isBold ? 'font-bold' : 'font-normal'}`} onClick={() => handleViewConversation(conv)}>
+                          <td className="py-2 px-2 truncate" title={conv.agentName}>
+                            <div className="flex items-center">
+                              <img
+                                src={conv.agentProfilePictureUrl || `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`}
+                                alt="Agent Profile"
+                                className="w-8 h-8 rounded-full mr-3 object-cover cursor-pointer"
+                                onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/40x40/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(conv.agentName)}`; }}
+                                onClick={(e) => { e.stopPropagation(); handleProfilePicClick(conv.agentProfilePictureUrl, conv.agentName); }}
+                              />
+                              <span className={`flex items-center ${darkMode ? 'text-green-400' : 'text-green-600'}`}>{conv.agentName || 'Unassigned'}{conv.agent_id && <button onClick={e => { e.stopPropagation(); navigate(`/client/agent-profile/${conv.agent_id}`) }} className="ml-2 py-1 px-2 bg-purple-500 text-white rounded-xl text-xs">View</button>}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-2 truncate" title={conv.propertyTitle}><span className="flex items-center">{conv.propertyTitle || 'General Inquiry'}{conv.property_id && <button onClick={e => { e.stopPropagation(); navigate(`/listings/${conv.property_id}`) }} className="ml-2 py-1 px-2 bg-blue-500 text-white rounded-xl text-xs">View</button>}</span></td>
+                          <td className="py-2 px-2 truncate" title={conv.lastMessage}>
+                            <span className={`${darkMode ? 'text-green-400' : 'text-green-600'} ${isBold ? 'font-semibold' : ''}`}>
+                              {conv.lastMessage || 'No messages yet.'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 truncate" title={new Date(conv.lastMessageTimestamp).toLocaleString()}>{new Date(conv.lastMessageTimestamp).toLocaleString()}</td>
+                          <td className={`py-2 px-2 truncate font-semibold ${displayStatus === 'New Message' ? 'text-red-600' : (darkMode ? 'text-green-400' : 'text-green-700')}`}>{displayStatus}</td>
+                        </tr>
+                      )
+                    }) : <tr><td colSpan="5" className="py-8 text-center text-gray-500">No conversations found.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
           <div className="flex justify-center items-center space-x-4 mt-4">
             <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1} className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100"}`}>Previous</button>
@@ -568,4 +613,3 @@ const ClientInquiries = () => {
 };
 
 export default ClientInquiries;
-

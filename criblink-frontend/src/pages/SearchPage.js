@@ -12,6 +12,19 @@ import { useMessage } from '../context/MessageContext'; // Import useMessage hoo
 import { useAuth } from '../context/AuthContext'; // Import useAuth hook to get user role
 import { useConfirmDialog } from '../context/ConfirmDialogContext'; // Import useConfirmDialog
 
+// Skeleton for a Listing Card (graphical view) - copied from Home.js
+const ListingCardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className={`w-full h-32 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className="flex justify-between items-center">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
 function SearchPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,6 +37,7 @@ function SearchPage() {
   const { showMessage } = useMessage(); // Initialize useMessage
   const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
   const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+  const [loading, setLoading] = useState(true); // New loading state
 
   // Get user and role from AuthContext
   const { user } = useAuth();
@@ -148,6 +162,7 @@ function SearchPage() {
     } else {
       setResults([]);
       setFilteredResults([]);
+      setLoading(false); // No search term, so no loading needed
     }
     fetchUserFavourites(); // Fetch favorites when search page loads
   }, [location.search, fetchUserFavourites]);
@@ -158,6 +173,7 @@ function SearchPage() {
   }, [filters, results]);
 
   const fetchResults = async (term) => {
+    setLoading(true); // Start loading
     try {
       const response = await axiosInstance.get(`${API_BASE_URL}/listings?search=${encodeURIComponent(term)}`);
       const data = response.data; // Axios automatically parses JSON
@@ -183,6 +199,8 @@ function SearchPage() {
       showMessage(errorMessage, 'error'); // Display error message
       setResults([]);
       setFilteredResults([]);
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
@@ -317,7 +335,7 @@ function SearchPage() {
       </AnimatePresence>
 
       {/* Results Count Display */}
-      {searchTerm && (filteredResults.length > 0 || currentPage > 1) && (
+      {searchTerm && (filteredResults.length > 0 || currentPage > 1) && !loading && (
         <motion.div
           className={`text-center mb-2 text-green-700 text-1xl md:text-2xl font-bold`} /* Reduced py-0.5 to py-0 and mb-6 to mb-4 */
           initial={{ opacity: 0, y: -20 }}
@@ -341,7 +359,18 @@ function SearchPage() {
           },
         }}
       >
-        {currentItems.length > 0 ? (
+        {loading ? (
+            // Render skeletons while loading
+            [...Array(itemsPerPage)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    transition={{ duration: 0.4 }}
+                >
+                    <ListingCardSkeleton darkMode={darkMode} />
+                </motion.div>
+            ))
+        ) : currentItems.length > 0 ? (
           currentItems.map((listing) => (
             <motion.div
               key={listing.property_id}
@@ -372,7 +401,7 @@ function SearchPage() {
       </motion.div>
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
+      {totalPages > 1 && !loading && (
         <div className="flex justify-center items-center mt-8 space-x-2">
           <button
             onClick={() => paginate(currentPage - 1)}

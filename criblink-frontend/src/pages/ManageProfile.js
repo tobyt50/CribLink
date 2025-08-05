@@ -13,6 +13,56 @@ import General from './profile/General';
 import Security from './profile/Security';
 import Privacy from './profile/Privacy';
 
+// Skeleton for the entire Manage Profile page layout
+const ProfilePageSkeleton = ({ darkMode, isMobile, isCollapsed }) => {
+  const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+  return (
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-4 min-h-screen flex flex-col`}>
+      {/* Sidebar Skeleton */}
+      <div className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ${isMobile ? 'w-0' : (isCollapsed ? 'w-20' : 'w-64')} ${darkMode ? "bg-gray-800" : "bg-white"} shadow-lg`}>
+        <div className="p-4 flex flex-col items-center">
+          <div className={`w-24 h-24 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-4`}></div>
+          <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-2`}></div>
+          <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </div>
+        <div className="mt-8 space-y-4 px-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className={`h-8 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content Area Skeleton */}
+      <motion.main
+        className={`flex-grow transition-all duration-300 pt-0 -mt-6 px-4 md:px-0 ${isMobile ? "w-full" : "ml-0"}`}
+        style={!isMobile ? { marginLeft: contentShift } : { marginLeft: 0 }}
+        animate={!isMobile ? { marginLeft: contentShift } : { marginLeft: 0 }}
+        transition={{ duration: 0.05 }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className={`
+            w-full mx-auto space-y-8
+            ${isMobile
+              ? "p-4"
+              : `max-w-4xl p-6 md:p-10 rounded-xl shadow-xl
+                 ${darkMode ? "bg-gray-800" : "bg-white"}`
+            }
+          `}
+        >
+          <div className={`h-8 w-1/2 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-6`}></div>
+          <div className={`h-48 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-6`}></div>
+          <div className={`h-32 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse mb-6`}></div>
+          <div className={`h-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} animate-pulse`}></div>
+        </motion.div>
+      </motion.main>
+    </div>
+  );
+};
+
+
 function ManageProfile() {
   const [form, setForm] = useState({
     full_name: "", username: "", email: "", bio: "",
@@ -248,7 +298,7 @@ function ManageProfile() {
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
   if (loading) {
-      return null;
+      return <ProfilePageSkeleton darkMode={darkMode} isMobile={isMobile} isCollapsed={isCollapsed} />;
   }
 
   return (
@@ -304,6 +354,7 @@ function ManageProfile() {
               updating={updating}
               userInfo={userInfo}
               onProfilePictureDataChange={handleProfilePictureDataChange}
+              loading={loading} // Pass loading state
             />
           )}
 
@@ -314,6 +365,7 @@ function ManageProfile() {
               handleUpdate={handleUpdate}
               updating={updating}
               currentSessionIdFromToken={currentSessionIdFromToken}
+              loading={loading} // Pass loading state
             />
           )}
 
@@ -324,6 +376,7 @@ function ManageProfile() {
               handleUpdate={handleUpdate}
               updating={updating}
               activeSection={activeSection}
+              loading={loading} // Pass loading state
             />
           )}
   

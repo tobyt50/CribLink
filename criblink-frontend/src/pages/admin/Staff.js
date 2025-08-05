@@ -112,6 +112,68 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
+// Skeleton component for Staff page
+const StaffSkeleton = ({ darkMode, viewMode }) => (
+  <div className={`animate-pulse space-y-4`}>
+    {/* Controls Skeleton */}
+    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className="flex gap-2">
+        <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </div>
+
+    {/* Content Skeleton based on viewMode */}
+    {viewMode === 'graphical' ? (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(9)].map((_, i) => ( // 9 skeleton cards for graphical view
+          <div key={i} className={`rounded-xl p-4 shadow-sm h-48 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+            <div className="flex flex-col items-center justify-center h-full space-y-3">
+              <div className={`w-20 h-20 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className={`w-full mt-4 text-sm table-fixed min-w-max`}>
+          <thead>
+            <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+              {[...Array(9)].map((_, i) => ( // 9 skeleton table headers
+                <th key={i} className={`py-2 px-2`}>
+                  <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
+            {[...Array(10)].map((_, i) => ( // 10 skeleton table rows
+              <tr key={i} className={`border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                {[...Array(9)].map((_, j) => ( // 9 skeleton cells per row
+                  <td key={j} className="py-2 px-2">
+                    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {/* Pagination Skeleton */}
+    <div className="flex justify-center items-center space-x-4 mt-4">
+      <div className={`h-8 w-16 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-4 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-16 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
 
 const Staff = () => {
   const [staffList, setStaffList] = useState([]);
@@ -123,6 +185,7 @@ const Staff = () => {
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
   // Initialize viewMode from localStorage, influenced by 'defaultListingsView'
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple');
@@ -148,6 +211,7 @@ const Staff = () => {
   };
 
   const fetchStaff = useCallback(async () => {
+    setIsLoading(true); // Set loading to true when fetching starts
     const params = new URLSearchParams({ search, page, limit, sort: sortKey, direction: sortDirection });
     const token = localStorage.getItem('token');
     try {
@@ -179,6 +243,8 @@ const Staff = () => {
         showMessage(errorMessage, 'error');
         setStaffList([]);
         setTotalStaff(0);
+    } finally {
+        setIsLoading(false); // Set loading to false when fetching is complete (success or error)
     }
   }, [search, page, limit, sortKey, sortDirection, showMessage, darkMode]);
 
@@ -507,7 +573,9 @@ const Staff = () => {
             </div>
           )}
 
-          {staffList.length === 0 ? (
+          {isLoading ? ( // Conditionally render skeleton when loading
+            <StaffSkeleton darkMode={darkMode} viewMode={viewMode} />
+          ) : staffList.length === 0 ? (
             <div className={`text-center py-8 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               No staff members found matching your criteria.
             </div>

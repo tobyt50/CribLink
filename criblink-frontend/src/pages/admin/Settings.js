@@ -111,8 +111,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 // Reusable Switch component
-const Switch = ({ isOn, handleToggle, label, description }) => {
-    const { darkMode } = useTheme();
+const Switch = ({ isOn, handleToggle, label, description, darkMode }) => {
     return (
         <div className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ease-in-out h-full ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
             <div>
@@ -134,6 +133,154 @@ const Switch = ({ isOn, handleToggle, label, description }) => {
         </div>
     );
 };
+
+// Skeleton component for the Settings page
+const SettingsSkeleton = ({ darkMode }) => (
+    <div className={`animate-pulse space-y-8`}>
+        {/* Header and Search Bar Skeleton */}
+        <div className="flex justify-between items-center">
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+            <div className={`h-10 w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+
+        {/* General Settings Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(6)].map((_, i) => ( // 6 general setting items
+                    <div key={i} className={`p-6 rounded-xl border h-32 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                        <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+                        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        <div className={`h-3 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mt-2`}></div>
+                    </div>
+                ))}
+                {/* Sidebar Toggle specific skeleton */}
+                <div className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                    <div className="flex-1 space-y-2">
+                        <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                    <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                </div>
+            </div>
+        </div>
+
+        {/* Notifications Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => ( // 3 notification switches
+                    <div key={i} className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                        <div className="flex-1 space-y-2">
+                            <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                            <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        </div>
+                        <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Email Settings Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(2)].map((_, i) => ( // 2 email input fields
+                    <div key={i}>
+                        <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+                        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                ))}
+            </div>
+            <div className={`h-10 w-40 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} mt-4`}></div>
+        </div>
+
+        {/* Security Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                    <div className="flex-1 space-y-2">
+                        <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                    <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                </div>
+                <div>
+                    <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+                    <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    <div className={`h-3 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mt-2`}></div>
+                    <div className={`h-10 w-40 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} mt-4`}></div>
+                </div>
+            </div>
+        </div>
+
+        {/* Integrations Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                    <div className="flex-1 space-y-2">
+                        <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                    <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                </div>
+                <div>
+                    <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+                    <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    <div className={`h-3 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mt-2`}></div>
+                    <div className={`h-10 w-40 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"} mt-4`}></div>
+                </div>
+            </div>
+        </div>
+
+        {/* Content Moderation Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(2)].map((_, i) => ( // 2 content moderation switches
+                    <div key={i} className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                        <div className="flex-1 space-y-2">
+                            <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                            <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        </div>
+                        <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* System & Maintenance Section Skeleton */}
+        <div className={`space-y-6 pt-6 border-t ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(4)].map((_, i) => ( // 2 switches and 2 buttons
+                    <div key={i} className={`p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                        <div className="flex-1 space-y-2">
+                            <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                            <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        </div>
+                        {i % 2 === 0 ? ( // Render switch for even indices, button for odd
+                            <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        ) : (
+                            <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                        )}
+                    </div>
+                ))}
+                {/* View Error Logs specific skeleton */}
+                <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between h-24 ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                    <div className="flex-1 space-y-2">
+                        <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                        <div className={`h-3 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+                    </div>
+                    <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 
 const AdminSettings = () => {
     // Destructure themePreference and setThemePreference from useTheme
@@ -545,195 +692,201 @@ const AdminSettings = () => {
                     transition={{ duration: 0.3 }}
                     className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-8 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
                 >
-                    {/* General Settings Section Header & Search - Now consistent for both mobile and desktop */}
-                    <div className="flex justify-between items-center">
-                        <h3 className={`text-xl md:text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>General</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                        <div className="relative w-full md:w-1/3 ml-4"> {/* md:w-1/2 for desktop width matching the card */}
-                            <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
-                            <input
-                                type="text"
-                                placeholder="Search settings..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
-                            />
-                        </div>
-                    </div>
-
-                    {filterSection("General") && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Existing Theme Setting */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
-                                    {/* Use themePreference for the value, and handleDarkModeChange to set the new preference */}
-                                    <Dropdown placeholder="Select Theme" options={darkModeOptions} value={themePreference} onChange={handleDarkModeChange} className="w-full" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your preferred theme.</p>
-                                </div>
-                                {/* Existing Default Listings Display */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Listings Display</label>
-                                    <Dropdown placeholder="Select View Mode" options={[{ value: 'simple', label: 'Table View', icon: <LayoutList size={20} /> }, { value: 'graphical', label: 'Grid View', icon: <LayoutGrid size={20} /> }]} value={defaultListView} onChange={handleDefaultListViewChange} className="w-full" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
-                                </div>
-                                {/* Existing Sidebar Toggle */}
-                                <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
-
-                                {/* General App Settings from ProfileSettings.js */}
-                                {/* Language */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="language">Language</label>
-                                    <Dropdown
-                                        options={languageOptions}
-                                        value={userSettings.language}
-                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
-                                        placeholder="Select Language"
-                                        className="w-full"
+                    {userSettingsLoading ? (
+                        <SettingsSkeleton darkMode={darkMode} />
+                    ) : (
+                        <>
+                            {/* General Settings Section Header & Search - Now consistent for both mobile and desktop */}
+                            <div className="flex justify-between items-center">
+                                <h3 className={`text-xl md:text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>General</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                <div className="relative w-full md:w-1/3 ml-4"> {/* md:w-1/2 for desktop width matching the card */}
+                                    <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search settings..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
                                     />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
-                                </div>
-
-                                {/* Timezone */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="timezone">Timezone</label>
-                                    <Dropdown
-                                        options={timezoneOptions}
-                                        value={userSettings.timezone}
-                                        onChange={(value) => handleUserSettingsUpdate('timezone', value)}
-                                        placeholder="Select Timezone"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
-                                </div>
-
-                                {/* Currency */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="currency">Default Currency</label>
-                                    <Dropdown
-                                        options={currencyOptions}
-                                        value={userSettings.currency}
-                                        onChange={(value) => handleUserSettingsUpdate('currency', value)}
-                                        placeholder="Select Currency"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
-                                </div>
-
-                                {/* Default Landing Page */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
-                                    <Dropdown
-                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
-                                        value={userSettings.default_landing_page}
-                                        onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
-                                        placeholder="Select Landing Page"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
-                                        Choose the page you see after logging in.
-                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {filterSection("Notifications") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Notifications</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <Switch label="Email Notifications" description="Receive updates via email." isOn={emailNotifications} handleToggle={handleEmailNotificationsToggle} />
-                                <Switch label="SMS Notifications" description="Get alerts on your phone." isOn={smsNotifications} handleToggle={handleSmsNotificationsToggle} />
-                                <Switch label="In-App Notifications" description="See notifications in the dashboard." isOn={inAppNotifications} handleToggle={handleInAppNotificationsToggle} />
-                            </div>
-                        </div>
-                    )}
+                            {filterSection("General") && (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Existing Theme Setting */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
+                                            {/* Use themePreference for the value, and handleDarkModeChange to set the new preference */}
+                                            <Dropdown placeholder="Select Theme" options={darkModeOptions} value={themePreference} onChange={handleDarkModeChange} className="w-full" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your preferred theme.</p>
+                                        </div>
+                                        {/* Existing Default Listings Display */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Listings Display</label>
+                                            <Dropdown placeholder="Select View Mode" options={[{ value: 'simple', label: 'Table View', icon: <LayoutList size={20} /> }, { value: 'graphical', label: 'Grid View', icon: <LayoutGrid size={20} /> }]} value={defaultListView} onChange={handleDefaultListViewChange} className="w-full" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
+                                        </div>
+                                        {/* Existing Sidebar Toggle */}
+                                        <Switch label="Permanently Expand/Collapse Sidebar" description="Keep the sidebar expanded by default on desktop." isOn={sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} darkMode={darkMode} />
 
-                    {filterSection("Email") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Email Settings</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="senderEmail" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Sender Email Address</label>
-                                    <input type="email" id="senderEmail" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., noreply@yourdomain.com" />
-                                </div>
-                                <div>
-                                    <label htmlFor="smtpHost" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>SMTP Host</label>
-                                    <input type="text" id="smtpHost" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., smtp.gmail.com" />
-                                </div>
-                            </div>
-                            <button onClick={handleSaveSettings('Email settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Email Settings</button>
-                        </div>
-                    )}
+                                        {/* General App Settings from ProfileSettings.js */}
+                                        {/* Language */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="language">Language</label>
+                                            <Dropdown
+                                                options={languageOptions}
+                                                value={userSettings.language}
+                                                onChange={(value) => handleUserSettingsUpdate('language', value)}
+                                                placeholder="Select Language"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
+                                        </div>
 
-                    {filterSection("Security") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Require 2FA for Admin Login" description="Enhance security for all admin accounts." isOn={require2FA} handleToggle={handleRequire2FAToggle} />
-                                <div>
-                                    <label htmlFor="minPasswordLength" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Minimum Password Length</label>
-                                    <input type="number" id="minPasswordLength" value={minPasswordLength} onChange={(e) => setMinPasswordLength(parseInt(e.target.value))} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} min="1" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum characters for user passwords.</p>
-                                    <button onClick={handleSaveSettings('Password policy')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Policy</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                        {/* Timezone */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="timezone">Timezone</label>
+                                            <Dropdown
+                                                options={timezoneOptions}
+                                                value={userSettings.timezone}
+                                                onChange={(value) => handleUserSettingsUpdate('timezone', value)}
+                                                placeholder="Select Timezone"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
+                                        </div>
 
-                    {filterSection("Integrations") && (
-                        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Integrations</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Enable CRM Integration" description="Sync data with your external CRM." isOn={crmIntegrationEnabled} handleToggle={handleCrmIntegrationToggle} />
-                                <div>
-                                    <label htmlFor="analyticsId" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Google Analytics ID</label>
-                                    <input type="text" id="analyticsId" value={analyticsId} onChange={(e) => setAnalyticsId(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="UA-XXXXX-Y" />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Integrate Google Analytics for traffic monitoring.</p>
-                                    <button onClick={handleSaveSettings('Analytics settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Analytics</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                        {/* Currency */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="currency">Default Currency</label>
+                                            <Dropdown
+                                                options={currencyOptions}
+                                                value={userSettings.currency}
+                                                onChange={(value) => handleUserSettingsUpdate('currency', value)}
+                                                placeholder="Select Currency"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
+                                        </div>
 
-                    {filterSection("Content Moderation") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                <Switch label="Auto-Approve New Listings" description="Approve new agent listings automatically." isOn={autoApproveListings} handleToggle={handleAutoApproveListingsToggle} />
-                                <Switch label="Enable User Comments" description="Allow comments on property listings." isOn={enableComments} handleToggle={handleEnableCommentsToggle} />
-                            </div>
-                        </div>
-                    )}
-
-                    {filterSection("System") && (
-                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>System & Maintenance</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Switch label="Enable Maintenance Mode" description="Take the site offline for updates." isOn={maintenanceMode} handleToggle={handleMaintenanceModeToggle} />
-                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Application Cache</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Clear temporary data.</p>
+                                        {/* Default Landing Page */}
+                                        <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <label className={labelStyles} htmlFor="default_landing_page">Default Landing Page</label>
+                                            <Dropdown
+                                                options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                                value={userSettings.default_landing_page}
+                                                onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
+                                                placeholder="Select Landing Page"
+                                                className="w-full"
+                                            />
+                                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-2`}>
+                                                Choose the page you see after logging in.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <button onClick={handleClearCache} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Clear</button>
                                 </div>
-                                <Switch label="Automated Database Backups" description="Schedule regular database backups." isOn={databaseBackupScheduled} handleToggle={handleToggleDatabaseBackupScheduling} />
-                                <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Manual Backup</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Create an on-demand backup.</p>
+                            )}
+
+                            {filterSection("Notifications") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Notifications</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <Switch label="Email Notifications" description="Receive updates via email." isOn={emailNotifications} handleToggle={handleEmailNotificationsToggle} darkMode={darkMode} />
+                                        <Switch label="SMS Notifications" description="Get alerts on your phone." isOn={smsNotifications} handleToggle={handleSmsNotificationsToggle} darkMode={darkMode} />
+                                        <Switch label="In-App Notifications" description="See notifications in the dashboard." isOn={inAppNotifications} handleToggle={handleInAppNotificationsToggle} darkMode={darkMode} />
                                     </div>
-                                    <button onClick={handleBackupDatabase} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Backup</button>
                                 </div>
-                                <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <div>
-                                        <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>View Error Logs</span>
-                                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Access system error logs for debugging.</p>
+                            )}
+
+                            {filterSection("Email") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Email Settings</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label htmlFor="senderEmail" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Sender Email Address</label>
+                                            <input type="email" id="senderEmail" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., noreply@yourdomain.com" />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="smtpHost" className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>SMTP Host</label>
+                                            <input type="text" id="smtpHost" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="e.g., smtp.gmail.com" />
+                                        </div>
                                     </div>
-                                    <button onClick={handleViewErrorLogs} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">View Logs</button>
+                                    <button onClick={handleSaveSettings('Email settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Email Settings</button>
                                 </div>
-                            </div>
-                        </div>
+                            )}
+
+                            {filterSection("Security") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Security</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Require 2FA for Admin Login" description="Enhance security for all admin accounts." isOn={require2FA} handleToggle={handleRequire2FAToggle} darkMode={darkMode} />
+                                        <div>
+                                            <label htmlFor="minPasswordLength" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Minimum Password Length</label>
+                                            <input type="number" id="minPasswordLength" value={minPasswordLength} onChange={(e) => setMinPasswordLength(parseInt(e.target.value))} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} min="1" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum characters for user passwords.</p>
+                                            <button onClick={handleSaveSettings('Password policy')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Policy</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("Integrations") && (
+                                <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Integrations</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Enable CRM Integration" description="Sync data with your external CRM." isOn={crmIntegrationEnabled} handleToggle={handleCrmIntegrationToggle} darkMode={darkMode} />
+                                        <div>
+                                            <label htmlFor="analyticsId" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Google Analytics ID</label>
+                                            <input type="text" id="analyticsId" value={analyticsId} onChange={(e) => setAnalyticsId(e.target.value)} className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`} placeholder="UA-XXXXX-Y" />
+                                            <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Integrate Google Analytics for traffic monitoring.</p>
+                                            <button onClick={handleSaveSettings('Analytics settings')} className="w-full md:w-auto mt-4 py-2 px-6 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">Save Analytics</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("Content Moderation") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Content Moderation</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                        <Switch label="Auto-Approve New Listings" description="Approve new agent listings automatically." isOn={autoApproveListings} handleToggle={handleAutoApproveListingsToggle} darkMode={darkMode} />
+                                        <Switch label="Enable User Comments" description="Allow comments on property listings." isOn={enableComments} handleToggle={handleEnableCommentsToggle} darkMode={darkMode} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {filterSection("System") && (
+                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h3 className={`text-xl md:text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>System & Maintenance</h3> {/* Changed to h3, text-xl for mobile, md:text-2xl for desktop */}
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Switch label="Enable Maintenance Mode" description="Take the site offline for updates." isOn={maintenanceMode} handleToggle={handleMaintenanceModeToggle} darkMode={darkMode} />
+                                        <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Application Cache</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Clear temporary data.</p>
+                                            </div>
+                                            <button onClick={handleClearCache} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Clear</button>
+                                        </div>
+                                        <Switch label="Automated Database Backups" description="Schedule regular database backups." isOn={databaseBackupScheduled} handleToggle={handleToggleDatabaseBackupScheduling} darkMode={darkMode} />
+                                        <div className={`p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Manual Backup</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Create an on-demand backup.</p>
+                                            </div>
+                                            <button onClick={handleBackupDatabase} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">Backup</button>
+                                        </div>
+                                        <div className={`md:col-span-2 p-4 rounded-xl border flex items-center justify-between ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+                                            <div>
+                                                <span className={`text-lg font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>View Error Logs</span>
+                                                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mt-1`}>Access system error logs for debugging.</p>
+                                            </div>
+                                            <button onClick={handleViewErrorLogs} className="px-4 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-md hover:bg-green-700">View Logs</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </motion.div>
             </motion.div>

@@ -403,6 +403,7 @@ function Agencies() {
           }}
         >
           {loading || loadingMemberships || loadingAdminCount ? (
+            // Loading Skeleton
             [...Array(8)].map((_, i) => (
               <div key={i} className="h-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-xl"></div>
             ))

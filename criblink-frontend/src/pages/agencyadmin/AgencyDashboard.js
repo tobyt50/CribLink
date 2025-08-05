@@ -4,13 +4,126 @@ import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, User, Home, MessageSquare, X, Briefcase, DollarSign, BarChart2, Users, Settings, UserCog, ListChecks, UserPlus, CheckCircle, Clock } from 'lucide-react'; // Removed Tag
+import { Menu, User, Home, MessageSquare, X, Briefcase, DollarSign, BarChart2, Users, Settings, UserCog, ListChecks, UserPlus, CheckCircle, Clock } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card';
 import StatCard from '../../components/StatCard';
 import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { useAuth } from '../../context/AuthContext'; // Corrected import path
+import { useAuth } from '../../context/AuthContext';
+
+// Skeleton component for the Agency Dashboard
+const AgencyDashboardSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-6`}>
+    {/* Stat Cards Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {/* Total Members Skeleton Card */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 w-full">
+          {[...Array(3)].map((_, j) => (
+            <div key={j} className={`h-16 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Pending Approvals Skeleton Card */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 w-full">
+          {[...Array(2)].map((_, j) => (
+            <div key={j} className={`h-16 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Listings Overview Skeleton Card */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 w-full">
+          {[...Array(3)].map((_, j) => (
+            <div key={j} className={`h-16 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Inquiry Metrics Skeleton Card */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 w-full">
+          {[...Array(2)].map((_, j) => (
+            <div key={j} className={`h-16 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+    </div>
+
+    {/* Recent Activity Feed Skeleton */}
+    <Card>
+      <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+      <ul className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <li key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2 overflow-hidden w-full">
+              <div className={`h-4 w-4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-4 w-1/4 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+            <div className={`h-4 w-1/5 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} ml-2`}></div>
+          </li>
+        ))}
+      </ul>
+      <div className={`mt-4 h-6 w-1/4 rounded mx-auto ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </Card>
+
+    {/* Additional Sections/Features Suggestions Skeleton */}
+    <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card>
+        <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+        <ul className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <li key={i} className={`h-4 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></li>
+          ))}
+        </ul>
+        <div className={`mt-4 h-6 w-1/2 rounded mx-auto ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </Card>
+      <Card>
+        <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`h-12 rounded-lg ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+      </Card>
+    </div>
+
+    {/* Financial Overview Skeleton */}
+    <div className="mt-10">
+      <Card>
+        <div className={`h-8 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className={`h-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          ))}
+        </div>
+        <div className={`mt-4 h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      </Card>
+    </div>
+  </div>
+);
+
 
 const AgencyDashboard = () => {
   const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -29,11 +142,11 @@ const AgencyDashboard = () => {
   const [pendingAgentRequestsCount, setPendingAgentRequestsCount] = useState(null);
   const [underOfferListingsCount, setUnderOfferListingsCount] = useState(null);
   const [soldListingsCount, setSoldListingsCount] = useState(null);
-  // Removed featuredListingsCount
   const [clientInquiriesCount, setClientInquiriesCount] = useState(null);
   const [agentResponsesCount, setAgentResponsesCount] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [loading, setLoading] = useState(true); // New loading state
 
   // Redirect if not agency_admin or agency_id is missing
   useEffect(() => {
@@ -53,21 +166,33 @@ const AgencyDashboard = () => {
   const goToListings = () => navigate('/agency/listings');
   const goToPendingListings = () => navigate('/agency/listings', { state: { statusFilter: 'pending' } });
   const goToPendingAgentRequests = () => navigate('/agency/members', { state: { showPendingRequests: true } });
-  // Navigation for specific listing statuses
   const goToUnderOfferListings = () => navigate('/agency/listings', { state: { statusFilter: 'under offer' } });
   const goToSoldListings = () => navigate('/agency/listings', { state: { statusFilter: 'sold' } });
-  // Removed goToFeaturedListings
-
 
   // Updated navigation for members with role filters
   const goToMembersAdmins = () => navigate('/agency/members', { state: { roleFilter: 'agency_admin' } });
   const goToMembersAgents = () => navigate('/agency/members', { state: { roleFilter: 'agent' } });
-  const goToClients = () => navigate('/agency/clients'); // Navigate to Clients.js
+  const goToClients = () => navigate('/agency/clients');
 
   // Effect for fetching Dashboard statistics
   useEffect(() => {
     const fetchAgencyStats = async () => {
-      if (!agencyId) return;
+      setLoading(true); // Start loading
+      if (!agencyId) {
+        setAgentsCount(null);
+        setAdminsCount(null);
+        setClientsCount(null);
+        setListingsCount(null);
+        setPendingListingsCount(null);
+        setPendingAgentRequestsCount(null);
+        setUnderOfferListingsCount(null);
+        setSoldListingsCount(null);
+        setClientInquiriesCount(null);
+        setAgentResponsesCount(null);
+        setRecentActivities([]);
+        setLoading(false); // End loading if no agencyId
+        return;
+      }
 
       const token = localStorage.getItem('token');
       if (!token) {
@@ -80,10 +205,10 @@ const AgencyDashboard = () => {
         setPendingAgentRequestsCount(null);
         setUnderOfferListingsCount(null);
         setSoldListingsCount(null);
-        // Removed setFeaturedListingsCount
         setClientInquiriesCount(null);
         setAgentResponsesCount(null);
         setRecentActivities([]);
+        setLoading(false); // End loading if no token
         return;
       }
 
@@ -99,7 +224,6 @@ const AgencyDashboard = () => {
           pendingAgentRequestsRes,
           underOfferRes,
           soldRes,
-          // Removed featuredRes
           inquiriesRes,
           responsesRes,
           activityRes,
@@ -113,7 +237,6 @@ const AgencyDashboard = () => {
           axiosInstance.get(`/agency-stats/${agencyId}/pending-agent-requests/count`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/listings/under-offer/count`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/listings/sold/count`, { headers }),
-          // Removed API call for featured
           axiosInstance.get(`/inquiries/agent/count/all-inquiries`, { headers }),
           axiosInstance.get(`/inquiries/agent/count/agent-responses`, { headers }),
           axiosInstance.get(`/agency-stats/${agencyId}/recent-activity`, { headers }),
@@ -128,7 +251,6 @@ const AgencyDashboard = () => {
         setPendingAgentRequestsCount(pendingAgentRequestsRes.data.count);
         setUnderOfferListingsCount(underOfferRes.data.count);
         setSoldListingsCount(soldRes.data.count);
-        // Removed setFeaturedListingsCount
         setClientInquiriesCount(inquiriesRes.data.count);
         setAgentResponsesCount(responsesRes.data.count);
         setAgencyName(agencyDetailsRes.data.name);
@@ -174,6 +296,8 @@ const AgencyDashboard = () => {
         } else {
             showMessage('Failed to load agency dashboard statistics.', 'error', 3000);
         }
+      } finally {
+        setLoading(false); // End loading
       }
     };
 
@@ -189,10 +313,6 @@ const AgencyDashboard = () => {
     };
   }, [agencyId, showMessage, navigate]);
 
-
-  const stats = [
-    // Removed old Listings stat card as it's now a combined card
-  ];
 
   const visibleActivities = showAllActivities ? recentActivities : recentActivities.slice(0, 5);
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
@@ -255,181 +375,170 @@ const AgencyDashboard = () => {
           </h1>
         </div>
 
-        {/* Stat Cards */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            {/* Members Overview Card - Renamed to Total Members */}
-            <Card> {/* Removed onClick from the main card */}
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Total Members</h3>
-                <Users size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              {/* Changed to 3 columns, centered text, and re-ordered */}
-              {/* Refactored: Removed sm:grid-cols-3 to ensure 3 columns on all screen sizes */}
-              <div className="grid grid-cols-3 gap-4 w-full">
-                {/* Admins */}
-                <StatCard label="Admins" value={adminsCount} onClick={goToMembersAdmins} textCentered={true} />
-                {/* Agents */}
-                <StatCard label="Agents" value={agentsCount} onClick={goToMembersAgents} textCentered={true} />
-                {/* Clients */}
-                <StatCard label="Clients" value={clientsCount} onClick={goToClients} textCentered={true} />
-              </div>
-            </Card>
+        {loading ? (
+            <AgencyDashboardSkeleton darkMode={darkMode} />
+        ) : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                {/* Members Overview Card - Renamed to Total Members */}
+                <Card>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Total Members</h3>
+                    <Users size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="grid grid-cols-3 gap-4 w-full">
+                    <StatCard label="Admins" value={adminsCount} onClick={goToMembersAdmins} textCentered={true} />
+                    <StatCard label="Agents" value={agentsCount} onClick={goToMembersAgents} textCentered={true} />
+                    <StatCard label="Clients" value={clientsCount} onClick={goToClients} textCentered={true} />
+                </div>
+                </Card>
 
-            {/* NEW: Pending Approvals Card with sub-cards */}
-            <Card>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Pending Approvals</h3>
-                <ListChecks size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              {/* Refactored: Removed sm:grid-cols-2 to ensure 2 columns on all screen sizes */}
-              <div className="grid grid-cols-2 gap-4 w-full">
-                {/* Listings Sub-card */}
-                <StatCard label="Listings" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<Home size={20} />} />
-                {/* Agent Requests Sub-card */}
-                <StatCard label="Agent Requests" value={pendingAgentRequestsCount} onClick={goToPendingAgentRequests} textCentered={true} icon={<UserPlus size={20} />} />
-              </div>
-            </Card>
+                {/* NEW: Pending Approvals Card with sub-cards */}
+                <Card>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Pending Approvals</h3>
+                    <ListChecks size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 w-full">
+                    <StatCard label="Listings" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<Home size={20} />} />
+                    <StatCard label="Agent Requests" value={pendingAgentRequestsCount} onClick={goToPendingAgentRequests} textCentered={true} icon={<UserPlus size={20} />} />
+                </div>
+                </Card>
 
-            {/* NEW: Listings Overview Card with sub-cards */}
-            <Card>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Listings Overview</h3>
-                <Home size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              {/* Refactored: Removed sm:grid-cols-3 to ensure 3 columns on all screen sizes */}
-              <div className="grid grid-cols-3 gap-4 w-full">
-                {/* Total Listings */}
-                <StatCard label="Total" value={listingsCount} onClick={goToListings} textCentered={true} icon={<Home size={20} />} />
-                {/* Under Offer Listings */}
-                <StatCard label="Under Offer" value={underOfferListingsCount} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} />
-                {/* Sold Listings */}
-                <StatCard label="Sold" value={soldListingsCount} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
-                {/* Removed Featured Listings */}
-              </div>
-            </Card>
+                {/* NEW: Listings Overview Card with sub-cards */}
+                <Card>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Listings Overview</h3>
+                    <Home size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="grid grid-cols-3 gap-4 w-full">
+                    <StatCard label="Total" value={listingsCount} onClick={goToListings} textCentered={true} icon={<Home size={20} />} />
+                    <StatCard label="Under Offer" value={underOfferListingsCount} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} />
+                    <StatCard label="Sold" value={soldListingsCount} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
+                </div>
+                </Card>
 
 
-            {/* Inquiry and Response Stats - Combined Card */}
-            <div className={`p-4 rounded-xl shadow text-center ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Metrics</h3>
-                <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
-              </div>
-              {/* Refactored: Removed sm:grid-cols-2 to ensure 2 columns on all screen sizes */}
-              <div className="grid grid-cols-2 gap-4 w-full">
-                <StatCard label="Inquiries" value={clientInquiriesCount} textCentered={true} />
-                <StatCard label="Responses" value={agentResponsesCount} textCentered={true} />
-              </div>
+                {/* Inquiry and Response Stats - Combined Card */}
+                <div className={`p-4 rounded-xl shadow text-center ${darkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Inquiry Metrics</h3>
+                    <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 w-full">
+                    <StatCard label="Inquiries" value={clientInquiriesCount} textCentered={true} />
+                    <StatCard label="Responses" value={agentResponsesCount} textCentered={true} />
+                </div>
+                </div>
             </div>
-          </div>
 
-          {/* Recent Activity Feed */}
-          <Card>
-            <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Agency Activity</h2>
-            <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-              {visibleActivities.length > 0 ? (
-                visibleActivities.map((activity, idx) => (
-                  <li key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <span className={`text-${activity.color}-500 flex-shrink-0`}>{activity.icon}</span>
-                      <span className="truncate">{activity.message}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600 flex-shrink-0`}
-                      >
-                        {activity.tag}
-                      </span>
-                    </div>
-                    <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"} flex-shrink-0 ml-2`}>{activity.formattedTime}</span>
-                  </li>
-                ))
-              ) : (
-                <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No recent activity to display.</p>
-              )}
-            </ul>
-            {recentActivities.length > 5 && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => setShowAllActivities(prev => !prev)}
-                  className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
-                >
-                  {showAllActivities ? 'Show Less' : 'Show More'}
-                </button>
-              </div>
-            )}
-          </Card>
-
-          {/* Additional Sections/Features Suggestions */}
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Recent Activity Feed */}
             <Card>
-              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Performance Overview</h2>
-              <ul className={`space-y-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                <li className="truncate"><strong>Top Performing Agents:</strong> Identify agents with most listings, sales, or inquiries.</li>
-                <li className="truncate"><strong>Listing Performance:</strong> Track views, inquiries, and conversion rates for listings.</li>
-                <li className="truncate"><strong>Revenue Projections:</strong> Based on completed sales (requires finance integration).</li>
-                <li className="truncate"><strong>Client Acquisition Trends:</strong> Analyze how new clients are joining.</li>
-              </ul>
-              <div className="mt-4 text-center">
-                <button
-                  onClick={() => showMessage('Feature coming soon!', 'info')}
-                  className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
-                >
-                  View Detailed Reports
-                </button>
-              </div>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Recent Agency Activity</h2>
+                <ul className={`space-y-2 text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                {visibleActivities.length > 0 ? (
+                    visibleActivities.map((activity, idx) => (
+                    <li key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                        <span className={`text-${activity.color}-500 flex-shrink-0`}>{activity.icon}</span>
+                        <span className="truncate">{activity.message}</span>
+                        <span
+                            className={`text-xs px-2 py-0.5 rounded-full bg-${activity.color}-100 text-${activity.color}-600 flex-shrink-0`}
+                        >
+                            {activity.tag}
+                        </span>
+                        </div>
+                        <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"} flex-shrink-0 ml-2`}>{activity.formattedTime}</span>
+                    </li>
+                    ))
+                ) : (
+                    <p className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>No recent activity to display.</p>
+                )}
+                </ul>
+                {recentActivities.length > 5 && (
+                <div className="mt-4 text-center">
+                    <button
+                    onClick={() => setShowAllActivities(prev => !prev)}
+                    className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
+                    >
+                    {showAllActivities ? 'Show Less' : 'Show More'}
+                    </button>
+                </div>
+                )}
             </Card>
 
-            <Card>
-              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => navigate('/agency/add-listing')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                >
-                  <Home size={20} /> Add New Listing
-                </button>
-                <button
-                  onClick={() => navigate('/agency/members')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
-                >
-                  <Users size={20} /> Manage Members
-                </button>
-                <button
-                  onClick={() => navigate('/agency/settings')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-purple-700 hover:bg-purple-600 text-white" : "bg-purple-500 hover:bg-purple-600 text-white"}`}
-                >
-                  <Settings size={20} /> Agency Settings
-                </button>
-                <button
-                  onClick={() => showMessage('Reporting feature under development!', 'info')}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
-                    ${darkMode ? "bg-yellow-700 hover:bg-yellow-600 text-white" : "bg-yellow-500 hover:bg-yellow-600 text-white"}`}
-                >
-                  <BarChart2 size={20} /> Generate Report
-                </button>
-              </div>
-            </Card>
-          </div>
+            {/* Additional Sections/Features Suggestions */}
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Performance Overview</h2>
+                <ul className={`space-y-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <li className="truncate"><strong>Top Performing Agents:</strong> Identify agents with most listings, sales, or inquiries.</li>
+                    <li className="truncate"><strong>Listing Performance:</strong> Track views, inquiries, and conversion rates for listings.</li>
+                    <li className="truncate"><strong>Revenue Projections:</strong> Based on completed sales (requires finance integration).</li>
+                    <li className="truncate"><strong>Client Acquisition Trends:</strong> Analyze how new clients are joining.</li>
+                </ul>
+                <div className="mt-4 text-center">
+                    <button
+                    onClick={() => showMessage('Feature coming soon!', 'info')}
+                    className={`text-sm hover:underline ${darkMode ? "text-green-400" : "text-green-600"}`}
+                    >
+                    View Detailed Reports
+                    </button>
+                </div>
+                </Card>
 
-          {/* Financial Overview (Placeholder) */}
-          <div className="mt-10">
-            <Card>
-              <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Financial Snapshot</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard label="Revenue (YTD)" value="$XX,XXX" icon={<DollarSign size={20} />} />
-                <StatCard label="Pending Commissions" value="$X,XXX" icon={<DollarSign size={20} />} />
-                <StatCard label="Marketing Spend" value="$X,XXX" icon={<DollarSign size={20} />} />
-              </div>
-              <p className={`mt-4 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                *Financial data is illustrative. Full integration with accounting systems coming soon.
-              </p>
-            </Card>
-          </div>
+                <Card>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Quick Actions</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                    onClick={() => navigate('/agency/add-listing')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-green-700 hover:bg-green-600 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                    >
+                    <Home size={20} /> Add New Listing
+                    </button>
+                    <button
+                    onClick={() => navigate('/agency/members')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-blue-700 hover:bg-blue-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+                    >
+                    <Users size={20} /> Manage Members
+                    </button>
+                    <button
+                    onClick={() => navigate('/agency/settings')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-purple-700 hover:bg-purple-600 text-white" : "bg-purple-500 hover:bg-purple-600 text-white"}`}
+                    >
+                    <Settings size={20} /> Agency Settings
+                    </button>
+                    <button
+                    onClick={() => showMessage('Reporting feature under development!', 'info')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-lg shadow-md transition-all duration-200
+                        ${darkMode ? "bg-yellow-700 hover:bg-yellow-600 text-white" : "bg-yellow-500 hover:bg-yellow-600 text-white"}`}
+                    >
+                    <BarChart2 size={20} /> Generate Report
+                    </button>
+                </div>
+                </Card>
+            </div>
 
-        </motion.div>
+            {/* Financial Overview (Placeholder) */}
+            <div className="mt-10">
+                <Card>
+                <h2 className={`text-xl font-semibold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Financial Snapshot</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <StatCard label="Revenue (YTD)" value="$XX,XXX" icon={<DollarSign size={20} />} />
+                    <StatCard label="Pending Commissions" value="$X,XXX" icon={<DollarSign size={20} />} />
+                    <StatCard label="Marketing Spend" value="$X,XXX" icon={<DollarSign size={20} />} />
+                </div>
+                <p className={`mt-4 text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    *Financial data is illustrative. Full integration with accounting systems coming soon.
+                </p>
+                </Card>
+            </div>
+
+            </motion.div>
+        )}
       </motion.div>
     </div>
   );

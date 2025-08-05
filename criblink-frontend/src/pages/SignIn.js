@@ -9,6 +9,39 @@ import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
 import { useAuth } from '../context/AuthContext';
 
+// Skeleton for the SignIn page
+const SignInSkeleton = ({ darkMode }) => (
+  <div className={`flex items-start justify-center min-h-screen pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className={`w-full max-w-md space-y-6
+        bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
+        ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}
+        px-4 pt-4 animate-pulse`}
+    >
+      <div className={`h-8 w-3/4 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+      <div className={`h-4 w-1/2 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-6`}></div>
+
+      {/* Input fields and buttons skeletons */}
+      <div className="space-y-4">
+        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-green-700" : "bg-green-200"}`}></div>
+        <div className="relative flex items-center py-1">
+          <div className={`flex-grow border-t ${darkMode ? "border-gray-700" : "border-gray-300"}`}></div>
+          <div className={`flex-shrink mx-4 h-4 w-1/6 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+          <div className={`flex-grow border-t ${darkMode ? "border-gray-700" : "border-gray-300"}`}></div>
+        </div>
+        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-4 w-1/3 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      </div>
+    </motion.div>
+  </div>
+);
+
 export default function SignIn() {
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);

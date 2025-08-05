@@ -116,6 +116,49 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     );
 };
 
+// Skeleton component for Analytics page
+const AnalyticsSkeleton = ({ darkMode }) => (
+  <div className={`animate-pulse space-y-8`}>
+    {/* Date Range Selector Skeleton */}
+    <div className="flex flex-col md:flex-row items-center justify-end gap-4 mb-6">
+        <div className={`h-6 w-24 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-10 w-full md:w-32 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+
+    {/* Overview Statistics Skeletons */}
+    <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className={`rounded-xl p-4 shadow-sm h-28 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+          <div className="flex items-center justify-center h-full">
+            <div className={`w-10 h-10 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"} mr-3`}></div>
+            <div className="flex-1 space-y-2">
+              <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+              <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Detailed Analytics Skeletons */}
+    <div className={`h-8 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {[...Array(8)].map((_, i) => ( // 8 charts in total
+        <div key={i} className={`rounded-xl p-4 shadow-sm h-72 ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+          <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-4`}></div>
+          <div className={`h-48 w-full rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+        </div>
+      ))}
+    </div>
+
+    {/* Export Button Skeleton */}
+    <div className="mt-8 text-right">
+      <div className={`h-10 w-40 rounded-xl ml-auto ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    </div>
+  </div>
+);
+
 
 const AdminAnalytics = () => {
   // Use the useSidebarState hook for sidebar management
@@ -150,19 +193,8 @@ const AdminAnalytics = () => {
   const [error, setError] = useState(null);
 
   const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
-
-  // Removed the local useEffect for window resize, as useSidebarState handles it.
-  // useEffect(() => {
-  //   const handleResize = () => {
-  //     const mobile = window.innerWidth < 768;
-  //     setIsMobile(mobile);
-  //     setIsSidebarOpen(!mobile);
-  //   };
-
-  //   window.addEventListener('resize', handleResize);
-  //   return () => window.removeEventListener('resize', handleResize);
-  // }, []);
+  // Define headers inside useCallback to ensure it's stable
+  // and only re-created when 'token' changes.
 
   const capitalizeFirstLetter = (string) => {
     if (!string) return '';
@@ -173,113 +205,128 @@ const AdminAnalytics = () => {
     setIsLoading(true);
     setError(null);
 
-    const [
-      listingsCountRes,
-      inquiriesCountRes,
-      totalUsersRes,
-      revenueSoldListingsRes,
-      totalDealsClosedRes,
-      listingStatusRes,
-      listingsOverTimeRes,
-      userRegistrationRes,
-      inquiryTrendsRes,
-      propertyTypeRes,
-      listingPriceDistributionRes,
-      topLocationsRes,
-      agentPerformanceRes,
-      purchaseCategoryRes,
-      bedroomsDistributionRes,
-      bathroomsDistributionRes,
-      userRoleDistributionRes,
-    ] = await Promise.all([
-      axios.get(`${API_BASE_URL}/stats/listings-count`, { headers }),
-      axios.get(`${API_BASE_URL}/stats/inquiries-count`, { headers }),
-      axios.get(`${API_BASE_URL}/total-users-count`, { headers }),
-      axios.get(`${API_BASE_URL}/revenue-sold-listings`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/total-deals-closed`, { headers, params: { dateRange } }),
+    // Define headers here, so it's part of the useCallback's dependencies implicitly via 'token'
+    const headers = { Authorization: `Bearer ${token}` };
 
-      axios.get(`${API_BASE_URL}/listing-status`, { headers }),
-      axios.get(`${API_BASE_URL}/listings-over-time`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/user-registrations`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/inquiry-trends`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/property-types`, { headers }),
-      axios.get(`${API_BASE_URL}/listing-price-distribution`, { headers }),
-      axios.get(`${API_BASE_URL}/top-locations`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/agent-performance`, { headers, params: { dateRange } }),
-      axios.get(`${API_BASE_URL}/listing-purchase-category`, { headers }),
-      axios.get(`${API_BASE_URL}/listing-bedrooms-distribution`, { headers }),
-      axios.get(`${API_BASE_URL}/listing-bathrooms-distribution`, { headers }),
-      axios.get(`${API_BASE_URL}/user-role-distribution`, { headers }),
-    ]);
+    try {
+      const [
+        listingsCountRes,
+        inquiriesCountRes,
+        totalUsersRes,
+        revenueSoldListingsRes,
+        totalDealsClosedRes,
+        listingStatusRes,
+        listingsOverTimeRes,
+        userRegistrationRes,
+        inquiryTrendsRes,
+        propertyTypeRes,
+        listingPriceDistributionRes,
+        topLocationsRes,
+        agentPerformanceRes,
+        purchaseCategoryRes,
+        bedroomsDistributionRes,
+        bathroomsDistributionRes,
+        userRoleDistributionRes,
+      ] = await Promise.all([
+        axios.get(`${API_BASE_URL}/stats/listings-count`, { headers }),
+        axios.get(`${API_BASE_URL}/stats/inquiries-count`, { headers }),
+        axios.get(`${API_BASE_URL}/total-users-count`, { headers }),
+        axios.get(`${API_BASE_URL}/revenue-sold-listings`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/total-deals-closed`, { headers, params: { dateRange } }),
 
-    setTotalListings(listingsCountRes.data.count);
-    setTotalInquiries(inquiriesCountRes.data.count);
-    setTotalUsers(totalUsersRes.data.count);
-    setRevenueSoldListings(revenueSoldListingsRes.data.total_revenue || 0);
-    setTotalDealsClosed(totalDealsClosedRes.data.total_deals || 0);
+        axios.get(`${API_BASE_URL}/listing-status`, { headers }),
+        axios.get(`${API_BASE_URL}/listings-over-time`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/user-registrations`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/inquiry-trends`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/property-types`, { headers }),
+        axios.get(`${API_BASE_URL}/listing-price-distribution`, { headers }),
+        axios.get(`${API_BASE_URL}/top-locations`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/agent-performance`, { headers, params: { dateRange } }),
+        axios.get(`${API_BASE_URL}/listing-purchase-category`, { headers }),
+        axios.get(`${API_BASE_URL}/listing-bedrooms-distribution`, { headers }),
+        axios.get(`${API_BASE_URL}/listing-bathrooms-distribution`, { headers }),
+        axios.get(`${API_BASE_URL}/user-role-distribution`, { headers }),
+      ]);
 
-    const rawListingStatusData = listingStatusRes.data;
-    const statusMapForPie = new Map();
+      setTotalListings(listingsCountRes.data.count);
+      setTotalInquiries(inquiriesCountRes.data.count);
+      setTotalUsers(totalUsersRes.data.count);
+      setRevenueSoldListings(revenueSoldListingsRes.data.total_revenue || 0);
+      setTotalDealsClosed(totalDealsClosedRes.data.total_deals || 0);
 
-    const standardStatusesForPie = {
-      'available': 'Available',
-      'sold': 'Sold',
-      'under offer': 'Under Offer',
-      'pending': 'Pending',
-      'rejected': 'Rejected',
-      'featured': 'Featured'
-    };
+      const rawListingStatusData = listingStatusRes.data;
+      const statusMapForPie = new Map();
 
-    Object.values(standardStatusesForPie).forEach(displayStatus => {
-        statusMapForPie.set(displayStatus, 0);
-    });
+      const standardStatusesForPie = {
+        'available': 'Available',
+        'sold': 'Sold',
+        'under offer': 'Under Offer',
+        'pending': 'Pending',
+        'rejected': 'Rejected',
+        'featured': 'Featured'
+      };
 
-    rawListingStatusData.forEach(item => {
-        const statusKey = item.status.toLowerCase();
-        let displayStatus = standardStatusesForPie[statusKey];
-        if (!displayStatus) {
-            displayStatus = capitalizeFirstLetter(statusKey);
-        }
-        statusMapForPie.set(displayStatus, (statusMapForPie.get(displayStatus) || 0) + item.count);
-    });
+      Object.values(standardStatusesForPie).forEach(displayStatus => {
+          statusMapForPie.set(displayStatus, 0);
+      });
 
-    const finalListingStatusDataForPie = Array.from(statusMapForPie.entries()).map(([status, count]) => ({
-        status: status,
-        count: count
-    }));
-    setListingStatusPieData(finalListingStatusDataForPie);
+      rawListingStatusData.forEach(item => {
+          const statusKey = item.status.toLowerCase();
+          let displayStatus = standardStatusesForPie[statusKey];
+          if (!displayStatus) {
+              displayStatus = capitalizeFirstLetter(statusKey);
+          }
+          statusMapForPie.set(displayStatus, (statusMapForPie.get(displayStatus) || 0) + item.count);
+      });
 
-    setListingsOverTimeData(listingsOverTimeRes.data);
-    setUserRegistrationData(userRegistrationRes.data);
-    setInquiryTrendsData(inquiryTrendsRes.data);
+      const finalListingStatusDataForPie = Array.from(statusMapForPie.entries()).map(([status, count]) => ({
+          status: status,
+          count: count
+      }));
+      setListingStatusPieData(finalListingStatusDataForPie);
 
-    const processedPropertyTypeData = propertyTypeRes.data.map(item => ({
-      type: capitalizeFirstLetter(item.type),
-      count: item.count
-    }));
-    setPropertyTypeData(processedPropertyTypeData);
+      setListingsOverTimeData(listingsOverTimeRes.data);
+      setUserRegistrationData(userRegistrationRes.data);
+      setInquiryTrendsData(inquiryTrendsRes.data);
 
-    setListingPriceDistribution(listingPriceDistributionRes.data);
-    setTopLocationsData(topLocationsRes.data);
-    setAgentPerformanceData(agentPerformanceRes.data);
+      const processedPropertyTypeData = propertyTypeRes.data.map(item => ({
+        type: capitalizeFirstLetter(item.type),
+        count: item.count
+      }));
+      setPropertyTypeData(processedPropertyTypeData);
 
-    const processedPurchaseCategoryData = purchaseCategoryRes.data.map(item => ({
-      category: capitalizeFirstLetter(item.category),
-      count: item.count
-    }));
-    setPurchaseCategoryData(processedPurchaseCategoryData);
+      setListingPriceDistribution(listingPriceDistributionRes.data);
+      setTopLocationsData(topLocationsRes.data);
+      setAgentPerformanceData(agentPerformanceRes.data);
 
-    setBedroomsDistributionData(bedroomsDistributionRes.data);
-    setBathroomsDistributionData(bathroomsDistributionRes.data);
+      const processedPurchaseCategoryData = purchaseCategoryRes.data.map(item => ({
+        category: capitalizeFirstLetter(item.category),
+        count: item.count
+      }));
+      setPurchaseCategoryData(processedPurchaseCategoryData);
 
-    const processedUserRoleData = userRoleDistributionRes.data.map(item => ({
-      role: capitalizeFirstLetter(item.role),
-      count: item.count
-    }));
-    setUserRoleDistributionData(processedUserRoleData);
+      setBedroomsDistributionData(bedroomsDistributionRes.data);
+      setBathroomsDistributionData(bathroomsDistributionRes.data);
 
-    setIsLoading(false);
-  }, [dateRange, token]);
+      const processedUserRoleData = userRoleDistributionRes.data.map(item => ({
+        role: capitalizeFirstLetter(item.role),
+        count: item.count
+      }));
+      setUserRoleDistributionData(processedUserRoleData);
+
+    } catch (err) {
+      console.error("Error fetching analytics data:", err);
+      let errorMessage = 'Failed to load analytics data.';
+      if (err.response && err.response.data && err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dateRange, token]); // Now 'token' is the direct dependency, and 'headers' is created inside.
 
   useEffect(() => {
     if (token) {
@@ -324,7 +371,7 @@ const AdminAnalytics = () => {
         {labelText}
       </text>
     );
-  }, [darkMode]);
+  }, [darkMode, isMobile]);
 
 
   return (
@@ -383,22 +430,8 @@ const AdminAnalytics = () => {
           transition={{ duration: 0.3 }}
           className={`${isMobile ? '' : 'rounded-3xl p-6 shadow'} space-y-6 max-w-full ${isMobile ? '' : (darkMode ? "bg-gray-800" : "bg-white")}`}
         >
-          <div className="flex flex-col md:flex-row items-center justify-end gap-4 mb-6">
-            <label htmlFor="dateRange" className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Date Range:</label>
-            <Dropdown
-              placeholder="Date Range"
-              options={dateRangeOptions}
-              value={dateRange}
-              onChange={setDateRange}
-              className="w-full md:w-auto"
-            />
-          </div>
-
           {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className={`animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 ${darkMode ? "border-green-400" : "border-green-700"}`}></div>
-              <p className={`ml-4 text-lg ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Loading analytics data...</p>
-            </div>
+            <AnalyticsSkeleton darkMode={darkMode} />
           ) : error ? (
             <div className={`flex items-center justify-center p-4 rounded-xl ${darkMode ? "bg-red-900 text-red-200" : "bg-red-100 text-red-700"}`}>
               <AlertCircle className="mr-2" />
@@ -406,6 +439,17 @@ const AdminAnalytics = () => {
             </div>
           ) : (
             <>
+              <div className="flex flex-col md:flex-row items-center justify-end gap-4 mb-6">
+                <label htmlFor="dateRange" className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Date Range:</label>
+                <Dropdown
+                  placeholder="Date Range"
+                  options={dateRangeOptions}
+                  value={dateRange}
+                  onChange={setDateRange}
+                  className="w-full md:w-auto"
+                />
+              </div>
+
               <h2 className={`text-2xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Overview Statistics</h2>
               {/* Added grid-cols-2 for mobile layout */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

@@ -12,6 +12,19 @@ import HomeSearchFilters from "../components/HomeSearchFilters";
 
 const ITEMS_PER_PAGE = 20;
 
+// Skeleton for a Listing Card (graphical view)
+const ListingCardSkeleton = ({ darkMode }) => (
+  <div className={`rounded-xl shadow-lg p-4 animate-pulse ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+    <div className={`w-full h-32 rounded-lg ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-2`}></div>
+    <div className={`h-3 w-1/2 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"} mb-3`}></div>
+    <div className="flex justify-between items-center">
+      <div className={`h-8 w-1/3 rounded-xl ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
+    </div>
+  </div>
+);
+
 function Home() {
   const [listings, setListings] = useState([]);
   const [featuredListings, setFeaturedListings] = useState([]);
@@ -424,48 +437,56 @@ function Home() {
           </div>
         </motion.div>
 
-        {featuredListings.length > 0 && (
-          <motion.div
-            className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
-              darkMode
-                ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
-                : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"
+        {/* Featured Listings Section */}
+        <motion.div
+          className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
+            darkMode
+              ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
+              : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"
+          }`}
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <h2
+            className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
+              darkMode ? "text-green-400" : "text-green-800"
             }`}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
           >
-            <h2
-              className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
-                darkMode ? "text-green-400" : "text-green-800"
-              }`}
+            <Star size={20} className="text-yellow-400 fill-current" />
+            Featured Properties
+            <Star size={20} className="text-yellow-400 fill-current" />
+          </h2>
+          <div className="relative">
+            {/* This is the new scrollable container */}
+            <style>{`
+              /* Hide scrollbar for Chrome, Safari and Opera */
+              .no-scrollbar::-webkit-scrollbar {
+                  display: none;
+              }
+              /* Hide scrollbar for IE, Edge and Firefox */
+              .no-scrollbar {
+                  -ms-overflow-style: none;  /* IE and Edge */
+                  scrollbar-width: none;  /* Firefox */
+              }
+            `}</style>
+            <div
+              ref={featuredCarouselRef}
+              // Apply mobile-specific padding, then reset for larger screens
+              className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
             >
-              <Star size={20} className="text-yellow-400 fill-current" />
-              Featured Properties
-              <Star size={20} className="text-yellow-400 fill-current" />
-            </h2>
-            <div className="relative">
-              {/* This is the new scrollable container */}
-              <style>{`
-                /* Hide scrollbar for Chrome, Safari and Opera */
-                .no-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                /* Hide scrollbar for IE, Edge and Firefox */
-                .no-scrollbar {
-                    -ms-overflow-style: none;  /* IE and Edge */
-                    scrollbar-width: none;  /* Firefox */
-                }
-              `}</style>
-              <div
-                ref={featuredCarouselRef}
-                // Apply mobile-specific padding, then reset for larger screens
-                className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
-              >
-                {/* Duplicate listings three times to create a continuous loop effect */}
-                {[...featuredListings, ...featuredListings, ...featuredListings].map((listing, index) => (
+              {loading ? (
+                // Render skeletons for featured listings
+                [...Array(FEATURED_ITEMS_PER_VIEW.lg)].map((_, i) => (
+                  <div key={i} className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item">
+                    <ListingCardSkeleton darkMode={darkMode} />
+                  </div>
+                ))
+              ) : featuredListings.length > 0 ? (
+                // Duplicate listings three times to create a continuous loop effect
+                [...featuredListings, ...featuredListings, ...featuredListings].map((listing, index) => (
                   <div
                     key={`featured-${listing.property_id}-${index}`} // Unique key for duplicated items
                     // Mobile: w-[50vw] px-2 for partial view and consistent sizing
@@ -483,15 +504,19 @@ function Home() {
                       onDeleteListing={handleDeleteListing}
                     />
                   </div>
-                ))}
-              </div>
-
-              {/* Navigation buttons for featured listings are removed */}
+                ))
+              ) : (
+                <div className={`col-span-full text-center py-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                  No featured listings found.
+                </div>
+              )}
             </div>
-          </motion.div>
-        )}
 
-        <h2 className={`text-1.5xl md:text-2xl font-bold text-center mt-2 mb-4 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+            {/* Navigation buttons for featured listings are removed */}
+          </div>
+        </motion.div>
+
+        <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
           Available Listings
         </h2>
         <motion.div
@@ -507,8 +532,15 @@ function Home() {
           }}
         >
           {loading ? (
-            [...Array(10)].map((_, i) => (
-              <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-xl"></div>
+            // Render skeletons for available listings
+            [...Array(ITEMS_PER_PAGE)].map((_, i) => (
+              <motion.div
+                key={i}
+                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.4 }}
+              >
+                <ListingCardSkeleton darkMode={darkMode} />
+              </motion.div>
             ))
           ) : listings.length > 0 ? (
             listings.map((listing) => (
@@ -540,7 +572,7 @@ function Home() {
           )}
         </motion.div>
 
-        {totalPages > 1 && (
+        {totalPages > 1 && !loading && (
           <div className="flex justify-center items-center gap-4 mt-10 pb-8">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
