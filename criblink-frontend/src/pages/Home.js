@@ -2,11 +2,11 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ListingCard from "../components/ListingCard";
 import API_BASE_URL from "../config";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowDownUp, Search, Star, ArrowLeftCircleIcon, ArrowRightCircleIcon, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext"; // Import useConfirmDialog
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import axiosInstance from '../api/axiosInstance';
 import HomeSearchFilters from "../components/HomeSearchFilters";
 
@@ -18,7 +18,7 @@ function Home() {
   const [category, setCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [user, setUser] = useState(null); // State for user object
+  const [user, setUser] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("date_listed_desc");
   const searchInputRef = useRef(null);
@@ -26,15 +26,15 @@ function Home() {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
-  const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
+  const { showConfirm } = useConfirmDialog();
 
-  const [currentFeaturedPage, setCurrentFeaturedPage] = useState(0);
   const featuredCarouselRef = useRef(null);
-  const autoSwipeIntervalRef = useRef(null); // Ref to store the interval ID
+  const autoSwipeIntervalRef = useRef(null);
+  const initialScrollSet = useRef(false); // New ref to ensure initial scroll happens once
   const [loading, setLoading] = useState(true);
 
   const [showSearchContext, setShowSearchContext] = useState(false);
-  const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+  const [userFavourites, setUserFavourites] = useState([]);
 
   const [advancedFilters, setAdvancedFilters] = useState({
     location: "",
@@ -47,7 +47,13 @@ function Home() {
     purchaseCategory: "",
   });
 
-  const FEATURED_ITEMS_PER_PAGE = 4;
+  // Define how many featured items are visible at once on different screen sizes
+  // This might not be directly used for the new mobile partial view, but kept for larger screens.
+  const FEATURED_ITEMS_PER_VIEW = {
+    sm: 2, // On small screens (sm), show 2 items
+    lg: 4, // On large screens (lg), show 4 items
+    default: 2 // Default for extra small screens, now shows 2 items
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -61,43 +67,34 @@ function Home() {
     }
   }, []);
 
-  // Extract user details for passing to ListingCard
   const currentUserRole = user?.role || 'guest';
   const currentUserId = user?.user_id || null;
   const currentUserAgencyId = user?.agency_id || null;
 
-  // Determine the base path for add/edit listing based on role
   const getRoleBasePath = () => {
       if (currentUserRole === 'admin') return '/admin';
       if (currentUserRole === 'agency_admin') return '/agency';
       if (currentUserRole === 'agent') return '/agent';
-      return ''; // Default or handle unauthorized access
+      return '';
   };
 
-
-  // New function to fetch user's favorite listings
   const fetchUserFavourites = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      setUserFavourites([]); // Clear favorites if not logged in
+      setUserFavourites([]);
       return;
     }
     try {
       const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Assuming the backend returns an array of favorite listing objects,
-      // we extract just the property_ids for easy lookup.
       setUserFavourites(response.data.favourites.map(fav => fav.property_id));
     } catch (error) {
       console.error("Failed to fetch user favourites:", error);
-      // Optionally show a message to the user
-      // showMessage("Failed to load your favorites.", "error");
       setUserFavourites([]);
     }
   }, []);
 
-  // New function to handle adding/removing a listing from favorites
   const handleFavoriteToggle = useCallback(async (propertyId, isCurrentlyFavorited) => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -108,19 +105,16 @@ function Home() {
 
     try {
       if (isCurrentlyFavorited) {
-        // Remove from favorites
         await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showMessage("Removed from favorites!", "success");
       } else {
-        // Add to favorites
         await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
           headers: { Authorization: `Bearer ${token}` },
         });
         showMessage("Added to favorites!", "success");
       }
-      // Re-fetch user favorites to update the UI
       fetchUserFavourites();
     } catch (error) {
       console.error("Failed to toggle favorite status:", error);
@@ -134,7 +128,6 @@ function Home() {
     }
   }, [fetchUserFavourites, showMessage, navigate]);
 
-  // Function to handle deleting a listing
   const handleDeleteListing = async (listingId) => {
     showConfirm({
         title: "Delete Listing",
@@ -150,7 +143,7 @@ function Home() {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 showMessage('Listing deleted successfully!', 'success');
-                fetchListings(); // Refresh the list after deletion
+                fetchListings();
             } catch (error) {
                 console.error('Error deleting listing:', error.response?.data || error.message);
                 showMessage('Failed to delete listing. Please try again.', 'error');
@@ -160,7 +153,6 @@ function Home() {
         cancelLabel: "Cancel"
     });
   };
-
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -184,28 +176,25 @@ function Home() {
     if (advancedFilters.minPrice) params.append("min_price", advancedFilters.minPrice);
     if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
 
-
     const url = `${API_BASE_URL}/listings?${params.toString()}`;
     console.log("Fetching listings with URL:", url);
 
-    // Create separate params for featured listings to ensure consistency with filters
     const featuredParams = new URLSearchParams();
     featuredParams.append("status", "Featured");
-    featuredParams.append("limit", 12); // Keep the limit for featured carousel
+    featuredParams.append("limit", 12);
 
-    // Apply advanced filters to featured listings query as well
     if (advancedFilters.purchaseCategory) {
         featuredParams.append("purchase_category", advancedFilters.purchaseCategory);
     } else if (category) {
-        featuredParams.append("purchase_category", category);
+        featuredParams.append("purchase_category", advancedFilters.purchaseCategory);
     }
     if (searchTerm) featuredParams.append("search", searchTerm);
     if (advancedFilters.location) featuredParams.append("location", advancedFilters.location);
     if (advancedFilters.propertyType) featuredParams.append("property_type", advancedFilters.propertyType);
     if (advancedFilters.bedrooms) featuredParams.append("bedrooms", advancedFilters.bedrooms);
     if (advancedFilters.bathrooms) featuredParams.append("bathrooms", advancedFilters.bathrooms);
-    if (advancedFilters.minPrice) featuredParams.append("min_price", advancedFilters.minPrice);
-    if (advancedFilters.maxPrice) featuredParams.append("max_price", advancedFilters.maxPrice);
+    if (advancedFilters.minPrice) params.append("min_price", advancedFilters.minPrice);
+    if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
 
     const featuredUrl = `${API_BASE_URL}/listings?${featuredParams.toString()}`;
 
@@ -224,16 +213,13 @@ function Home() {
       const fetchedFeaturedListings = featuredResponse.data.listings || [];
       setFeaturedListings(fetchedFeaturedListings);
 
-      // Ensure that all featured listings are present in the main listings array,
-      // if they are not already there due to pagination or other filters.
-      // This is a frontend merge to guarantee the visibility of all featured items.
       const combinedListings = [...allListings];
       fetchedFeaturedListings.forEach(featuredListing => {
         if (!combinedListings.some(l => l.property_id === featuredListing.property_id)) {
           combinedListings.push(featuredListing);
         }
       });
-      setListings(combinedListings); // Set the combined list
+      setListings(combinedListings);
 
     } catch (error) {
       let errorMessage = 'Failed to fetch listings. Please try again.';
@@ -251,11 +237,10 @@ function Home() {
     }
   }, [category, searchTerm, currentPage, sortBy, showMessage, advancedFilters]);
 
-  // Fetch listings and user favorites on component mount and relevant state changes
   useEffect(() => {
     setCurrentPage(1);
     fetchListings();
-    fetchUserFavourites(); // Fetch favorites when listings are fetched
+    fetchUserFavourites();
   }, [category, searchTerm, sortBy, advancedFilters, fetchListings, fetchUserFavourites]);
 
   const handleSearch = useCallback((e) => {
@@ -297,84 +282,104 @@ function Home() {
     }
   }, [totalPages]);
 
-  const handleNextFeatured = useCallback(() => {
-    setCurrentFeaturedPage((prevPage) => {
-      const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
-      return (prevPage + 1) % totalFeaturedPages;
-    });
-  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
+  // Effect to set initial scroll position to the middle set of duplicated items
+  useEffect(() => {
+    if (featuredCarouselRef.current && featuredListings.length > 0 && !initialScrollSet.current) {
+      const carousel = featuredCarouselRef.current;
+      const itemElement = carousel.querySelector('.featured-card-item');
+      if (itemElement) {
+        const itemStyle = window.getComputedStyle(itemElement);
+        const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+        const itemMarginRight = parseFloat(itemStyle.marginRight);
+        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
 
-  const handlePrevFeatured = useCallback(() => {
-    setCurrentFeaturedPage((prevPage) => {
-      const totalFeaturedPages = Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE);
-      return prevPage === 0 ? totalFeaturedPages - 1 : prevPage - 1;
-    });
-  }, [featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
+        const numOriginalItems = featuredListings.length;
+        const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+
+        // Scroll to the beginning of the second set of items
+        carousel.scrollLeft = totalOriginalListWidth;
+        initialScrollSet.current = true; // Mark as set
+      }
+    }
+  }, [featuredListings.length]); // Re-run if the number of featured listings changes
+
+  // Function to scroll the featured carousel with continuous loop
+  const scrollFeatured = useCallback((direction) => {
+    if (featuredCarouselRef.current && featuredListings.length > 0) {
+      const carousel = featuredCarouselRef.current;
+      const currentScrollLeft = carousel.scrollLeft;
+
+      const itemElement = carousel.querySelector('.featured-card-item');
+      if (!itemElement) return;
+
+      const itemStyle = window.getComputedStyle(itemElement);
+      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+      const itemMarginRight = parseFloat(itemStyle.marginRight);
+      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+
+      const numOriginalItems = featuredListings.length;
+      const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+
+      let newScrollTarget = currentScrollLeft;
+
+      if (direction === 'next') {
+        newScrollTarget += itemWidthWithMargins;
+        // If we've scrolled past the end of the second set (into the third set)
+        if (newScrollTarget >= 2 * totalOriginalListWidth) {
+          // Instantly snap back to the equivalent position in the second set
+          carousel.scrollLeft = currentScrollLeft - totalOriginalListWidth;
+          newScrollTarget = carousel.scrollLeft + itemWidthWithMargins; // Adjust target based on new snapped position
+        }
+      } else { // 'prev'
+        newScrollTarget -= itemWidthWithMargins;
+        // If we've scrolled before the beginning of the second set (into the first set)
+        if (newScrollTarget < totalOriginalListWidth) {
+          // Instantly snap forward to the equivalent position in the second set
+          carousel.scrollLeft = currentScrollLeft + totalOriginalListWidth;
+          newScrollTarget = carousel.scrollLeft - itemWidthWithMargins; // Adjust target based on new snapped position
+        }
+      }
+
+      carousel.scrollTo({
+        left: newScrollTarget,
+        behavior: 'smooth',
+      });
+    }
+  }, [featuredListings.length]); // Dependency added: featuredListings.length
 
   // Effect for auto-swiping featured listings
   useEffect(() => {
-    // Clear any existing interval to prevent multiple intervals running
     if (autoSwipeIntervalRef.current) {
       clearInterval(autoSwipeIntervalRef.current);
     }
 
-    // Set up the new interval only if there are featured listings to swipe
-    if (featuredListings.length > FEATURED_ITEMS_PER_PAGE) {
+    // Only enable auto-swipe if there are more items than can be displayed at once
+    // For continuous scroll, we always want auto-swipe if there's at least one item
+    if (featuredListings.length > 0) {
       autoSwipeIntervalRef.current = setInterval(() => {
-        handleNextFeatured();
-      }, 5000); // Auto-swipe every 5 seconds
+        scrollFeatured('next');
+      }, 3000); // Auto-swipe every 3 seconds for a faster animation
     }
 
-    // Cleanup function to clear the interval when the component unmounts
-    // or when featuredListings changes (to reset the interval if data changes)
     return () => {
       if (autoSwipeIntervalRef.current) {
         clearInterval(autoSwipeIntervalRef.current);
       }
     };
-  }, [featuredListings.length, handleNextFeatured]); // Re-run effect if featuredListings count changes
+  }, [featuredListings.length, scrollFeatured]);
 
-  const startIndex = currentFeaturedPage * FEATURED_ITEMS_PER_PAGE;
-  const displayedFeaturedListings = featuredListings.slice(startIndex, startIndex + FEATURED_ITEMS_PER_PAGE);
-
-  const handleTouchStart = useCallback((e) => {
-    // Clear auto-swipe interval on manual touch interaction
+  // Touch handlers to stop/restart auto-swipe on manual interaction
+  const handleTouchStart = useCallback(() => {
     if (autoSwipeIntervalRef.current) {
       clearInterval(autoSwipeIntervalRef.current);
     }
-    if (featuredCarouselRef.current) {
-      featuredCarouselRef.current.startX = e.touches[0].clientX;
-    }
   }, []);
 
-  const handleTouchMove = useCallback((e) => {
-    if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
-    const currentX = e.touches[0].clientX;
-    const diffX = featuredCarouselRef.current.startX - currentX;
-    if (Math.abs(diffX) > 10) {
-      e.preventDefault();
-    }
+  const handleTouchEnd = useCallback(() => {
+    // Restart auto-swipe after a short delay if no further interaction
+    // This will be handled by the useEffect for auto-swipe when dependencies change or component mounts
+    // For now, simply let the useEffect re-evaluate and set the interval if needed.
   }, []);
-
-  const handleTouchEnd = useCallback((e) => {
-    if (!featuredCarouselRef.current || featuredCarouselRef.current.startX === undefined) return;
-    const endX = e.changedTouches[0].clientX;
-    const diffX = featuredCarouselRef.current.startX - endX;
-    const swipeThreshold = 50;
-    if (diffX > swipeThreshold) {
-      handleNextFeatured();
-    } else if (diffX < -swipeThreshold) {
-      handlePrevFeatured();
-    }
-    featuredCarouselRef.current.startX = undefined;
-    // Optionally restart the auto-swipe after a short delay if no further interaction
-    // This is often desired for a better user experience
-    if (featuredListings.length > FEATURED_ITEMS_PER_PAGE) {
-      autoSwipeIntervalRef.current = setInterval(() => {
-        handleNextFeatured();
-      }, 5000);
-    }
-  }, [handleNextFeatured, handlePrevFeatured, featuredListings.length, FEATURED_ITEMS_PER_PAGE]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -399,7 +404,7 @@ function Home() {
           transition={{ duration: 0.6 }}
         >
           <h1
-            className={`font-script text-2xl md:text-3xl mb-4 ${
+            className={`font-script text-xl md:text-2xl mb-2 ${
               darkMode ? "text-green-400" : "text-green-700"
             }`}
           >
@@ -421,7 +426,7 @@ function Home() {
 
         {featuredListings.length > 0 && (
           <motion.div
-            className={`-mt-4 mb-8 sm:mb-12 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
+            className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
               darkMode
                 ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
                 : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"
@@ -429,9 +434,7 @@ function Home() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            ref={featuredCarouselRef}
             onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <h2
@@ -444,67 +447,51 @@ function Home() {
               <Star size={20} className="text-yellow-400 fill-current" />
             </h2>
             <div className="relative">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`page-${currentFeaturedPage}`}
-                initial={{ opacity: 0, x: 100 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                className="grid grid-cols-2 gap-6 lg:grid-cols-4"
+              {/* This is the new scrollable container */}
+              <style>{`
+                /* Hide scrollbar for Chrome, Safari and Opera */
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                /* Hide scrollbar for IE, Edge and Firefox */
+                .no-scrollbar {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                }
+              `}</style>
+              <div
+                ref={featuredCarouselRef}
+                // Apply mobile-specific padding, then reset for larger screens
+                className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
               >
-                {displayedFeaturedListings.map((listing) => (
-                  <div key={`featured-${listing.property_id}`} className="relative transform hover:scale-[1.03] transition-transform duration-200">
+                {/* Duplicate listings three times to create a continuous loop effect */}
+                {[...featuredListings, ...featuredListings, ...featuredListings].map((listing, index) => (
+                  <div
+                    key={`featured-${listing.property_id}-${index}`} // Unique key for duplicated items
+                    // Mobile: w-[50vw] px-2 for partial view and consistent sizing
+                    // Desktop (md and lg): w-1/2 and w-1/4 for previous layout
+                    className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item"
+                  >
                     <ListingCard
                       listing={listing}
-                      isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
-                      onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
-                      userRole={currentUserRole} // Pass user role
-                      userId={currentUserId}   // Pass user ID
-                      userAgencyId={currentUserAgencyId} // Pass user agency ID
-                      getRoleBasePath={getRoleBasePath} // Pass the function
-                      onDeleteListing={handleDeleteListing} // Pass the delete function
+                      isFavorited={userFavourites.includes(listing.property_id)}
+                      onFavoriteToggle={handleFavoriteToggle}
+                      userRole={currentUserRole}
+                      userId={currentUserId}
+                      userAgencyId={currentUserAgencyId}
+                      getRoleBasePath={getRoleBasePath}
+                      onDeleteListing={handleDeleteListing}
                     />
                   </div>
                 ))}
-              </motion.div>
-            </AnimatePresence>
+              </div>
 
-              {Math.ceil(featuredListings.length / FEATURED_ITEMS_PER_PAGE) > 1 && (
-                <div className="flex justify-center mt-6 space-x-4">
-                  <button
-                    onClick={() => {
-                      clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
-                      handlePrevFeatured();
-                    }}
-                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
-                    aria-label="Previous Featured Properties"
-                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                      ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                      ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <ArrowLeftCircleIcon className="h-8 w-8" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      clearInterval(autoSwipeIntervalRef.current); // Stop auto-swipe on manual interaction
-                      handleNextFeatured();
-                    }}
-                    disabled={featuredListings.length <= FEATURED_ITEMS_PER_PAGE}
-                    aria-label="Next Featured Properties"
-                    className={`p-2 rounded-full shadow-md transition-all duration-200
-                      ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}
-                      ${featuredListings.length <= FEATURED_ITEMS_PER_PAGE ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <ArrowRightCircleIcon className="h-8 w-8" />
-                  </button>
-                </div>
-              )}
+              {/* Navigation buttons for featured listings are removed */}
             </div>
           </motion.div>
         )}
 
-        <h2 className={`text-1.5xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+        <h2 className={`text-1.5xl md:text-2xl font-bold text-center mt-2 mb-4 ${darkMode ? "text-green-400" : "text-green-800"}`}>
           Available Listings
         </h2>
         <motion.div
@@ -532,13 +519,13 @@ function Home() {
               >
                 <ListingCard
                   listing={listing}
-                  isFavorited={userFavourites.includes(listing.property_id)} // Pass favorite state
-                  onFavoriteToggle={handleFavoriteToggle} // Pass toggle function
-                  userRole={currentUserRole} // Pass user role
-                  userId={currentUserId}   // Pass user ID
-                  userAgencyId={currentUserAgencyId} // Pass user agency ID
-                  getRoleBasePath={getRoleBasePath} // Pass the function
-                  onDeleteListing={handleDeleteListing} // Pass the delete function
+                  isFavorited={userFavourites.includes(listing.property_id)}
+                  onFavoriteToggle={handleFavoriteToggle}
+                  userRole={currentUserRole}
+                  userId={currentUserId}
+                  userAgencyId={currentUserAgencyId}
+                  getRoleBasePath={getRoleBasePath}
+                  onDeleteListing={handleDeleteListing}
                 />
               </motion.div>
             ))
