@@ -1462,8 +1462,8 @@ const AgencyProfile = () => {
           transition={{ duration: 0.5, delay: 0.8 }}
           // Removed touch events
         >
-          <h2 className={`text-xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
-            darkMode ? "text-green-400" : "text-green-800"
+          <h2 className={`text-xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-1 md:gap-3 ${
+  darkMode ? "text-green-400" : "text-green-800"
           }`}>
             <HomeIcon size={24} /> Listings by {agency?.name || 'Agency'}
           </h2>

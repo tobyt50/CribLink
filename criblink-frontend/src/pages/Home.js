@@ -25,7 +25,7 @@ const ListingCardSkeleton = ({ darkMode }) => (
   </div>
 );
 
-// New Skeleton for Headers
+// New Skeleton for Headers (This component is no longer used for headers, but kept for reference if needed elsewhere)
 const HeaderSkeleton = ({ darkMode, widthClass, heightClass }) => (
   <div className={`animate-pulse rounded-xl ${widthClass} ${heightClass} ${darkMode ? "bg-gray-700" : "bg-gray-300"}`}></div>
 );
@@ -422,11 +422,8 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {loading ? (
-            <div className="flex justify-center mb-2">
-              <HeaderSkeleton darkMode={darkMode} widthClass="w-3/4 md:w-1/2" heightClass="h-8" />
-            </div>
-          ) : (
+          {/* "Find Your Dream Property" Header */}
+          {!loading && (
             <h1
               className={`font-script text-xl md:text-2xl mb-2 ${
                 darkMode ? "text-green-400" : "text-green-700"
@@ -462,11 +459,8 @@ function Home() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {loading ? (
-            <div className="flex justify-center mb-2">
-              <HeaderSkeleton darkMode={darkMode} widthClass="w-2/3 md:w-1/3" heightClass="h-7" />
-            </div>
-          ) : (
+          {/* "Featured Properties" Header */}
+          {!loading && (
             <h2
               className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
                 darkMode ? "text-green-400" : "text-green-800"
@@ -534,11 +528,8 @@ function Home() {
           </div>
         </motion.div>
 
-        {loading ? (
-          <div className="flex justify-center pt-4 pb-0 mb-2">
-            <HeaderSkeleton darkMode={darkMode} widthClass="w-2/3 md:w-1/3" heightClass="h-7" />
-          </div>
-        ) : (
+        {/* "Available Listings" Header */}
+        {!loading && (
           <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
             Available Listings
           </h2>

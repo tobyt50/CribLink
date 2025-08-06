@@ -733,12 +733,11 @@ const LegalDocuments = () => {
 
                         {loading ? (
                             viewMode === 'graphical' ? (
-                                <motion.div
-                                    layout
+                                <div
                                     className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                                 >
                                     {[...Array(currentLimit)].map((_, i) => <DocumentCardSkeleton key={i} darkMode={darkMode} />)}
-                                </motion.div>
+                                </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
@@ -793,8 +792,7 @@ const LegalDocuments = () => {
                             </div>
                         ) : (
                             viewMode === 'graphical' ? (
-                                <motion.div
-                                    layout
+                                <div
                                     className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                                 >
                                     {filteredDocuments.map((doc) => (
@@ -805,7 +803,7 @@ const LegalDocuments = () => {
                                             />
                                         </div>
                                     ))}
-                                </motion.div>
+                                </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>

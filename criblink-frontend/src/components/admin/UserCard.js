@@ -52,7 +52,7 @@ const UserCard = ({ user, onActionApply, actionSelections, setActionSelections, 
 
   // Helper to render a vertical separator
   const Separator = () => (
-    <div className="w-[0.5px] bg-gray-300 dark:bg-gray-600 h-5 self-center"></div>
+    <div className="w-[0.5px] bg-gray-300 dark:bg-gray-600 h-5 self-center mx-2"></div>
   );
 
   return (
@@ -106,7 +106,7 @@ const UserCard = ({ user, onActionApply, actionSelections, setActionSelections, 
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-nowrap justify-center w-full border-t border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap px-0" onClick={(e) => e.stopPropagation()}> {/* Prevent card click when interacting with buttons */}
+      <div className="flex flex-nowrap justify-center w-full border-t border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap px-0 items-center" onClick={(e) => e.stopPropagation()}> {/* Prevent card click when interacting with buttons */}
 
         {actionOptions.map((option, index, arr) => {
           const IconComponent = option.icon;

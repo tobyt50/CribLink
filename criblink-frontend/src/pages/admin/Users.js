@@ -117,16 +117,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 // Skeleton component for Users page
 const UsersSkeleton = ({ darkMode, viewMode }) => (
   <div className={`animate-pulse space-y-4`}>
-    {/* Controls Skeleton */}
-    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-      <div className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      <div className="flex gap-2">
-        <div className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-        <div className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      </div>
-    </div>
-
+  
     {/* Content Skeleton based on viewMode */}
     {viewMode === 'graphical' ? (
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

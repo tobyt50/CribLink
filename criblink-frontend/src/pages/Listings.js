@@ -736,19 +736,15 @@ const Listings = () => {
     const hasSidebar = useMemo(() => {
         if (!user) return false; // No user, no sidebar
 
-        if (userRole === 'admin') {
-            return false; // Admin never has a sidebar on this page, as per user's request
-        }
-
-        // If agencyIdFilter is present, it means we are viewing listings from an agency profile.
-        // In this case, only agency_admin affiliated with *this* agency should have a sidebar.
+        // If agencyIdFilter is present (viewing agency-specific listings)
         if (agencyIdFilter) {
+            // Only agency_admin affiliated with *this* agency should have a sidebar.
             return userRole === 'agency_admin' && parseInt(userAgencyId) === parseInt(agencyIdFilter);
         }
 
         // For global listings (no agencyIdFilter)
-        // Agency_admin and Agent roles should have a sidebar.
-        return userRole === 'agency_admin' || userRole === 'agent';
+        // Admin, Agency_admin, and Agent roles should have a sidebar.
+        return userRole === 'admin' || userRole === 'agency_admin' || userRole === 'agent';
     }, [user, userRole, userAgencyId, agencyIdFilter]);
 
     // Adjusted contentShift based on mobile and collapsed state
@@ -773,7 +769,19 @@ const Listings = () => {
 
         // If hasSidebar is true, it means the current user role and agency filter
         // combination permits a sidebar to be rendered.
-        if (userRole === 'agency_admin') {
+        if (userRole === 'admin') {
+            return (
+                <AdminSidebar
+                    collapsed={isMobile ? false : isCollapsed}
+                    setCollapsed={isMobile ? () => {} : setIsCollapsed}
+                    activeSection={activeSection}
+                    setActiveSection={setActiveSection}
+                    isMobile={isMobile}
+                    isSidebarOpen={isSidebarOpen}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                />
+            );
+        } else if (userRole === 'agency_admin') {
             return (
                 <AgencyAdminSidebar
                     collapsed={isMobile ? false : isCollapsed}
