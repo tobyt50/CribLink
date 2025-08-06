@@ -211,7 +211,8 @@ const Members = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultMembersView') || 'graphical');
+  // Initialize viewMode from localStorage, defaulting to 'graphical' if not set
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'graphical'); // Changed to defaultListingsView
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
@@ -851,11 +852,11 @@ const Members = () => {
                   </div>
                 )}
               </div>
-              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultMembersView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                 <LayoutList className="h-6 w-6" />
               </button>
               <button
-                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultMembersView', 'graphical'); }}
+                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                 className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
               >
                 <Squares2X2Icon className="h-6 w-6" />
@@ -949,11 +950,11 @@ const Members = () => {
                     </div>
                   )}
                 </div>
-                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultMembersView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                   <LayoutList className="h-6 w-6" />
                 </button>
                 <button
-                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultMembersView', 'graphical'); }}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                 >
                   <Squares2X2Icon className="h-6 w-6" />
@@ -964,14 +965,14 @@ const Members = () => {
             <div className="flex justify-center">
               <button
                 onClick={() => { setShowPendingRequests(false); setPage(1); }}
-                className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
+                className={`px-4 py-[11px] rounded-l-xl text-sm font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
                           ${!showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
               >
                 Your Members ({members.length})
               </button>
               <button
                 onClick={() => { setShowPendingRequests(true); setPage(1); }}
-                className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
+                className={`px-4 py-[11px] rounded-r-xl text-sm font-semibold transition-colors duration-200 flex-1 whitespace-nowrap flex-shrink-0
                           ${showPendingRequests ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
               >
                 Pending Requests ({pendingRequests.length})
@@ -1036,7 +1037,6 @@ const Members = () => {
                           <td className="px-2 py-2 break-words" title={request.agent_name}>{request.agent_name}</td>
                           <td className="px-2 py-2 break-words" title={request.agent_email}>{request.agent_email}</td>
                           <td className="px-2 py-2 break-words" title={request.agent_phone}>{request.agent_phone || 'N/A'}</td> {/* New Phone Data */}
-                          <td className="px-2 py-2 break-words">{new Date(request.requested_at).toLocaleDateString()}</td>
                           <td className="px-2 py-2 flex gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for action buttons */}
                             <button className="text-green-600 hover:border-green-700 p-1 border border-transparent" onClick={() => handleAcceptRequest(request.request_id, request.agent_id)} title="Accept Request">
                               <CheckCircleIcon className="h-6 w-6" />

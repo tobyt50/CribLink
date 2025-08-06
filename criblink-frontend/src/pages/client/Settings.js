@@ -7,11 +7,11 @@ import { useMessage } from '../../context/MessageContext';
 import {
   User, Shield, Bell, Settings as SettingsIcon, Sun, Moon, Monitor, LayoutGrid, LayoutList,
   ChevronDownIcon, Mail, Home, Tag, MapPin, DollarSign, Search, X, Menu, Globe, CheckCircle, XCircle,
-  Bed, Bath, Languages, Palette, Link, Landmark, Loader, Save // Added new icons
+  Bed, Bath, Languages, Palette, Link, Landmark, Loader, Save
 } from 'lucide-react';
 import ClientSidebar from '../../components/client/Sidebar';
 import { useSidebarState } from '../../hooks/useSidebarState';
-import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
+import { useAuth } from '../../context/AuthContext';
 
 // Custom Alert/Message Box Component (instead of alert())
 const MessageBox = ({ message, type, onClose }) => {
@@ -134,8 +134,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 };
 
 // Reusable Switch component
-const Switch = ({ isOn, handleToggle, label, description }) => {
-    const { darkMode } = useTheme();
+const Switch = ({ isOn, handleToggle, label, description, darkMode }) => { // Added darkMode prop
     return (
         <div className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ease-in-out h-full ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
             <div>
@@ -232,30 +231,51 @@ const LoadingSkeleton = ({ darkMode, userRole }) => {
 const ClientSettings = () => {
     const { darkMode, themePreference, setThemePreference } = useTheme();
     const { showMessage } = useMessage();
-    const { user } = useAuth(); // Get user from AuthContext
+    const { user } = useAuth();
 
-    // State for client settings
-    const [settings, setSettings] = useState(null);
+    // Initialize settings state with defaults, including sidebar_permanently_expanded from localStorage
+    const [settings, setSettings] = useState(() => ({
+        profile: { name: 'N/A', email: 'N/A' },
+        notifications: {
+            emailNotifications: true,
+            inAppNotifications: true,
+            newListingAlert: true,
+            priceDropAlert: true,
+            favouriteUpdateAlert: true,
+        },
+        preferences: {
+            preferred_property_type: 'any',
+            preferred_location: '',
+            min_price: 0,
+            max_price: 1000000000,
+            min_bedrooms: 0,
+            min_bathrooms: 0,
+        },
+        display: {
+            theme: localStorage.getItem('themePreference') || 'system',
+            defaultListView: localStorage.getItem('defaultListingsView') || 'graphical',
+            sidebar_permanently_expanded: localStorage.getItem('sidebarPermanentlyExpanded') === 'true' || false, // Initialize from localStorage
+            language: localStorage.getItem('clientLanguage') || 'en',
+        },
+    }));
     const [loading, setLoading] = useState(true);
 
-    // State for general user settings (moved from ProfileSettings.js)
     const [userSettings, setUserSettings] = useState({
         language: 'en',
         timezone: 'UTC+1',
         currency: 'NGN',
         default_landing_page: '/',
-        notification_email: '', // Added for consistency
-        preferred_communication_channel: 'email', // Added for consistency
+        notification_email: '',
+        preferred_communication_channel: 'email',
     });
-    const [userSettingsLoading, setUserSettingsLoading] = useState(true); // For userSettings fetch
+    const [userSettingsLoading, setUserSettingsLoading] = useState(true);
 
-    // Sidebar State (using useSidebarState for consistency)
+    // Get isCollapsed and setIsCollapsed from useSidebarState
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
-    const [activeSection, setActiveSection] = useState('client-settings'); // Default active section
+    const [activeSection, setActiveSection] = useState('client-settings');
 
     const token = localStorage.getItem('token');
 
-    // Property Type Options
     const propertyTypeOptions = [
       { value: "any", label: "Any Property Type" },
       { value: "Duplex", label: "Duplex" },
@@ -267,19 +287,16 @@ const ClientSettings = () => {
       { value: "Condo", label: "Condo" },
     ];
 
-    // Bedroom Options
     const bedroomOptions = [
       { value: 0, label: "Any Bedrooms" },
       ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => ({ value: num, label: `${num} Bedroom(s)` })),
     ];
 
-    // Bathroom Options
     const bathroomOptions = [
       { value: 0, label: "Any Bathrooms" },
       ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => ({ value: num, label: `${num} Bathroom(s)` })),
     ];
 
-    // Language options (from ProfileSettings.js)
     const languageOptions = [
         { value: 'en', label: 'English' },
         { value: 'es', label: 'Spanish' },
@@ -287,7 +304,6 @@ const ClientSettings = () => {
         { value: 'de', label: 'German' },
     ];
 
-    // Timezone options (example for UTC+1, assuming Lagos, Nigeria) (from ProfileSettings.js)
     const timezoneOptions = [
         { value: 'UTC-12', label: '(UTC-12:00) International Date Line West' },
         { value: 'UTC-11', label: '(UTC-11:00) Coordinated Universal Time-11' },
@@ -302,7 +318,7 @@ const ClientSettings = () => {
         { value: 'UTC-02', label: '(UTC-02:00) Mid-Atlantic' },
         { value: 'UTC-01', label: '(UTC-01:00) Azores, Cape Verde Is.' },
         { value: 'UTC+00', label: '(UTC+00:00) Dublin, Edinburgh, Lisbon, London' },
-        { value: 'UTC+01', label: '(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna (West Central Africa)' }, // Adjusted for Lagos
+        { value: 'UTC+01', label: '(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna (West Central Africa)' },
         { value: 'UTC+02', label: '(UTC+02:00) Athens, Bucharest, Istanbul' },
         { value: 'UTC+03', label: '(UTC+03:00) Baghdad, Kuwait, Riyadh' },
         { value: 'UTC+04', label: '(UTC+04:00) Abu Dhabi, Muscat' },
@@ -317,7 +333,6 @@ const ClientSettings = () => {
         { value: 'UTC+12', label: '(UTC+12:00) Auckland, Wellington, Fiji' },
     ];
 
-    // Currency options for the dropdown (from ProfileSettings.js)
     const currencyOptions = [
         { value: 'NGN', label: '₦ Nigerian Naira' },
         { value: 'USD', label: '$ US Dollar' },
@@ -326,47 +341,42 @@ const ClientSettings = () => {
         { value: 'JPY', label: '¥ Japanese Yen' },
     ];
 
-    // Dynamically generate Default Landing Page options based on user role (from ProfileSettings.js)
     const defaultLandingPageOptions = useCallback(() => {
         const options = [
             { value: '/', label: 'Home' },
             { value: '/profile/general', label: 'Profile' },
-            // Add other general landing pages if applicable
         ];
 
         if (user?.role) {
             let dashboardPath = '';
-            let inquiriesPath = ''; // New variable for inquiries path
+            let inquiriesPath = '';
             switch (user.role) {
                 case 'admin':
                     dashboardPath = '/admin/dashboard';
-                    inquiriesPath = '/admin/inquiries'; // Assuming admin inquiries path
+                    inquiriesPath = '/admin/inquiries';
                     break;
                 case 'agent':
                     dashboardPath = '/agent/dashboard';
                     inquiriesPath = '/agent/inquiries';
                     break;
                 case 'client':
-                    dashboardPath = '/client/dashboard'; // While SignIn might redirect to /client/inquiries, clients can still have a dashboard
+                    dashboardPath = '/client/dashboard';
                     inquiriesPath = '/client/inquiries';
                     break;
                 default:
-                    dashboardPath = '/'; // Fallback generic dashboard if role is unknown
-                    inquiriesPath = '/'; // Fallback for inquiries
+                    dashboardPath = '/';
+                    inquiriesPath = '/';
             }
 
-            // Add Dashboard option
             options.unshift({ value: dashboardPath, label: 'Dashboard' });
 
-            // Add Inquiries option if a specific path is determined
-            if (inquiriesPath && inquiriesPath !== '/') { // Avoid adding duplicate '/'
+            if (inquiriesPath && inquiriesPath !== '/') {
                 options.unshift({ value: inquiriesPath, label: 'Inquiries' });
             }
         }
         return options;
     }, [user?.role]);
 
-    // Moved fetchUserSettings definition here, before the useEffect that calls it
     const fetchUserSettings = useCallback(async () => {
         setUserSettingsLoading(true);
         try {
@@ -404,24 +414,21 @@ const ClientSettings = () => {
                     return;
                 }
 
-                // Fetch client profile for display purposes (name, email)
                 const profileResponse = await axios.get(`${API_BASE_URL}/users/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const profileData = profileResponse.data;
 
                 let clientSpecificSettings = {};
-                let clientPreferences = {}; // To hold property preferences
+                let clientPreferences = {};
 
                 try {
-                    // Fetch client-specific general settings
                     const clientSettingsResponse = await axios.get(`${API_BASE_URL}/client/settings`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     clientSpecificSettings = clientSettingsResponse.data;
                 } catch (error) {
                     console.warn("Client general settings endpoint not found or error fetching. Using defaults.", error);
-                    // Initialize with defaults if no settings are found for the user
                     clientSpecificSettings = {
                         email_notifications: true,
                         in_app_notifications: true,
@@ -437,7 +444,6 @@ const ClientSettings = () => {
 
                 if (user?.role === 'client') {
                     try {
-                        // Fetch client property preferences
                         const clientPreferencesRes = await axios.get(`${API_BASE_URL}/clients/${user.user_id}/preferences`, {
                             headers: { Authorization: `Bearer ${token}` },
                         });
@@ -478,17 +484,19 @@ const ClientSettings = () => {
                     display: {
                         theme: clientSpecificSettings.theme || localStorage.getItem('themePreference') || 'system',
                         defaultListView: clientSpecificSettings.default_list_view || localStorage.getItem('defaultListingsView') || 'graphical',
+                        sidebar_permanently_expanded: clientSpecificSettings.sidebar_permanently_expanded ?? (localStorage.getItem('sidebarPermanentlyExpanded') === 'true' || false),
                         language: clientSpecificSettings.language || localStorage.getItem('clientLanguage') || 'en',
-                        sidebar_permanently_expanded: clientSpecificSettings.sidebar_permanently_expanded || localStorage.getItem('sidebarPermanentlyExpanded') === 'true',
                     },
                 };
                 setSettings(fetchedSettings);
+                // ADDED LOG: Check the value received from the backend
+                console.log("Fetched client display settings (from backend):", fetchedSettings.display.sidebar_permanently_expanded);
 
                 // Update local storage for synced values
                 localStorage.setItem('themePreference', fetchedSettings.display.theme);
                 localStorage.setItem('defaultListingsView', fetchedSettings.display.defaultListView);
                 localStorage.setItem('clientLanguage', fetchedSettings.display.language);
-                localStorage.setItem('sidebarPermanentlyExpanded', fetchedSettings.display.sidebarPermanentlyExpanded);
+                localStorage.setItem('sidebarPermanentlyExpanded', fetchedSettings.display.sidebar_permanently_expanded);
 
             } catch (error) {
                 console.error('Error fetching client settings:', error);
@@ -502,8 +510,8 @@ const ClientSettings = () => {
             }
         };
         fetchClientSettings();
-        fetchUserSettings(); // This call will now find fetchUserSettings
-    }, [user?.role, token, fetchUserSettings]); // Ensure fetchUserSettings is a dependency
+        fetchUserSettings();
+    }, [user?.role, token, fetchUserSettings, showMessage]);
 
     // Sync display settings to localStorage whenever they change
     useEffect(() => {
@@ -511,9 +519,19 @@ const ClientSettings = () => {
             localStorage.setItem('themePreference', settings.display.theme);
             localStorage.setItem('defaultListingsView', settings.display.defaultListView);
             localStorage.setItem('clientLanguage', settings.display.language);
-            localStorage.setItem('sidebarPermanentlyExpanded', settings.display.sidebarPermanentlyExpanded);
+            localStorage.setItem('sidebarPermanentlyExpanded', settings.display.sidebar_permanently_expanded);
         }
     }, [settings]);
+
+    // This useEffect ensures the sidebar's visual state (isCollapsed) matches the fetched setting on load/setting change
+    useEffect(() => {
+        if (settings && setIsCollapsed) {
+            // If sidebar_permanently_expanded is true, isCollapsed should be false (expanded)
+            // If sidebar_permanently_expanded is false, isCollapsed should be true (collapsed)
+            setIsCollapsed(!settings.display.sidebar_permanently_expanded);
+        }
+    }, [settings?.display.sidebar_permanently_expanded, setIsCollapsed]);
+
 
     const handleInputChange = (e, section, key) => {
         const { value, type, checked } = e.target;
@@ -526,15 +544,13 @@ const ClientSettings = () => {
         }));
     };
 
-    // New handler to update user settings and save immediately
     const handleUserSettingsUpdate = async (name, value) => {
         setUserSettings(prev => ({
             ...prev,
             [name]: value,
         }));
         try {
-            // No need for userSettingsLoading state for individual saves as it's quick
-            const payload = { [name]: value }; // Send only the changed setting
+            const payload = { [name]: value };
             await axios.put(`${API_BASE_URL}/users/update`, payload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -542,14 +558,13 @@ const ClientSettings = () => {
         } catch (error) {
             console.error(`Failed to save ${name}:`, error);
             showMessage(`Failed to save ${name.replace(/_/g, ' ')}. Please try again.`, "error");
-            // Optionally revert UI on error if needed, but for simple settings,
-            // it might be better to let the user see the change and try again.
         }
     };
 
 
     const createToggleHandler = (section, key, messageLabel, dbKey = key) => async () => {
         const newState = !settings[section][key];
+        // Optimistically update the UI
         setSettings(prevSettings => ({
             ...prevSettings,
             [section]: {
@@ -561,22 +576,44 @@ const ClientSettings = () => {
         try {
             if (!token) {
                 showMessage('Authentication token missing. Please log in.', 'error');
+                // Revert UI if token is missing
                 setSettings(prevSettings => ({
                     ...prevSettings,
                     [section]: { ...prevSettings[section], [key]: !newState },
                 }));
                 return;
             }
-            const payloadKey = dbKey.replace(/([A-Z])/g, '_$1').toLowerCase();
-            await axios.put(`${API_BASE_URL}/client/settings`, {
-                [payloadKey]: newState,
-            }, {
+
+            const payloadKey = dbKey.replace(/([A-Z])/g, '_$1').toLowerCase(); // e.g., 'sidebar_permanently_expanded'
+
+            let payloadToSend;
+            if (section === 'display') {
+                // For display section toggles, send the entire display object with the updated toggle
+                // Use the *current* state of settings.display, but override the specific toggled key
+                const currentDisplaySettings = settings.display; // Get the most recent settings.display
+                payloadToSend = {
+                    theme: currentDisplaySettings.theme,
+                    default_list_view: currentDisplaySettings.defaultListView,
+                    language: currentDisplaySettings.language,
+                    sidebar_permanently_expanded: newState, // This is the key change: use newState for the toggled item
+                };
+            } else {
+                // For other sections (like notifications), send only the specific toggled field
+                payloadToSend = {
+                    [payloadKey]: newState,
+                };
+            }
+
+            console.log(`Payload being sent for toggle (${messageLabel}):`, payloadToSend); // New log
+
+            await axios.put(`${API_BASE_URL}/client/settings`, payloadToSend, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             showMessage(`${messageLabel} ${newState ? 'enabled' : 'disabled'}.`, 'success');
         } catch (error) {
             console.error(`Error toggling ${messageLabel}:`, error);
             showMessage(`Failed to update ${messageLabel}. Please try again.`, 'error');
+            // Revert UI on error
             setSettings(prevSettings => ({
                 ...prevSettings,
                 [section]: {
@@ -587,7 +624,7 @@ const ClientSettings = () => {
         }
     };
 
-    const handleSaveSettings = async (settingName, sectionToSave) => {
+    const handleSaveSettings = async (settingName, sectionToSave, updatedFields = {}) => {
         try {
             if (!settings) return;
             setLoading(true);
@@ -597,7 +634,7 @@ const ClientSettings = () => {
                 return;
             }
             let payload = {};
-            let endpoint = `${API_BASE_URL}/client/settings`; // Default endpoint for general settings
+            let endpoint = `${API_BASE_URL}/client/settings`;
 
             if (sectionToSave === 'preferences') {
                 payload = {
@@ -608,17 +645,20 @@ const ClientSettings = () => {
                     min_bedrooms: settings.preferences.min_bedrooms,
                     min_bathrooms: settings.preferences.min_bathrooms,
                 };
-                // Assuming a separate endpoint for client property preferences
                 endpoint = `${API_BASE_URL}/clients/${user.user_id}/preferences`;
             } else if (sectionToSave === 'display') {
+                 // Merge current settings with any explicitly updated fields
+                 const currentDisplaySettings = settings.display;
+                 const mergedDisplaySettings = { ...currentDisplaySettings, ...updatedFields };
+
                  payload = {
-                    theme: settings.display.theme,
-                    default_list_view: settings.display.defaultListView,
-                    language: settings.display.language,
-                    sidebar_permanently_expanded: settings.display.sidebarPermanentlyExpanded,
+                    theme: mergedDisplaySettings.theme,
+                    default_list_view: mergedDisplaySettings.defaultListView,
+                    language: mergedDisplaySettings.language,
+                    sidebar_permanently_expanded: mergedDisplaySettings.sidebar_permanently_expanded,
                  };
+                 console.log("Payload for display settings (before axios.put):", payload);
             }
-            // Add other sections here as needed for specific 'Save' buttons
 
             await axios.put(endpoint, payload, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -639,7 +679,8 @@ const ClientSettings = () => {
             ...prevSettings,
             display: { ...prevSettings.display, theme: value },
         }));
-        handleSaveSettings('Theme', 'display');
+        // Pass the specific updated field directly
+        handleSaveSettings('Theme', 'display', { theme: value });
     };
 
     const handleDefaultListViewChange = (value) => {
@@ -647,7 +688,8 @@ const ClientSettings = () => {
             ...prevSettings,
             display: { ...prevSettings.display, defaultListView: value },
         }));
-        handleSaveSettings('Default Listings View', 'display');
+        // Pass the specific updated field directly
+        handleSaveSettings('Default Listings View', 'display', { defaultListView: value });
     };
 
     const handleLanguageChange = (value) => {
@@ -655,16 +697,30 @@ const ClientSettings = () => {
             ...prevSettings,
             display: { ...prevSettings.display, language: value },
         }));
-        handleSaveSettings('Language', 'display');
+        // Pass the specific updated field directly
+        handleSaveSettings('Language', 'display', { language: value });
     };
 
-    const handleSidebarToggle = createToggleHandler('display', 'sidebarPermanentlyExpanded', 'Sidebar permanently expanded', 'sidebar_permanently_expanded');
-    // We update the global sidebar state when the setting is toggled
-    useEffect(() => {
-        if (settings && setIsCollapsed) {
-            setIsCollapsed(!settings.display.sidebarPermanentlyExpanded);
-        }
-    }, [settings?.display.sidebarPermanentlyExpanded, setIsCollapsed]);
+    // Modified handleSidebarToggle to directly interact with useSidebarState
+    const handleSidebarToggle = () => {
+        setSettings(prevSettings => {
+            const newSidebarState = !prevSettings.display.sidebar_permanently_expanded;
+            // Immediately update the actual sidebar state via useSidebarState hook
+            setIsCollapsed(!newSidebarState); // If newSidebarState is true (expanded), isCollapsed should be false
+
+            // Trigger the save to backend, passing the new state for sidebar_permanently_expanded
+            handleSaveSettings('Sidebar permanently expanded', 'display', { sidebar_permanently_expanded: newSidebarState });
+
+            // Return the updated settings state for React's state management
+            return {
+                ...prevSettings,
+                display: {
+                    ...prevSettings.display,
+                    sidebar_permanently_expanded: newSidebarState,
+                },
+            };
+        });
+    };
 
 
     const themeOptions = [
@@ -683,14 +739,14 @@ const ClientSettings = () => {
     const searchableContent = {
         "General": [
             "Display Settings", "Customize the application's appearance.", "Theme", "Choose your preferred theme (Light, Dark, System).", "Default Listings Display", "Select how listings are displayed by default (Table, Grid).", "Permanently Expand Sidebar (Desktop Only)", "Keep the sidebar expanded by default on desktop.", "Language", "Select your preferred language.",
-            "Timezone", "Select Timezone", // Added from ProfileSettings
-            "Default Currency", "Select Currency", "Nigerian Naira", "US Dollar", "Euro", "British Pound", "Japanese Yen", // Added from ProfileSettings
-            "Default Landing Page", "Select Landing Page", "Home", "Profile", "Dashboard", "Inquiries", // Added from ProfileSettings
+            "Timezone", "Select Timezone",
+            "Default Currency", "Select Currency", "Nigerian Naira", "US Dollar", "Euro", "British Pound", "Japanese Yen",
+            "Default Landing Page", "Select Landing Page", "Home", "Profile", "Dashboard", "Inquiries",
         ],
         "Notifications": [
             "Notifications", "Control how you receive alerts.", "Email Notifications", "Receive updates via email.", "In-App Notifications", "See notifications directly in the dashboard.", "New Listing Alert", "Get notified about new property listings matching your criteria.", "Price Drop Alert", "Receive alerts for price reductions on favorite or saved listings.", "Favorite Update Alert", "Get notified when there are updates to your favorited properties."
         ],
-        "Property Preferences": [ // Updated section name
+        "Property Preferences": [
             "Property Preferences", "Set your preferences for property recommendations and alerts.", "Property Type", "Any Property Type", "Duplex", "Bungalow", "Apartment", "Penthouse", "Detached House", "Semi-Detached House", "Condo", "Preferred Location", "Min Price", "Max Price", "Min Bedrooms", "Min Bathrooms"
         ]
     };
@@ -729,7 +785,7 @@ const ClientSettings = () => {
                 )}
 
                 <ClientSidebar
-                    collapsed={isMobile ? false : isCollapsed}
+                    collapsed={isMobile ? false : (settings ? !settings.display.sidebar_permanently_expanded : isCollapsed)}
                     setCollapsed={setIsCollapsed}
                     activeSection={activeSection}
                     setActiveSection={setActiveSection}
@@ -788,7 +844,7 @@ const ClientSettings = () => {
             )}
 
             <ClientSidebar
-                collapsed={isMobile ? false : isCollapsed}
+                collapsed={isMobile ? false : (settings ? !settings.display.sidebar_permanently_expanded : isCollapsed)}
                 setCollapsed={setIsCollapsed}
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -835,7 +891,7 @@ const ClientSettings = () => {
                     </div>
 
                     {filterSection("General") && (
-                        <div className="space-y-6"> {/* Removed pt-6 */}
+                        <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
@@ -847,28 +903,13 @@ const ClientSettings = () => {
                                     <Dropdown placeholder="Select View Mode" options={defaultListViewOptions} value={settings.display.defaultListView} onChange={handleDefaultListViewChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
                                 </div>
-                                <Switch label="Permanently Expand Sidebar (Desktop Only)" description="Keep the sidebar expanded by default on desktop." isOn={settings.display.sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+                                <Switch label="Permanently Expand Sidebar (Desktop Only)" description="Keep the sidebar expanded by default on desktop." isOn={settings.display.sidebar_permanently_expanded} handleToggle={handleSidebarToggle} darkMode={darkMode} /> {/* Passed darkMode prop */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Language</label>
                                     <Dropdown placeholder="Select Language" options={languageOptions} value={settings.display.language} onChange={handleLanguageChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select your preferred language.</p>
                                 </div>
 
-                                {/* General App Settings from ProfileSettings.js */}
-                                {/* Language */}
-                                <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
-                                    <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_language">Language</label>
-                                    <Dropdown
-                                        options={languageOptions}
-                                        value={userSettings.language}
-                                        onChange={(value) => handleUserSettingsUpdate('language', value)}
-                                        placeholder="Select Language"
-                                        className="w-full"
-                                    />
-                                    <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
-                                </div>
-
-                                {/* Timezone */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_timezone">Timezone</label>
                                     <Dropdown
@@ -881,7 +922,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
                                 </div>
 
-                                {/* Currency */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_currency">Default Currency</label>
                                     <Dropdown
@@ -894,11 +934,10 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
                                 </div>
 
-                                {/* Default Landing Page */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_default_landing_page">Default Landing Page</label>
                                     <Dropdown
-                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                        options={defaultLandingPageOptions()}
                                         value={userSettings.default_landing_page}
                                         onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
                                         placeholder="Select Landing Page"
@@ -959,7 +998,6 @@ const ClientSettings = () => {
                                 Set your preferences for property recommendations and alerts.
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                {/* Property Type */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="preferred_property_type">Property Type</label>
                                     <Dropdown
@@ -972,7 +1010,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Filter listings by your ideal property type.</p>
                                 </div>
 
-                                {/* Location */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label htmlFor="preferred_location" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Preferred Location</label>
                                     <input
@@ -986,7 +1023,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a default location for property searches.</p>
                                 </div>
 
-                                {/* Min Price */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label htmlFor="min_price" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Min Price (₦)</label>
                                     <div className="relative">
@@ -1003,7 +1039,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a minimum price for property recommendations.</p>
                                 </div>
 
-                                {/* Max Price */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label htmlFor="max_price" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Max Price (₦)</label>
                                     <div className="relative">
@@ -1020,7 +1055,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set a maximum price for property recommendations.</p>
                                 </div>
 
-                                {/* Min Bedrooms */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="min_bedrooms">Min Bedrooms</label>
                                     <Dropdown
@@ -1033,7 +1067,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum number of bedrooms.</p>
                                 </div>
 
-                                {/* Min Bathrooms */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="min_bathrooms">Min Bathrooms</label>
                                     <Dropdown
@@ -1046,7 +1079,6 @@ const ClientSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set the minimum number of bathrooms.</p>
                                 </div>
                             </div>
-                            {/* Single Save Button for Property Preferences */}
                             <div className="flex justify-center mt-6">
                                 <button
                                     onClick={() => handleSaveSettings('Property Preferences', 'preferences')}

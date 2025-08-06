@@ -162,7 +162,7 @@ const Favourites = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('created_at'); // Default sort key for listings
   const [sortDirection, setSortDirection] = useState('desc');
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultFavouritesView') || 'graphical');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'graphical');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userRole, setUserRole] = useState('');
   const [agencyId, setAgencyId] = useState(null);
@@ -911,11 +911,11 @@ const Favourites = () => {
                     </div>
                   )}
                 </div>
-              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultFavouritesView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+              <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                 <LayoutList className="h-6 w-6" />
               </button>
               <button
-                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultFavouritesView', 'graphical'); }}
+                onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                 className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
               >
                 <Squares2X2Icon className="h-6 w-6" />
@@ -955,13 +955,13 @@ const Favourites = () => {
                   )}
                 </div>
                 <button
-                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultFavouritesView', 'simple'); }}
+                  onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                 >
                   <LayoutList className="h-6 w-6" />
                 </button>
                 <button
-                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultFavouritesView', 'graphical'); }}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                 >
                   <Squares2X2Icon className="h-6 w-6" />

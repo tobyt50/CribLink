@@ -37,11 +37,11 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             }
         };
 
-        document.addEventListener("click", handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("keydown", handleEscape);
 
         return () => {
-            document.removeEventListener("click", handleClickOutside);
+            document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("keydown", handleEscape);
         };
     }, []);
@@ -162,8 +162,8 @@ const LegalDocuments = () => {
     const { showConfirm } = useConfirmDialog();
     const { user } = useAuth();
 
-    // View mode state, initialized from localStorage
-    const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultDocumentsView') || 'list'); // 'list' or 'grid'
+    // View mode state, initialized from localStorage to align with Listings.js and Favourites.js
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'simple'); // Default to 'simple' (list view)
 
     // Use the useSidebarState hook
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
@@ -180,17 +180,17 @@ const LegalDocuments = () => {
 
     // Determine limit based on viewMode and screen size
     const getLimit = useCallback(() => {
-        if (viewMode === 'grid') {
+        if (viewMode === 'graphical') { // 'graphical' corresponds to 'grid'
             return isMobile ? 20 : 25; // 20 per page for mobile grid, 25 for desktop grid
         }
-        return 10; // 10 per page for list view
+        return 10; // 10 per page for 'simple' (list) view
     }, [viewMode, isMobile]);
 
     const currentLimit = getLimit(); // Get the current limit
 
     useEffect(() => {
         // Update localStorage when viewMode changes
-        localStorage.setItem('defaultDocumentsView', viewMode);
+        localStorage.setItem('defaultListingsView', viewMode);
         // Reset page to 1 when view mode changes, as limits might change
         setPage(1);
     }, [viewMode]);
@@ -608,15 +608,15 @@ const LegalDocuments = () => {
                                 {/* View mode buttons for mobile */}
                                 <div className="flex justify-center gap-2 w-full">
                                     <button
-                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'list' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('list')}
+                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
                                         title="List View"
                                     >
                                         <LayoutList className="h-5 w-5 mr-2" /> List View
                                     </button>
                                     <button
-                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'grid' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('grid')}
+                                        className={`flex-1 p-2 rounded-xl h-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                                         title="Grid View"
                                     >
                                         <LayoutGrid className="h-5 w-5 mr-2" /> Grid View
@@ -714,15 +714,15 @@ const LegalDocuments = () => {
                                     </div>
 
                                     <button
-                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'list' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('list')}
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }}
                                         title="List View"
                                     >
                                         <LayoutList className="h-6 w-6" />
                                     </button>
                                     <button
-                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'grid' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
-                                        onClick={() => setViewMode('grid')}
+                                        className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
+                                        onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                                         title="Grid View"
                                     >
                                         <LayoutGrid className="h-6 w-6" />
@@ -732,7 +732,7 @@ const LegalDocuments = () => {
                         )}
 
                         {loading ? (
-                            viewMode === 'grid' ? (
+                            viewMode === 'graphical' ? (
                                 <motion.div
                                     layout
                                     className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
@@ -792,7 +792,7 @@ const LegalDocuments = () => {
                                 No legal documents found matching your criteria.
                             </div>
                         ) : (
-                            viewMode === 'grid' ? (
+                            viewMode === 'graphical' ? (
                                 <motion.div
                                     layout
                                     className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"

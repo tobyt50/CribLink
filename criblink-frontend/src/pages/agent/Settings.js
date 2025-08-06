@@ -162,7 +162,7 @@ const DropdownSkeleton = ({ darkMode }) => (
 
 // Skeleton for a switch component
 const SwitchSkeleton = ({ darkMode }) => (
-  <div className={`flex items-center justify-between p-4 rounded-xl border animate-pulse h-full ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
+  <div className={`flex items-center justify-between p-4 rounded-xl border animate-pulse h-full ${darkMode ? "border-gray-700" : "bg-gray-700"}`}>
     <div className={`h-6 w-3/4 rounded ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
     <div className={`h-6 w-11 rounded-full ${darkMode ? "bg-gray-600" : "bg-gray-300"}`}></div>
   </div>
@@ -200,6 +200,7 @@ const AgentSettings = () => {
     const [userSettingsLoading, setUserSettingsLoading] = useState(true); // For userSettings fetch
 
     // Sidebar State (from other agent files like Dashboard.js, Listings.js)
+    // IMPORTANT: We will now use isCollapsed directly from useSidebarState as the source of truth
     const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
     const [activeSection, setActiveSection] = useState('settings'); // Default active section for Agent Settings
 
@@ -238,12 +239,11 @@ const AgentSettings = () => {
             try {
                 setLoading(true);
                 if (!token) {
-                    showMessage('Authentication token not found. Please log in.', 'error'); // Using showMessage
+                    showMessage('Authentication token not found. Please log in.', 'error');
                     setLoading(false);
-                    return; // Prevent further execution if no token
+                    return;
                 }
 
-                // Fetch agent profile for name, email, profile picture
                 const profileResponse = await axios.get(`${API_BASE_URL}/users/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -256,9 +256,7 @@ const AgentSettings = () => {
                     });
                     agentSpecificSettings = agentSettingsResponse.data;
                 } catch (error) {
-                    // If agent settings endpoint doesn't exist or returns error (e.g., 404/500)
                     console.warn("Agent specific settings endpoint not found or error fetching. Using defaults.", error);
-                    // Initialize with defaults if no settings are found for the user
                     agentSpecificSettings = {
                         two_factor_enabled: false,
                         email_notifications: true,
@@ -269,15 +267,15 @@ const AgentSettings = () => {
                         default_signature: '',
                         auto_assign_inquiries: false,
                         theme: 'system',
-                        default_list_view: 'simple',
+                        default_list_view: 'simple', // Ensure this matches initial backend default if no setting exists
+                        // Default sidebar_permanently_expanded to false (collapsed)
                         sidebar_permanently_expanded: false,
                         language: 'en',
                     };
                 }
 
-
                 const fetchedSettings = {
-                    profile: { // This section is for display only, not directly editable here
+                    profile: {
                         name: profileData.full_name || 'N/A',
                         email: profileData.email || 'N/A',
                         profilePicture: profileData.profile_picture_url || `https://placehold.co/100x100/A0D9D4/004D40?text=${profileData.full_name?.charAt(0).toUpperCase() || 'A'}`,
@@ -288,27 +286,27 @@ const AgentSettings = () => {
                     notifications: {
                         emailNotifications: agentSpecificSettings.email_notifications,
                         inAppNotifications: agentSpecificSettings.in_app_notifications,
-                        newTicketAlert: agentSpecificSettings.new_inquiry_alert, // Renamed in DB
-                        ticketUpdateAlert: agentSpecificSettings.ticket_update_alert, // Renamed in DB
+                        newTicketAlert: agentSpecificSettings.new_inquiry_alert,
+                        ticketUpdateAlert: agentSpecificSettings.ticket_update_alert,
                     },
                     agentPreferences: {
                         isAvailable: agentSpecificSettings.is_available,
                         defaultSignature: agentSpecificSettings.default_signature || '',
-                        autoAssignTickets: agentSpecificSettings.auto_assign_inquiries, // Renamed in DB
+                        autoAssignTickets: agentSpecificSettings.auto_assign_inquiries,
                     },
                     display: {
                         theme: agentSpecificSettings.theme || localStorage.getItem('themePreference') || 'system',
                         defaultListView: agentSpecificSettings.default_list_view || localStorage.getItem('defaultListingsView') || 'simple',
-                        sidebarPermanentlyExpanded: agentSpecificSettings.sidebar_permanently_expanded || localStorage.getItem('sidebarPermanentlyExpanded') === 'true',
+                        // sidebarPermanentlyExpanded is now handled directly by useSidebarState
                         language: agentSpecificSettings.language || localStorage.getItem('agentLanguage') || 'en',
                     },
                 };
                 setSettings(fetchedSettings);
-                // Also update local storage for the values that are synced client-side,
-                // ensuring consistency for other components relying on these global settings.
+                console.log('Frontend fetchedSettings.display.defaultListView:', fetchedSettings.display.defaultListView);
+
+                // Update local storage for values that should be immediately synced client-side
                 localStorage.setItem('themePreference', fetchedSettings.display.theme);
                 localStorage.setItem('defaultListingsView', fetchedSettings.display.defaultListView);
-                localStorage.setItem('sidebarPermanentlyExpanded', fetchedSettings.display.sidebarPermanentlyExpanded);
                 localStorage.setItem('agentLanguage', fetchedSettings.display.language);
 
             } catch (error) {
@@ -323,19 +321,8 @@ const AgentSettings = () => {
             }
         };
         fetchAgentSettings();
-        fetchUserSettings(); // Fetch general user settings
+        fetchUserSettings();
     }, [token, fetchUserSettings]);
-
-    // Sync settings to localStorage whenever they change
-    // This is for display settings which might be used globally across the app
-    useEffect(() => {
-      if (settings) {
-        localStorage.setItem('themePreference', settings.display.theme);
-        localStorage.setItem('defaultListingsView', settings.display.defaultListView);
-        localStorage.setItem('sidebarPermanentlyExpanded', settings.display.sidebarPermanentlyExpanded);
-        localStorage.setItem('agentLanguage', settings.display.language);
-      }
-    }, [settings]);
 
     const handleInputChange = (e, section, key) => {
         const { value, type, checked } = e.target;
@@ -348,15 +335,13 @@ const AgentSettings = () => {
         }));
     };
 
-    // New handler to update user settings and save immediately
     const handleUserSettingsUpdate = async (name, value) => {
         setUserSettings(prev => ({
             ...prev,
             [name]: value,
         }));
         try {
-            // No need for userSettingsLoading state for individual saves as it's quick
-            const payload = { [name]: value }; // Send only the changed setting
+            const payload = { [name]: value };
             await axios.put(`${API_BASE_URL}/users/update`, payload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -364,14 +349,12 @@ const AgentSettings = () => {
         } catch (error) {
             console.error(`Failed to save ${name}:`, error);
             showMessage(`Failed to save ${name.replace(/_/g, ' ')}. Please try again.`, "error");
-            // Optionally revert UI on error if needed, but for simple settings,
-            // it might be better to let the user see the change and try again.
         }
     };
 
     const createToggleHandler = (section, key, messageLabel, dbKey = key) => async () => {
-        const newState = !settings[section][key]; // Get new state based on current
-        setSettings(prevSettings => ({ // Optimistic UI update
+        const newState = !settings[section][key];
+        setSettings(prevSettings => ({
             ...prevSettings,
             [section]: {
                 ...prevSettings[section],
@@ -380,16 +363,15 @@ const AgentSettings = () => {
         }));
 
         try {
-            if (!token) { // Double check token before sending request
+            if (!token) {
                 showMessage('Authentication token missing. Please log in.', 'error');
-                setSettings(prevSettings => ({ // Revert UI on missing token
+                setSettings(prevSettings => ({
                     ...prevSettings,
                     [section]: { ...prevSettings[section], [key]: !newState },
                 }));
                 return;
             }
-            // Backend expects snake_case for DB columns
-            const payloadKey = dbKey.replace(/([A-Z])/g, '_$1').toLowerCase(); // Converts camelCase to snake_case
+            const payloadKey = dbKey.replace(/([A-Z])/g, '_$1').toLowerCase();
             await axios.put(`${API_BASE_URL}/agent/settings`, {
                 [payloadKey]: newState,
             }, {
@@ -399,29 +381,27 @@ const AgentSettings = () => {
         } catch (error) {
             console.error(`Error toggling ${messageLabel}:`, error);
             showMessage(`Failed to update ${messageLabel}. Please try again.`, 'error');
-            // Revert UI on error
             setSettings(prevSettings => ({
                 ...prevSettings,
                 [section]: {
                     ...prevSettings[section],
-                    [key]: !newState, // Revert to previous state
+                    [key]: !newState,
                 },
             }));
         }
     };
 
-    const handleSaveSettings = async (settingName, sectionToSave) => {
+    const handleSaveSettings = async (settingName, sectionToSave, updatedValue = null) => {
         try {
             if (!settings) return;
             setLoading(true);
-            if (!token) { // Double check token before sending request
+            if (!token) {
                 showMessage('Authentication token missing. Please log in.', 'error');
                 setLoading(false);
                 return;
             }
             let payload = {};
 
-            // Map frontend camelCase to backend snake_case for the payload
             if (sectionToSave === 'agentPreferences') {
                 payload = {
                     is_available: settings.agentPreferences.isAvailable,
@@ -430,18 +410,17 @@ const AgentSettings = () => {
                 };
             } else if (sectionToSave === 'display') {
                  payload = {
-                    theme: settings.display.theme,
-                    default_list_view: settings.display.defaultListView,
-                    sidebar_permanently_expanded: settings.display.sidebarPermanently_expanded,
-                    language: settings.display.language,
+                    theme: updatedValue !== null && settingName === 'Theme' ? updatedValue : settings.display.theme,
+                    default_list_view: updatedValue !== null && settingName === 'Default Listings View' ? updatedValue : settings.display.defaultListView,
+                    sidebar_permanently_expanded: !isCollapsed,
+                    language: updatedValue !== null && settingName === 'Language' ? updatedValue : settings.display.language,
                  };
             }
-            // Add other sections here as needed for specific 'Save' buttons
 
             await axios.put(`${API_BASE_URL}/agent/settings`, payload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            showMessage(`${settingName} saved successfully!`, 'success'); // Using showMessage
+            showMessage(`${settingName} saved successfully!`, 'success');
         } catch (error) {
             console.error(`Error saving ${settingName} settings:`, error);
             showMessage(`Failed to save ${settingName}. Please try again.`, 'error');
@@ -452,7 +431,7 @@ const AgentSettings = () => {
 
 
     const handleThemeChange = (value) => {
-        setThemePreference(value); // Update global theme context
+        setThemePreference(value);
         setSettings(prevSettings => ({
             ...prevSettings,
             display: {
@@ -460,7 +439,8 @@ const AgentSettings = () => {
                 theme: value,
             },
         }));
-        handleSaveSettings('Theme', 'display'); // Save immediately
+        localStorage.setItem('themePreference', value); // Immediate localStorage update
+        handleSaveSettings('Theme', 'display', value);
     };
 
     const handleDefaultListViewChange = (value) => {
@@ -471,17 +451,34 @@ const AgentSettings = () => {
                 defaultListView: value,
             },
         }));
-        handleSaveSettings('Default Listings View', 'display'); // Save immediately
+        localStorage.setItem('defaultListingsView', value); // Immediate localStorage update
+        showMessage(`Default Listings Display set to ${value === 'simple' ? 'Table View' : 'Grid View'}.`, 'success'); // Immediate feedback
+        handleSaveSettings('Default Listings View', 'display', value);
     };
 
-    const handleSidebarToggle = createToggleHandler('display', 'sidebarPermanentlyExpanded', 'Sidebar permanently expanded', 'sidebar_permanently_expanded');
-    // We update the global sidebar state when the setting is toggled
-    useEffect(() => {
-        if (settings && setIsCollapsed) {
-            setIsCollapsed(!settings.display.sidebarPermanentlyExpanded);
-        }
-    }, [settings?.display.sidebarPermanentlyExpanded, setIsCollapsed]);
+    const handleSidebarToggle = async () => {
+        // Optimistically toggle the sidebar state via the hook
+        setIsCollapsed(!isCollapsed); // This will also update localStorage
 
+        try {
+            if (!token) {
+                showMessage('Authentication token missing. Please log in.', 'error');
+                return;
+            }
+            // Send the new 'permanently expanded' state (inverse of new isCollapsed) to the backend
+            await axios.put(`${API_BASE_URL}/agent/settings`, {
+                sidebar_permanently_expanded: !(!isCollapsed), // !isCollapsed is the new 'permanently expanded' state
+            }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            showMessage(`Sidebar permanently expanded ${!isCollapsed ? 'enabled' : 'disabled'}.`, 'success');
+        } catch (error) {
+            console.error(`Error toggling sidebar expansion:`, error);
+            showMessage(`Failed to update sidebar expansion. Please try again.`, 'error');
+            // Revert UI on error by toggling back
+            setIsCollapsed(isCollapsed);
+        }
+    };
 
     const handleLanguageChange = (value) => {
         setSettings(prevSettings => ({
@@ -491,7 +488,8 @@ const AgentSettings = () => {
                 language: value,
             },
         }));
-        handleSaveSettings('Language', 'display'); // Save immediately
+        localStorage.setItem('agentLanguage', value); // Immediate localStorage update
+        handleSaveSettings('Language', 'display', value);
     };
 
 
@@ -730,7 +728,7 @@ const AgentSettings = () => {
 
             <AgentSidebar
                 collapsed={isMobile ? false : isCollapsed}
-                setCollapsed={setIsCollapsed}
+                setCollapsed={setIsCollapsed} // This is the toggleCollapsed from useSidebarState
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
                 isMobile={isMobile}
@@ -756,10 +754,6 @@ const AgentSettings = () => {
                     <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Settings</h1>
                 </div>
 
-                {/* MessageBox is now conditionally rendered based on message state from MessageContext */}
-                {/* No direct message state needed here as MessageContext takes over */}
-                {/* <MessageBox message={message} type={messageType} onClose={() => setMessage('')} /> */}
-
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -781,9 +775,8 @@ const AgentSettings = () => {
                         </div>
                     </div>
 
-                    {filterSection("General") && ( // Filter on the new "General" section
-                        <div className="space-y-6"> {/* Removed pt-6 and border-t from the first section */}
-                            {/* Display Settings (now directly under General, no subheading) */}
+                    {filterSection("General") && (
+                        <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Theme</label>
@@ -795,7 +788,8 @@ const AgentSettings = () => {
                                     <Dropdown placeholder="Select View Mode" options={defaultListViewOptions} value={settings.display.defaultListView} onChange={handleDefaultListViewChange} className="w-full" />
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select how listings are displayed by default.</p>
                                 </div>
-                                <Switch label="Permanently Expand Sidebar (Desktop Only)" description="Keep the sidebar expanded by default on desktop." isOn={settings.display.sidebarPermanentlyExpanded} handleToggle={handleSidebarToggle} />
+                                {/* Use !isCollapsed for the isOn prop */}
+                                <Switch label="Permanently Expand Sidebar (Desktop Only)" description="Keep the sidebar expanded by default on desktop." isOn={!isCollapsed} handleToggle={handleSidebarToggle} />
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Language</label>
                                     <Dropdown placeholder="Select Language" options={languageOptions} value={settings.display.language} onChange={handleLanguageChange} className="w-full" />
@@ -803,7 +797,6 @@ const AgentSettings = () => {
                                 </div>
 
                                 {/* General App Settings from ProfileSettings.js */}
-                                {/* Language */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_language">Language</label>
                                     <Dropdown
@@ -816,7 +809,6 @@ const AgentSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Set your preferred language for the application.</p>
                                 </div>
 
-                                {/* Timezone */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_timezone">Timezone</label>
                                     <Dropdown
@@ -829,7 +821,6 @@ const AgentSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Choose your local timezone for accurate timestamps.</p>
                                 </div>
 
-                                {/* Currency */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_currency">Default Currency</label>
                                     <Dropdown
@@ -842,11 +833,10 @@ const AgentSettings = () => {
                                     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Select the default currency for financial displays.</p>
                                 </div>
 
-                                {/* Default Landing Page */}
                                 <div className={`p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"}`}>
                                     <label className={`block text-lg font-semibold mb-3 ${darkMode ? "text-gray-100" : "text-gray-800"}`} htmlFor="user_default_landing_page">Default Landing Page</label>
                                     <Dropdown
-                                        options={defaultLandingPageOptions()} // Call the function to get dynamic options
+                                        options={defaultLandingPageOptions()}
                                         value={userSettings.default_landing_page}
                                         onChange={(value) => handleUserSettingsUpdate('default_landing_page', value)}
                                         placeholder="Select Landing Page"
@@ -906,7 +896,7 @@ const AgentSettings = () => {
                                     <label htmlFor="defaultSignature" className={`block text-lg font-semibold mb-2 ${darkMode ? "text-gray-100" : "text-gray-800"}`}>Default Email Signature</label>
                                     <textarea
                                         id="defaultSignature"
-                                        value={settings.agentPreferences.defaultSignature} // This will now be an empty string if null/undefined
+                                        value={settings.agentPreferences.defaultSignature}
                                         onChange={(e) => handleInputChange(e, 'agentPreferences', 'defaultSignature')}
                                         className={`w-full py-2.5 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"}`}
                                         rows="3"

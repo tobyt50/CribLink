@@ -1,11 +1,11 @@
 // src/pages/Listings.js (Centralized View)
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 // Import all sidebar components
 import AdminSidebar from '../components/admin/Sidebar';
 import AgencyAdminSidebar from '../components/agencyadmin/Sidebar';
 import AgentSidebar from '../components/agent/Sidebar';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom'; // Import useParams
 import ListingCard from '../components/ListingCard';
 import axios from 'axios';
 // Import necessary icons from @heroicons/react/24/outline
@@ -175,6 +175,7 @@ const Listings = () => {
     const { showMessage } = useMessage(); // Initialize useMessage
     const { showConfirm } = useConfirmDialog(); // Initialize useConfirmDialog
     const [userFavourites, setUserFavourites] = useState([]); // New state for user's favorited listing IDs
+    const [agencyName, setAgencyName] = useState(''); // New state for agency name
 
     // Loading state
     const [loading, setLoading] = useState(true);
@@ -201,18 +202,32 @@ const Listings = () => {
 
 
     const location = useLocation();
+    const { agencyId } = useParams(); // Get agencyId from URL parameters
+
 
     // Effect to set initial status filter from location state (e.g., from dashboard links)
     const [statusFilter, setStatusFilter] = useState(() => {
         return location.state?.statusFilter || 'all';
     });
 
+    // New state for agencyId from URL params, defaulting to null if not present
+    const [agencyIdFilter, setAgencyIdFilter] = useState(agencyId || null);
+
     useEffect(() => {
         if (location.state?.statusFilter && location.state.statusFilter !== statusFilter) {
             setStatusFilter(location.state.statusFilter);
             setPage(1);
         }
-    }, [location.state?.statusFilter, statusFilter]);
+        // Update agencyIdFilter if it comes from URL params
+        if (agencyId && agencyId !== agencyIdFilter) {
+            setAgencyIdFilter(agencyId);
+            setPage(1); // Reset page on agency filter change
+        } else if (!agencyId && agencyIdFilter) {
+            // If agencyId is no longer in URL but was previously set, clear it
+            setAgencyIdFilter(null);
+            setPage(1);
+        }
+    }, [location.state?.statusFilter, statusFilter, agencyId, agencyIdFilter]); // Depend on agencyId from params
 
     // Effect to close export dropdown and search bar filters when clicking outside
     useEffect(() => {
@@ -237,7 +252,7 @@ const Listings = () => {
         document.addEventListener("keydown", handleEscape);
 
         return () => {
-            document.removeEventListener('click', handleClickOutside); // Changed from mousedown to click
+            document.removeEventListener("click", handleClickOutside); // Changed from mousedown to click
             document.removeEventListener("keydown", handleEscape);
         };
     }, []);
@@ -300,11 +315,7 @@ const Listings = () => {
 
     // Fetch listings function - now sends all filters and pagination to backend
     const fetchListings = useCallback(async () => {
-        // Only fetch listings if user role is available
-        if (!userRole) {
-            console.log("User role not yet available, skipping fetchListings.");
-            return;
-        }
+        // Removed the check for !userRole to allow guest users to view listings.
         setLoading(true); // Start loading
 
         try {
@@ -329,7 +340,10 @@ const Listings = () => {
             }
 
             // --- Pass agent_id or agency_id to the backend for filtering based on role ---
-            if (userRole === 'agent' && userId) {
+            // If agencyIdFilter is present from location state, prioritize it for filtering
+            if (agencyIdFilter) {
+                params.append('agency_id', agencyIdFilter);
+            } else if (userRole === 'agent' && userId) {
                 params.append('agent_id', userId);
             } else if (userRole === 'agency_admin' && userAgencyId) {
                 params.append('agency_id', userAgencyId);
@@ -370,13 +384,31 @@ const Listings = () => {
         } finally {
             setLoading(false); // End loading
         }
-    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, userRole, userId, userAgencyId, navigate, showMessage]); // All filters, pagination, and user-related dependencies
+    }, [purchaseCategoryFilter, searchTerm, minPriceFilter, maxPriceFilter, statusFilter, page, limit, userRole, userId, userAgencyId, agencyIdFilter, navigate, showMessage]); // All filters, pagination, and user-related dependencies
 
-    // Effect to fetch listings whenever relevant states change
+    // Function to fetch agency details
+    const fetchAgencyDetails = useCallback(async () => {
+        if (!agencyIdFilter) {
+            setAgencyName('');
+            return;
+        }
+        try {
+            const token = localStorage.getItem("token");
+            const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+            const response = await axios.get(`${API_BASE_URL}/agencies/${agencyIdFilter}`, config);
+            setAgencyName(response.data.name); // Assuming the API returns agency details with a 'name' field
+        } catch (error) {
+            console.error("Failed to fetch agency details:", error);
+            setAgencyName(''); // Clear name on error
+        }
+    }, [agencyIdFilter]);
+
+    // Effect to fetch listings, user favorites, and agency details whenever relevant states change
     useEffect(() => {
         fetchListings();
-        fetchUserFavourites(); // Fetch favorites when listings are fetched
-    }, [fetchListings, fetchUserFavourites]); // Depend on the memoized fetchListings and fetchUserFavourites
+        fetchUserFavourites();
+        fetchAgencyDetails(); // Fetch agency details when agencyIdFilter changes
+    }, [fetchListings, fetchUserFavourites, fetchAgencyDetails]); // Depend on the memoized fetch functions
 
     // Client-side sorting only (status filtering is now backend-handled)
     const applySorting = useCallback(() => {
@@ -412,7 +444,7 @@ const Listings = () => {
             if (typeA === 'string' && typeB === 'string') {
                 return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             } else if (typeA === 'number' && typeB === 'number') {
-                return sortDirection === 'asc' ? aValue - bValue : bBvalue - aValue;
+                return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
             } else {
                 const numA = parseFloat(aValue);
                 const numB = parseFloat(bValue);
@@ -676,8 +708,51 @@ const Listings = () => {
         navigate(`/listing/${listingId}`);
     };
 
+    // Consolidated logic for displaying Add/Export buttons and Actions column
+    const canPerformActions = useMemo(() => {
+        if (!user) return false; // No user, no actions
+
+        if (userRole === 'admin') {
+            return true; // Admin can always perform actions
+        }
+
+        // If agencyIdFilter is present, it means we are viewing a specific agency's listings (e.g., /listings/agency/:agencyId)
+        if (agencyIdFilter) {
+            // For agency_admin or agent, check if their *affiliated agency ID* matches the agencyIdFilter
+            // userAgencyId is the agency_id from the user's token/context
+            return (userRole === 'agency_admin' || userRole === 'agent') && parseInt(userAgencyId) === parseInt(agencyIdFilter);
+        }
+
+        // For global view (no agencyIdFilter in URL, e.g., /admin/listings or /agent/listings)
+        // Agents and agency admins can perform actions on their own listings (which are implicitly filtered by their role/agency_id in fetchListings)
+        return userRole === 'agency_admin' || userRole === 'agent';
+    }, [user, userRole, agencyIdFilter, userAgencyId]); // userId is not needed here for the affiliation check
+
+    const shouldShowAddExportButtons = canPerformActions;
+    const showActionsColumn = canPerformActions;
+
+
+    // Determine if a sidebar is actually rendered based on user role and agency filter
+    const hasSidebar = useMemo(() => {
+        if (!user) return false; // No user, no sidebar
+
+        if (userRole === 'admin') {
+            return false; // Admin never has a sidebar on this page, as per user's request
+        }
+
+        // If agencyIdFilter is present, it means we are viewing listings from an agency profile.
+        // In this case, only agency_admin affiliated with *this* agency should have a sidebar.
+        if (agencyIdFilter) {
+            return userRole === 'agency_admin' && parseInt(userAgencyId) === parseInt(agencyIdFilter);
+        }
+
+        // For global listings (no agencyIdFilter)
+        // Agency_admin and Agent roles should have a sidebar.
+        return userRole === 'agency_admin' || userRole === 'agent';
+    }, [user, userRole, userAgencyId, agencyIdFilter]);
+
     // Adjusted contentShift based on mobile and collapsed state
-    const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
+    const contentShift = isMobile || !hasSidebar ? 0 : isCollapsed ? 80 : 256;
 
     // Include all possible statuses for the filter dropdown, formatted for the Dropdown component
     const statusOptions = [
@@ -690,21 +765,15 @@ const Listings = () => {
         { value: "featured", label: "Featured" }
     ];
 
-    // Conditionally render the sidebar based on user role
+    // Conditionally render the sidebar based on user role and hasSidebar state
     const renderSidebar = () => {
-        if (userRole === 'admin') {
-            return (
-                <AdminSidebar
-                    collapsed={isMobile ? false : isCollapsed}
-                    setCollapsed={isMobile ? () => {} : setIsCollapsed}
-                    activeSection={activeSection}
-                    setActiveSection={setActiveSection}
-                    isMobile={isMobile}
-                    isSidebarOpen={isSidebarOpen}
-                    setIsSidebarOpen={setIsSidebarOpen}
-                />
-            );
-        } else if (userRole === 'agency_admin') {
+        if (!hasSidebar) {
+            return null; // If hasSidebar is false, no sidebar is rendered.
+        }
+
+        // If hasSidebar is true, it means the current user role and agency filter
+        // combination permits a sidebar to be rendered.
+        if (userRole === 'agency_admin') {
             return (
                 <AgencyAdminSidebar
                     collapsed={isMobile ? false : isCollapsed}
@@ -717,6 +786,7 @@ const Listings = () => {
                 />
             );
         } else if (userRole === 'agent') {
+            // This case is only reached if agencyIdFilter is NOT present (global agent listings)
             return (
                 <AgentSidebar
                     collapsed={isMobile ? false : isCollapsed}
@@ -729,7 +799,7 @@ const Listings = () => {
                 />
             );
         }
-        return null; // Or a default sidebar if needed for other roles
+        return null; // Should not be reached if hasSidebar logic is correct.
     };
 
     // Determine the base path for add/edit listing based on role
@@ -740,10 +810,11 @@ const Listings = () => {
         return ''; // Default or handle unauthorized access
     };
 
+
     return (
         <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
             {/* Mobile Sidebar Toggle Button */}
-            {isMobile && (
+            {isMobile && hasSidebar && ( // Only show if mobile AND a sidebar is being rendered
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
                     className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
@@ -772,18 +843,13 @@ const Listings = () => {
                 animate={{ marginLeft: contentShift }}
                 transition={{ duration: 0.3 }}
                 initial={false}
-                className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
+                className={`pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0 ${!hasSidebar ? 'max-w-7xl mx-auto' : ''}`} 
                 style={{ minWidth: `calc(100% - ${contentShift}px)` }}
             >
-                {/* Mobile-only H1 element */}
-                <div className="md:hidden flex items-center justify-center mb-4">
-                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
-                </div>
-
-                {/* Desktop-only centered title */}
-                <div className="hidden md:block mb-6">
-                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Listings</h1>
-                </div>
+                {/* Conditional Page Title (combined for mobile and desktop) */}
+                <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-4 md:mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+                    {agencyIdFilter && agencyName ? `${agencyName} Listings` : 'Listings'}
+                </h1>
 
                 <main className="space-y-6">
                     <motion.div
@@ -893,30 +959,34 @@ const Listings = () => {
                                         </AnimatePresence>
                                     </div>
 
-                                    <button
-                                        className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0"
-                                        onClick={() => navigate(`${getRoleBasePath()}/add-listing`)} // Role-specific path
-                                        title="Add New Listing"
-                                    >
-                                        <Plus size={20} />
-                                    </button>
-                                    <div className="relative inline-block text-left flex-shrink-0" ref={exportDropdownRef}>
-                                        <button
-                                            onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                                            className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                            title="Export"
-                                        >
-                                            <FileText size={20} />
-                                        </button>
-                                        {isExportDropdownOpen && (
-                                            <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                                                <div className="py-1">
-                                                    <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
-                                                    <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
-                                                </div>
+                                    {shouldShowAddExportButtons && (
+                                        <>
+                                            <button
+                                                className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center flex-shrink-0"
+                                                onClick={() => navigate(`${getRoleBasePath()}/add-listing`)} // Role-specific path
+                                                title="Add New Listing"
+                                            >
+                                                <Plus size={20} />
+                                            </button>
+                                            <div className="relative inline-block text-left flex-shrink-0" ref={exportDropdownRef}>
+                                                <button
+                                                    onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                                    className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
+                                                    title="Export"
+                                                >
+                                                    <FileText size={20} />
+                                                </button>
+                                                {isExportDropdownOpen && (
+                                                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                                                        <div className="py-1">
+                                                            <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                                                            <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                                 {/* View mode buttons for mobile */}
                                 <div className="flex justify-center gap-2 w-full">
@@ -1046,29 +1116,33 @@ const Listings = () => {
 
                                 {/* Add, Export, and View Mode Buttons - Grouped together */}
                                 <div className="flex gap-2 items-center">
-                                    <button
-                                        className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate(`${getRoleBasePath()}/add-listing`)} // Role-specific path
-                                    >
-                                        +Add
-                                    </button>
+                                    {shouldShowAddExportButtons && (
+                                        <>
+                                            <button
+                                                className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
+                                                onClick={() => navigate(`${getRoleBasePath()}/add-listing`)} // Role-specific path
+                                            >
+                                                +Add
+                                            </button>
 
-                                    <div className="relative inline-block text-left" ref={exportDropdownRef}>
-                                        <button
-                                            onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                                            className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
-                                        >
-                                            Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
-                                        </button>
-                                        {isExportDropdownOpen && (
-                                            <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
-                                                <div className="py-1">
-                                                    <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
-                                                    <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
-                                                </div>
+                                            <div className="relative inline-block text-left" ref={exportDropdownRef}>
+                                                <button
+                                                    onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                                                    className="inline-flex justify-center items-center gap-x-1.5 rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 h-10"
+                                                >
+                                                    Export to CSV <ChevronDownIcon className="-mr-1 h-5 w-5 text-white" />
+                                                </button>
+                                                {isExportDropdownOpen && (
+                                                    <div className={`absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl shadow-lg ring-1 ring-black ring-opacity-5 ${darkMode ? "bg-gray-800 text-gray-200 border-gray-700" : "bg-white text-gray-900"}`}>
+                                                        <div className="py-1">
+                                                            <button onClick={() => handleExportCsv('current')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>Current View</button>
+                                                            <button onClick={() => handleExportCsv('all')} className={`block w-full text-left px-4 py-2 text-sm ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"} rounded-xl`}>All Listings</button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
 
                                     <button
                                         className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
@@ -1089,11 +1163,7 @@ const Listings = () => {
                         )}
 
                         {/* Only render listings if userRole is available */}
-                        {!userRole ? (
-                            <div className={`text-center py-8 col-span-full ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                Loading user data...
-                            </div>
-                        ) : loading ? (
+                        {loading ? (
                             viewMode === 'graphical' ? (
                                 <motion.div
                                     layout
@@ -1106,7 +1176,7 @@ const Listings = () => {
                                     <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                                {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
+                                                {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', showActionsColumn ? 'actions' : null].filter(Boolean).map((key) => (
                                                     <th
                                                         key={key}
                                                         className={`py-2 px-2 whitespace-nowrap`}
@@ -1153,6 +1223,7 @@ const Listings = () => {
                                             userAgencyId={userAgencyId}
                                             getRoleBasePath={getRoleBasePath} // Pass the function
                                             onDeleteListing={handleDeleteListing} // Pass the delete function
+                                            showActions={showActionsColumn} // Pass showActions prop
                                         />
                                     </div>
                                 ))}
@@ -1162,7 +1233,7 @@ const Listings = () => {
                                 <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                     <thead>
                                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                            {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', 'actions'].map((key) => (
+                                            {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', showActionsColumn ? 'actions' : null].filter(Boolean).map((key) => (
                                                 <th
                                                     key={key}
                                                     onClick={key !== 'actions' ? () => handleSortClick(key) : undefined}
@@ -1177,9 +1248,7 @@ const Listings = () => {
                                                             key === 'status' ? '80px' :
                                                             key === 'date_listed' ? '120px' :
                                                             key === 'purchase_category' ? '100px' :
-                                                            key === 'bedrooms' ? '70px' :
-                                                            key === 'bathrooms' ? '70px' :
-                                                            key === 'actions' ? '150px' : 'auto'
+                                                            key === 'bedrooms' ? '70px' : '70px' // Default for bathrooms if actions is not present
                                                     }}
                                                 >
                                                     <div className="flex items-center gap-1">
@@ -1190,7 +1259,7 @@ const Listings = () => {
                                                                 purchase_category: 'Category',
                                                                 actions: 'Actions'
                                                             }[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                        </span>
+                                                            </span>
                                                         {renderSortIcon(key)}
                                                     </div>
                                                 </th>
@@ -1219,54 +1288,56 @@ const Listings = () => {
                                                 <td className="py-2 px-2 max-w-[100px] truncate" title={listing.purchase_category && listing.purchase_category.length > 12 ? listing.purchase_category : ''}>{listing.purchase_category}</td>
                                                 <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
                                                 <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bathrooms ? listing.bathrooms.toString() : ''}>{listing.bathrooms}</td>
-                                                <td className="py-2 px-2 space-x-2 max-w-[150px]">
-                                                    {listing.status && listing.status.toLowerCase() === 'pending' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
-                                                                <CheckCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
-                                                                <XCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
-                                                                <CheckCircleIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
-                                                                <TrashIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
-                                                                <CurrencyDollarIcon className="h-6 w-6" />
-                                                            </button>
-                                                            <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
-                                                                <ArrowUturnLeftIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                                onClick={() => navigate(`${getRoleBasePath()}/edit-listing/${listing.property_id}`)} // Role-specific path
-                                                                title="Edit Listing"
-                                                            >
-                                                                <PencilIcon className="h-4 w-4 inline" />
-                                                                <span className="ml-1">Edit</span>
-                                                            </button>
-                                                            <button
-                                                                className="text-red-600 hover:text-red-800 p-1"
-                                                                onClick={() => handleDeleteListing(listing.property_id)}
-                                                                title="Delete Listing"
-                                                            >
-                                                                <TrashIcon className="h-6 w-6" />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
+                                                {showActionsColumn && (
+                                                    <td className="py-2 px-2 space-x-2 max-w-[150px]">
+                                                        {listing.status && listing.status.toLowerCase() === 'pending' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                    <CheckCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
+                                                                    <XCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                    <CheckCircleIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
+                                                                    <TrashIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
+                                                                    <CurrencyDollarIcon className="h-6 w-6" />
+                                                                </button>
+                                                                <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
+                                                                    <ArrowUturnLeftIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
+                                                                    onClick={() => navigate(`${getRoleBasePath()}/edit-listing/${listing.property_id}`)} // Role-specific path
+                                                                    title="Edit Listing"
+                                                                >
+                                                                    <PencilIcon className="h-4 w-4 inline" />
+                                                                    <span className="ml-1">Edit</span>
+                                                                </button>
+                                                                <button
+                                                                    className="text-red-600 hover:text-red-800 p-1"
+                                                                    onClick={() => handleDeleteListing(listing.property_id)}
+                                                                    title="Delete Listing"
+                                                                >
+                                                                    <TrashIcon className="h-6 w-6" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>

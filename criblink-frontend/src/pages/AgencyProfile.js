@@ -76,7 +76,11 @@ const AgencyProfile = () => {
 
   const agencyListingsCarouselRef = useRef(null);
   const autoSwipeAgencyListingsIntervalRef = useRef(null);
-  const initialScrollSetAgencyListings = useRef(false); // New ref for initial scroll
+  const initialScrollSetAgencyListings = useRef(null); // Changed to null, not used for auto-scroll
+
+  // State to determine if the current view is mobile
+  const [isMobileView, setIsMobileView] = useState(false);
+
 
   // Determine if the current user is an admin of this agency
   useEffect(() => {
@@ -104,8 +108,10 @@ const AgencyProfile = () => {
     const handleResize = () => {
       if (window.innerWidth < 768) { // md breakpoint is 768px
         setCurrentListingsPerPage(listingsPerPageMobile);
+        setIsMobileView(true);
       } else {
         setCurrentListingsPerPage(listingsPerPageDesktop);
+        setIsMobileView(false);
       }
     };
 
@@ -818,131 +824,50 @@ const AgencyProfile = () => {
   };
 
 
-  // Carousel navigation for agency listings
+  // Carousel navigation for agency listings - REMOVED AUTO SCROLL AND BUTTONS
   const scrollAgencyListings = useCallback((direction) => {
-    if (agencyListingsCarouselRef.current && agencyListings.length > 0) {
-      const carousel = agencyListingsCarouselRef.current;
-      const currentScrollLeft = carousel.scrollLeft;
-
-      const itemElement = carousel.querySelector('.agency-listing-card-item');
-      if (!itemElement) return;
-
-      const itemStyle = window.getComputedStyle(itemElement);
-      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-      const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-
-      const numOriginalItems = agencyListings.length;
-      const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-
-      let newScrollTarget = currentScrollLeft;
-
-      if (direction === 'next') {
-        newScrollTarget += itemWidthWithMargins;
-        // If we've scrolled past the end of the second set (into the third set)
-        if (newScrollTarget >= 2 * totalOriginalListWidth) {
-          // Instantly snap back to the equivalent position in the second set
-          carousel.scrollLeft = currentScrollLeft - totalOriginalListWidth;
-          newScrollTarget = carousel.scrollLeft + itemWidthWithMargins; // Adjust target based on new snapped position
-        }
-      } else { // 'prev'
-        newScrollTarget -= itemWidthWithMargins;
-        // If we've scrolled before the beginning of the second set (into the first set)
-        if (newScrollTarget < totalOriginalListWidth) {
-          // Instantly snap forward to the equivalent position in the second set
-          carousel.scrollLeft = currentScrollLeft + totalOriginalListWidth;
-          newScrollTarget = carousel.scrollLeft - itemWidthWithMargins; // Adjust target based on new snapped position
-        }
-      }
-
-      carousel.scrollTo({
-        left: newScrollTarget,
-        behavior: 'smooth',
-      });
-    }
+    // This function is no longer used for auto-scrolling or buttons, but kept for potential manual use if needed.
   }, [agencyListings.length]);
 
   const handlePrevListing = useCallback(() => {
-    scrollAgencyListings('prev');
-    clearInterval(autoSwipeAgencyListingsIntervalRef.current); // Stop auto-swipe on manual interaction
-  }, [scrollAgencyListings]);
+    // No longer needed
+  }, []);
 
   const handleNextListing = useCallback(() => {
-    scrollAgencyListings('next');
-    clearInterval(autoSwipeAgencyListingsIntervalRef.current); // Stop auto-swipe on manual interaction
-  }, [scrollAgencyListings]);
+    // No longer needed
+  }, []);
 
-  // Auto-swipe for agency listings
+  // Auto-swipe for agency listings - REMOVED
   useEffect(() => {
     // Clear any existing interval before setting a new one
     if (autoSwipeAgencyListingsIntervalRef.current) {
       clearInterval(autoSwipeAgencyListingsIntervalRef.current);
     }
-
-    if (agencyListings.length > 0) { // Only auto-swipe if there are listings
-      autoSwipeAgencyListingsIntervalRef.current = setInterval(() => {
-        scrollAgencyListings('next');
-      }, 3000); // Change every 3 seconds
-    }
-
-    // Cleanup function: clear interval when component unmounts or dependencies change
+    // No auto-swipe
     return () => {
       if (autoSwipeAgencyListingsIntervalRef.current) {
         clearInterval(autoSwipeAgencyListingsIntervalRef.current);
       }
     };
-  }, [agencyListings.length, scrollAgencyListings]);
+  }, [agencyListings.length, scrollAgencyListings, isMobileView]);
 
-  // Touch event handlers for carousel
+  // Touch event handlers for carousel - REMOVED
   const handleTouchStartAgencyListings = useCallback((e) => {
-    clearInterval(autoSwipeAgencyListingsIntervalRef.current);
-    if (agencyListingsCarouselRef.current) {
-      agencyListingsCarouselRef.current.startX = e.touches[0].clientX;
-    }
+    // No longer needed
   }, []);
 
   const handleTouchMoveAgencyListings = useCallback((e) => {
-    if (!agencyListingsCarouselRef.current || agencyListingsCarouselRef.current.startX === undefined) return;
-    const currentX = e.touches[0].clientX;
-    const diffX = agencyListingsCarouselRef.current.startX - currentX;
-    if (Math.abs(diffX) > 10) {
-      e.preventDefault();
-    }
+    // No longer needed
   }, []);
 
   const handleTouchEndAgencyListings = useCallback((e) => {
-    if (!agencyListingsCarouselRef.current || agencyListingsCarouselRef.current.startX === undefined) return;
-    const endX = e.changedTouches[0].clientX;
-    const diffX = agencyListingsCarouselRef.current.startX - endX;
-    const swipeThreshold = 50;
-    if (diffX > swipeThreshold) {
-      handleNextListing();
-    } else if (diffX < -swipeThreshold) {
-      handlePrevListing();
-    }
-    agencyListingsCarouselRef.current.startX = undefined;
-  }, [handleNextListing, handlePrevListing]);
+    // No longer needed
+  }, []);
 
-  // Effect to set initial scroll position to the middle set of duplicated items
+  // Effect to set initial scroll position to the middle set of duplicated items - REMOVED
   useEffect(() => {
-    if (agencyListingsCarouselRef.current && agencyListings.length > 0 && !initialScrollSetAgencyListings.current) {
-      const carousel = agencyListingsCarouselRef.current;
-      const itemElement = carousel.querySelector('.agency-listing-card-item');
-      if (itemElement) {
-        const itemStyle = window.getComputedStyle(itemElement);
-        const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-        const itemMarginRight = parseFloat(itemStyle.marginRight);
-        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-
-        const numOriginalItems = agencyListings.length;
-        const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-
-        // Scroll to the beginning of the second set of items
-        carousel.scrollLeft = totalOriginalListWidth;
-        initialScrollSetAgencyListings.current = true; // Mark as set
-      }
-    }
-  }, [agencyListings.length]); // Re-run if the number of agency listings changes
+    // No longer needed
+  }, [agencyListings.length, isMobileView]);
 
   // Determine the current user's affiliation status with THIS agency
   const currentUserAffiliationWithThisAgency = currentUserMemberships.find(
@@ -1208,7 +1133,7 @@ const AgencyProfile = () => {
 
             {/* Current User's Affiliation Status with THIS Agency */}
             {isAuthenticated && user?.role !== 'client' && loadingCurrentUserMemberships && (
-              <div className={`mt-6 p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-200 bg-gray-50"} flex items-center justify-center`}>
+              <div className={`mt-6 p-4 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-700" : "border-gray-50"} flex items-center justify-center`}>
                 <Loader size={20} className="animate-spin mr-2" /> Loading your agency affiliation...
               </div>
             )}
@@ -1257,7 +1182,7 @@ const AgencyProfile = () => {
                     <button
                       onClick={handleClearRejectedStatus}
                       className={`px-4 py-2 rounded-full text-sm font-semibold transition duration-200
-                        ${darkMode ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+                        ${darkMode ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-500 text-white hover:bg-blue-600"}`}
                     >
                       Re-send Request
                     </button>
@@ -1528,78 +1453,109 @@ const AgencyProfile = () => {
       {/* Agency Listings Section */}
       {agencyListings.length > 0 && (
         <motion.div
-          className={`max-w-7xl mx-auto mt-12 space-y-6 p-0 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
-            darkMode ? "bg-white border-gray-200" : "bg-white border-gray-200"
+          className={`max-w-7xl mx-auto mt-12 space-y-6 p-0 sm:py-2 relative ${isMobileView ? '' : 'overflow-hidden'} sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
+            // Removed container background for mobile
+            isMobileView ? '' : (darkMode ? "bg-white border-gray-200" : "bg-white border-gray-200")
           }`}
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          onTouchStart={handleTouchStartAgencyListings}
-          onTouchMove={handleTouchMoveAgencyListings}
-          onTouchEnd={handleTouchEndAgencyListings}
+          // Removed touch events
         >
           <h2 className={`text-xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
             darkMode ? "text-green-400" : "text-green-800"
           }`}>
             <HomeIcon size={24} /> Listings by {agency?.name || 'Agency'}
           </h2>
-          <style>{`
-            /* Hide scrollbar for Chrome, Safari and Opera */
-            .no-scrollbar::-webkit-scrollbar {
-                display: none;
-            }
-            /* Hide scrollbar for IE, Edge and Firefox */
-            .no-scrollbar {
-                -ms-overflow-style: none;  /* IE and Edge */
-                scrollbar-width: none;  /* Firefox */
-            }
-          `}</style>
-          <div className="relative">
-            <div
-              ref={agencyListingsCarouselRef}
-              className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
-            >
-              {/* Duplicate listings three times to create a continuous loop effect */}
-              {[...agencyListings, ...agencyListings, ...agencyListings].map((listing, index) => {
-                return (
-                  <div
-                    key={`agency-listing-${listing.property_id}-${index}`} // Unique key for duplicated items
-                    className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 agency-listing-card-item"
-                  >
-                    <ListingCard
-                      listing={{ ...listing, agency_id: user?.agency_id }}
-                      darkMode={darkMode}
-                      userRole={user?.role}
-                      userId={user?.user_id}
-                      userAgencyId={user?.agency_id}
-                      getRoleBasePath={() => '/agency'}
-                      isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
-                      onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
-                        handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-center mt-4 space-x-4">
-              <button
-                onClick={handlePrevListing}
-                className={`p-2 rounded-full shadow-md transition-all duration-200
-                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}`}
-              >
-                <ArrowLeftCircleIcon className="h-8 w-8" />
-              </button>
 
-              <button
-                onClick={handleNextListing}
-                className={`p-2 rounded-full shadow-md transition-all duration-200
-                  ${darkMode ? "bg-gray-700 bg-opacity-70 text-gray-300 hover:bg-opacity-100 hover:bg-gray-600" : "bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 hover:bg-gray-100"}`}
-              >
-                <ArrowRightCircleIcon className="h-8 w-8" />
-              </button>
+          {isMobileView ? ( // Mobile layout (2x2 grid)
+            <div className="grid grid-cols-2 gap-4 p-4">
+              {agencyListings.slice(0, 4).map((listing, index) => ( // Show max 4 listings for 2x2 grid
+                <motion.div
+                  key={`agency-listing-mobile-${listing.property_id}-${index}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <ListingCard
+                    listing={{ ...listing, agency_id: user?.agency_id }}
+                    darkMode={darkMode}
+                    userRole={user?.role}
+                    userId={user?.user_id}
+                    userAgencyId={user?.agency_id}
+                    getRoleBasePath={() => '/agency'}
+                    isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
+                    onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
+                      handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
+                    }
+                  />
+                </motion.div>
+              ))}
+              {agencyListings.length > 0 && ( // Always show "View All Listings" if there are any listings
+                <div className="col-span-2 text-center mt-4">
+                  <button
+                    onClick={() => navigate(`/listings/agency/${id}`)} // Navigate to Listings.js with agencyId in URL
+                    className={`px-6 py-2 rounded-2xl font-semibold transition-colors duration-300 shadow-md bg-green-600 text-white hover:bg-green-700`}
+                  >
+                    View All Listings ({agencyListings.length})
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          ) : ( // Desktop layout (1x5 carousel)
+            <>
+              <style>{`
+                /* Hide scrollbar for Chrome, Safari and Opera */
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                /* Hide scrollbar for IE, Edge and Firefox */
+                .no-scrollbar {
+                    -ms-overflow-style: none;  /* IE and Edge */
+                    scrollbar-width: none;  /* Firefox */
+                }
+              `}</style>
+              <div className="relative">
+                <div
+                  ref={agencyListingsCarouselRef}
+                  className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar md:pl-0 md:pr-0"
+                >
+                  {/* Duplicate listings three times to create a continuous loop effect */}
+                  {[...agencyListings, ...agencyListings, ...agencyListings].map((listing, index) => {
+                    return (
+                      <div
+                        key={`agency-listing-desktop-${listing.property_id}-${index}`} // Unique key for duplicated items
+                        className="flex-shrink-0 snap-center w-1/5 px-2 agency-listing-card-item" // w-1/5 for 5 columns
+                      >
+                        <ListingCard
+                          listing={{ ...listing, agency_id: user?.agency_id }}
+                          darkMode={darkMode}
+                          userRole={user?.role}
+                          userId={user?.user_id}
+                          userAgencyId={user?.agency_id}
+                          getRoleBasePath={() => '/agency'}
+                          isFavorited={user?.role === 'client' && clientFavoriteProperties.includes(listing.property_id)}
+                          onFavoriteToggle={(propertyId, isCurrentlyFavorited) =>
+                            handleToggleClientFavoriteProperty(propertyId, isCurrentlyFavorited)
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {agencyListings.length > 0 && ( // Always show "View All Listings" if there are any listings
+                  <div className="flex justify-center mt-4 space-x-4">
+                    <button
+                      onClick={() => navigate(`/listings/agency/${id}`)} // Navigate to Listings.js with agencyId in URL
+                      className={`px-6 py-2 rounded-2xl font-semibold transition-colors duration-300 shadow-md bg-green-600 text-white hover:bg-green-700`}
+                    >
+                      View All Listings ({agencyListings.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </motion.div>
       )}
     </motion.div>

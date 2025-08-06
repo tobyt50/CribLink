@@ -384,8 +384,9 @@ const AdminDashboard = () => {
                         <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Legal Documents</h3>
                         <FileText size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                     </div>
-                    <div className="flex items-center justify-center h-full">
-                        <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalDocumentsCount}</p>
+                    {/* Removed h-full and added pt-2 to adjust vertical alignment */}
+                    <div className="flex items-center justify-center">
+                        <p className={`text-4xl font-bold pt-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalDocumentsCount}</p>
                     </div>
                     </Card>
 

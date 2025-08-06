@@ -11,7 +11,8 @@ import {
   Shield,
   FileText,
   Landmark, // For Agency Info
-  MessageSquare // For Inquiries
+  MessageSquare, // For Inquiries
+  Bookmark // Import the Bookmark icon here
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell.js';
 
@@ -22,9 +23,8 @@ const MENU_ITEMS = [
   { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
   { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
   { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' },
-  { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' }, // NEW: Added Inquiries
-  // Note: Properties route is not explicitly in App.js agencyAdminRoutes, but added here for completeness if it exists
-  // { name: 'Properties', to: '/agency/properties', icon: <Home />, key: 'properties' },
+  { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' },
+  { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
   { name: 'Settings', to: '/agency/settings', icon: <Settings />, key: 'settings' },
 ];
 

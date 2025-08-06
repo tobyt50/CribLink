@@ -8,39 +8,6 @@ import { useMessage } from '../context/MessageContext';
 import API_BASE_URL from '../config'; // Import API_BASE_URL
 import { Loader, UserPlus, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical, Landmark, Search, X, ArrowLeft } from 'lucide-react'; // Import necessary icons, added ArrowLeft
 
-// Skeleton for the SignUp page
-const SignUpSkeleton = ({ darkMode }) => (
-  <div className={`flex items-start justify-center min-h-screen pt-0 sm:pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`w-full max-w-md space-y-6
-        bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
-        ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}
-        px-4 pt-4 animate-pulse`}
-    >
-      <div className={`h-8 w-3/4 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
-      <div className={`h-4 w-1/2 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-6`}></div>
-
-      {/* Role selection skeleton */}
-      <div className="flex justify-center space-x-4 mb-4">
-        <div className={`h-8 w-24 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-        <div className={`h-8 w-24 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      </div>
-
-      {/* Input fields skeletons */}
-      <div className="space-y-4">
-        {[1, 2, 3, 4].map((_, i) => (
-          <div key={i} className={`h-10 w-full rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-        ))}
-        <div className={`h-10 w-full rounded-xl ${darkMode ? "bg-green-700" : "bg-green-200"}`}></div>
-        <div className={`h-4 w-1/3 mx-auto rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      </div>
-    </motion.div>
-  </div>
-);
-
 export default function SignUp() {
   const location = useLocation();
   // Initialize selectedRole from location state if available, otherwise default to 'user'
@@ -93,9 +60,6 @@ export default function SignUp() {
   // New state to control visibility of the agency affiliation options
   const [showAgencyAffiliationOptions, setShowAgencyAffiliationOptions] = useState(false);
 
-  // New loading state for the component itself
-  const [loading, setLoading] = useState(true);
-
 
   // Effect to check for existing token and redirect authenticated users
   useEffect(() => {
@@ -113,7 +77,6 @@ export default function SignUp() {
           navigate('/');
       }
     }
-    setLoading(false); // Set loading to false after initial check
   }, [navigate]);
 
   // Fetch all agencies for the dropdown and search
@@ -129,11 +92,8 @@ export default function SignUp() {
   }, [showMessage]);
 
   useEffect(() => {
-    // Only fetch agencies if not currently loading the main component
-    if (!loading) {
-      fetchAgencies();
-    }
-  }, [fetchAgencies, loading]);
+    fetchAgencies();
+  }, [fetchAgencies]);
 
   // Handle input changes, updating the form state
   const handleChange = (e) => {
@@ -412,10 +372,6 @@ export default function SignUp() {
 
   const labelStyles = `block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`;
   const inputGroupStyles = "flex flex-col";
-
-  if (loading) {
-    return <SignUpSkeleton darkMode={darkMode} />;
-  }
 
   return (
     <div className={`flex items-start justify-center min-h-screen pt-0 sm:pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>

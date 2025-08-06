@@ -25,6 +25,12 @@ const ListingCardSkeleton = ({ darkMode }) => (
   </div>
 );
 
+// New Skeleton for Headers
+const HeaderSkeleton = ({ darkMode, widthClass, heightClass }) => (
+  <div className={`animate-pulse rounded-xl ${widthClass} ${heightClass} ${darkMode ? "bg-gray-700" : "bg-gray-300"}`}></div>
+);
+
+
 function Home() {
   const [listings, setListings] = useState([]);
   const [featuredListings, setFeaturedListings] = useState([]);
@@ -416,13 +422,19 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1
-            className={`font-script text-xl md:text-2xl mb-2 ${
-              darkMode ? "text-green-400" : "text-green-700"
-            }`}
-          >
-            Find Your Dream Property
-          </h1>
+          {loading ? (
+            <div className="flex justify-center mb-2">
+              <HeaderSkeleton darkMode={darkMode} widthClass="w-3/4 md:w-1/2" heightClass="h-8" />
+            </div>
+          ) : (
+            <h1
+              className={`font-script text-xl md:text-2xl mb-2 ${
+                darkMode ? "text-green-400" : "text-green-700"
+              }`}
+            >
+              Find Your Dream Property
+            </h1>
+          )}
 
           <div className="w-full max-w-4xl mx-auto">
             <HomeSearchFilters
@@ -450,15 +462,21 @@ function Home() {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <h2
-            className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
-              darkMode ? "text-green-400" : "text-green-800"
-            }`}
-          >
-            <Star size={20} className="text-yellow-400 fill-current" />
-            Featured Properties
-            <Star size={20} className="text-yellow-400 fill-current" />
-          </h2>
+          {loading ? (
+            <div className="flex justify-center mb-2">
+              <HeaderSkeleton darkMode={darkMode} widthClass="w-2/3 md:w-1/3" heightClass="h-7" />
+            </div>
+          ) : (
+            <h2
+              className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
+                darkMode ? "text-green-400" : "text-green-800"
+              }`}
+            >
+              <Star size={20} className="text-yellow-400 fill-current" />
+              Featured Properties
+              <Star size={20} className="text-yellow-400 fill-current" />
+            </h2>
+          )}
           <div className="relative">
             {/* This is the new scrollable container */}
             <style>{`
@@ -516,9 +534,15 @@ function Home() {
           </div>
         </motion.div>
 
-        <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-          Available Listings
-        </h2>
+        {loading ? (
+          <div className="flex justify-center pt-4 pb-0 mb-2">
+            <HeaderSkeleton darkMode={darkMode} widthClass="w-2/3 md:w-1/3" heightClass="h-7" />
+          </div>
+        ) : (
+          <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+            Available Listings
+          </h2>
+        )}
         <motion.div
           className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
           initial="hidden"

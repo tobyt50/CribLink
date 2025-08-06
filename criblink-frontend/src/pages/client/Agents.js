@@ -209,7 +209,7 @@ const Agents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultAgentsView') || 'graphical');
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('defaultListingsView') || 'graphical');
   const [activeTab, setActiveTab] = useState('connected'); // 'connected' or 'pending'
   const [page, setPage] = useState(1); // For pagination when searching globally
   const itemsPerPage = 12;
@@ -1059,11 +1059,11 @@ const Agents = () => {
 
   {/* View Mode Controls (Right) */}
   <div className="flex justify-end gap-2 items-center">
-    <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultAgentsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+    <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
       <LayoutList className="h-6 w-6" />
     </button>
     <button
-      onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultAgentsView', 'graphical'); }}
+      onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
       className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
     >
       <Squares2X2Icon className="h-6 w-6" />
@@ -1085,11 +1085,11 @@ const Agents = () => {
               />
               {/* View Mode Controls (Right) */}
               <div className="flex gap-2 items-center flex-shrink-0">
-                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultAgentsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
+                <button onClick={() => { setViewMode('simple'); localStorage.setItem('defaultListingsView', 'simple'); }} className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'simple' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}>
                   <LayoutList className="h-6 w-6" />
                 </button>
                 <button
-                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultAgentsView', 'graphical'); }}
+                  onClick={() => { setViewMode('graphical'); localStorage.setItem('defaultListingsView', 'graphical'); }}
                   className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center ${viewMode === 'graphical' ? 'bg-green-700 text-white' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
                 >
                   <Squares2X2Icon className="h-6 w-6" />

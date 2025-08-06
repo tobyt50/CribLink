@@ -280,8 +280,9 @@ const ClientDashboard = () => {
                     <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>My Inquiries</h3>
                     <MessageSquare size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                 </div>
-                <div className="flex items-center justify-center h-full">
-                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalInquiries}</p>
+                {/* Reduced top padding to pt-2 */}
+                <div className="flex items-center justify-center">
+                    <p className={`text-4xl font-bold pt-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{totalInquiries}</p>
                 </div>
                 </Card>
 
@@ -291,8 +292,9 @@ const ClientDashboard = () => {
                     <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Saved Listings</h3>
                     <Heart size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                 </div>
-                <div className="flex items-center justify-center h-full">
-                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{savedListingsCount}</p>
+                {/* Reduced top padding to pt-2 */}
+                <div className="flex items-center justify-center">
+                    <p className={`text-4xl font-bold pt-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{savedListingsCount}</p>
                 </div>
                 </Card>
 
@@ -302,17 +304,13 @@ const ClientDashboard = () => {
                     <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Connected Agents</h3>
                     <User size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                 </div>
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{connectedAgents.length}</p>
+                {/* Reduced top padding to pt-2 and removed "Manage Agents" button */}
+                <div className="flex flex-col items-center justify-center text-center">
+                    <p className={`text-4xl font-bold pt-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{connectedAgents.length}</p>
                     <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
                     {connectedAgents.length === 1 ? 'agent' : 'agents'}
                     </p>
-                    <button
-                    onClick={handleFindAgentClick}
-                    className={`mt-2 text-sm hover:underline ${darkMode ? "text-blue-400" : "text-blue-600"}`}
-                    >
-                    Manage Agents
-                    </button>
+                    {/* Removed the "Manage Agents" button */}
                 </div>
                 </Card>
 
@@ -322,8 +320,9 @@ const ClientDashboard = () => {
                     <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Recommended Listings</h3>
                     <Star size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                 </div>
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                    <p className={`text-4xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{recommendedListingsCount}</p>
+                {/* Reduced top padding to pt-2 */}
+                <div className="flex flex-col items-center justify-center text-center">
+                    <p className={`text-4xl font-bold pt-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`}>{recommendedListingsCount}</p>
                     <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
                     {connectedAgents.length > 0 ? `from ${connectedAgents.length} agent(s)` : 'Connect to see recommendations'}
                     </p>
@@ -418,5 +417,6 @@ const ClientDashboard = () => {
     </div>
   );
 };
+
 
 export default ClientDashboard;

@@ -189,6 +189,8 @@ function AppContent() {
             <Route path="*" element={<NotFoundPage />} />
             <Route path="/agencies/:id" element={<AgencyProfile />} />
             <Route path="/agencies" element={<Agencies />} />
+            {/* NEW ROUTE FOR AGENCY-SPECIFIC LISTINGS */}
+            <Route path="/listings/agency/:agencyId" element={<Listings />} />
           </Route>
 
           {/* Authenticated base user routes */}
