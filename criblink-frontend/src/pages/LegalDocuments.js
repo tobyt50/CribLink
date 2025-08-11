@@ -454,7 +454,7 @@ const LegalDocuments = () => {
 
 
     return (
-        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
             {isMobile && (
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -740,7 +740,7 @@ const LegalDocuments = () => {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                    <table className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                                 {[
@@ -806,7 +806,7 @@ const LegalDocuments = () => {
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                    <table className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                                 {[

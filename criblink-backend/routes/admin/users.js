@@ -1,21 +1,19 @@
 const express = require('express');
 const router = express.Router();
-// Corrected import: Destructure the 'pool' property from the exported object
-const { pool, query } = require('../../db');
-const logActivity = require('../../utils/logActivity'); // Corrected path to logActivity
+const { pool } = require('../../db');
+const logActivity = require('../../utils/logActivity');
 
 // GET users with optional filters, search, sorting, and conditional pagination
 router.get('/users', async (req, res) => {
-  // Extract query parameters. Do NOT provide default values for page/limit here
-  // so we can check if they were explicitly provided by the frontend.
   const {
     search = '',
     role,
     status,
-    page, // page will be undefined if not provided
-    limit, // limit will be undefined if not provided
-    sort = 'date_joined', // Default sort column
-    direction = 'desc' // Default sort direction
+    subscription,
+    page,
+    limit,
+    sort = 'date_joined',
+    direction = 'desc'
   } = req.query;
 
   let whereClauses = [];
@@ -23,66 +21,85 @@ router.get('/users', async (req, res) => {
 
   if (search) {
     values.push(`%${search.toLowerCase()}%`);
-    whereClauses.push(`(LOWER(full_name) LIKE $${values.length} OR LOWER(email) LIKE $${values.length})`);
+    whereClauses.push(`(LOWER(u.full_name) LIKE $${values.length} OR LOWER(u.email) LIKE $${values.length})`);
   }
 
   if (role) {
     values.push(role);
-    whereClauses.push(`role = $${values.length}`);
+    whereClauses.push(`u.role = $${values.length}`);
   }
 
   if (status) {
     values.push(status);
-    whereClauses.push(`status = $${values.length}`);
+    whereClauses.push(`u.status = $${values.length}`);
+  }
+
+  if (subscription) {
+    if (subscription === 'none') {
+      whereClauses.push(`(u.role = 'agency_admin' AND (a.subscription_type IS NULL OR a.subscription_type = '')) OR (u.role != 'agency_admin' AND (u.subscription_type IS NULL OR u.subscription_type = ''))`);
+    } else {
+      values.push(subscription);
+      whereClauses.push(`(u.role = 'agency_admin' AND a.subscription_type = $${values.length}) OR (u.role != 'agency_admin' AND u.subscription_type = $${values.length})`);
+    }
   }
 
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-  // Determine the column to sort by and the sort order
-  const validSortColumns = ['user_id', 'full_name', 'email', 'role', 'status', 'date_joined']; // Valid columns for sorting
-  const orderByColumn = validSortColumns.includes(sort) ? sort : 'date_joined'; // Use default if sort column is invalid
+  const validSortColumns = ['user_id', 'full_name', 'email', 'role', 'status', 'date_joined', 'subscription_type', 'featured_priority'];
+  const orderByColumn = validSortColumns.includes(sort) ? sort : 'date_joined';
   const orderByDirection = direction.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
-  // Base query text without LIMIT and OFFSET
-  let queryText = `SELECT user_id, full_name, email, role, status, date_joined, profile_picture_url
-                   FROM users
-                   ${whereSQL}
-                   ORDER BY ${orderByColumn} ${orderByDirection}`;
+  let queryText = `
+    SELECT
+      u.user_id,
+      u.full_name,
+      u.email,
+      u.role,
+      u.status,
+      u.date_joined,
+      u.profile_picture_url,
+      u.agency_id,
+      CASE
+        WHEN u.role = 'agency_admin' THEN a.subscription_type
+        ELSE u.subscription_type
+      END AS subscription_type,
+      CASE
+        WHEN u.role = 'agency_admin' THEN a.featured_priority
+        ELSE u.featured_priority
+      END AS featured_priority
+    FROM users u
+    LEFT JOIN agencies a ON u.agency_id = a.agency_id
+    ${whereSQL}
+    ORDER BY ${orderByColumn} ${orderByDirection}
+  `;
 
-  let countQueryText = `SELECT COUNT(*) FROM users ${whereSQL}`;
+  let countQueryText = `SELECT COUNT(*) FROM users u LEFT JOIN agencies a ON u.agency_id = a.agency_id ${whereSQL}`;
   let totalCount = 0;
 
   try {
-      // First, get the total count of users matching the filters (regardless of pagination)
-      const countRes = await pool.query(countQueryText, values);
-      totalCount = parseInt(countRes.rows[0].count);
+    const countRes = await pool.query(countQueryText, values);
+    totalCount = parseInt(countRes.rows[0].count);
 
-      // Conditionally add LIMIT and OFFSET if page and limit are provided (for paginated requests)
-      if (page !== undefined && limit !== undefined) {
-          const parsedPage = parseInt(page);
-          const parsedLimit = parseInt(limit);
+    if (page !== undefined && limit !== undefined) {
+      const parsedPage = parseInt(page);
+      const parsedLimit = parseInt(limit);
 
-          // Validate parsed page and limit
-          if (isNaN(parsedPage) || parsedPage < 1 || isNaN(parsedLimit) || parsedLimit < 1) {
-              return res.status(400).json({ error: 'Invalid page or limit parameter' });
-          }
-
-          const offset = (parsedPage - 1) * parsedLimit;
-          queryText += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-          // Add limit and offset values to the values array for the main query
-          values.push(parsedLimit, offset);
+      if (isNaN(parsedPage) || parsedPage < 1 || isNaN(parsedLimit) || parsedLimit < 1) {
+        return res.status(400).json({ error: 'Invalid page or limit parameter' });
       }
 
-      // Execute the main query (with or without LIMIT/OFFSET)
-      const usersRes = await pool.query(queryText, values);
+      const offset = (parsedPage - 1) * parsedLimit;
+      queryText += ` LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+      values.push(parsedLimit, offset);
+    }
 
-      // Send the user data and total count in the response
-      res.json({
-        users: usersRes.rows,
-        total: totalCount, // Include total count for pagination metadata
-        // Only include page and limit in the response if they were part of the request
-        ...(page !== undefined && limit !== undefined && { page: parseInt(page), limit: parseInt(limit) })
-      });
+    const usersRes = await pool.query(queryText, values);
+
+    res.json({
+      users: usersRes.rows,
+      total: totalCount,
+      ...(page !== undefined && limit !== undefined && { page: parseInt(page), limit: parseInt(limit) })
+    });
 
   } catch (err) {
     console.error('Error fetching users:', err.message);
@@ -95,7 +112,7 @@ router.post('/users/:id/role', async (req, res) => {
   const userId = req.params.id;
   const { role } = req.body;
 
-  const validRoles = ['user', 'agent', 'admin'];
+  const validRoles = ['client', 'agent', 'admin', 'agency_admin'];
   if (!validRoles.includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
   }
@@ -118,6 +135,7 @@ router.post('/users/:id/role', async (req, res) => {
       [role, userId]
     );
 
+    await logActivity(`Updated role of user ID ${userId} to "${role}"`, req.user, 'user_role_change');
     res.json({ message: 'Role updated', user: updateRes.rows[0] });
   } catch (err) {
     console.error('Error updating role:', err);
@@ -125,28 +143,23 @@ router.post('/users/:id/role', async (req, res) => {
   }
 });
 
-// New endpoint for updating user role (admin action)
+// Update user role (admin action)
 router.put('/users/:userId/role', async (req, res) => {
-  const { newRole } = req.body; // Get newRole from the request body
-  const { userId } = req.params; // Get userId from the URL parameters
-  // Removed manual userName construction; logActivity will handle it.
-  const validRoles = ['client', 'agent', 'admin']; // Define valid roles
+  const { newRole } = req.body;
+  const { userId } = req.params;
+  const validRoles = ['client', 'agent', 'admin', 'agency_admin'];
 
-  if (!validRoles.includes(newRole)) { // Validate the new role
-      return res.status(400).json({ message: 'Invalid role provided.' });
+  if (!validRoles.includes(newRole)) {
+    return res.status(400).json({ message: 'Invalid role provided.' });
   }
 
   try {
-      await pool.query(`UPDATE users SET role = $1 WHERE user_id = $2`, [newRole, userId]); // Update the user's role in the database
-      res.json({ message: 'User role updated' }); // Send success response
-
-      // FIX: Removed "by ${userName}" from the message string.
-      // logActivity will now correctly derive the actor's name from req.user.
-      await logActivity(`Updated role of user ID ${userId} to "${newRole}"`, req.user, 'user');
-
+    await pool.query(`UPDATE users SET role = $1 WHERE user_id = $2`, [newRole, userId]);
+    await logActivity(`Updated role of user ID ${userId} to "${newRole}"`, req.user, 'user_role_change');
+    res.json({ message: 'User role updated' });
   } catch (err) {
-      console.error('Error updating user role:', err.message);
-      res.status(500).json({ message: 'Failed to update role', error: err.message });
+    console.error('Error updating user role:', err.message);
+    res.status(500).json({ message: 'Failed to update role', error: err.message });
   }
 });
 
@@ -160,6 +173,7 @@ router.put('/users/:id/status', async (req, res) => {
 
   try {
     await pool.query('UPDATE users SET status = $1 WHERE user_id = $2', [status, req.params.id]);
+    await logActivity(`Updated status of user ID ${req.params.id} to "${status}"`, req.user, 'user_status_change');
     res.json({ message: `User status updated to ${status}` });
   } catch (err) {
     console.error('Error updating user status:', err.message);
@@ -167,40 +181,77 @@ router.put('/users/:id/status', async (req, res) => {
   }
 });
 
+// Delete user and associated activity logs
 router.delete('/users/:id', async (req, res) => {
   const userIdToDelete = req.params.id;
-  const client = await pool.connect(); // Get a client from the connection pool
+  const client = await pool.connect();
 
   try {
-    await client.query('BEGIN'); // Start a transaction
+    await client.query('BEGIN');
 
-    // 1. Delete associated activity logs
     await client.query('DELETE FROM activity_logs WHERE user_id = $1', [userIdToDelete]);
-
-    // 2. Delete the user
     const deleteUserRes = await client.query('DELETE FROM users WHERE user_id = $1 RETURNING *', [userIdToDelete]);
 
     if (deleteUserRes.rowCount === 0) {
-      await client.query('ROLLBACK'); // Rollback if user not found
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    await client.query('COMMIT'); // Commit the transaction if all operations succeed
-
-    // Log the activity after successful deletion
-    // Removed manual actingUser construction; logActivity will handle it.
-    // FIX: Removed "by ${actingUser}" from the message string.
-    // logActivity will now correctly derive the actor's name from req.user.
+    await client.query('COMMIT');
     await logActivity(`Deleted user ID: ${userIdToDelete}`, req.user, 'user_deletion');
-
     res.json({ message: 'User and associated activity logs deleted successfully.' });
-
   } catch (err) {
-    await client.query('ROLLBACK'); // Rollback the transaction on error
+    await client.query('ROLLBACK');
     console.error('Error deleting user and activity logs:', err.message);
     res.status(500).json({ error: 'Internal server error during user deletion.' });
   } finally {
-    client.release(); // Release the client back to the pool
+    client.release();
+  }
+});
+
+// NEW: Update user subscription and featured priority
+router.put('/users/:userId/subscription', async (req, res) => {
+  const { userId } = req.params;
+  const { subscription_type } = req.body;
+  const validSubscriptions = ['', 'basic', 'pro', 'enterprise'];
+
+  if (!validSubscriptions.includes(subscription_type)) {
+    return res.status(400).json({ error: 'Invalid subscription type' });
+  }
+
+  const featuredPriorityMap = {
+    '': 0,
+    basic: 1,
+    pro: 2,
+    enterprise: 3
+  };
+  const featured_priority = featuredPriorityMap[subscription_type];
+
+  try {
+    const userRes = await pool.query('SELECT role, agency_id FROM users WHERE user_id = $1', [userId]);
+    if (userRes.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+
+    const { role, agency_id } = userRes.rows[0];
+
+    if (role === 'agency_admin' && agency_id) {
+      // Update agency's subscription and priority if user is agency_admin
+      await pool.query(
+        'UPDATE agencies SET subscription_type = $1, featured_priority = $2 WHERE agency_id = $3',
+        [subscription_type, featured_priority, agency_id]
+      );
+    } else {
+      // Update user's subscription and priority
+      await pool.query(
+        'UPDATE users SET subscription_type = $1, featured_priority = $2 WHERE user_id = $3',
+        [subscription_type, featured_priority, userId]
+      );
+    }
+
+    await logActivity(`Updated subscription of user ID ${userId} to "${subscription_type}" with priority ${featured_priority}`, req.user, 'user_subscription_change');
+    res.json({ message: 'Subscription and priority updated' });
+  } catch (err) {
+    console.error('Error updating subscription:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

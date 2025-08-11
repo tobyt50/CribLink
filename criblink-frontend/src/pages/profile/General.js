@@ -674,7 +674,7 @@ function General({ form, handleChange, handleUpdate, updating, userInfo, onProfi
         >
             <div className={`pb-6 mb-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
                 <h3 className={`text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
-                    <User className="mr-3 text-green-500" size={24} /> General Information
+                    <User className="mr-3 text-green-500" size={24} /> Profile Overview
                 </h3>
 
                 <div className="flex flex-col md:flex-row md:space-x-8 mb-6">

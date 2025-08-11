@@ -1033,7 +1033,7 @@ const Clients = () => {
 
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -1124,14 +1124,6 @@ const Clients = () => {
                   Pending Requests ({pendingRequests.length})
                 </button>
               </div>
-            )}
-            {userRole === 'agency_admin' && (
-                <div className="flex justify-center w-full max-w-[28rem] whitespace-nowrap">
-                    <span className={`px-4 py-[11px] text-sm font-semibold rounded-xl truncate
-                        ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-                        All Clients ({clients.length})
-                    </span>
-                </div>
             )}
 
             {/* View Mode Controls (Right) */}
@@ -1226,16 +1218,8 @@ const Clients = () => {
                 </button>
               </div>
             )}
-             {userRole === 'agency_admin' && (
-                <div className="flex justify-center">
-                    <span className={`px-6 py-2 rounded-xl text-lg font-semibold
-                        ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
-                        All Clients ({clients.length})
-                    </span>
-                </div>
-            )}
+            
           </div>
-
 
           {loading ? (
             // Render skeletons when loading
@@ -1247,7 +1231,7 @@ const Clients = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       <th className="text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name</th>
@@ -1313,7 +1297,7 @@ const Clients = () => {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <table className={`w-full text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                       <thead>
                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                           <th onClick={() => handleSortClick('client_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '15%' }}>Name {renderSortIcon('client_name')}</th>
@@ -1400,7 +1384,7 @@ const Clients = () => {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <table className={`w-full text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                       <thead>
                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                           <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: userRole === 'agency_admin' ? '15%' : '15%' }}>Name {renderSortIcon('full_name')}</th>

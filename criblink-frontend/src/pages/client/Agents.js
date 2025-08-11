@@ -57,7 +57,7 @@ const AgentsSkeleton = ({ darkMode, viewMode }) => (
       </div>
     ) : (
       <div className="overflow-x-auto">
-        <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+        <table className={`w-full text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               <th className="py-2 px-2" style={{ width: '18%' }}>Name</th>
@@ -971,7 +971,7 @@ const Agents = () => {
 
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -1151,7 +1151,7 @@ const Agents = () => {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className={`w-full text-sm table-fixed ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <table className={`w-full text-sm  ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                       <thead>
                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                           <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-1 whitespace-nowrap" style={{ width: '18%' }}>Name {renderSortIcon('full_name')}</th>

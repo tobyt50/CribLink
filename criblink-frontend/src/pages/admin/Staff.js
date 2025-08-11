@@ -130,7 +130,7 @@ const StaffSkeleton = ({ darkMode, viewMode }) => (
       </div>
     ) : (
       <div className="overflow-x-auto">
-        <table className={`w-full mt-4 text-sm table-fixed min-w-max`}>
+        <table className={`w-full mt-4 text-sm  table-auto`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               {[...Array(9)].map((_, i) => ( // 9 skeleton table headers
@@ -434,7 +434,7 @@ const Staff = () => {
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen((prev) => !prev)}
@@ -584,7 +584,7 @@ const Staff = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       {["employee_id", "full_name", "role", "department", "email", "phone", "start_date", "status"].map(key => (
@@ -633,7 +633,7 @@ const Staff = () => {
                                 ? 'text-green-600'
                                 : 'text-red-600'
                             }`} title={staff.status && staff.status.length > 10 ? staff.status : ''}>{staff.status || 'N/A'}</td>
-                          <td className="py-2 px-2 space-x-2 max-w-[150px]">
+                          <td className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
                             <div className="flex flex-col gap-1 items-start w-full min-w-[120px]">
                               <Dropdown
                                 placeholder="Select Action"
@@ -647,7 +647,14 @@ const Staff = () => {
                                 onChange={e => setActionSelections(prev => ({ ...prev, [staff.employee_id]: e }))}
                                 className="w-full"
                               />
-                              <button onClick={() => handleActionApply(staff, actionSelections[staff.employee_id])} className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5">Apply</button>
+                              {actionSelections[staff.employee_id] && (
+                                <button
+                                  onClick={() => handleActionApply(staff, actionSelections[staff.employee_id])}
+                                  className="text-xs text-white bg-green-500 hover:bg-green-600 rounded-lg px-2 py-1 w-full mt-0.5"
+                                >
+                                  Apply
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

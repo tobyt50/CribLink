@@ -10,6 +10,7 @@ pg_restore --verbose --clean --no-owner `
   "C:\Users\Mattted\Desktop\CribLink\db.backup"
 
 Neon restore:
-pg_restore --verbose --clean --no-owner `
-  --dbname="postgresql://neondb_owner:npg_1XTjFuesK4If@ep-white-cell-a9fivc8d-pooler.gwc.azure.neon.tech/neondb?sslmode=require&channel_binding=require" `
-  "C:\Users\Mattted\Documents\db.backup"
+pg_restore --verbose --clean --no-owner --no-acl `
+  --dbname='postgresql://neondb_owner:npg_SuO7xUwoV6WF@ep-lingering-recipe-a8js9b0e-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require' `
+  'C:\Users\Mattted\Desktop\CribLink\db.backup'
+

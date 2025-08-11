@@ -205,7 +205,9 @@ CREATE TABLE public.agencies (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     agency_admin_id integer,
-    address character varying(255)
+    address character varying(255),
+    featured_priority integer DEFAULT 0,
+    subscription_type character varying(50)
 );
 
 
@@ -247,7 +249,7 @@ CREATE TABLE public.agency_members (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     message text,
     member_status character varying(50) DEFAULT 'regular'::character varying NOT NULL,
-    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('agent'::character varying)::text])))
+    CONSTRAINT agency_members_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'agent'::character varying])::text[])))
 );
 
 
@@ -703,7 +705,8 @@ CREATE TABLE public.property_listings (
     image_url text,
     image_public_id character varying(255),
     agency_id integer,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    is_featured boolean DEFAULT false
 );
 
 
@@ -800,6 +803,19 @@ ALTER SEQUENCE public.support_tickets_ticket_id_seq OWNED BY public.support_tick
 
 
 --
+-- Name: user_favourites; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_favourites (
+    user_id integer NOT NULL,
+    property_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.user_favourites OWNER TO postgres;
+
+--
 -- Name: user_favourites_agencies; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -864,7 +880,7 @@ CREATE TABLE public.user_login_history (
     login_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     status character varying(20) NOT NULL,
     message text,
-    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY (ARRAY[('Success'::character varying)::text, ('Failed'::character varying)::text])))
+    CONSTRAINT user_login_history_status_check CHECK (((status)::text = ANY ((ARRAY['Success'::character varying, 'Failed'::character varying])::text[])))
 );
 
 
@@ -952,8 +968,10 @@ CREATE TABLE public.users (
     profile_picture_public_id character varying(255),
     agency_id integer,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT valid_role CHECK (((role)::text = ANY (ARRAY[('client'::character varying)::text, ('agent'::character varying)::text, ('admin'::character varying)::text, ('agency_admin'::character varying)::text]))),
-    CONSTRAINT valid_status CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('deactivated'::character varying)::text])))
+    featured_priority integer DEFAULT 0,
+    subscription_type character varying(50),
+    CONSTRAINT valid_role CHECK (((role)::text = ANY ((ARRAY['client'::character varying, 'agent'::character varying, 'admin'::character varying, 'agency_admin'::character varying])::text[]))),
+    CONSTRAINT valid_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'deactivated'::character varying])::text[])))
 );
 
 
@@ -1328,10 +1346,10 @@ ALTER TABLE ONLY public.user_favourites_clients
 
 
 --
--- Name: user_favourites_properties user_favourites_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_favourites user_favourites_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.user_favourites_properties
+ALTER TABLE ONLY public.user_favourites
     ADD CONSTRAINT user_favourites_pkey PRIMARY KEY (user_id, property_id);
 
 
@@ -1757,11 +1775,27 @@ ALTER TABLE ONLY public.user_favourites_clients
 
 
 --
+-- Name: user_favourites user_favourites_property_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_favourites
+    ADD CONSTRAINT user_favourites_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.property_listings(property_id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_favourites_properties user_favourites_property_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.user_favourites_properties
     ADD CONSTRAINT user_favourites_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.property_listings(property_id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_favourites user_favourites_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_favourites
+    ADD CONSTRAINT user_favourites_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
 
 
 --

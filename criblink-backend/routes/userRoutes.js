@@ -1,20 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware'); // Ensure this is authenticateToken
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 // --- Auth & Profile Routes ---
 router.post('/signup', userController.signupUser);
 router.post('/signin', userController.signinUser);
 router.get('/profile', authenticateToken, userController.getProfile);
-router.put('/update', authenticateToken, userController.updateProfile); // This route handles agency_id updates
+router.put('/update', authenticateToken, userController.updateProfile);
 
 // --- Password Recovery ---
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password', userController.resetPassword);
 
 // --- Profile Picture Management (no multer middleware) ---
-// Expects base64 image data in the request body
 router.put(
   '/profile/picture/upload',
   authenticateToken,
@@ -40,6 +39,14 @@ router.delete('/sessions/:sessionId', authenticateToken, userController.revokeSe
 // --- Login History ---
 router.get('/login-history', authenticateToken, userController.getLoginHistory);
 
+// --- NEW: Get Current User ---
+/**
+ * @route GET /api/users/me
+ * @desc Gets the authenticated user's details.
+ * @access Private
+ */
+router.get('/me', authenticateToken, userController.getCurrentUser);
+
 // --- NEW: Revert Agency Admin to Agent ---
 /**
  * @route PUT /api/users/revert-to-agent
@@ -49,7 +56,7 @@ router.get('/login-history', authenticateToken, userController.getLoginHistory);
 router.put(
   '/revert-to-agent',
   authenticateToken,
-  authorizeRoles(['agency_admin']), // Only agency admins can use this endpoint
+  authorizeRoles(['agency_admin']),
   userController.revertToAgent
 );
 

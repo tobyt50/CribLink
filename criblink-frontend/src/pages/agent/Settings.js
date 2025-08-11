@@ -632,7 +632,7 @@ const AgentSettings = () => {
 
     if (loading || userSettingsLoading) {
         return (
-            <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+            <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
                 {/* Sidebar placeholder */}
                 <div className={`fixed top-0 left-0 h-full ${isCollapsed ? 'w-20' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transition-all duration-300`}>
                   <div className={`h-full animate-pulse flex flex-col p-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -708,7 +708,7 @@ const AgentSettings = () => {
 
 
     return (
-        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
             {/* Mobile Sidebar Toggle Button */}
             {isMobile && (
                 <motion.button

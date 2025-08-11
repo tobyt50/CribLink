@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdminSidebar from '../../components/admin/Sidebar';
+import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -118,7 +118,7 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 // Skeleton component for Agent Performance
 const AgentPerformanceSkeleton = ({ darkMode, limit }) => (
     <div className={`overflow-x-auto animate-pulse ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-        <table className={`w-full mt-4 text-sm table-fixed min-w-max`}>
+        <table className={`w-full mt-4 text-sm  table-auto`}>
             <thead>
                 <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                     {[
@@ -204,7 +204,7 @@ const AgentPerformance = () => {
         }
 
         try {
-            const response = await axiosInstance.get(`${API_BASE_URL}/admin/agent/performance?${params.toString()}`, { headers });
+            const response = await axiosInstance.get(`${API_BASE_URL}/agencies/performance?${params.toString()}`, { headers });
 
             setPerformanceData(response.data.performance || []);
             setFilteredPerformance(response.data.performance || []);
@@ -272,7 +272,7 @@ const AgentPerformance = () => {
         }
 
         try {
-            await axiosInstance.delete(`${API_BASE_URL}/admin/agent/performance/${userId}`, {
+            await axiosInstance.delete(`${API_BASE_URL}/agencies/performance/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -394,7 +394,7 @@ const AgentPerformance = () => {
     const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
     return (
-        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
             {isMobile && (
                 <motion.button
                     onClick={() => setIsSidebarOpen(prev => !prev)}
@@ -417,7 +417,7 @@ const AgentPerformance = () => {
                 </motion.button>
             )}
 
-            <AdminSidebar
+            <AgencyAdminSidebar
                 collapsed={isMobile ? false : isCollapsed}
                 setCollapsed={isMobile ? () => {} : setIsCollapsed}
                 activeSection={activeSection}
@@ -455,7 +455,7 @@ const AgentPerformance = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <button
                                     className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/admin/agent/performance/add')}
+                                    onClick={() => navigate('/agencies/performance/add')}
                                     title="Add New Performance Entry"
                                 >
                                     <Plus size={20} />
@@ -506,7 +506,7 @@ const AgentPerformance = () => {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/admin/agent/performance/add')}
+                                        onClick={() => navigate('/agencies/performance/add')}
                                     >
                                         +Add Entry
                                     </button>
@@ -539,7 +539,7 @@ const AgentPerformance = () => {
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                <table className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                     <thead>
                                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                             {[
@@ -600,7 +600,7 @@ const AgentPerformance = () => {
                                                     <div className="flex items-center gap-2">
                                                         <button
                                                             className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                            onClick={() => navigate(`/admin/agent/performance/edit/${entry.user_id}`)}
+                                                            onClick={() => navigate(`/agencies/performance/edit/${entry.user_id}`)}
                                                             title="Edit Entry"
                                                         >
                                                             <PencilIcon className="h-4 w-4 inline" />

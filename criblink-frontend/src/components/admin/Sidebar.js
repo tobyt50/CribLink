@@ -23,7 +23,6 @@ const MENU_ITEMS = [
   { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
   { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
   { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' }, // NEW: Legal Documents link
-  { name: 'Agent Performance', to: '/admin/agent-performance', icon: <Award />, key: 'agent-performance' },
   { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
   { name: 'Settings', to: '/admin/settings', icon: <Settings />, key: 'settings' },

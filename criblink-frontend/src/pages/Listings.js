@@ -704,8 +704,9 @@ const Listings = () => {
         return string.charAt(0).toUpperCase() + string.slice(1);
     };
 
+    // MODIFIED: Corrected the navigation path to ListingDetails
     const handleCardClick = (listingId) => {
-        navigate(`/listing/${listingId}`);
+        navigate(`/listings/${listingId}`);
     };
 
     // Consolidated logic for displaying Add/Export buttons and Actions column
@@ -820,7 +821,8 @@ const Listings = () => {
 
 
     return (
-        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+        // MODIFIED: Adjusted top padding to move the page content higher.
+        <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
             {/* Mobile Sidebar Toggle Button */}
             {isMobile && hasSidebar && ( // Only show if mobile AND a sidebar is being rendered
                 <motion.button
@@ -1181,7 +1183,7 @@ const Listings = () => {
                                 </motion.div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                    <table className={`w-full mt-4 text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                         <thead>
                                             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                                 {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', showActionsColumn ? 'actions' : null].filter(Boolean).map((key) => (
@@ -1238,7 +1240,7 @@ const Listings = () => {
                             </motion.div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className={`w-full mt-4 text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                <table className={`w-full mt-4 text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                                     <thead>
                                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                                             {['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms', showActionsColumn ? 'actions' : null].filter(Boolean).map((key) => (
@@ -1276,7 +1278,11 @@ const Listings = () => {
                                     </thead>
                                     <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                                         {filteredAndSortedListings.map((listing) => (
-                                            <tr key={listing.property_id} className={`border-t cursor-default max-w-full break-words ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-50"}`}>
+                                            <tr 
+                                                key={listing.property_id} 
+                                                onClick={() => handleCardClick(listing.property_id)}
+                                                className={`transition-colors duration-200 cursor-pointer max-w-full break-words ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
+                                            >
                                                 <td className="py-2 px-2 max-w-[90px] truncate" title={listing.property_id && listing.property_id.length > 10 ? listing.property_id : ''}>{listing.property_id}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.title && listing.title.length > 15 ? listing.title : ''}>{listing.title}</td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.location && listing.location.length > 15 ? listing.location : ''}>{listing.location}</td>
@@ -1284,14 +1290,18 @@ const Listings = () => {
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.price ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price) : ''}>
                                                     {new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(listing.price)}
                                                 </td>
+                                                {/* MODIFIED: Status column now shows "Featured" if the prop is true */}
                                                 <td className={`py-2 px-2 max-w-[80px] truncate font-semibold ${
+                                                    listing.is_featured ? 'text-yellow-500' :
                                                     listing.status && listing.status.toLowerCase() === 'available' ? 'text-green-600' :
                                                     listing.status && listing.status.toLowerCase() === 'sold' ? 'text-red-600' :
                                                     listing.status && listing.status.toLowerCase() === 'under offer' ? 'text-yellow-600' :
                                                     listing.status && listing.status.toLowerCase() === 'pending' ? 'text-blue-600' :
                                                     listing.status && listing.status.toLowerCase() === 'rejected' ? 'text-purple-600' :
                                                     'text-gray-600'
-                                                }`} title={capitalizeFirstLetter(listing.status)}>{capitalizeFirstLetter(listing.status)}</td>
+                                                }`} title={listing.is_featured ? "Featured" : capitalizeFirstLetter(listing.status)}>
+                                                    {listing.is_featured ? "Featured" : capitalizeFirstLetter(listing.status)}
+                                                </td>
                                                 <td className="py-2 px-2 max-w-[120px] truncate" title={listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : ''}>{listing.date_listed ? new Date(listing.date_listed).toLocaleDateString() : 'N/A'}</td>
                                                 <td className="py-2 px-2 max-w-[100px] truncate" title={listing.purchase_category && listing.purchase_category.length > 12 ? listing.purchase_category : ''}>{listing.purchase_category}</td>
                                                 <td className="py-2 px-2 max-w-[70px] truncate" title={listing.bedrooms ? listing.bedrooms.toString() : ''}>{listing.bedrooms}</td>
@@ -1300,44 +1310,47 @@ const Listings = () => {
                                                     <td className="py-2 px-2 space-x-2 max-w-[150px]">
                                                         {listing.status && listing.status.toLowerCase() === 'pending' ? (
                                                             <div className="flex items-center gap-2">
-                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={(e) => { e.stopPropagation(); handleApproveListing(listing.property_id); }} title="Approve Listing">
                                                                     <CheckCircleIcon className="h-6 w-6" />
                                                                 </button>
-                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleRejectListing(listing.property_id)} title="Reject Listing">
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={(e) => { e.stopPropagation(); handleRejectListing(listing.property_id); }} title="Reject Listing">
                                                                     <XCircleIcon className="h-6 w-6" />
                                                                 </button>
                                                             </div>
                                                         ) : listing.status && listing.status.toLowerCase() === 'rejected' ? (
                                                             <div className="flex items-center gap-2">
-                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleApproveListing(listing.property_id)} title="Approve Listing">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={(e) => { e.stopPropagation(); handleApproveListing(listing.property_id); }} title="Approve Listing">
                                                                     <CheckCircleIcon className="h-6 w-6" />
                                                                 </button>
-                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={() => handleDeleteListing(listing.property_id)} title="Delete Listing">
+                                                                <button className="text-red-600 hover:text-red-800 p-1" onClick={(e) => { e.stopPropagation(); handleDeleteListing(listing.property_id); }} title="Delete Listing">
                                                                     <TrashIcon className="h-6 w-6" />
                                                                 </button>
                                                             </div>
                                                         ) : listing.status && listing.status.toLowerCase() === 'under offer' ? (
                                                             <div className="flex items-center gap-2">
-                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={() => handleMarkAsSold(listing.property_id)} title="Mark as Sold">
+                                                                <button className="text-green-600 hover:text-green-800 p-1" onClick={(e) => { e.stopPropagation(); handleMarkAsSold(listing.property_id); }} title="Mark as Sold">
                                                                     <CurrencyDollarIcon className="h-6 w-6" />
                                                                 </button>
-                                                                <button className="text-gray-600 hover:text-gray-800 p-1" onClick={() => handleMarkAsFailed(listing.property_id)} title="Mark as Failed (Return to Available)">
+                                                                <button className="text-gray-600 hover:text-gray-800 p-1" onClick={(e) => { e.stopPropagation(); handleMarkAsFailed(listing.property_id); }} title="Mark as Failed (Return to Available)">
                                                                     <ArrowUturnLeftIcon className="h-6 w-6" />
                                                                 </button>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-2">
+                                                                {/* MODIFIED: Edit pencil icon size reduced */}
                                                                 <button
-                                                                    className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                                    onClick={() => navigate(`${getRoleBasePath()}/edit-listing/${listing.property_id}`)} // Role-specific path
+                                                                    className="text-green-600 hover:text-green-800 p-1"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        navigate(`${getRoleBasePath()}/edit-listing/${listing.property_id}`);
+                                                                    }}
                                                                     title="Edit Listing"
                                                                 >
-                                                                    <PencilIcon className="h-4 w-4 inline" />
-                                                                    <span className="ml-1">Edit</span>
+                                                                    <PencilIcon className="h-5 w-5" />
                                                                 </button>
                                                                 <button
                                                                     className="text-red-600 hover:text-red-800 p-1"
-                                                                    onClick={() => handleDeleteListing(listing.property_id)}
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteListing(listing.property_id); }}
                                                                     title="Delete Listing"
                                                                 >
                                                                     <TrashIcon className="h-6 w-6" />

@@ -384,7 +384,7 @@ const AgentInquiries = () => {
   };
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}><AnimatePresence mode="wait"><motion.div key={isSidebarOpen ? 'x' : 'm'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }}>{isSidebarOpen ? <X size={20} /> : <Menu size={20} />}</motion.div></AnimatePresence></motion.button>}
       <AgentSidebar collapsed={isCollapsed} setCollapsed={setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       <motion.div key={isMobile ? 'mobile' : 'desktop'} animate={{ marginLeft: contentShift }} transition={{ duration: 0.3 }} className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0">
@@ -427,7 +427,7 @@ const AgentInquiries = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full mt-4 text-left text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={darkMode ? "text-gray-400" : "text-gray-500"}>
                       {[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'assigned_agent', label: 'Assigned To'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} className={`py-2 px-2`} style={{width: c.key === 'last_message' ? '200px' : '150px', textAlign: c.key === 'actions' ? 'center' : 'left'}}><div className="flex items-center gap-1"><span>{c.label}</span></div></th>)}
@@ -574,7 +574,7 @@ const AgentInquiries = () => {
             ) : (
               // Desktop table view
               <div className="overflow-x-auto">
-                <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full mt-4 text-left text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead><tr className={darkMode ? "text-gray-400" : "text-gray-500"}>{[{key: 'client_name', label: 'Client'}, {key: 'property_title', label: 'Property'}, {key: 'last_message', label: 'Last Message'}, {key: 'last_message_timestamp', label: 'Last Activity'}, {key: 'assigned_agent', label: 'Assigned To'}, {key: 'status', label: 'Status'}, {key: 'actions', label: 'Actions'}].map(c => <th key={c.key} onClick={() => handleSortClick(c.key)} className={`py-2 px-2 cursor-pointer select-none ${sortKey === c.key ? (darkMode ? 'text-green-400' : 'text-green-700') : ''}`} style={{width: c.key === 'last_message' ? '200px' : '150px', textAlign: c.key === 'actions' ? 'center' : 'left'}}><div className="flex items-center gap-1"><span>{c.label}</span>{renderSortIcon(c.key)}</div></th>)}</tr></thead>
                   <tbody className={`${darkMode ? "divide-gray-700" : "divide-gray-200"} divide-y`}>
                     {groupedConversations.length > 0 ? groupedConversations.map(conv => {

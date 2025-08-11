@@ -282,7 +282,7 @@ const AdminDashboard = () => {
   const visibleActivities = showAllActivities ? activities : activities.slice(0, 5);
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Mobile Sidebar Toggle Button */}
       {isMobile && (
         <motion.button

@@ -1,13 +1,12 @@
-// src/pages/AddListing.js
 import React, { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import API_BASE_URL from '../config';
 import { useTheme } from '../layouts/AppShell';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X as CloseIcon } from 'lucide-react';
 import { useMessage } from '../context/MessageContext';
+import { useConfirmDialog } from '../context/ConfirmDialogContext';
 
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,21 +14,14 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   const { darkMode } = useTheme();
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
     };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
@@ -38,25 +30,11 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
 
   const menuVariants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 500,
-        damping: 30,
-        delayChildren: 0.05,
-        staggerChildren: 0.02,
-      },
-    },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 500, damping: 30, delayChildren: 0.05, staggerChildren: 0.02 } },
     exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
   };
 
-  const itemVariants = {
-    hidden: { y: 10, opacity: 0 },
-    visible: { y: 0, opacity: 1 },
-  };
+  const itemVariants = { hidden: { y: 10, opacity: 0 }, visible: { y: 0, opacity: 1 } };
 
   const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
 
@@ -65,21 +43,17 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-          ${darkMode
-            ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
-            : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
-          }`}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-label={`Current selection: ${selectedOptionLabel}. Open to change selection.`}
+        className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+          ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-600"}`}
       >
-        <span>{selectedOptionLabel}</span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
         </motion.div>
       </button>
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -93,12 +67,10 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
             {options.map((option) => (
               <motion.button
                 key={option.value}
+                type="button"
                 variants={itemVariants}
                 whileHover={{ x: 5 }}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
+                onClick={() => { onChange(option.value); setIsOpen(false); }}
                 className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
                   ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
               >
@@ -112,9 +84,12 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
-
 const AddListing = () => {
   const navigate = useNavigate();
+  const { showConfirm } = useConfirmDialog();
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
+
   const [purchaseCategory, setPurchaseCategory] = useState('Rent');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -123,11 +98,10 @@ const AddListing = () => {
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [price, setPrice] = useState('');
-  const [images, setImages] = useState([]); // Array of { file: File, base64: string, originalname: string } for new uploads
-  const [imageURLs, setImageURLs] = useState([]); // URLs added via input
+  const [newImages, setNewImages] = useState([]);
+  const [newImageURLs, setNewImageURLs] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // Can be a URL or the originalname of a new file
-
+  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null);
   const [description, setDescription] = useState('');
   const [squareFootage, setSquareFootage] = useState('');
   const [lotSize, setLotSize] = useState('');
@@ -136,31 +110,156 @@ const AddListing = () => {
   const [coolingType, setCoolingType] = useState('');
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
-
-  // New states for land properties
   const [landSize, setLandSize] = useState('');
   const [zoningType, setZoningType] = useState('');
-  const [titleType, setTitleType] = useState(''); // Made non-conditional
-
-  const { darkMode } = useTheme();
-  const { showMessage } = useMessage();
-
-  // Determine if the current property type is 'Land'
+  const [titleType, setTitleType] = useState('');
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [statusValue, setStatusValue] = useState('');
+  const [userRole, setUserRole] = useState(null);
   const isLandProperty = propertyType === 'Land';
 
-  // Combine all images for easier handling and display
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data } = await axiosInstance.get('/users/profile');
+        setUserRole(data.role);
+      } catch (error) {
+        setUserRole('visitor');
+      }
+    };
+    fetchUserRole();
+  }, []);
+
+  // Set the default status based on the user's role.
+  useEffect(() => {
+    if (userRole === 'admin') {
+      setStatusValue('available');
+    } else if (userRole === 'agency_admin' || userRole === 'agent') {
+      setStatusValue('pending');
+    }
+  }, [userRole]);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      acceptedFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          setNewImages(prev => [...prev, { base64: reader.result, originalname: file.name }]);
+          setThumbnailIdentifier(prev => prev || file.name);
+        };
+      });
+    },
+    accept: { 'image/*': [] }
+  });
+
   const allImagesForDisplay = [
-    ...images.map(img => ({ url: img.base64, identifier: img.originalname, type: 'file' })),
-    ...imageURLs.map(url => ({ url: url, identifier: url, type: 'url' }))
+    ...newImages.map(img => ({ url: img.base64, identifier: img.originalname, type: 'newFile' })),
+    ...newImageURLs.map(url => ({ url, identifier: url, type: 'newUrl' }))
   ];
+
+  const handleAddImageUrl = () => {
+    if (imageUrlInput.trim()) {
+      const newUrl = imageUrlInput.trim();
+      setNewImageURLs(prev => [...prev, newUrl]);
+      setThumbnailIdentifier(prev => prev || newUrl);
+      setImageUrlInput('');
+    } else {
+      showMessage('Please enter a valid image URL.', 'error');
+    }
+  };
+
+  const handleRemoveImage = (identifierToRemove, type) => {
+    if (type === 'newFile') {
+      setNewImages(prev => prev.filter(img => img.originalname !== identifierToRemove));
+    } else {
+      setNewImageURLs(prev => prev.filter(url => url !== identifierToRemove));
+    }
+    if (thumbnailIdentifier === identifierToRemove) {
+      const nextThumbnail = allImagesForDisplay.find(img => img.identifier !== identifierToRemove);
+      setThumbnailIdentifier(nextThumbnail ? nextThumbnail.identifier : null);
+    }
+  };
+
+  const setAsThumbnail = (identifier) => {
+    setThumbnailIdentifier(identifier);
+    showMessage('Thumbnail set.', 'success');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const isValidThumbnail = allImagesForDisplay.some(img => img.identifier === thumbnailIdentifier);
+    if (!thumbnailIdentifier || !isValidThumbnail) {
+      showMessage('Please select a valid thumbnail image.', 'error');
+      return;
+    }
+    if (allImagesForDisplay.length < 2) {
+      showMessage('Please upload or add at least 2 images.', 'error');
+      return;
+    }
+
+    const payload = {
+      purchase_category: purchaseCategory,
+      title,
+      location,
+      state: stateValue,
+      property_type: propertyType,
+      bedrooms: isLandProperty ? null : bedrooms,
+      bathrooms: isLandProperty ? null : bathrooms,
+      price,
+      description,
+      square_footage: isLandProperty ? null : squareFootage,
+      lot_size: lotSize,
+      year_built: isLandProperty ? null : yearBuilt,
+      heating_type: isLandProperty ? null : heatingType,
+      cooling_type: isLandProperty ? null : coolingType,
+      parking: isLandProperty ? null : parking,
+      amenities: isLandProperty ? null : amenities,
+      land_size: isLandProperty ? landSize : null,
+      zoning_type: isLandProperty ? zoningType : null,
+      title_type: titleType,
+      is_featured: isFeatured,
+      status: statusValue,
+      mainImageBase64: newImages.find(img => img.originalname === thumbnailIdentifier)?.base64 || null,
+      mainImageOriginalName: newImages.find(img => img.originalname === thumbnailIdentifier)?.originalname || null,
+      mainImageURL: newImageURLs.includes(thumbnailIdentifier) ? thumbnailIdentifier : null,
+      galleryImagesBase64: newImages.filter(img => img.originalname !== thumbnailIdentifier).map(img => img.base64),
+      galleryImagesOriginalNames: newImages.filter(img => img.originalname !== thumbnailIdentifier).map(img => img.originalname),
+      galleryImageURLs: newImageURLs.filter(url => url !== thumbnailIdentifier)
+    };
+
+    try {
+      const { data } = await axiosInstance.post('/listings', payload);
+      showMessage('Listing created successfully!', 'success');
+      navigate(`/listings/${data.property_id}`);
+    } catch (error) {
+      showMessage(error.response?.data?.error || 'Failed to create listing.', 'error');
+    }
+  };
+
+  const handleExit = () => {
+    const currentState = {
+      purchaseCategory, title, location, stateValue, propertyType, bedrooms, bathrooms, price, description,
+      squareFootage, lotSize, yearBuilt, heatingType, coolingType, parking, amenities, landSize, zoningType,
+      titleType, isFeatured, statusValue, newImages, newImageURLs, thumbnailIdentifier
+    };
+    if (Object.values(currentState).some(val => val !== '' && val !== null && (Array.isArray(val) && val.length !== 0))) {
+      showConfirm({
+        message: 'Are you sure you want to exit? Any unsaved changes will be lost.',
+        onConfirm: () => navigate(-1),
+        onCancel: () => {}
+      });
+    } else {
+      navigate(-1);
+    }
+  };
 
   const nigerianStates = [
     "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
     "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
     "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
     "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
-    "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
-    "Abuja"
+    "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Abuja"
   ].sort();
 
   const purchaseCategoryOptions = [
@@ -172,7 +271,6 @@ const AddListing = () => {
   ];
 
   const stateOptions = [{ value: "", label: "Select State" }, ...nigerianStates.map(state => ({ value: state, label: state }))];
-
   const propertyTypeOptions = [
     { value: "", label: "Select Property Type" },
     { value: "Duplex", label: "Duplex" },
@@ -182,19 +280,16 @@ const AddListing = () => {
     { value: "Detached House", label: "Detached House" },
     { value: "Semi-Detached House", label: "Semi-Detached House" },
     { value: "Condo", label: "Condo" },
-    { value: "Land", label: "Land" }, // Added Land option
+    { value: "Land", label: "Land" },
   ];
-
   const bedroomOptions = [
     { value: "", label: "Any Bedrooms" },
     ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bedroom(s)` })),
   ];
-
   const bathroomOptions = [
     { value: "", label: "Any Bathrooms" },
     ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bathroom(s)` })),
   ];
-
   const zoningTypeOptions = [
     { value: "", label: "Select Zoning Type" },
     { value: "Residential", label: "Residential" },
@@ -204,7 +299,6 @@ const AddListing = () => {
     { value: "Mixed-Use", label: "Mixed-Use" },
     { value: "Other", label: "Other" },
   ];
-
   const titleTypeOptions = [
     { value: "", label: "Select Title Type" },
     { value: "C of O", label: "Certificate of Occupancy (C of O)" },
@@ -215,556 +309,426 @@ const AddListing = () => {
     { value: "Excision", label: "Excision" },
     { value: "Other", label: "Other" },
   ];
+  const heatingTypeOptions = [
+    { value: "", label: "Select Heating Type" },
+    { value: "Central Heating", label: "Central Heating" },
+    { value: "Electric", label: "Electric" },
+    { value: "Gas", label: "Gas" },
+    { value: "Solar", label: "Solar" },
+    { value: "None", label: "None" },
+  ];
+  const coolingTypeOptions = [
+    { value: "", label: "Select Cooling Type" },
+    { value: "Central AC", label: "Central AC" },
+    { value: "Window Unit", label: "Window Unit" },
+    { value: "Split System", label: "Split System" },
+    { value: "None", label: "None" },
+  ];
 
-
-  const onDrop = (acceptedFiles) => {
-    acceptedFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onloadend = () => {
-        setImages(prev => [...prev, { file, base64: reader.result, originalname: file.name }]);
-        // Set the first new file as thumbnail if no thumbnail is set yet
-        if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
-          setThumbnailIdentifier(file.name);
-        }
-      };
-    });
-  };
-
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } });
-
-  const handleAddImageUrl = () => {
-    if (imageUrlInput.trim()) {
-      const newUrl = imageUrlInput.trim();
-      setImageURLs(prev => [...prev, newUrl]);
-      setImageUrlInput('');
-      // Set the first new URL as thumbnail if no thumbnail is set yet
-      if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
-        setThumbnailIdentifier(newUrl);
-      }
-    } else {
-      showMessage('Please enter a valid image URL.', 'error');
-    }
-  };
-
-  const handleRemoveImage = (identifierToRemove, type) => {
-    let newImagesArray = [...images];
-    let newImageURLsArray = [...imageURLs];
-
-    if (type === 'file') {
-      newImagesArray = newImagesArray.filter(img => img.originalname !== identifierToRemove);
-      setImages(newImagesArray);
-    } else { // type === 'url'
-      newImageURLsArray = newImageURLsArray.filter(url => url !== identifierToRemove);
-      setImageURLs(newImageURLsArray);
-    }
-
-    // If the removed image was the thumbnail, clear the thumbnail
-    if (thumbnailIdentifier === identifierToRemove) {
-      setThumbnailIdentifier(null);
-    }
-
-    // Re-evaluate thumbnail if it was cleared and there are still images
-    const remainingImages = [
-      ...newImagesArray.map(img => ({ url: img.base64, identifier: img.originalname, type: 'file' })),
-      ...newImageURLsArray.map(url => ({ url: url, identifier: url, type: 'url' }))
-    ];
-
-    if (thumbnailIdentifier === null && remainingImages.length > 0) {
-      setThumbnailIdentifier(remainingImages[0].identifier);
-    }
-  };
-
-  const setAsThumbnail = (identifier) => {
-    setThumbnailIdentifier(identifier);
-  };
-
-  const capitalizeFirstLetter = (string) => {
-    if (!string) return '';
-    return string.charAt(0).toUpperCase() + string.slice(1);
-  };
-
-  const handleClose = () => {
-    navigate(-1);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Basic validation for common fields
-    if (!purchaseCategory || !title || !location || !stateValue || !propertyType || !price) {
-      showMessage('Please fill in all required fields (Purchase Category, Title, Location, State, Property Type, Price).', 'error');
-      return;
-    }
-
-    // Conditional validation for bedrooms/bathrooms
-    if (!isLandProperty && (!bedrooms || !bathrooms)) {
-      showMessage('Please fill in Bedrooms and Bathrooms for non-land properties.', 'error');
-      return;
-    }
-
-    if (allImagesForDisplay.length < 2) {
-      showMessage('Please upload at least two images for your listing.', 'error');
-      return;
-    }
-
-    if (thumbnailIdentifier === null) {
-      showMessage('Please set a thumbnail image for your listing.', 'error');
-      return;
-    }
-
-    const payload = {
-      purchase_category: purchaseCategory,
-      title,
-      location,
-      state: stateValue,
-      property_type: propertyType,
-      price,
-      status: 'Pending',
-      description,
-      mainImageBase64: null,
-      mainImageOriginalName: null,
-      galleryImagesBase64: [],
-      galleryImagesOriginalNames: [],
-      galleryImageURLs: [],
-      title_type: titleType, // Always include title_type
-    };
-
-    // Conditionally add property-specific fields
-    if (!isLandProperty) {
-      payload.bedrooms = bedrooms;
-      payload.bathrooms = bathrooms;
-      payload.square_footage = squareFootage;
-      payload.year_built = yearBuilt;
-      payload.heating_type = heatingType;
-      payload.cooling_type = coolingType;
-      payload.parking = parking;
-      payload.amenities = amenities;
-      // lot_size can apply to both, so it's not conditional here
-      payload.lot_size = lotSize;
-    } else {
-      // For land properties, include land-specific fields
-      payload.land_size = landSize;
-      payload.zoning_type = zoningType;
-      // Ensure non-applicable fields are explicitly null or undefined for land
-      payload.bedrooms = null;
-      payload.bathrooms = null;
-      payload.square_footage = null;
-      payload.year_built = null;
-      payload.heating_type = null;
-      payload.cooling_type = null;
-      payload.parking = null;
-      payload.amenities = null;
-      // lot_size is still relevant for land, so it's included
-      payload.lot_size = lotSize;
-    }
-
-
-    // Separate main image from gallery images
-    const thumbnailItem = allImagesForDisplay.find(item => item.identifier === thumbnailIdentifier);
-
-    if (thumbnailItem) {
-      if (thumbnailItem.type === 'file') {
-        const fullImageObject = images.find(img => img.originalname === thumbnailItem.identifier);
-        payload.mainImageBase64 = fullImageObject.base64;
-        payload.mainImageOriginalName = fullImageObject.originalname;
-      } else { // type === 'url'
-        payload.mainImageURL = thumbnailItem.url;
-      }
-    }
-
-    allImagesForDisplay.forEach(item => {
-      if (item.identifier !== thumbnailIdentifier) { // Only add to gallery if not the thumbnail
-        if (item.type === 'file') {
-          const fullImageObject = images.find(img => img.originalname === item.identifier);
-          payload.galleryImagesBase64.push(fullImageObject.base64);
-          payload.galleryImagesOriginalNames.push(fullImageObject.originalname);
-        } else { // type === 'url'
-          payload.galleryImageURLs.push(item.url);
-        }
-      }
-    });
-
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      showMessage('Authentication token not found. Please sign in to add a listing.', 'error');
-      navigate('/signin');
-      return;
-    }
-
-    try {
-      await axiosInstance.post(`${API_BASE_URL}/listings`, payload, {
-        headers: {
-          'Content-Type': 'application/json', // Sending JSON with base64
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      showMessage('Listing added successfully!', 'success', 3000);
-      // Clear form fields
-      setPurchaseCategory('Rent');
-      setTitle('');
-      setLocation('');
-      setStateValue('');
-      setPropertyType('');
-      setBedrooms('');
-      setBathrooms('');
-      setPrice('');
-      setImages([]);
-      setImageURLs([]);
-      setThumbnailIdentifier(null);
-      setDescription('');
-      setSquareFootage('');
-      setLotSize('');
-      setYearBuilt('');
-      setHeatingType('');
-      setCoolingType('');
-      setParking('');
-      setAmenities('');
-      setLandSize('');
-      setZoningType('');
-      setTitleType('');
-
-      navigate('/admin/listings');
-    } catch (error) {
-      let errorMessage = 'Failed to add listing. Please try again.';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      showMessage(errorMessage, 'error');
-    }
-  };
-
-  const formElementStyles = `py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-    ${darkMode
-      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-    }`;
+  const uniformInputClass = (isTextArea = false) => `w-full py-1 px-4 border rounded-xl shadow-sm transition-all duration-200
+  ${darkMode
+    ? "bg-gray-700 text-white border-gray-600 hover:border-green-500 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 focus:ring-green-400"
+    : "bg-white text-gray-800 border-gray-300 hover:border-green-500 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 focus:ring-green-600"}
+  ${isTextArea ? 'min-h-[8rem]' : 'h-10'}`;
+  const labelClass = `block text-sm font-semibold mb-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`;
+  const sectionTitleClass = `text-lg font-bold mb-4 border-b pb-2 ${darkMode ? "text-gray-100 border-gray-700" : "text-gray-800 border-gray-300"}`;
 
   return (
-    <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className={`relative min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-2 pb-10`}
+    >
       <motion.form
         onSubmit={handleSubmit}
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className={`rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-6 relative ${darkMode ? "bg-gray-800" : "bg-white"}`}
+        className={`max-w-4xl mx-auto p-8 rounded-3xl shadow-2xl space-y-8 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}
       >
-        <button
-          type="button"
-          onClick={handleClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white text-2xl font-bold"
-          aria-label="Close"
-        >
-          &times;
-        </button>
-
-        <motion.h2
-          className={`text-2xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.4 }}
-        >
-          Add Listing
-        </motion.h2>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={handleExit}
+            className="absolute -top-4 -right-4 p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 z-10"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </button>
+          <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+            Add New Property Listing
+          </h1>
+        </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="space-y-6"
+        >
+          <h2 className={sectionTitleClass}>Core Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <label htmlFor="purchaseCategory" className={labelClass}>
+                Purchase Category <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                options={purchaseCategoryOptions}
+                value={purchaseCategory}
+                onChange={setPurchaseCategory}
+                placeholder="Select a category"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="title" className={labelClass}>
+                Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Beautiful 3-Bedroom Duplex"
+                className={uniformInputClass()}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label htmlFor="propertyType" className={labelClass}>
+                Property Type <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                options={propertyTypeOptions}
+                value={propertyType}
+                onChange={setPropertyType}
+                placeholder="Select property type"
+              />
+            </div>
+            {!isLandProperty && (
+              <>
+                <div>
+                  <label htmlFor="bedrooms" className={labelClass}>
+                    Bedrooms <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    options={bedroomOptions}
+                    value={bedrooms}
+                    onChange={setBedrooms}
+                    placeholder="Any"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bathrooms" className={labelClass}>
+                    Bathrooms <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    options={bathroomOptions}
+                    value={bathrooms}
+                    onChange={setBathrooms}
+                    placeholder="Any"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="location" className={labelClass}>
+                Location <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., Lekki Phase 1, Lagos"
+                className={uniformInputClass()}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="stateValue" className={labelClass}>
+                State <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                options={stateOptions}
+                value={stateValue}
+                onChange={setStateValue}
+                placeholder="Select a state"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="price" className={labelClass}>
+                Price (NGN) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                id="price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="e.g., 50000000"
+                className={uniformInputClass()}
+                required
+              />
+            </div>
+            {/* The status dropdown is no longer needed here as it's set automatically */}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
           className="space-y-6"
         >
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Purchase Category</label>
-            <Dropdown
-              placeholder="Select Purchase Category"
-              options={purchaseCategoryOptions}
-              value={purchaseCategory}
-              onChange={setPurchaseCategory}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(capitalizeFirstLetter(e.target.value))}
-              className={`block w-full ${formElementStyles}`}
-              required
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Location</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(capitalizeFirstLetter(e.target.value))}
-              className={`block w-full ${formElementStyles}`}
-              required
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>State</label>
-            <Dropdown
-              placeholder="Select State"
-              options={stateOptions}
-              value={stateValue}
-              onChange={setStateValue}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Property Type</label>
-            <Dropdown
-              placeholder="Select Property Type"
-              options={propertyTypeOptions}
-              value={propertyType}
-              onChange={setPropertyType}
-              className="w-full"
-            />
-          </div>
-
-          {/* Conditional fields for non-land properties */}
-          {!isLandProperty && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bedrooms</label>
-                <Dropdown
-                  placeholder="Any Bedrooms"
-                  options={bedroomOptions}
-                  value={bedrooms}
-                  onChange={setBedrooms}
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bathrooms</label>
-                <Dropdown
-                  placeholder="Any Bathrooms"
-                  options={bathroomOptions}
-                  value={bathrooms}
-                  onChange={setBathrooms}
-                  className="w-full"
-                />
-              </div>
+          <h2 className={sectionTitleClass}>Images</h2>
+          <div className="space-y-4">
+            <div
+              {...getRootProps()}
+              className={`border border-dashed rounded-2xl py-6 px-4 text-center cursor-pointer transition-all duration-300
+                ${darkMode ? "border-gray-600 hover:border-green-500 text-gray-400" : "border-gray-300 hover:border-green-500 text-gray-500"}`}
+            >
+              <input {...getInputProps()} />
+              <p>Drag 'n' drop some files here, or click to select files</p>
+              <p className="text-xs mt-1">(Minimum 2 images required)</p>
             </div>
-          )}
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>
-              {purchaseCategory === 'Rent' ? 'Price (₦ / Year)' :
-                purchaseCategory === 'Sale' ? 'Price (₦)' :
-                  purchaseCategory === 'Lease' ? 'Price (₦ / Lease)' :
-                    purchaseCategory === 'Short Let' ? 'Price (₦ / Night)' :
-                      'Price (₦ / Month)'}
-            </label>
-            <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={`block w-full ${formElementStyles}`} required />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Description (Optional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className={`block w-full ${formElementStyles}`}
-              rows="4"
-              placeholder="Detailed description of the property..."
-            ></textarea>
-          </div>
-
-          {/* Conditional fields for non-land properties */}
-          {!isLandProperty && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Square Footage (Optional)</label>
-                <input
-                  type="number"
-                  value={squareFootage}
-                  onChange={(e) => setSquareFootage(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Lot Size (sqft or acres) (Optional)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={lotSize}
-                  onChange={(e) => setLotSize(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Land-specific fields */}
-          {isLandProperty && (
-            <>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Land Size (sqft or acres) (Optional)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={landSize}
-                  onChange={(e) => setLandSize(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                  placeholder="e.g., 5000 sqft or 1.5 acres"
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Zoning Type (Optional)</label>
-                <Dropdown
-                  placeholder="Select Zoning Type"
-                  options={zoningTypeOptions}
-                  value={zoningType}
-                  onChange={setZoningType}
-                  className="w-full"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Title Type field - now always visible */}
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Title Type (Optional)</label>
-            <Dropdown
-              placeholder="Select Title Type"
-              options={titleTypeOptions}
-              value={titleType}
-              onChange={setTitleType}
-              className="w-full"
-            />
-          </div>
-
-          {!isLandProperty && (
-            <>
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Year Built (Optional)</label>
-                <input
-                  type="number"
-                  value={yearBuilt}
-                  onChange={(e) => setYearBuilt(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Heating Type (Optional)</label>
-                  <input
-                    type="text"
-                    value={heatingType}
-                    onChange={(e) => setHeatingType(e.target.value)}
-                    className={`block w-full ${formElementStyles}`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Cooling Type (Optional)</label>
-                  <input
-                    type="text"
-                    value={coolingType}
-                    onChange={(e) => setCoolingType(e.target.value)}
-                    className={`block w-full ${formElementStyles}`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Parking (Optional)</label>
-                <input
-                  type="text"
-                  value={parking}
-                  onChange={(e) => setParking(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                  placeholder="e.g., Garage, Street, Driveway"
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Amenities (comma-separated) (Optional)</label>
-                <textarea
-                  value={amenities}
-                  onChange={(e) => setAmenities(e.target.value)}
-                  className={`block w-full ${formElementStyles}`}
-                  rows="3"
-                  placeholder="e.g., Pool, Gym, Balcony, Garden"
-                ></textarea>
-              </div>
-            </>
-          )}
-
-
-          <div {...getRootProps()} className={`p-6 border-dashed border-2 rounded-2xl cursor-pointer text-center transition-all duration-200 ${
-            darkMode
-              ? "border-gray-600 bg-gray-700 text-gray-300 hover:border-green-500 focus:ring-green-400"
-              : "border-gray-300 bg-gray-50 text-gray-600 hover:border-green-500 focus:ring-green-600"
-          }`}>
-            <input {...getInputProps()} />
-            Drag & drop or click to select images
-          </div>
-
-          <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Or Add Image URL</label>
-            <div className="flex gap-2 mt-1">
+            <div className="flex items-center space-x-2">
               <input
                 type="text"
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
-                className={`flex-grow block w-full ${formElementStyles}`}
-                placeholder="https://example.com/image.jpg"
+                placeholder="Or paste an image URL here..."
+                className={uniformInputClass()}
               />
-              <button type="button" onClick={handleAddImageUrl} className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 text-sm transition-all duration-200">Add</button>
+              <button
+                type="button"
+                onClick={handleAddImageUrl}
+                className={`bg-green-600 text-white py-2 px-6 rounded-2xl transition-colors duration-200 hover:bg-green-700 font-bold whitespace-nowrap`}
+              >
+                Add URL
+              </button>
             </div>
+            {allImagesForDisplay.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {allImagesForDisplay.map((item, index) => (
+                  <motion.div
+                    key={item.identifier || index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="relative group overflow-hidden rounded-2xl shadow-lg border"
+                  >
+                    <img
+                      src={item.url}
+                      alt={`Listing Image ${index + 1}`}
+                      className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div
+                      className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleRemoveImage(item.identifier, item.type)}
+                    >
+                      <CloseIcon className="h-4 w-4 text-white" />
+                    </div>
+                    <div
+                      className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold
+                        ${item.identifier === thumbnailIdentifier ? "bg-green-700 text-white" : "bg-white/80 text-gray-800 backdrop-blur-sm"}`}
+                    >
+                      {item.identifier === thumbnailIdentifier ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAsThumbnail(item.identifier)}
+                      className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100"
+                    ></button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
-
-          {(allImagesForDisplay.length > 0) && (
-            <div className="grid grid-cols-2 gap-3">
-              {allImagesForDisplay.map((item, index) => (
-                <motion.div
-                  key={item.identifier}
-                  className={`border p-2 rounded-2xl relative transition-all duration-200 ${item.identifier === thumbnailIdentifier ? 'border-green-500 ring-2 ring-green-500' : ''} ${
-                    darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
-                  }`}
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <img
-                    src={item.url}
-                    alt={`Upload ${index}`}
-                    className="w-full h-32 object-cover rounded-xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(item.identifier, item.type)}
-                    className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200"
-                  >✕</button>
-                  <button
-                    type="button"
-                    onClick={() => setAsThumbnail(item.identifier)}
-                    className={`text-xs underline mt-1 block transition-all duration-200 ${darkMode ? "text-green-400" : "text-green-700"}`}
-                  >{item.identifier === thumbnailIdentifier ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          <button type="submit" className="w-full bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-200">
-            Submit Listing
-          </button>
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-6"
+        >
+          <h2 className={sectionTitleClass}>Optional Details</h2>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="description" className={labelClass}>Description</label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Provide a detailed description of the property..."
+                className={uniformInputClass(true)}
+              ></textarea>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label htmlFor="squareFootage" className={labelClass}>Square Footage</label>
+                <input
+                  type="number"
+                  id="squareFootage"
+                  value={squareFootage}
+                  onChange={(e) => setSquareFootage(e.target.value)}
+                  placeholder="e.g., 2000"
+                  className={uniformInputClass()}
+                />
+              </div>
+              <div>
+                <label htmlFor="yearBuilt" className={labelClass}>Year Built</label>
+                <input
+                  type="number"
+                  id="yearBuilt"
+                  value={yearBuilt}
+                  onChange={(e) => setYearBuilt(e.target.value)}
+                  placeholder="e.g., 2010"
+                  className={uniformInputClass()}
+                />
+              </div>
+              <div>
+                <label htmlFor="lotSize" className={labelClass}>Lot Size</label>
+                <input
+                  type="text"
+                  id="lotSize"
+                  value={lotSize}
+                  onChange={(e) => setLotSize(e.target.value)}
+                  placeholder="e.g., 500 sq meters"
+                  className={uniformInputClass()}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label htmlFor="parking" className={labelClass}>Parking</label>
+                <input
+                  type="text"
+                  id="parking"
+                  value={parking}
+                  onChange={(e) => setParking(e.target.value)}
+                  placeholder="e.g., 2-car garage"
+                  className={uniformInputClass()}
+                />
+              </div>
+              {!isLandProperty && (
+                <>
+                  <div>
+                    <label htmlFor="heatingType" className={labelClass}>Heating Type</label>
+                    <Dropdown
+                      options={heatingTypeOptions}
+                      value={heatingType}
+                      onChange={setHeatingType}
+                      placeholder="Select heating type"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="coolingType" className={labelClass}>Cooling Type</label>
+                    <Dropdown
+                      options={coolingTypeOptions}
+                      value={coolingType}
+                      onChange={setCoolingType}
+                      placeholder="Select cooling type"
+                    />
+                  </div>
+                </>
+              )}
+              {isLandProperty && (
+                <>
+                  <div>
+                    <label htmlFor="landSize" className={labelClass}>Land Size</label>
+                    <input
+                      type="text"
+                      id="landSize"
+                      value={landSize}
+                      onChange={(e) => setLandSize(e.target.value)}
+                      placeholder="e.g., 600 sqm"
+                      className={uniformInputClass()}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="zoningType" className={labelClass}>Zoning Type</label>
+                    <Dropdown
+                      options={zoningTypeOptions}
+                      value={zoningType}
+                      onChange={setZoningType}
+                      placeholder="Select zoning type"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="amenities" className={labelClass}>Amenities</label>
+              <input
+                type="text"
+                id="amenities"
+                value={amenities}
+                onChange={(e) => setAmenities(e.target.value)}
+                placeholder="e.g., Pool, Gym, Security"
+                className={uniformInputClass()}
+              />
+            </div>
+
+            {isLandProperty && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="titleType" className={labelClass}>Title Type</label>
+                  <Dropdown
+                    options={titleTypeOptions}
+                    value={titleType}
+                    onChange={setTitleType}
+                    placeholder="Select title type"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {(userRole === 'admin' || userRole === 'agency_admin') && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="space-y-6"
+          >
+            <h2 className={sectionTitleClass}>Admin Options</h2>
+            <div className="flex justify-center items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_featured"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                className={`h-5 w-5 rounded-md focus:ring-green-500 border
+                  ${darkMode ? "bg-gray-800 border-gray-600 checked:bg-green-600" : "border-gray-300 checked:bg-green-600"}`}
+              />
+              <label htmlFor="is_featured" className={`${labelClass} mb-0 font-bold`}>
+                Mark as Featured Listing (Admin Only)
+              </label>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            className="w-full md:w-1/3 bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-300 shadow-md"
+          >
+            Add Listing
+          </button>
+        </div>
       </motion.form>
-    </div>
+    </motion.div>
   );
 };
 
 export default AddListing;
-

@@ -1,110 +1,56 @@
-// EditListing.js
 import React, { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
-import API_BASE_URL from '../config';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTheme } from '../layouts/AppShell';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X as CloseIcon } from 'lucide-react';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
 
-const Dropdown = ({ options, value, onChange, placeholder, className = "", refProp, programmaticOpen }) => {
+const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { darkMode } = useTheme();
 
-  // Combine the internal ref with the ref passed via refProp
-  const setRefs = (element) => {
-    dropdownRef.current = element;
-    if (refProp) {
-      if (typeof refProp === 'function') {
-        refProp(element);
-      } else {
-        refProp.current = element;
-      }
-    }
-  };
-
   useEffect(() => {
-    // If programmaticOpen is true, open the dropdown.
-    // This effect only triggers when programmaticOpen changes to true.
-    if (programmaticOpen) {
-      setIsOpen(true);
-    }
-    // We do NOT set setIsOpen(false) here when programmaticOpen becomes false,
-    // as we want user interaction (click outside/on button) to close it.
-  }, [programmaticOpen]); // Depend only on programmaticOpen
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
     };
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, []); // Empty dependency array means it runs once on mount
+  }, []);
 
   const menuVariants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 500,
-        damping: 30,
-        delayChildren: 0.05,
-        staggerChildren: 0.02,
-      },
-    },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 500, damping: 30, delayChildren: 0.05, staggerChildren: 0.02 } },
     exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
   };
 
-  const itemVariants = {
-    hidden: { y: 10, opacity: 0 },
-    visible: { y: 0, opacity: 1 },
-  };
+  const itemVariants = { hidden: { y: 10, opacity: 0 }, visible: { y: 0, opacity: 1 } };
 
   const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
 
   return (
-    <div className={`relative ${className}`} ref={setRefs}> {/* Use setRefs here */}
+    <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-          ${darkMode
-            ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
-            : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
-          }
-          ${isOpen ? (darkMode ? "border-green-500 ring-green-400" : "border-green-500 ring-green-600") : ""}
-        `}
+        className={`flex items-center justify-between w-full py-1 px-4 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 h-10
+          ${darkMode ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" : "bg-white border-gray-300 text-gray-500 hover:border-green-500 focus:ring-green-600"}`}
       >
-        <span>{selectedOptionLabel}</span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <span className="overflow-hidden truncate">{selectedOptionLabel}</span>
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
         </motion.div>
       </button>
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -117,20 +63,20 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "", refPr
           >
             {options.map((option) => (
               <motion.button
-              type="button"
-              key={option.value}
-              variants={itemVariants}
-              whileHover={{ x: 5 }}
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false); // Close dropdown on option selection
-              }}
-              className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
-                ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
-            >
-              {option.label}
-            </motion.button>
-
+                key={option.value}
+                type="button"
+                variants={itemVariants}
+                whileHover={{ x: 5 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200
+                  ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-green-50 hover:text-green-700"}`}
+              >
+                {option.label}
+              </motion.button>
             ))}
           </motion.div>
         )}
@@ -139,29 +85,22 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "", refPr
   );
 };
 
-
 const EditListing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation(); // Use useLocation to get query parameters
+  const { showConfirm } = useConfirmDialog();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
-  const { showConfirm } = useConfirmDialog();
 
-  const [listing, setListing] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
+  const [initialState, setInitialState] = useState(null);
   const [purchaseCategory, setPurchaseCategory] = useState('');
   const [title, setTitle] = useState('');
-  const [locationValue, setLocationValue] = useState(''); // Renamed to avoid conflict with useLocation
+  const [location, setLocation] = useState('');
   const [stateValue, setStateValue] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [price, setPrice] = useState('');
-  const [status, setStatus] = useState('');
-
   const [description, setDescription] = useState('');
   const [squareFootage, setSquareFootage] = useState('');
   const [lotSize, setLotSize] = useState('');
@@ -170,823 +109,557 @@ const EditListing = () => {
   const [coolingType, setCoolingType] = useState('');
   const [parking, setParking] = useState('');
   const [amenities, setAmenities] = useState('');
-
-  // New states for land properties
   const [landSize, setLandSize] = useState('');
   const [zoningType, setZoningType] = useState('');
-  const [titleType, setTitleType] = useState(''); // Made non-conditional
-
-  const [existingImages, setExistingImages] = useState([]); // Array of { url: string, publicId: string }
-  const [newImages, setNewImages] = useState([]); // Array of { file: File, base64: string, originalname: string }
+  const [titleType, setTitleType] = useState('');
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [statusValue, setStatusValue] = useState('');
+  const [existingImages, setExistingImages] = useState([]);
+  const [newImages, setNewImages] = useState([]);
+  const [newImageURLs, setNewImageURLs] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
-  const [newImageURLs, setNewImageURLs] = useState([]); // Array of string URLs
+  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null);
+  const [statusOptions, setStatusOptions] = useState([]);
 
-  const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null); // Can be a URL or the originalname of a new file
+  const [tempState, setTempState] = useState({
+    purchaseCategory: '',
+    title: '',
+    location: '',
+    stateValue: '',
+    propertyType: '',
+    bedrooms: '',
+    bathrooms: '',
+    price: '',
+    description: '',
+    squareFootage: '',
+    lotSize: '',
+    yearBuilt: '',
+    heatingType: '',
+    coolingType: '',
+    parking: '',
+    amenities: '',
+    landSize: '',
+    zoningType: '',
+    titleType: '',
+    isFeatured: false,
+    statusValue: '',
+  });
 
-  // Refs for the fields to scroll to and potentially open dropdowns
-  const purchaseCategoryRef = useRef(null);
-  const statusRef = useRef(null);
+  const isLandProperty = tempState.propertyType === 'Land';
 
-  // States to control programmatic opening of dropdowns
-  const [purchaseCategoryDropdownOpen, setPurchaseCategoryDropdownOpen] = useState(false);
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data } = await axiosInstance.get('/users/profile');
+        setUserRole(data.role);
+      } catch (error) {
+        console.error('Failed to fetch user role:', error);
+        setUserRole('visitor');
+      }
+    };
+    fetchUserRole();
+  }, []);
 
-  // Determine if the current property type is 'Land'
-  const isLandProperty = propertyType === 'Land';
+  useEffect(() => {
+    if (userRole === 'admin') {
+      setStatusOptions([
+        { value: "available", label: "Available" },
+        { value: "pending", label: "Pending" },
+        { value: "rejected", label: "Rejected" },
+      ]);
+    } else if (userRole === 'agency_admin' || userRole === 'agent') {
+      setStatusOptions([
+        { value: "sold", label: "Sold" },
+        { value: "under offer", label: "Under Offer" },
+      ]);
+    } else {
+      setStatusOptions([]);
+    }
+  }, [userRole]);
 
   useEffect(() => {
     const fetchListing = async () => {
-      setLoading(true);
-      setError(null);
       try {
-        const response = await axiosInstance.get(`${API_BASE_URL}/listings/${id}`);
-        const fetchedListing = response.data;
+        const { data } = await axiosInstance.get(`/listings/${id}`);
 
-        if (!fetchedListing) {
-          setError('Listing not found.');
-          showMessage('Listing not found.', 'error');
-          setLoading(false);
-          return;
-        }
+        const fetchedState = {
+          purchaseCategory: data.purchase_category || '',
+          title: data.title || '',
+          location: data.location || '',
+          stateValue: data.state || '',
+          propertyType: data.property_type || '',
+          bedrooms: data.bedrooms || '',
+          bathrooms: data.bathrooms || '',
+          price: data.price || '',
+          description: data.description || '',
+          squareFootage: data.square_footage || '',
+          lotSize: data.lot_size || '',
+          yearBuilt: data.year_built || '',
+          heatingType: data.heating_type || '',
+          coolingType: data.cooling_type || '',
+          parking: data.parking || '',
+          amenities: data.amenities || '',
+          landSize: data.land_size || '',
+          zoningType: data.zoning_type || '',
+          titleType: data.title_type || '',
+          isFeatured: data.is_featured || false,
+          statusValue: data.status || '',
+          existingImages: data.gallery_images || [],
+          newImages: [],
+          newImageURLs: [],
+        };
 
-        setListing(fetchedListing);
+        setPurchaseCategory(fetchedState.purchaseCategory);
+        setTitle(fetchedState.title);
+        setLocation(fetchedState.location);
+        setStateValue(fetchedState.stateValue);
+        setPropertyType(fetchedState.propertyType);
+        setBedrooms(String(fetchedState.bedrooms));
+        setBathrooms(String(fetchedState.bathrooms));
+        setPrice(String(fetchedState.price));
+        setDescription(fetchedState.description);
+        setSquareFootage(String(fetchedState.squareFootage));
+        setLotSize(fetchedState.lotSize);
+        setYearBuilt(String(fetchedState.yearBuilt));
+        setHeatingType(fetchedState.heatingType);
+        setCoolingType(fetchedState.coolingType);
+        setParking(fetchedState.parking);
+        setAmenities(fetchedState.amenities);
+        setLandSize(fetchedState.landSize);
+        setZoningType(fetchedState.zoningType);
+        setTitleType(fetchedState.titleType);
+        setIsFeatured(fetchedState.isFeatured);
+        setStatusValue(fetchedState.statusValue);
+        setExistingImages(data.gallery_images ? data.gallery_images.map(url => ({ url, identifier: url, type: 'existing' })) : []);
 
-        setPurchaseCategory(fetchedListing.purchase_category || '');
-        setTitle(fetchedListing.title || '');
-        setLocationValue(fetchedListing.location || ''); // Use locationValue
-        setStateValue(fetchedListing.state || '');
-        setPropertyType(fetchedListing.property_type || '');
-        setBedrooms(fetchedListing.bedrooms || '');
-        setBathrooms(fetchedListing.bathrooms || '');
-        setPrice(fetchedListing.price || '');
-        setStatus(fetchedListing.status || '');
+        const initialThumbnail = data.image_url || (data.gallery_images && data.gallery_images.length > 0 ? data.gallery_images[0] : null);
+        setThumbnailIdentifier(initialThumbnail);
+        setInitialState({ ...fetchedState, thumbnailIdentifier: initialThumbnail });
 
-        setDescription(fetchedListing.description || '');
-        setSquareFootage(fetchedListing.square_footage || '');
-        setLotSize(fetchedListing.lot_size || '');
-        setYearBuilt(fetchedListing.year_built || '');
-        setHeatingType(fetchedListing.heating_type || '');
-        setCoolingType(fetchedListing.cooling_type || '');
-        setParking(fetchedListing.parking || '');
-        setAmenities(fetchedListing.amenities || '');
+        setTempState({
+          purchaseCategory: fetchedState.purchaseCategory,
+          title: fetchedState.title,
+          location: fetchedState.location,
+          stateValue: fetchedState.stateValue,
+          propertyType: fetchedState.propertyType,
+          bedrooms: String(fetchedState.bedrooms),
+          bathrooms: String(fetchedState.bathrooms),
+          price: String(fetchedState.price),
+          description: fetchedState.description,
+          squareFootage: String(fetchedState.squareFootage),
+          lotSize: fetchedState.lotSize,
+          yearBuilt: String(fetchedState.yearBuilt),
+          heatingType: fetchedState.heatingType,
+          coolingType: fetchedState.coolingType,
+          parking: fetchedState.parking,
+          amenities: fetchedState.amenities,
+          landSize: fetchedState.landSize,
+          zoningType: fetchedState.zoningType,
+          titleType: fetchedState.titleType,
+          isFeatured: fetchedState.isFeatured,
+          statusValue: fetchedState.statusValue,
+        });
 
-        // Set land-specific fields
-        setLandSize(fetchedListing.land_size || '');
-        setZoningType(fetchedListing.zoning_type || '');
-        setTitleType(fetchedListing.title_type || ''); // Always set titleType
-
-        const initialExistingImages = [];
-        if (fetchedListing.image_url) {
-          initialExistingImages.push({ url: fetchedListing.image_url, publicId: fetchedListing.image_public_id });
-          setThumbnailIdentifier(fetchedListing.image_url);
-        }
-        if (fetchedListing.gallery_images && Array.isArray(fetchedListing.gallery_images)) {
-          fetchedListing.gallery_images.forEach(url => {
-            // Ensure gallery images don't duplicate the main image if it's also in gallery_images
-            if (url !== fetchedListing.image_url) {
-              // Assuming publicId can be derived or is also returned for gallery images
-              initialExistingImages.push({ url: url, publicId: null }); // Public ID is not directly available from gallery_images in fetchedListing
-            }
-          });
-        }
-        setExistingImages(initialExistingImages);
-
-        setLoading(false);
-      } catch (err) {
-        console.error('Failed to fetch listing:', err);
-        let errorMessage = 'Failed to fetch listing. Please try again.';
-        if (err.response && err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        setError(errorMessage);
-        showMessage(errorMessage, 'error');
+      } catch (error) {
+        console.error('Failed to fetch listing:', error);
+        showMessage('Failed to load listing data.', 'error');
+      } finally {
         setLoading(false);
       }
     };
-
-    if (id) {
-      fetchListing();
-    } else {
-      setLoading(false);
-      setError('No listing ID provided.');
-      showMessage('No listing ID provided for editing.', 'error');
-    }
-
+    fetchListing();
   }, [id, showMessage]);
 
-  // Effect to handle opening dropdown and scrolling based on URL query parameter
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const openFieldParam = queryParams.get('open');
-
-    // Reset dropdown open states (this is crucial for preventing persistent open)
-    // We only want to set them to true if the URL param is present.
-    // Otherwise, they should default to false.
-    setPurchaseCategoryDropdownOpen(false);
-    setStatusDropdownOpen(false);
-
-    if (openFieldParam) {
-      let targetRef = null;
-      let setOpenState = null;
-
-      switch (openFieldParam) {
-        case 'purchaseCategory':
-          targetRef = purchaseCategoryRef;
-          setOpenState = setPurchaseCategoryDropdownOpen;
-          break;
-        case 'status':
-          targetRef = statusRef;
-          setOpenState = setStatusDropdownOpen;
-          break;
-        default:
-          break;
-      }
-
-      if (targetRef && targetRef.current && setOpenState) {
-        // Scroll to the element first
-        targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        // Then, open the dropdown after a delay that allows scrolling to largely complete
-        const openTimer = setTimeout(() => {
-          setOpenState(true); // This will cause the dropdown to open
-        }, 400); // Increased delay to allow scroll animation to finish
-
-        // Clear the query parameter after a slight delay to ensure the programmaticOpen prop
-        // has been consumed by the Dropdown component. This will cause a re-render
-        // where programmaticOpen becomes false, allowing normal close behavior.
-        const clearParamTimer = setTimeout(() => {
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('open');
-          window.history.replaceState({}, document.title, newUrl.toString());
-        }, 800); // Clear param after 800ms (ensures programmaticOpen is true for at least 300ms after it's set)
-
-        // Cleanup timers
-        return () => {
-          clearTimeout(openTimer);
-          clearTimeout(clearParamTimer);
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop: (acceptedFiles) => {
+      acceptedFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          setNewImages(prev => [...prev, { base64: reader.result, originalname: file.name }]);
+          setThumbnailIdentifier(prev => prev || file.name);
         };
-      }
-    }
-  }, [location.search, listing]); // Re-run when location.search changes or listing updates
+      });
+    },
+    accept: { 'image/*': [] }
+  });
 
-  const onDrop = (acceptedFiles) => {
-    acceptedFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onloadend = () => {
-        setNewImages(prev => [...prev, { file, base64: reader.result, originalname: file.name }]);
-        if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
-          setThumbnailIdentifier(file.name);
-        }
-      };
-    });
-  };
-
-  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'image/*': [] } });
+  const allImagesForDisplay = [
+    ...existingImages,
+    ...newImages.map(img => ({ url: img.base64, identifier: img.originalname, type: 'newFile' })),
+    ...newImageURLs.map(url => ({ url, identifier: url, type: 'newUrl' }))
+  ];
 
   const handleAddImageUrl = () => {
     if (imageUrlInput.trim()) {
-      const newUrl = imageUrlInput.trim();
-      setNewImageURLs(prev => [...prev, newUrl]);
+      setNewImageURLs(prev => [...prev, imageUrlInput.trim()]);
+      setThumbnailIdentifier(prev => prev || imageUrlInput.trim());
       setImageUrlInput('');
-      if (thumbnailIdentifier === null && allImagesForDisplay.length === 0) {
-        setThumbnailIdentifier(newUrl);
-      }
     } else {
       showMessage('Please enter a valid image URL.', 'error');
     }
   };
 
-  const performRemoveImage = (identifier, type) => {
-    let updatedThumbnailIdentifier = thumbnailIdentifier;
-
+  const handleRemoveImage = (identifierToRemove, type) => {
     if (type === 'existing') {
-      setExistingImages(prev => prev.filter(img => img.url !== identifier));
+      setExistingImages(prev => prev.filter(img => img.identifier !== identifierToRemove));
     } else if (type === 'newFile') {
-      setNewImages(prev => prev.filter(file => file.originalname !== identifier));
-    } else if (type === 'newUrl') {
-      setNewImageURLs(prev => prev.filter(url => url !== identifier));
+      setNewImages(prev => prev.filter(img => img.originalname !== identifierToRemove));
+    } else {
+      setNewImageURLs(prev => prev.filter(url => url !== identifierToRemove));
     }
-
-    if (updatedThumbnailIdentifier === identifier) {
-      updatedThumbnailIdentifier = null;
+    if (thumbnailIdentifier === identifierToRemove) {
+      const nextThumbnail = allImagesForDisplay.find(img => img.identifier !== identifierToRemove);
+      setThumbnailIdentifier(nextThumbnail ? nextThumbnail.identifier : null);
     }
-
-    const remainingImagesAfterRemoval = [
-      ...existingImages.filter(img => img.url !== identifier).map(img => ({ url: img.url, identifier: img.url, type: 'existing' })),
-      ...newImages.filter(file => file.originalname !== identifier).map(file => ({ url: file.base64, identifier: file.originalname, type: 'newFile' })),
-      ...newImageURLs.filter(url => url !== identifier).map(url => ({ url: url, identifier: url, type: 'newUrl' }))
-    ];
-
-    if (updatedThumbnailIdentifier === null && remainingImagesAfterRemoval.length > 0) {
-      updatedThumbnailIdentifier = remainingImagesAfterRemoval[0].identifier;
-    }
-    setThumbnailIdentifier(updatedThumbnailIdentifier);
-    showMessage('Image removed successfully!', 'info');
   };
-
-  const handleRemoveImage = (identifier, type) => {
-    showConfirm({
-      title: "Remove Image",
-      message: "Are you sure you want to remove this image? This action cannot be undone for existing images.",
-      onConfirm: () => performRemoveImage(identifier, type),
-      confirmLabel: "Remove",
-      cancelLabel: "Cancel"
-    });
-  };
-
 
   const setAsThumbnail = (identifier) => {
     setThumbnailIdentifier(identifier);
+    showMessage('Thumbnail set.', 'success');
   };
 
-  const capitalizeFirstLetter = (string) => {
-    if (!string) return '';
-    return string.charAt(0).toUpperCase() + string.slice(1);
-  };
+  const handleTempStateChange = (field, value) => {
+    let newState = { ...tempState, [field]: value };
 
-  const handleClose = () => {
-    navigate(-1);
+    if (field === 'statusValue' && value === 'sold') {
+      newState.isFeatured = false;
+    }
+
+    if (field === 'isFeatured' && value && tempState.statusValue === 'sold') {
+      showMessage('A sold property cannot be featured.', 'error');
+      return;
+    }
+
+    setTempState(newState);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !locationValue || !price || !status || !propertyType || !purchaseCategory) {
-      showMessage('Please fill in all required fields (Title, Location, Price, Status, Property Type, Purchase Category).', 'error');
+    const isValidThumbnail = allImagesForDisplay.some(img => img.identifier === thumbnailIdentifier);
+    if (!thumbnailIdentifier || !isValidThumbnail) {
+      showMessage('Please select a valid thumbnail image.', 'error');
       return;
     }
-
-    // Conditional validation for bedrooms/bathrooms
-    if (!isLandProperty && (!bedrooms || !bathrooms)) {
-      showMessage('Please fill in Bedrooms and Bathrooms for non-land properties.', 'error');
-      return;
-    }
-
     if (allImagesForDisplay.length < 2) {
-      showMessage('Please ensure at least two images are uploaded or provided via URL.', 'error');
+      showMessage('Please upload or add at least 2 images.', 'error');
       return;
     }
 
-    if (thumbnailIdentifier === null) {
-      showMessage('Please select a thumbnail image for your listing.', 'error');
-      return;
-    }
+    setPurchaseCategory(tempState.purchaseCategory);
+    setTitle(tempState.title);
+    setLocation(tempState.location);
+    setStateValue(tempState.stateValue);
+    setPropertyType(tempState.propertyType);
+    setBedrooms(tempState.bedrooms);
+    setBathrooms(tempState.bathrooms);
+    setPrice(tempState.price);
+    setDescription(tempState.description);
+    setSquareFootage(tempState.squareFootage);
+    setLotSize(tempState.lotSize);
+    setYearBuilt(tempState.yearBuilt);
+    setHeatingType(tempState.heatingType);
+    setCoolingType(tempState.coolingType);
+    setParking(tempState.parking);
+    setAmenities(tempState.amenities);
+    setLandSize(tempState.landSize);
+    setZoningType(tempState.zoningType);
+    setTitleType(tempState.titleType);
+    setIsFeatured(tempState.isFeatured);
+    setStatusValue(tempState.statusValue);
 
     const payload = {
-      title,
-      location: locationValue, // Use locationValue
-      state: stateValue,
-      property_type: propertyType,
-      price,
-      status,
-      purchase_category: purchaseCategory,
-      description,
-      existingImageUrlsToKeep: [],
-      newImageUrls: [],
-      newImagesBase64: [],
-      newImagesOriginalNames: [],
-      mainImageIdentifier: thumbnailIdentifier, // Send the identifier of the chosen thumbnail
-      title_type: titleType, // Always include title_type
+      purchase_category: tempState.purchaseCategory,
+      title: tempState.title,
+      location: tempState.location,
+      state: tempState.stateValue,
+      property_type: tempState.propertyType,
+      bedrooms: isLandProperty ? null : tempState.bedrooms,
+      bathrooms: isLandProperty ? null : tempState.bathrooms,
+      price: tempState.price,
+      description: tempState.description,
+      square_footage: isLandProperty ? null : tempState.squareFootage,
+      lot_size: tempState.lotSize,
+      year_built: isLandProperty ? null : tempState.yearBuilt,
+      heating_type: tempState.heatingType,
+      cooling_type: tempState.coolingType,
+      parking: tempState.parking,
+      amenities: tempState.amenities,
+      land_size: isLandProperty ? tempState.landSize : null,
+      zoning_type: isLandProperty ? tempState.zoningType : null,
+      title_type: tempState.titleType,
+      status: tempState.statusValue,
+      mainImageIdentifier: thumbnailIdentifier,
+      existingImageUrlsToKeep: existingImages.map(img => img.url),
+      newImageUrls: newImageURLs,
+      newImagesBase64: newImages.map(img => img.base64),
+      newImagesOriginalNames: newImages.map(img => img.originalname)
     };
 
-    // Conditionally add property-specific fields
-    if (!isLandProperty) {
-      payload.bedrooms = bedrooms;
-      payload.bathrooms = bathrooms;
-      payload.square_footage = squareFootage;
-      payload.year_built = yearBuilt;
-      payload.heating_type = heatingType;
-      payload.cooling_type = coolingType;
-      payload.parking = parking;
-      payload.amenities = amenities;
-      payload.lot_size = lotSize; // lot_size can apply to both
-    } else {
-      // For land properties, include land-specific fields
-      payload.land_size = landSize;
-      payload.zoning_type = zoningType;
-      // Explicitly set non-applicable fields to null for land
-      payload.bedrooms = null;
-      payload.bathrooms = null;
-      payload.square_footage = null;
-      payload.year_built = null;
-      payload.heating_type = null;
-      payload.cooling_type = null;
-      payload.parking = null;
-      payload.amenities = null;
-      payload.lot_size = lotSize; // lot_size is still relevant for land
-    }
-
-    // Populate existingImageUrlsToKeep
-    existingImages.forEach(img => {
-        payload.existingImageUrlsToKeep.push(img.url);
-    });
-
-    // Populate newImageUrls
-    newImageURLs.forEach(url => {
-        payload.newImageUrls.push(url);
-    });
-
-    // Populate newImagesBase64 and newImagesOriginalNames
-    newImages.forEach(img => {
-      payload.newImagesBase64.push(img.base64);
-      payload.newImagesOriginalNames.push(img.originalname);
-    });
-
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      showMessage('Authentication token not found. Please sign in to update the listing.', 'error');
-      navigate('/signin');
-      return;
+    if (['agent', 'agency_admin'].includes(userRole) && tempState.statusValue === 'sold') {
+      payload.is_featured = false;
+    } else if (userRole === 'admin') {
+      payload.is_featured = tempState.isFeatured;
     }
 
     try {
-      const response = await axiosInstance.put(`${API_BASE_URL}/listings/${id}`, payload, {
-        headers: {
-          'Content-Type': 'application/json', // Sending JSON with base64
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.status === 200) {
-        showMessage('Listing updated successfully!', 'success', 3000);
-        navigate('/admin/listings');
-      } else {
-        showMessage(`Failed to update listing. Server returned status: ${response.status}.`, 'error');
-      }
+      const { data } = await axiosInstance.put(`/listings/${id}`, payload);
+      showMessage('Listing updated successfully!', 'success');
+      navigate(`/listings/${data.property_id || id}`);
     } catch (error) {
-      let errorMessage = 'Failed to update listing. Please try again.';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      showMessage(errorMessage, 'error');
+      console.error('Error updating listing:', error.response?.data || error.message);
+      showMessage(error.response?.data?.error || 'Failed to update listing.', 'error');
     }
   };
 
+  const handleExit = () => {
+    const currentState = {
+      ...tempState,
+      existingImages: existingImages.map(i => i.url),
+      newImages,
+      newImageURLs,
+      thumbnailIdentifier
+    };
+    if (JSON.stringify(initialState) !== JSON.stringify(currentState)) {
+      showConfirm({
+        message: 'Are you sure you want to exit? Any unsaved changes will be lost.',
+        onConfirm: () => navigate(-1),
+        onCancel: () => {}
+      });
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const nigerianStates = ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Abuja"].sort();
   const purchaseCategoryOptions = [
-    { value: "Sale", label: "Sale" },
-    { value: "Rent", label: "Rent" },
-    { value: "Lease", label: "Lease" },
-    { value: "Short Let", label: "Short Let" },
-    { value: "Long Let", label: "Long Let" }
+    { value: "Rent", label: "Rent" }, { value: "Sale", label: "Sale" }, { value: "Lease", label: "Lease" },
+    { value: "Short Let", label: "Short Let" }, { value: "Long Let", label: "Long Let" }
   ];
-
-  const statusOptions = [
-    { value: "", label: "Select Status" },
-    { value: "available", label: "Available" },
-    { value: "sold", label: "Sold" },
-    { value: "under offer", label: "Under Offer" },
-    { value: "pending", label: "Pending" },
-    { value: "approved", label: "Approved" },
-    { value: "rejected", label: "Rejected" },
-    { value: "featured", label: "Featured" },
-  ];
-
-  const nigerianStates = [
-    "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-    "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
-    "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
-    "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo",
-    "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
-    "Abuja"
-  ].sort();
-
   const stateOptions = [{ value: "", label: "Select State" }, ...nigerianStates.map(state => ({ value: state, label: state }))];
-
   const propertyTypeOptions = [
-    { value: "", label: "Select Property Type" },
-    { value: "Duplex", label: "Duplex" },
-    { value: "Bungalow", label: "Bungalow" },
-    { value: "Apartment", label: "Apartment" },
-    { value: "Penthouse", label: "Penthouse" },
-    { value: "Detached House", label: "Detached House" },
-    { value: "Semi-Detached House", label: "Semi-Detached House" },
-    { value: "Condo", label: "Condo" },
-    { value: "Land", label: "Land" }, // Added Land option
+    { value: "", label: "Select Property Type" }, { value: "Duplex", label: "Duplex" }, { value: "Bungalow", label: "Bungalow" },
+    { value: "Apartment", label: "Apartment" }, { value: "Penthouse", label: "Penthouse" }, { value: "Detached House", label: "Detached House" },
+    { value: "Semi-Detached House", label: "Semi-Detached House" }, { value: "Condo", label: "Condo" }, { value: "Land", label: "Land" }
   ];
-
-  const bedroomOptions = [
-    { value: "", label: "Any Bedrooms" },
-    ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bedroom(s)` })),
-  ];
-
-  const bathroomOptions = [
-    { value: "", label: "Any Bathrooms" },
-    ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bathroom(s)` })),
-  ];
-
+  const bedroomOptions = [{ value: "", label: "Any Bedrooms" }, ...[1, 2, 3, 4, 5].map(num => ({ value: String(num), label: `${num} Bedroom(s)` }))];
+  const bathroomOptions = [{ value: "", label: "Any Bathrooms" }, ...[1, 2, 3, 4, 5].map(num => ({ value: String(num), label: `${num} Bathroom(s)` }))];
   const zoningTypeOptions = [
-    { value: "", label: "Select Zoning Type" },
-    { value: "Residential", label: "Residential" },
-    { value: "Commercial", label: "Commercial" },
-    { value: "Industrial", label: "Industrial" },
-    { value: "Agricultural", label: "Agricultural" },
-    { value: "Mixed-Use", label: "Mixed-Use" },
-    { value: "Other", label: "Other" },
+    { value: "", label: "Select Zoning Type" }, { value: "Residential", label: "Residential" }, { value: "Commercial", label: "Commercial" },
+    { value: "Industrial", label: "Industrial" }, { value: "Agricultural", label: "Agricultural" }, { value: "Mixed-Use", label: "Mixed-Use" },
+    { value: "Other", label: "Other" }
   ];
-
   const titleTypeOptions = [
-    { value: "", label: "Select Title Type" },
-    { value: "C of O", label: "Certificate of Occupancy (C of O)" },
-    { value: "Gazette", label: "Gazette" },
-    { value: "Deed of Assignment", label: "Deed of Assignment" },
-    { value: "Governor's Consent", label: "Governor's Consent" },
-    { value: "Survey Plan", label: "Survey Plan" },
-    { value: "Excision", label: "Excision" },
-    { value: "Other", label: "Other" },
+    { value: "", label: "Select Title Type" }, { value: "C of O", label: "Certificate of Occupancy (C of O)" },
+    { value: "Gazette", label: "Gazette" }, { value: "Deed of Assignment", label: "Deed of Assignment" },
+    { value: "Governor's Consent", label: "Governor's Consent" }, { value: "Survey Plan", label: "Survey Plan" },
+    { value: "Excision", label: "Excision" }, { value: "Other", label: "Other" }
+  ];
+  const heatingTypeOptions = [
+    { value: "", label: "Select Heating Type" }, { value: "Central Heating", label: "Central Heating" },
+    { value: "Electric", label: "Electric" }, { value: "Gas", label: "Gas" }, { value: "Solar", label: "Solar" },
+    { value: "None", label: "None" }
+  ];
+  const coolingTypeOptions = [
+    { value: "", label: "Select Cooling Type" }, { value: "Central AC", label: "Central AC" }, { value: "Window Unit", label: "Window Unit" },
+    { value: "Split System", label: "Split System" }, { value: "None", label: "None" }
   ];
 
-  const inputStyles = `py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-    darkMode
-      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-  }`;
+  const uniformInputClass = (isTextArea = false) => `w-full py-1 px-4 border rounded-xl shadow-sm transition-all duration-200
+  ${darkMode
+    ? "bg-gray-700 text-white border-gray-600 hover:border-green-500 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 focus:ring-green-400"
+    : "bg-white text-gray-800 border-gray-300 hover:border-green-500 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 focus:ring-600"}
+  ${isTextArea ? 'min-h-[8rem]' : 'h-10'}`;
+  const labelClass = `block text-sm font-semibold mb-2 ${darkMode ? "text-gray-200" : "text-gray-700"}`;
+  const sectionTitleClass = `text-lg font-bold mb-4 border-b pb-2 ${darkMode ? "text-gray-100 border-gray-700" : "text-gray-800 border-gray-300"}`;
 
-
-  if (loading) {
-    return (
-      <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        <p className={`text-lg ${darkMode ? "text-green-400" : "text-green-700"}`}>Loading listing...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        <p className={`text-lg ${darkMode ? "text-red-400" : "text-red-600"}`}>Error loading listing. Please check the URL.</p>
-      </div>
-    );
-  }
-
-  if (!listing) {
-    return (
-      <div className={`flex justify-center items-center min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
-        <p className={`text-lg ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Listing not found.</p>
-      </div>
-    );
-  }
-
-  const allImagesForDisplay = [
-    ...existingImages.map(img => ({ url: img.url, identifier: img.url, type: 'existing' })),
-    ...newImages.map(file => ({ url: file.base64, identifier: file.originalname, type: 'newFile' })),
-    ...newImageURLs.map(url => ({ url: url, identifier: url, type: 'newUrl' }))
-  ];
+  if (loading) return <div className={`flex items-center justify-center min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>Loading...</div>;
 
   return (
-    <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}>
-      <main className="space-y-6 w-full max-w-2xl">
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className={`rounded-2xl shadow-2xl w-full p-8 space-y-6 relative ${darkMode ? "bg-gray-800" : "bg-white"}`}
-        >
-          <button
-            type="button"
-            onClick={handleClose}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white text-2xl font-bold"
-            aria-label="Close"
-          >
-            &times;
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className={`relative min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-2 pb-10`}>
+      <motion.form onSubmit={handleSubmit} className={`max-w-4xl mx-auto p-8 rounded-3xl shadow-2xl space-y-8 ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
+        <div className="relative">
+          <button type="button" onClick={handleExit} className="absolute -top-4 -right-4 p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 z-10">
+            <CloseIcon className="h-5 w-5" />
           </button>
+          <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Edit Property Listing</h1>
+        </div>
 
-          <motion.div
-            className="text-center max-w-3xl mx-auto px-4"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-              Editing:
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
+          <h2 className={sectionTitleClass}>Core Details</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+              <label htmlFor="purchaseCategory" className={labelClass}>Purchase Category <span className="text-red-500">*</span></label>
+              <Dropdown options={purchaseCategoryOptions} value={tempState.purchaseCategory} onChange={(value) => handleTempStateChange('purchaseCategory', value)} placeholder="Select a category" />
             </div>
-            <h2 className={`text-2xl font-bold break-words leading-snug ${darkMode ? "text-green-400" : "text-green-700"}`}>
-              {listing.title}
-            </h2>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-6"
-          >
+            <div className="md:col-span-2">
+              <label htmlFor="title" className={labelClass}>Title <span className="text-red-500">*</span></label>
+              <input type="text" id="title" value={tempState.title} onChange={(e) => handleTempStateChange('title', e.target.value)} placeholder="e.g., Beautiful 3-Bedroom Duplex" className={uniformInputClass()} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Purchase Category</label>
-              <Dropdown
-                placeholder="Select Category"
-                options={purchaseCategoryOptions}
-                value={purchaseCategory}
-                onChange={setPurchaseCategory}
-                className="w-full"
-                refProp={purchaseCategoryRef} // Pass ref to Dropdown
-                programmaticOpen={purchaseCategoryDropdownOpen} // Pass the new state
-              />
+              <label htmlFor="propertyType" className={labelClass}>Property Type <span className="text-red-500">*</span></label>
+              <Dropdown options={propertyTypeOptions} value={tempState.propertyType} onChange={(value) => handleTempStateChange('propertyType', value)} placeholder="Select property type" />
             </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(capitalizeFirstLetter(e.target.value))}
-                className={`block w-full ${inputStyles}`}
-                required
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Location</label>
-              <input
-                type="text"
-                value={locationValue} // Use locationValue
-                onChange={(e) => setLocationValue(capitalizeFirstLetter(e.target.value))} // Use setLocationValue
-                className={`block w-full ${inputStyles}`}
-                required
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>State</label>
-              <Dropdown
-                placeholder="Select State"
-                options={stateOptions}
-                value={stateValue}
-                onChange={setStateValue}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Property Type</label>
-              <Dropdown
-                placeholder="Select Property Type"
-                options={propertyTypeOptions}
-                value={propertyType}
-                onChange={setPropertyType}
-                className="w-full"
-              />
-            </div>
-
-            {/* Conditional fields for non-land properties */}
-            {!isLandProperty && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bedrooms</label>
-                  <Dropdown
-                    placeholder="Any Bedrooms"
-                    options={bedroomOptions}
-                    value={bedrooms}
-                    onChange={setBedrooms}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Bathrooms</label>
-                  <Dropdown
-                    placeholder="Any Bathrooms"
-                    options={bathroomOptions}
-                    value={bathrooms}
-                    onChange={setBathrooms}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>
-                {purchaseCategory === 'Rent' ? 'Price (₦ / Year)' :
-                  purchaseCategory === 'Sale' ? 'Price (₦)' :
-                    purchaseCategory === 'Lease' ? 'Price (₦ / Lease)' :
-                      purchaseCategory === 'Short Let' ? 'Price (₦ / Night)' :
-                        'Price (₦ / Month)'}
-              </label>
-              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className={`block w-full ${inputStyles}`} required />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Status (Optional)</label>
-              <Dropdown
-                placeholder="Select Status"
-                options={statusOptions}
-                value={status}
-                onChange={setStatus}
-                className="w-full"
-                refProp={statusRef} // Pass ref to Dropdown
-                programmaticOpen={statusDropdownOpen} // Pass the new state
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Description (Optional)</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={`block w-full ${inputStyles}`}
-                rows="4"
-                placeholder="Detailed description of the property..."
-              ></textarea>
-            </div>
-
-            {/* Conditional fields for non-land properties */}
-            {!isLandProperty && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Square Footage (Optional)</label>
-                  <input
-                    type="number"
-                    value={squareFootage}
-                    onChange={(e) => setSquareFootage(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Lot Size (sqft or acres) (Optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={lotSize}
-                    onChange={(e) => setLotSize(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Land-specific fields */}
-            {isLandProperty && (
-              <>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Land Size (sqft or acres) (Optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={landSize}
-                    onChange={(e) => setLandSize(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                    placeholder="e.g., 5000 sqft or 1.5 acres"
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Zoning Type (Optional)</label>
-                  <Dropdown
-                    placeholder="Select Zoning Type"
-                    options={zoningTypeOptions}
-                    value={zoningType}
-                    onChange={setZoningType}
-                    className="w-full"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Title Type field - now always visible */}
-            <div>
-              <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Title Type (Optional)</label>
-              <Dropdown
-                placeholder="Select Title Type"
-                options={titleTypeOptions}
-                value={titleType}
-                onChange={setTitleType}
-                className="w-full"
-              />
-            </div>
-
             {!isLandProperty && (
               <>
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Year Built (Optional)</label>
-                  <input
-                    type="number"
-                    value={yearBuilt}
-                    onChange={(e) => setYearBuilt(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                  />
+                  <label htmlFor="bedrooms" className={labelClass}>Bedrooms <span className="text-red-500">*</span></label>
+                  <Dropdown options={bedroomOptions} value={tempState.bedrooms} onChange={(value) => handleTempStateChange('bedrooms', value)} placeholder="Any" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Heating Type (Optional)</label>
-                    <input
-                      type="text"
-                      value={heatingType}
-                      onChange={(e) => setHeatingType(e.target.value)}
-                      className={`block w-full ${inputStyles}`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Cooling Type (Optional)</label>
-                    <input
-                      type="text"
-                      value={coolingType}
-                      onChange={(e) => setCoolingType(e.target.value)}
-                      className={`block w-full ${inputStyles}`}
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Parking (Optional)</label>
-                  <input
-                    type="text"
-                    value={parking}
-                    onChange={(e) => setParking(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                    placeholder="e.g., Garage, Street, Driveway"
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Amenities (comma-separated) (Optional)</label>
-                  <textarea
-                    value={amenities}
-                    onChange={(e) => setAmenities(e.target.value)}
-                    className={`block w-full ${inputStyles}`}
-                    rows="3"
-                    placeholder="e.g., Pool, Gym, Balcony, Garden"
-                  ></textarea>
+                  <label htmlFor="bathrooms" className={labelClass}>Bathrooms <span className="text-red-500">*</span></label>
+                  <Dropdown options={bathroomOptions} value={tempState.bathrooms} onChange={(value) => handleTempStateChange('bathrooms', value)} placeholder="Any" />
                 </div>
               </>
             )}
-
-
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Images</label>
-
-              <div {...getRootProps()} className={`p-6 border-dashed border-2 rounded-xl cursor-pointer text-center mb-4 transition-all duration-200 ${
-                darkMode
-                  ? "border-gray-600 bg-gray-700 text-gray-300 hover:border-green-500 focus:ring-green-400"
-                  : "border-gray-300 bg-gray-50 text-gray-600 hover:border-green-500 focus:ring-green-600"
-              }`}>
-                <input {...getInputProps()} />
-                Drag & drop or click to add new images
+              <label htmlFor="location" className={labelClass}>Location <span className="text-red-500">*</span></label>
+              <input type="text" id="location" value={tempState.location} onChange={(e) => handleTempStateChange('location', e.target.value)} placeholder="e.g., Lekki Phase 1, Lagos" className={uniformInputClass()} required />
+            </div>
+            <div>
+              <label htmlFor="stateValue" className={labelClass}>State <span className="text-red-500">*</span></label>
+              <Dropdown options={stateOptions} value={tempState.stateValue} onChange={(value) => handleTempStateChange('stateValue', value)} placeholder="Select a state" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="price" className={labelClass}>Price (NGN) <span className="text-red-500">*</span></label>
+              <input type="number" id="price" value={tempState.price} onChange={(e) => handleTempStateChange('price', e.target.value)} placeholder="e.g., 50000000" className={uniformInputClass()} required />
+            </div>
+            {['admin', 'agency_admin', 'agent'].includes(userRole) && statusOptions.length > 0 && (
+              <div>
+                <label htmlFor="statusValue" className={labelClass}>Status</label>
+                <Dropdown options={statusOptions} value={tempState.statusValue} onChange={(value) => handleTempStateChange('statusValue', value)} placeholder="Select status" />
               </div>
+            )}
+          </div>
+        </motion.div>
 
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  className={`flex-grow block w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-                    darkMode
-                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-                  }`}
-                  placeholder="Or add new image URL: [https://example.com/image.jpg](https://example.com/image.jpg)"
-                />
-                <button type="button" onClick={handleAddImageUrl} className="bg-green-600 text-white px-4 py-2 rounded-2xl hover:bg-green-700 text-sm transition-all duration-200">Add URL</button>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
+          <h2 className={sectionTitleClass}>Images</h2>
+          <div className="space-y-4">
+            <div {...getRootProps()} className={`border border-dashed rounded-2xl py-6 px-4 text-center cursor-pointer transition-all duration-300 ${darkMode ? "border-gray-600 hover:border-green-500 text-gray-400" : "border-gray-300 hover:border-green-500 text-gray-500"}`}>
+              <input {...getInputProps()} />
+              <p>Drag 'n' drop some files here, or click to select files</p>
+              <p className="text-xs mt-1">(Minimum 2 images required)</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input type="text" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="Or paste an image URL here..." className={uniformInputClass()} />
+              <button type="button" onClick={handleAddImageUrl} className={`bg-green-600 text-white py-2 px-6 rounded-2xl transition-colors duration-200 hover:bg-green-700 font-bold whitespace-nowrap`}>Add URL</button>
+            </div>
+            {allImagesForDisplay.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {allImagesForDisplay.map((item, index) => (
+                  <motion.div key={item.identifier || index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative group overflow-hidden rounded-2xl shadow-lg border">
+                    <img src={item.url} alt={`Listing Image ${index + 1}`} className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <div className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveImage(item.identifier, item.type)}>
+                      <CloseIcon className="h-4 w-4 text-white" />
+                    </div>
+                    <div className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold ${item.identifier === thumbnailIdentifier ? "bg-green-700 text-white" : "bg-white/80 text-gray-800 backdrop-blur-sm"}`}>
+                      {item.identifier === thumbnailIdentifier ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}
+                    </div>
+                    <button type="button" onClick={() => setAsThumbnail(item.identifier)} className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100"></button>
+                  </motion.div>
+                ))}
               </div>
+            )}
+          </div>
+        </motion.div>
 
-              {(allImagesForDisplay.length > 0) && (
-                <div className="grid grid-cols-2 gap-3">
-                  {allImagesForDisplay.map((item, index) => {
-                    const isThumbnail = item.identifier === thumbnailIdentifier;
-                    return (
-                      <motion.div
-                        key={item.identifier} // Use the unique identifier as key
-                        className={`border p-2 rounded-2xl relative transition-all duration-200 ${isThumbnail ? 'border-green-500 ring-2 ring-green-500' : ''} ${
-                          darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-200"
-                        }`}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <img
-                          src={item.url}
-                          alt={`Listing Image ${index}`}
-                          className="w-full h-32 object-cover rounded-xl"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(item.identifier, item.type)}
-                          className="absolute top-1 right-1 text-red-600 bg-white rounded-full p-1 shadow transition-all duration-200"
-                        >✕</button>
-                        <button
-                          type="button"
-                          onClick={() => setAsThumbnail(item.identifier)}
-                          className={`text-xs underline mt-1 block transition-all duration-200 ${darkMode ? "text-green-400" : "text-green-700"}`}
-                        >{isThumbnail ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</button>
-                      </motion.div>
-                    );
-                  })}
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="space-y-6">
+          <h2 className={sectionTitleClass}>Optional Details</h2>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="description" className={labelClass}>Description</label>
+              <textarea id="description" value={tempState.description} onChange={(e) => handleTempStateChange('description', e.target.value)} placeholder="Provide a detailed description of the property..." className={uniformInputClass(true)}></textarea>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label htmlFor="squareFootage" className={labelClass}>Square Footage</label>
+                <input type="number" id="squareFootage" value={tempState.squareFootage} onChange={(e) => handleTempStateChange('squareFootage', e.target.value)} placeholder="e.g., 2000" className={uniformInputClass()} />
+              </div>
+              <div>
+                <label htmlFor="yearBuilt" className={labelClass}>Year Built</label>
+                <input type="number" id="yearBuilt" value={tempState.yearBuilt} onChange={(e) => handleTempStateChange('yearBuilt', e.target.value)} placeholder="e.g., 2010" className={uniformInputClass()} />
+              </div>
+              <div>
+                <label htmlFor="lotSize" className={labelClass}>Lot Size</label>
+                <input type="text" id="lotSize" value={tempState.lotSize} onChange={(e) => handleTempStateChange('lotSize', e.target.value)} placeholder="e.g., 500 sq meters" className={uniformInputClass()} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label htmlFor="parking" className={labelClass}>Parking</label>
+                <input type="text" id="parking" value={tempState.parking} onChange={(e) => handleTempStateChange('parking', e.target.value)} placeholder="e.g., 2-car garage" className={uniformInputClass()} />
+              </div>
+              {!isLandProperty && (
+                <>
+                  <div>
+                    <label htmlFor="heatingType" className={labelClass}>Heating Type</label>
+                    <Dropdown options={heatingTypeOptions} value={tempState.heatingType} onChange={(value) => handleTempStateChange('heatingType', value)} placeholder="Select heating type" />
                 </div>
+                  <div>
+                    <label htmlFor="coolingType" className={labelClass}>Cooling Type</label>
+                    <Dropdown options={coolingTypeOptions} value={tempState.coolingType} onChange={(value) => handleTempStateChange('coolingType', value)} placeholder="Select cooling type" />
+                  </div>
+                </>
+              )}
+              {isLandProperty && (
+                <>
+                  <div>
+                    <label htmlFor="landSize" className={labelClass}>Land Size</label>
+                    <input type="text" id="landSize" value={tempState.landSize} onChange={(e) => handleTempStateChange('landSize', e.target.value)} placeholder="e.g., 600 sqm" className={uniformInputClass()} />
+                  </div>
+                  <div>
+                    <label htmlFor="zoningType" className={labelClass}>Zoning Type</label>
+                    <Dropdown options={zoningTypeOptions} value={tempState.zoningType} onChange={(value) => handleTempStateChange('zoningType', value)} placeholder="Select zoning type" />
+                  </div>
+                </>
               )}
             </div>
+            <div>
+              <label htmlFor="amenities" className={labelClass}>Amenities</label>
+              <input type="text" id="amenities" value={tempState.amenities} onChange={(e) => handleTempStateChange('amenities', e.target.value)} placeholder="e.g., Pool, Gym, Security" className={uniformInputClass()} />
+            </div>
+            {isLandProperty && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="titleType" className={labelClass}>Title Type</label>
+                  <Dropdown options={titleTypeOptions} value={tempState.titleType} onChange={(value) => handleTempStateChange('titleType', value)} placeholder="Select title type" />
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
 
-            <button type="submit" className="w-full bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-200">
-              Update Listing
-            </button>
+        {userRole === 'admin' && (
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="space-y-6">
+            <h2 className={sectionTitleClass}>Admin Options</h2>
+            <div className="flex justify-center items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_featured"
+                checked={tempState.isFeatured}
+                onChange={(e) => handleTempStateChange('isFeatured', e.target.checked)}
+                className={`h-5 w-5 rounded-md focus:ring-green-500 border ${darkMode ? "bg-gray-800 border-gray-600 checked:bg-green-600" : "border-gray-300 checked:bg-green-600"}`}
+              />
+              <label htmlFor="is_featured" className={`${labelClass} mb-0 font-bold`}>Mark as Featured Listing (Admin Only)</label>
+            </div>
           </motion.div>
-        </motion.form>
-      </main>
-    </div>
+        )}
+
+        <div className="flex justify-center">
+          <button type="submit" className="w-full md:w-1/3 bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-300 shadow-md">Update Listing</button>
+        </div>
+      </motion.form>
+    </motion.div>
   );
 };
 

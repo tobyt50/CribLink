@@ -12,7 +12,8 @@ import {
   FileText,
   Landmark, // For Agency Info
   MessageSquare, // For Inquiries
-  Bookmark // Import the Bookmark icon here
+  Bookmark,
+  Award// Import the Bookmark icon here
 } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell.js';
 
@@ -23,6 +24,7 @@ const MENU_ITEMS = [
   { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
   { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
   { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' },
+  { name: 'Agent Performance', to: '/agency/agent-performance', icon: <Award />, key: 'agent-performance' },
   { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
   { name: 'Settings', to: '/agency/settings', icon: <Settings />, key: 'settings' },

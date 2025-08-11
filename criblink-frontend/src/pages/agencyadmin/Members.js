@@ -170,7 +170,7 @@ const MembersSkeleton = ({ darkMode, viewMode }) => (
       </div>
     ) : (
       <div className="overflow-x-auto">
-        <table className={`w-full text-sm min-w-max`}>
+        <table className={`w-full text-sm table-auto`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
               {[...Array(7)].map((_, i) => ( // 7 skeleton table headers
@@ -686,7 +686,7 @@ const Members = () => {
   const totalAdmins = members.filter(member => member.agency_role === 'agency_admin').length;
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Conditionally render sidebar for agency_admin role */}
       {user?.role === 'agency_admin' && (
         <>
@@ -1017,7 +1017,7 @@ const Members = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed table-fixed */}
+                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed  */}
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                         <th onClick={() => handleSortClick('agent_name')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[120px]">Name {renderSortIcon('agent_name')}</th>
@@ -1083,7 +1083,7 @@ const Members = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed table-fixed */}
+                  <table className={`w-full text-sm ${darkMode ? "text-gray-300" : "text-gray-700"}`}> {/* Removed  */}
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                         <th onClick={() => handleSortClick('full_name')} className="cursor-pointer text-left py-2 px-2 whitespace-nowrap min-w-[120px]">Name {renderSortIcon('full_name')}</th>

@@ -1,10 +1,8 @@
-// ListingCard.js
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
 import { Pencil, Trash2 } from "lucide-react";
-
 
 function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = false, userRole = 'guest', userId = null, userAgencyId = null, getRoleBasePath, onDeleteListing }) {
   const navigate = useNavigate();
@@ -45,7 +43,6 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         tagRightRef.current && !tagRightRef.current.contains(event.target)    // Check if click is on right tag
       ) {
         setShowDropdown(false);
-        // setHighlightField(null); // Clear highlight when dropdown closes - removed
       }
     };
 
@@ -63,6 +60,7 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
   }, [showDropdown]); // Dependency array includes showDropdown to re-run effect when its state changes
 
   const listing = { ...initialListing, rating: initialListing.rating || 4.27 };
+  const displayStatus = listing.is_featured === true ? "Featured" : listing.status;
 
   const isLandProperty = listing.property_type?.toLowerCase() === 'land';
 
@@ -255,22 +253,20 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
         {/* Tags */}
         {listing.purchase_category && (
           <div
-          ref={tagLeftRef}
-          className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-400 truncate"
-          onClick={(e) => handleTagClick(e, 'left')}
-        >
-          {getCategoryIcon(listing.purchase_category)}
-        </div>        
-        
-        
+            ref={tagLeftRef}
+            className="absolute top-0 left-0 rounded-br-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs bg-green-400 truncate"
+            onClick={(e) => handleTagClick(e, 'left')}
+          >
+            {getCategoryIcon(listing.purchase_category)}
+          </div>
         )}
-        {listing.status && (
+        {displayStatus && (
           <div
             ref={tagRightRef} // Attach ref here
-            className={`absolute top-0 right-0 rounded-bl-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs ${getStatusColor(listing.status)} max-w-[70%] truncate`}
+            className={`absolute top-0 right-0 rounded-bl-2xl z-10 px-2 py-0.5 font-semibold text-white text-[0.65rem] sm:text-xs ${getStatusColor(displayStatus)} max-w-[70%] truncate`}
             onClick={(e) => handleTagClick(e, 'right')} // Pass 'right' for status
           >
-            {getStatusIcon(listing.status)}
+            {getStatusIcon(displayStatus)}
           </div>
         )}
       </div>
@@ -376,7 +372,6 @@ function ListingCard({ listing: initialListing, onFavoriteToggle, isFavorited = 
     </svg>
   </button>
 </div>
-
 
         </div>
       </div>

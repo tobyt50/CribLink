@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-// Removed: const upload = require('../middleware/uploadMiddleware'); // No longer needed
 
 const {
     getAllListings,
@@ -9,11 +8,13 @@ const {
     updateListing,
     deleteListing,
     getPurchaseCategories,
+    getFeaturedListings, // New: Import the new controller function
 } = require('../controllers/listingsController');
 const { authenticateToken, optionalAuthenticateToken } = require('../middleware/authMiddleware');
 
 // Public Routes
 router.get('/categories', getPurchaseCategories);
+router.get('/featured', getFeaturedListings); // New: Endpoint for featured listings
 router.get('/:id', getListingById);
 
 router.get('/', optionalAuthenticateToken, getAllListings);

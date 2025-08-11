@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ListingCard from "../components/ListingCard";
 import API_BASE_URL from "../config";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ArrowDownUp, Search, Star, ArrowLeftCircleIcon, ArrowRightCircleIcon, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
 import { useMessage } from "../context/MessageContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
@@ -25,23 +25,16 @@ const ListingCardSkeleton = ({ darkMode }) => (
   </div>
 );
 
-// New Skeleton for Headers (This component is no longer used for headers, but kept for reference if needed elsewhere)
-const HeaderSkeleton = ({ darkMode, widthClass, heightClass }) => (
-  <div className={`animate-pulse rounded-xl ${widthClass} ${heightClass} ${darkMode ? "bg-gray-700" : "bg-gray-300"}`}></div>
-);
-
-
 function Home() {
   const [listings, setListings] = useState([]);
   const [featuredListings, setFeaturedListings] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [category, setCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [user, setUser] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("date_listed_desc");
-  const searchInputRef = useRef(null);
-  const searchContextRef = useRef(null);
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
@@ -49,10 +42,9 @@ function Home() {
 
   const featuredCarouselRef = useRef(null);
   const autoSwipeIntervalRef = useRef(null);
-  const initialScrollSet = useRef(false); // New ref to ensure initial scroll happens once
+  const initialScrollSet = useRef(false);
   const [loading, setLoading] = useState(true);
 
-  const [showSearchContext, setShowSearchContext] = useState(false);
   const [userFavourites, setUserFavourites] = useState([]);
 
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -66,13 +58,8 @@ function Home() {
     purchaseCategory: "",
   });
 
-  // Define how many featured items are visible at once on different screen sizes
-  // This might not be directly used for the new mobile partial view, but kept for larger screens.
-  const FEATURED_ITEMS_PER_VIEW = {
-    sm: 2, // On small screens (sm), show 2 items
-    lg: 4, // On large screens (lg), show 4 items
-    default: 2 // Default for extra small screens, now shows 2 items
-  };
+  // FIX: Determine if the carousel functionality should be active.
+  const isCarousel = featuredListings.length > 1;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -173,21 +160,32 @@ function Home() {
     });
   };
 
+  useEffect(() => {
+    const fetchFeaturedListings = async () => {
+      setFeaturedLoading(true);
+      try {
+        const response = await axiosInstance.get(`${API_BASE_URL}/listings/featured`);
+        setFeaturedListings(response.data.listings || []);
+      } catch (error) {
+        console.error("Failed to fetch featured listings:", error);
+        setFeaturedListings([]);
+      } finally {
+        setFeaturedLoading(false);
+      }
+    };
+    fetchFeaturedListings();
+  }, []);
+
   const fetchListings = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
 
-    if (advancedFilters.purchaseCategory) {
-      params.append("purchase_category", advancedFilters.purchaseCategory);
-    } else if (category) {
-      params.append("purchase_category", category);
-    }
-
+    if (advancedFilters.purchaseCategory) params.append("purchase_category", advancedFilters.purchaseCategory);
+    else if (category) params.append("purchase_category", category);
     if (searchTerm) params.append("search", searchTerm);
     params.append("page", currentPage);
     params.append("limit", ITEMS_PER_PAGE);
     params.append("sortBy", sortBy);
-
     if (advancedFilters.location) params.append("location", advancedFilters.location);
     if (advancedFilters.propertyType) params.append("property_type", advancedFilters.propertyType);
     if (advancedFilters.bedrooms) params.append("bedrooms", advancedFilters.bedrooms);
@@ -196,60 +194,17 @@ function Home() {
     if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
 
     const url = `${API_BASE_URL}/listings?${params.toString()}`;
-    console.log("Fetching listings with URL:", url);
-
-    const featuredParams = new URLSearchParams();
-    featuredParams.append("status", "Featured");
-    featuredParams.append("limit", 12);
-
-    if (advancedFilters.purchaseCategory) {
-        featuredParams.append("purchase_category", advancedFilters.purchaseCategory);
-    } else if (category) {
-        featuredParams.append("purchase_category", advancedFilters.purchaseCategory);
-    }
-    if (searchTerm) featuredParams.append("search", searchTerm);
-    if (advancedFilters.location) featuredParams.append("location", advancedFilters.location);
-    if (advancedFilters.propertyType) featuredParams.append("property_type", advancedFilters.propertyType);
-    if (advancedFilters.bedrooms) featuredParams.append("bedrooms", advancedFilters.bedrooms);
-    if (advancedFilters.bathrooms) featuredParams.append("bathrooms", advancedFilters.bathrooms);
-    if (advancedFilters.minPrice) params.append("min_price", advancedFilters.minPrice);
-    if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
-
-    const featuredUrl = `${API_BASE_URL}/listings?${featuredParams.toString()}`;
-
     const token = localStorage.getItem("token");
-    const headers = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    const headers = token ? { "Authorization": `Bearer ${token}` } : {};
 
     try {
       const response = await axiosInstance.get(url, { headers });
-      const allListings = response.data.listings || [];
+      setListings(response.data.listings || []);
       setTotalPages(response.data.totalPages || 1);
-
-      const featuredResponse = await axiosInstance.get(featuredUrl, { headers });
-      const fetchedFeaturedListings = featuredResponse.data.listings || [];
-      setFeaturedListings(fetchedFeaturedListings);
-
-      const combinedListings = [...allListings];
-      fetchedFeaturedListings.forEach(featuredListing => {
-        if (!combinedListings.some(l => l.property_id === featuredListing.property_id)) {
-          combinedListings.push(featuredListing);
-        }
-      });
-      setListings(combinedListings);
-
     } catch (error) {
-      let errorMessage = 'Failed to fetch listings. Please try again.';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch listings.';
       showMessage(errorMessage, 'error');
       setListings([]);
-      setFeaturedListings([]);
       setTotalPages(1);
     } finally {
       setLoading(false);
@@ -265,35 +220,22 @@ function Home() {
   const handleSearch = useCallback((e) => {
     e.preventDefault();
     const queryParams = new URLSearchParams();
+    if (searchTerm.trim()) queryParams.append("query", searchTerm.trim());
+    if (advancedFilters.purchaseCategory || category) queryParams.append("category", advancedFilters.purchaseCategory || category);
+    if (advancedFilters.location) queryParams.append("location", advancedFilters.location);
+    if (advancedFilters.propertyType) queryParams.append("property_type", advancedFilters.propertyType);
+    if (advancedFilters.subtype) queryParams.append("subtype", advancedFilters.subtype);
+    if (advancedFilters.bedrooms) queryParams.append("bedrooms", advancedFilters.bedrooms);
+    if (advancedFilters.bathrooms) queryParams.append("bathrooms", advancedFilters.bathrooms);
+    if (advancedFilters.minPrice) queryParams.append("min_price", advancedFilters.minPrice);
+    if (advancedFilters.maxPrice) queryParams.append("max_price", advancedFilters.maxPrice);
 
-    if (searchTerm.trim()) {
-      queryParams.append("query", encodeURIComponent(searchTerm.trim()));
-    }
-    if (advancedFilters.purchaseCategory) {
-      queryParams.append("category", encodeURIComponent(advancedFilters.purchaseCategory));
-    } else if (category) {
-      queryParams.append("category", encodeURIComponent(category));
-    }
-
-    if (advancedFilters.location) queryParams.append("location", encodeURIComponent(advancedFilters.location));
-    if (advancedFilters.propertyType) queryParams.append("property_type", encodeURIComponent(advancedFilters.propertyType));
-    if (advancedFilters.subtype) queryParams.append("subtype", encodeURIComponent(advancedFilters.subtype));
-    if (advancedFilters.bedrooms) queryParams.append("bedrooms", encodeURIComponent(advancedFilters.bedrooms));
-    if (advancedFilters.bathrooms) queryParams.append("bathrooms", encodeURIComponent(advancedFilters.bathrooms));
-    if (advancedFilters.minPrice) queryParams.append("min_price", encodeURIComponent(advancedFilters.minPrice));
-    if (advancedFilters.maxPrice) queryParams.append("max_price", encodeURIComponent(advancedFilters.maxPrice));
-
-    if (searchTerm.trim() || advancedFilters.purchaseCategory || Object.values(advancedFilters).some(filter => filter)) {
+    if (queryParams.toString()) {
       navigate(`/search?${queryParams.toString()}`);
     } else {
       showMessage('Please enter a search term or select a category/filter.', 'info');
     }
-    setShowSearchContext(false);
   }, [searchTerm, category, advancedFilters, navigate, showMessage]);
-
-  const handleSortToggle = useCallback(() => {
-    setSortBy((prev) => (prev === "date_listed_desc" ? "date_listed_asc" : "date_listed_desc"));
-  }, []);
 
   const handlePageChange = useCallback((newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -301,9 +243,8 @@ function Home() {
     }
   }, [totalPages]);
 
-  // Effect to set initial scroll position to the middle set of duplicated items
   useEffect(() => {
-    if (featuredCarouselRef.current && featuredListings.length > 0 && !initialScrollSet.current) {
+    if (isCarousel && featuredCarouselRef.current && !initialScrollSet.current) {
       const carousel = featuredCarouselRef.current;
       const itemElement = carousel.querySelector('.featured-card-item');
       if (itemElement) {
@@ -311,107 +252,64 @@ function Home() {
         const itemMarginLeft = parseFloat(itemStyle.marginLeft);
         const itemMarginRight = parseFloat(itemStyle.marginRight);
         const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-
         const numOriginalItems = featuredListings.length;
-        const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-
-        // Scroll to the beginning of the second set of items
-        carousel.scrollLeft = totalOriginalListWidth;
-        initialScrollSet.current = true; // Mark as set
+        carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
+        initialScrollSet.current = true;
       }
     }
-  }, [featuredListings.length]); // Re-run if the number of featured listings changes
+  }, [featuredListings.length, isCarousel]);
 
-  // Function to scroll the featured carousel with continuous loop
   const scrollFeatured = useCallback((direction) => {
-    if (featuredCarouselRef.current && featuredListings.length > 0) {
-      const carousel = featuredCarouselRef.current;
-      const currentScrollLeft = carousel.scrollLeft;
+    if (!isCarousel || !featuredCarouselRef.current) return;
 
-      const itemElement = carousel.querySelector('.featured-card-item');
-      if (!itemElement) return;
+    const carousel = featuredCarouselRef.current;
+    const itemElement = carousel.querySelector('.featured-card-item');
+    if (!itemElement) return;
 
-      const itemStyle = window.getComputedStyle(itemElement);
-      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-      const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+    const itemStyle = window.getComputedStyle(itemElement);
+    const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+    const itemMarginRight = parseFloat(itemStyle.marginRight);
+    const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+    const numOriginalItems = featuredListings.length;
+    const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+    let newScrollTarget = carousel.scrollLeft;
 
-      const numOriginalItems = featuredListings.length;
-      const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-
-      let newScrollTarget = currentScrollLeft;
-
-      if (direction === 'next') {
-        newScrollTarget += itemWidthWithMargins;
-        // If we've scrolled past the end of the second set (into the third set)
-        if (newScrollTarget >= 2 * totalOriginalListWidth) {
-          // Instantly snap back to the equivalent position in the second set
-          carousel.scrollLeft = currentScrollLeft - totalOriginalListWidth;
-          newScrollTarget = carousel.scrollLeft + itemWidthWithMargins; // Adjust target based on new snapped position
-        }
-      } else { // 'prev'
-        newScrollTarget -= itemWidthWithMargins;
-        // If we've scrolled before the beginning of the second set (into the first set)
-        if (newScrollTarget < totalOriginalListWidth) {
-          // Instantly snap forward to the equivalent position in the second set
-          carousel.scrollLeft = currentScrollLeft + totalOriginalListWidth;
-          newScrollTarget = carousel.scrollLeft - itemWidthWithMargins; // Adjust target based on new snapped position
-        }
+    if (direction === 'next') {
+      newScrollTarget += itemWidthWithMargins;
+      if (newScrollTarget >= 2 * totalOriginalListWidth) {
+        carousel.scrollLeft = carousel.scrollLeft - totalOriginalListWidth;
+        newScrollTarget = carousel.scrollLeft + itemWidthWithMargins;
       }
-
-      carousel.scrollTo({
-        left: newScrollTarget,
-        behavior: 'smooth',
-      });
+    } else {
+      newScrollTarget -= itemWidthWithMargins;
+      if (newScrollTarget < totalOriginalListWidth) {
+        carousel.scrollLeft = carousel.scrollLeft + totalOriginalListWidth;
+        newScrollTarget = carousel.scrollLeft - itemWidthWithMargins;
+      }
     }
-  }, [featuredListings.length]); // Dependency added: featuredListings.length
+    carousel.scrollTo({ left: newScrollTarget, behavior: 'smooth' });
+  }, [featuredListings.length, isCarousel]);
 
-  // Effect for auto-swiping featured listings
   useEffect(() => {
-    if (autoSwipeIntervalRef.current) {
-      clearInterval(autoSwipeIntervalRef.current);
+    if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
+    // FIX: Only start auto-swipe if it is a carousel
+    if (isCarousel) {
+      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 3000);
     }
-
-    // Only enable auto-swipe if there are more items than can be displayed at once
-    // For continuous scroll, we always want auto-swipe if there's at least one item
-    if (featuredListings.length > 0) {
-      autoSwipeIntervalRef.current = setInterval(() => {
-        scrollFeatured('next');
-      }, 3000); // Auto-swipe every 3 seconds for a faster animation
-    }
-
     return () => {
-      if (autoSwipeIntervalRef.current) {
-        clearInterval(autoSwipeIntervalRef.current);
-      }
+      if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
     };
-  }, [featuredListings.length, scrollFeatured]);
+  }, [isCarousel, scrollFeatured]);
 
-  // Touch handlers to stop/restart auto-swipe on manual interaction
   const handleTouchStart = useCallback(() => {
-    if (autoSwipeIntervalRef.current) {
-      clearInterval(autoSwipeIntervalRef.current);
-    }
+    if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    // Restart auto-swipe after a short delay if no further interaction
-    // This will be handled by the useEffect for auto-swipe when dependencies change or component mounts
-    // For now, simply let the useEffect re-evaluate and set the interval if needed.
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showSearchContext && searchContextRef.current && !searchContextRef.current.contains(event.target)) {
-        setShowSearchContext(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showSearchContext, advancedFilters]);
-
+    if (isCarousel) {
+      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 3000);
+    }
+  }, [isCarousel, scrollFeatured]);
 
   return (
     <>
@@ -422,17 +320,9 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {/* "Find Your Dream Property" Header */}
-          {!loading && (
-            <h1
-              className={`font-script text-xl md:text-2xl mb-2 ${
-                darkMode ? "text-green-400" : "text-green-700"
-              }`}
-            >
-              Find Your Dream Property
-            </h1>
-          )}
-
+          <h1 className={`font-script text-xl md:text-2xl mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+            Find Your Dream Property
+          </h1>
           <div className="w-full max-w-4xl mx-auto">
             <HomeSearchFilters
               filters={advancedFilters}
@@ -446,89 +336,70 @@ function Home() {
           </div>
         </motion.div>
 
-        {/* Featured Listings Section */}
-        <motion.div
-          className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${
-            darkMode
-              ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700"
-              : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"
-          }`}
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          {/* "Featured Properties" Header */}
-          {!loading && (
-            <h2
-              className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${
-                darkMode ? "text-green-400" : "text-green-800"
-              }`}
-            >
+        {featuredListings.length > 0 && (
+          <motion.div
+            className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${darkMode ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}`}
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            onTouchStart={isCarousel ? handleTouchStart : undefined}
+            onTouchEnd={isCarousel ? handleTouchEnd : undefined}
+          >
+            <h2 className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
               <Star size={20} className="text-yellow-400 fill-current" />
               Featured Properties
               <Star size={20} className="text-yellow-400 fill-current" />
             </h2>
-          )}
-          <div className="relative">
-            {/* This is the new scrollable container */}
-            <style>{`
-              /* Hide scrollbar for Chrome, Safari and Opera */
-              .no-scrollbar::-webkit-scrollbar {
-                  display: none;
-              }
-              /* Hide scrollbar for IE, Edge and Firefox */
-              .no-scrollbar {
-                  -ms-overflow-style: none;  /* IE and Edge */
-                  scrollbar-width: none;  /* Firefox */
-              }
-            `}</style>
-            <div
-              ref={featuredCarouselRef}
-              // Apply mobile-specific padding, then reset for larger screens
-              className="flex overflow-x-scroll snap-x snap-mandatory pb-4 -mb-4 no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0"
-            >
-              {loading ? (
-                // Render skeletons for featured listings
-                [...Array(FEATURED_ITEMS_PER_VIEW.lg)].map((_, i) => (
-                  <div key={i} className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item">
-                    <ListingCardSkeleton darkMode={darkMode} />
-                  </div>
-                ))
-              ) : featuredListings.length > 0 ? (
-                // Duplicate listings three times to create a continuous loop effect
-                [...featuredListings, ...featuredListings, ...featuredListings].map((listing, index) => (
-                  <div
-                    key={`featured-${listing.property_id}-${index}`} // Unique key for duplicated items
-                    // Mobile: w-[50vw] px-2 for partial view and consistent sizing
-                    // Desktop (md and lg): w-1/2 and w-1/4 for previous layout
-                    className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item"
-                  >
-                    <ListingCard
-                      listing={listing}
-                      isFavorited={userFavourites.includes(listing.property_id)}
-                      onFavoriteToggle={handleFavoriteToggle}
-                      userRole={currentUserRole}
-                      userId={currentUserId}
-                      userAgencyId={currentUserAgencyId}
-                      getRoleBasePath={getRoleBasePath}
-                      onDeleteListing={handleDeleteListing}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className={`col-span-full text-center py-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  No featured listings found.
-                </div>
+            <div className="relative">
+              <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+              
+              {/* FIX: Add navigation buttons only for carousel view */}
+              {isCarousel && (
+                <>
+                  <button onClick={() => scrollFeatured('prev')} className={`absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-200'}`} aria-label="Previous featured item">
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button onClick={() => scrollFeatured('next')} className={`absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-200'}`} aria-label="Next featured item">
+                    <ChevronRight size={24} />
+                  </button>
+                </>
               )}
+
+              <div
+                ref={featuredCarouselRef}
+                className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll snap-x snap-mandatory no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0' : 'justify-center'}`}
+              >
+                {featuredLoading ? (
+                  [...Array(4)].map((_, i) => (
+                    <div key={i} className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item">
+                      <ListingCardSkeleton darkMode={darkMode} />
+                    </div>
+                  ))
+                ) : (
+                  // FIX: Conditionally duplicate listings for carousel effect
+                  (isCarousel ? [...featuredListings, ...featuredListings, ...featuredListings] : featuredListings).map((listing, index) => (
+                    <div
+                      key={`featured-${listing.property_id}-${index}`}
+                      className={`flex-shrink-0 ${isCarousel ? 'snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item' : 'w-full max-w-sm px-2'}`}
+                    >
+                      <ListingCard
+                        listing={listing}
+                        isFavorited={userFavourites.includes(listing.property_id)}
+                        onFavoriteToggle={handleFavoriteToggle}
+                        userRole={currentUserRole}
+                        userId={currentUserId}
+                        userAgencyId={currentUserAgencyId}
+                        getRoleBasePath={getRoleBasePath}
+                        onDeleteListing={handleDeleteListing}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
+          </motion.div>
+        )}
 
-            {/* Navigation buttons for featured listings are removed */}
-          </div>
-        </motion.div>
-
-        {/* "Available Listings" Header */}
         {!loading && (
           <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
             Available Listings
@@ -538,32 +409,17 @@ function Home() {
           className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
           initial="hidden"
           animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.08 },
-            },
-          }}
+          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}
         >
           {loading ? (
-            // Render skeletons for available listings
             [...Array(ITEMS_PER_PAGE)].map((_, i) => (
-              <motion.div
-                key={i}
-                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div key={i} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.4 }}>
                 <ListingCardSkeleton darkMode={darkMode} />
               </motion.div>
             ))
           ) : listings.length > 0 ? (
             listings.map((listing) => (
-              <motion.div
-                key={listing.property_id}
-                variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                transition={{ duration: 0.4 }}
-              >
+              <motion.div key={listing.property_id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.4 }}>
                 <ListingCard
                   listing={listing}
                   isFavorited={userFavourites.includes(listing.property_id)}
@@ -577,11 +433,7 @@ function Home() {
               </motion.div>
             ))
           ) : (
-            <motion.div
-              className={`col-span-full text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
+            <motion.div className={`col-span-full text-center py-12 ${darkMode ? "text-gray-400" : "text-gray-600"}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               No listings found.
             </motion.div>
           )}
@@ -592,11 +444,7 @@ function Home() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
-                darkMode
-                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
             >
               <ChevronLeft size={18} /> Prev
             </button>
@@ -606,11 +454,7 @@ function Home() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
-                darkMode
-                  ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
             >
               Next <ChevronRight size={18} />
             </button>

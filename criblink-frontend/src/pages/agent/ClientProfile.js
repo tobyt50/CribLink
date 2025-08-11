@@ -850,7 +850,7 @@ const ClientProfile = () => {
 
   if (loading) {
     return (
-      <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+      <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
         {/* Sidebar placeholder */}
         {userRole === 'agent' && (
           <div className={`fixed top-0 left-0 h-full ${isCollapsed ? 'w-20' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transition-all duration-300`}>
@@ -890,7 +890,7 @@ const ClientProfile = () => {
   const isChatButtonDisabled = !client || !agentId;
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Conditionally render the mobile menu button for the sidebar */}
       {isMobile && userRole === 'agent' && (
         <motion.button

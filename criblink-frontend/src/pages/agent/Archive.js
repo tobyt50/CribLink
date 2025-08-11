@@ -487,7 +487,7 @@ const Archive = () => {
   const contentShift = isMobile ? 0 : isCollapsed ? 80 : 256;
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Mobile Sidebar Toggle Button */}
       {isMobile && (
         <motion.button
@@ -543,24 +543,24 @@ const Archive = () => {
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setActiveTab('clients')}
-              className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200
+              className={`px-6 py-2 rounded-l-xl text-sm font-semibold transition-colors duration-200
                         ${activeTab === 'clients' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')}`}
             >
-              Archived Clients ({clients.length})
+              Clients ({clients.length})
             </button>
             <button
               onClick={() => setActiveTab('inquiries')}
-              className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200
+              className={`px-6 py-2 rounded-r-xl text-sm font-semibold transition-colors duration-200
                         ${activeTab === 'inquiries' ? 'bg-green-700 text-white shadow-lg' : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')}`}
             >
-              Archived Inquiries ({inquiries.length})
+              Inquiries ({inquiries.length})
             </button>
           </div>
 
           {activeTab === 'clients' ? (
             loadingClients ? (
               <div className="overflow-x-auto">
-                <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       <th className="text-left px-2 py-2 whitespace-nowrap">Name</th>
@@ -577,7 +577,7 @@ const Archive = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       {['full_name', 'email', 'client_status', 'archived_at', 'Actions'].map((key) => (
@@ -660,7 +660,7 @@ const Archive = () => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  <table className={`w-full text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                     <thead>
                       <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                         <th className="text-left px-2 py-2 whitespace-nowrap">Client</th>
@@ -798,7 +798,7 @@ const Archive = () => {
                 ) : (
                   // Desktop table view for inquiries (existing code)
                   <div className="overflow-x-auto">
-                    <table className={`w-full text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <table className={`w-full text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                       <thead>
                         <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                           {[{key: 'clientName', label: 'Client'}, {key: 'propertyTitle', label: 'Property'}, {key: 'lastMessage', label: 'Last Message'}, {key: 'lastMessageTimestamp', label: 'Last Activity'}, {key: 'agent_name', label: 'Archived By'}, {key: 'reassigned_at', label: 'Reassigned At'}, {key: 'Actions', label: 'Actions'}].map(c => (

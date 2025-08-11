@@ -1,48 +1,34 @@
-// src/pages/SignUp.js
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axiosInstance from '../api/axiosInstance'; // Use your configured axios instance
-import { motion } from 'framer-motion';
+import axiosInstance from '../api/axiosInstance';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
-import API_BASE_URL from '../config'; // Import API_BASE_URL
-import { Loader, UserPlus, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical, Landmark, Search, X, ArrowLeft } from 'lucide-react'; // Import necessary icons, added ArrowLeft
+import API_BASE_URL from '../config';
+import { Loader, UserPlus, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical, Landmark, Search, X, Eye, ArrowLeft, Mail } from 'lucide-react';
 
 export default function SignUp() {
   const location = useLocation();
-  // Initialize selectedRole from location state if available, otherwise default to 'user'
   const [selectedRole, setSelectedRole] = useState(location.state?.role || 'user');
-
-  // State for form data, initialized with common fields
   const [form, setForm] = useState({
     full_name: '',
     email: '',
     password: '',
-    confirm_password: '', // Added for password confirmation
-    phone_number: '', // Example agent field
-    // agency_id and new_agency_details will NOT be part of the initial signup payload
-    // They will be sent in a separate request after basic user signup.
+    confirm_password: '',
+    phone_number: '',
   });
-
-  // State for displaying password validation errors
   const [passwordError, setPasswordError] = useState('');
-  // Refactored: signupStep now has 2 values: 0 for initial choice, 1 for combined form
   const [signupStep, setSignupStep] = useState(0);
-
   const navigate = useNavigate();
-  const { darkMode } = useTheme(); // Use the dark mode context
-  const { showMessage } = useMessage(); // Use the showMessage function from MessageContext
-
-  // Agency specific states
+  const { darkMode } = useTheme();
+  const { showMessage } = useMessage();
   const [agencies, setAgencies] = useState([]);
   const [filteredAgencies, setFilteredAgencies] = useState([]);
   const [agencySearchTerm, setAgencySearchTerm] = useState('');
   const [selectedAgencyId, setSelectedAgencyId] = useState(null);
-  const [agencyConnectionStatus, setAgencyConnectionStatus] = useState('none'); // 'none', 'pending', 'connected', 'rejected', 'selected', 'new_agency_pending'
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false); // Not directly used here, but kept for consistency if needed later
-  const optionsMenuRef = useRef(null); // Not directly used here
-
-  // State for new agency registration form
+  const [agencyConnectionStatus, setAgencyConnectionStatus] = useState('none');
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const optionsMenuRef = useRef(null);
   const [showRegisterAgencyForm, setShowRegisterAgencyForm] = useState(false);
   const [newAgencyForm, setNewAgencyForm] = useState({
     name: '',
@@ -56,12 +42,9 @@ export default function SignUp() {
   });
   const [newAgencyLogoPreview, setNewAgencyLogoPreview] = useState('');
   const [registeringAgency, setRegisteringAgency] = useState(false);
-
-  // New state to control visibility of the agency affiliation options
   const [showAgencyAffiliationOptions, setShowAgencyAffiliationOptions] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-
-  // Effect to check for existing token and redirect authenticated users
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
@@ -79,12 +62,11 @@ export default function SignUp() {
     }
   }, [navigate]);
 
-  // Fetch all agencies for the dropdown and search
   const fetchAgencies = useCallback(async () => {
     try {
       const response = await axiosInstance.get(`${API_BASE_URL}/agencies`);
       setAgencies(response.data);
-      setFilteredAgencies(response.data); // Initialize filtered agencies
+      setFilteredAgencies(response.data);
     } catch (error) {
       console.error("Error fetching agencies:", error);
       showMessage("Failed to load agencies.", "error");
@@ -95,43 +77,37 @@ export default function SignUp() {
     fetchAgencies();
   }, [fetchAgencies]);
 
-  // Handle input changes, updating the form state
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    // Clear password error when user types
     if (e.target.name === 'password' || e.target.name === 'confirm_password') {
       setPasswordError('');
     }
   };
 
-  // Handle role switch
   const handleRoleSwitch = (role) => {
     setSelectedRole(role);
-    // Reset agent-specific fields when switching to user role
     if (role === 'user') {
       setForm(prev => ({ ...prev, phone_number: '' }));
       setSelectedAgencyId(null);
       setAgencyConnectionStatus('none');
-      setShowRegisterAgencyForm(false); // Hide agency registration form
-      setNewAgencyForm({ // Reset new agency form
+      setShowRegisterAgencyForm(false);
+      setNewAgencyForm({
         name: '', address: '', phone: '', email: '', website: '', description: '', logoBase64: null, logoOriginalname: null,
       });
       setNewAgencyLogoPreview('');
-      setShowAgencyAffiliationOptions(false); // Reset this too
+      setShowAgencyAffiliationOptions(false);
     }
-    setPasswordError(''); // Clear errors on role switch
+    setPasswordError('');
   };
 
-  // Function to validate password strength
   const validatePassword = (password) => {
     if (password.length < 8) {
       return 'Password must be at least 8 characters long.';
     }
-    // Only require at least one number
     if (!/[0-9]/.test(password)) {
       return 'Password must contain at least one number.';
     }
-    return ''; // No error
+    return '';
   };
 
   const handleAgencySearchChange = (e) => {
@@ -151,17 +127,15 @@ export default function SignUp() {
 
   const handleAgencySelect = (agencyId) => {
     setSelectedAgencyId(agencyId);
-    setAgencyConnectionStatus('selected'); // Indicate an agency has been selected
-    setShowRegisterAgencyForm(false); // Hide new agency form if an existing one is selected
+    setAgencyConnectionStatus('selected');
+    setShowRegisterAgencyForm(false);
   };
 
-  // Handle changes for the new agency registration form
   const handleNewAgencyFormChange = (e) => {
     const { name, value } = e.target;
     setNewAgencyForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle logo upload for new agency
   const handleNewAgencyLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -185,7 +159,6 @@ export default function SignUp() {
     }
   };
 
-  // Clear new agency logo preview
   const handleClearNewAgencyLogo = () => {
     setNewAgencyLogoPreview('');
     setNewAgencyForm(prev => ({
@@ -195,10 +168,9 @@ export default function SignUp() {
     }));
   };
 
-  // Function to toggle the visibility of agency affiliation options
   const toggleAgencyAffiliationOptions = () => {
     setShowAgencyAffiliationOptions(prev => !prev);
-    if (showAgencyAffiliationOptions) { // If it's about to be hidden
+    if (showAgencyAffiliationOptions) {
       setSelectedAgencyId(null);
       setAgencyConnectionStatus('none');
       setShowRegisterAgencyForm(false);
@@ -209,23 +181,19 @@ export default function SignUp() {
     }
   };
 
-  // Refactored: handleNextStep now only moves from step 0 to step 1
   const handleNextStep = (e) => {
     e.preventDefault();
     if (signupStep === 0) {
-      setSignupStep(1); // Move from initial choice to combined form
+      setSignupStep(1);
     } else {
-      // This is the combined step, proceed with actual submission
       handleSubmit(e);
     }
   };
 
-  // Handle form submission (actual API call)
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default form submission if called from handleNextStep
-    setPasswordError(''); // Clear previous password errors
+    e.preventDefault();
+    setPasswordError('');
 
-    // Client-side validation for combined form (Step 1)
     if (!form.full_name || !form.email || !form.password || !form.confirm_password) {
       showMessage('All fields are required.', 'error');
       return;
@@ -235,21 +203,19 @@ export default function SignUp() {
       return;
     }
 
-
     if (form.password !== form.confirm_password) {
       setPasswordError('Passwords do not match.');
-      showMessage('Passwords do not match.', 'error'); // Also show as a toast
-      return; // Stop form submission
+      showMessage('Passwords do not match.', 'error');
+      return;
     }
 
     const passwordStrengthError = validatePassword(form.password);
     if (passwordStrengthError) {
       setPasswordError(passwordStrengthError);
-      showMessage(passwordStrengthError, 'error'); // Also show as a toast
-      return; // Stop form submission
+      showMessage(passwordStrengthError, 'error');
+      return;
     }
 
-    // Construct the payload for basic user signup
     const userSignupPayload = {
       full_name: form.full_name,
       email: form.email,
@@ -259,62 +225,50 @@ export default function SignUp() {
 
     if (selectedRole === 'agent') {
       userSignupPayload.phone_number = form.phone_number;
-      // Do NOT include agency_id or new_agency_details here.
-      // They will be handled in subsequent calls.
     }
 
     try {
-      // Step 1: Sign up the user (basic account creation)
       const signupResponse = await axiosInstance.post('/users/signup', userSignupPayload);
       showMessage('Account created successfully!', 'success', 3000);
 
       const newUser = signupResponse.data.user;
       const newToken = signupResponse.data.token;
 
-      // Store token and user data from the initial signup response
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(newUser));
-      window.dispatchEvent(new Event("authChange")); // Notify AuthContext
+      window.dispatchEvent(new Event("authChange"));
 
-      // Step 2: Handle agency affiliation if applicable and user is an agent
       if (selectedRole === 'agent' && showAgencyAffiliationOptions) {
         if (selectedAgencyId === 'new_agency_pending') {
-          // Register a new agency and become admin
-          setRegisteringAgency(true); // Set loading state for this specific action
+          setRegisteringAgency(true);
           try {
             const registerAgencyPayload = {
               ...newAgencyForm,
-              // Ensure logoBase64 and logoOriginalname are correctly passed
               logoBase64: newAgencyForm.logoBase64,
               logoOriginalname: newAgencyForm.logoOriginalname,
             };
             const registerResponse = await axiosInstance.post(
               `${API_BASE_URL}/agencies/register-agent-agency`,
               registerAgencyPayload,
-              { headers: { Authorization: `Bearer ${newToken}` } } // Use the new token
+              { headers: { Authorization: `Bearer ${newToken}` } }
             );
             showMessage("Agency registered and profile updated successfully!", "success");
 
-            // Update local storage with the new user data (role and agency_id will be updated)
             localStorage.setItem('token', registerResponse.data.token);
             localStorage.setItem('user', JSON.stringify(registerResponse.data.user));
             window.dispatchEvent(new Event("authChange"));
-
           } catch (agencyError) {
             console.error("Error registering new agency during signup:", agencyError.response?.data || agencyError.message);
             showMessage(`Failed to register agency: ${agencyError.response?.data?.message || 'Please try again.'}`, 'error');
-            // Even if agency registration fails, the user account is created.
-            // They can try to affiliate later from their profile settings.
           } finally {
             setRegisteringAgency(false);
           }
         } else if (selectedAgencyId) {
-          // Send request to join existing agency
           try {
             await axiosInstance.post(
               `${API_BASE_URL}/agencies/request-to-join`,
               { agency_id: selectedAgencyId },
-              { headers: { Authorization: `Bearer ${newToken}` } } // Use the new token
+              { headers: { Authorization: `Bearer ${newToken}` } }
             );
             showMessage('Agency join request sent successfully. Awaiting approval.', 'success');
           } catch (joinError) {
@@ -324,9 +278,7 @@ export default function SignUp() {
         }
       }
 
-      showMessage('Signed in automatically!', 'success', 3000); // Show success message for auto-signin
-
-      // Redirect based on role or to home (use the latest user info from localStorage)
+      showMessage('Signed in automatically!', 'success', 3000);
       const updatedUser = JSON.parse(localStorage.getItem('user'));
       switch (updatedUser.role) {
         case 'admin':
@@ -336,11 +288,10 @@ export default function SignUp() {
           navigate('/agent/dashboard');
           break;
         default:
-          navigate('/'); // Redirect to home page
+          navigate('/');
       }
     } catch (err) {
-      console.error('Signup error caught locally:', err); // Log the error for debugging
-      // Display a user-friendly error message using showMessage
+      console.error('Signup error caught locally:', err);
       let errorMessage = 'An unexpected error occurred during signup.';
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
@@ -351,151 +302,122 @@ export default function SignUp() {
     }
   };
 
-  // Placeholder functions for social sign-up
   const handleGoogleSignUp = () => {
     showMessage('Google Sign-Up is not yet implemented.', 'info');
-    // Implement Google OAuth logic here
   };
 
   const handleFacebookSignUp = () => {
     showMessage('Facebook Sign-Up is not yet implemented.', 'info');
-    // Implement Facebook OAuth logic here
   };
 
-
-  const inputFieldStyles =
-    `w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-      darkMode
-        ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
-        : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-    }`;
-
-  const labelStyles = `block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`;
-  const inputGroupStyles = "flex flex-col";
-
   return (
-    <div className={`flex items-start justify-center min-h-screen pt-0 sm:pt-16 ${darkMode ? "bg-gray-900" : "bg-gray-50"} sm:px-4`}>
-      <form
-        onSubmit={handleNextStep} // Submit button now calls handleNextStep
-        className={`w-full max-w-md space-y-6
-          bg-transparent sm:rounded-2xl sm:shadow-2xl sm:p-8
-          ${darkMode ? "sm:bg-gray-800" : "sm:bg-white"}
-          px-4 pt-4`}
+    <div
+      className={`min-h-screen flex items-start justify-center p-4 ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}
+      style={{ minHeight: "100vh", paddingTop: "4rem" }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className={`w-full max-w-md p-6 sm:p-8 space-y-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}
       >
-        <h1 className={`text-3xl font-bold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-          Create Account
-        </h1>
-
-        {/* Role Selection Section */}
-        <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-          Sign up as{' '}
-          {/* Buttons to switch roles */}
-          <button
-            type="button" // Use type="button" to prevent form submission
-            className={`text-green-600 hover:underline font-medium ${selectedRole === 'user' ? 'underline' : ''}`}
-            onClick={() => handleRoleSwitch('user')}
-          >
-            Client
-          </button>{' '}
-          |{' '}
-          <button
-            type="button" // Use type="button" to prevent form submission
-            className={`text-green-600 hover:underline font-medium ${selectedRole === 'agent' ? 'underline' : ''}`}
-            onClick={() => handleRoleSwitch('agent')}
-          >
-            Agent
-          </button>
+        <div className="text-center">
+          <h1 className={`text-3xl font-bold ${darkMode ? "text-green-400" : "text-green-600"}`}>Create Account</h1>
+          <p className={`mt-2 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Sign up to start your journey.</p>
         </div>
 
-          {signupStep === 0 && ( // Initial choice screen
+        <AnimatePresence mode="wait">
+          {signupStep === 0 && (
             <motion.div
               key="choice"
-              initial={{ opacity: 0, x: -50 }}
+              initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, x: 30 }}
+              transition={{ duration: 0.1 }}
               className="space-y-4"
             >
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleNextStep} // This button now moves to step 1 (combined form)
-                  className="px-6 py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
-                >
-                  Email and Password
-                </button>
-              </div>
-
-              {/* OR Divider */}
-              <div className="relative flex items-center py-1">
-                <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
-                <span className={`flex-shrink mx-4 text-gray-500 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>OR</span>
-                <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
-              </div>
-
-              {/* Social Sign-up Buttons */}
               <button
                 type="button"
-                onClick={handleGoogleSignUp}
-                className={`w-full py-2 border rounded-xl font-medium transition flex items-center justify-center space-x-2
-                  ${darkMode
-                    ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                    : "bg-white border-gray-300 text-gray-800 hover:bg-gray-100"
-                  }`}
+                onClick={() => setSignupStep(1)}
+                className="w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700 transition"
               >
-                {/* Google SVG Icon */}
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <Mail className="w-4 h-4" />
+                Continue with Email
+              </button>
+              
+              <div className="relative flex items-center py-2">
+                <div className={`flex-grow border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
+                <span className={`flex-shrink mx-4 text-xs uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Or</span>
+                <div className={`flex-grow border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
+              </div>
+
+              <button
+                onClick={handleGoogleSignUp}
+                className={`w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border transition ${darkMode ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-white border-gray-300 text-gray-800 hover:bg-gray-50'}`}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.5-.19-2.22H12v4.26h6.01a5.05 5.05 0 0 1-2.18 3.32v2.79h3.6c2.11-1.94 3.33-4.8 3.33-8.15z"/>
                   <path fill="#34A853" d="M12 23c3.24 0 5.95-1.08 7.93-2.93l-3.6-2.79c-1.01.69-2.31 1.09-4.33 1.09-3.35 0-6.18-2.27-7.2-5.33H1.2v2.86C3.25 20.53 7.31 23 12 23z"/>
                   <path fill="#FBBC04" d="M4.8 14.1c-.2-.69-.31-1.44-.31-2.19s.11-1.5.31-2.19V6.95H1.2C.44 8.35 0 10.12 0 12c0 1.88.44 3.65 1.2 5.05L4.8 14.1z"/>
                   <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.59 1.79l3.2-3.2C17.95 1.08 15.24 0 12 0 7.31 0 3.25 2.47 1.2 6.95l3.6 2.8C5.82 7.02 8.65 4.75 12 4.75z"/>
                 </svg>
-                <span>Sign up with Google</span>
+                Continue with Google
               </button>
 
               <button
-                type="button"
                 onClick={handleFacebookSignUp}
-                className={`w-full py-2 border rounded-xl font-medium transition flex items-center justify-center space-x-2
-                  ${darkMode
-                    ? "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                    : "bg-white border-gray-300 text-gray-800 hover:bg-gray-100"
-                  }`}
+                className={`w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border transition ${darkMode ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600' : 'bg-white border-gray-300 text-gray-800 hover:bg-gray-50'}`}
               >
-                {/* Facebook SVG Icon */}
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path fill="#1877F2" d="M12 0C5.373 0 0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854V15.42H7.078v-3.413h3.047V9.43c0-3.007 1.792-4.661 4.533-4.661 1.306 0 2.68.235 2.68.235v2.953h-1.519c-1.493 0-1.956.925-1.956 1.879v2.273h3.297l-.527 3.413h-2.77V24C19.612 22.954 24 17.99 24 12c0-6.627-5.373-12-12-12z"/>
                 </svg>
-                <span>Sign up with Facebook</span>
+                Continue with Facebook
               </button>
 
-              <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"} pt-1`}>
+              <div className={`text-center text-sm pt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                 Already have an account?{' '}
-                <a href="/signin" className="text-green-600 hover:underline">
-                  Sign In
-                </a>
+                <a href="/signin" className="font-medium text-green-500 hover:underline">Sign In</a>
               </div>
             </motion.div>
           )}
 
-
-          {signupStep === 1 && ( // Combined Info and Password/Agency Form
-            <motion.div
-              key="step1" // Key remains "step1" for the combined form
-              initial={{ opacity: 0, x: 50 }}
+          {signupStep === 1 && (
+            <motion.form
+              key="signup-form"
+              onSubmit={handleNextStep}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
+              exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.3 }}
               className="space-y-4"
             >
               <button
                 type="button"
-                onClick={() => setSignupStep(0)} // Go back to the initial choice
-                className={`flex items-center text-sm font-medium ${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-800"} transition`}
+                onClick={() => setSignupStep(0)}
+                className={`flex items-center text-sm font-medium transition ${darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-600 hover:text-gray-800"}`}
               >
                 <ArrowLeft size={16} className="mr-1" /> Back to choices
               </button>
-              {/* Common fields for all roles */}
+
+              <div className="text-center text-sm">
+                Sign up as{' '}
+                <button
+                  type="button"
+                  className={`font-medium text-green-500 hover:underline ${selectedRole === 'user' ? 'underline' : ''}`}
+                  onClick={() => handleRoleSwitch('user')}
+                >
+                  Client
+                </button>{' '}
+                |{' '}
+                <button
+                  type="button"
+                  className={`font-medium text-green-500 hover:underline ${selectedRole === 'agent' ? 'underline' : ''}`}
+                  onClick={() => handleRoleSwitch('agent')}
+                >
+                  Agent
+                </button>
+              </div>
+
               <input
                 type="text"
                 name="full_name"
@@ -503,8 +425,9 @@ export default function SignUp() {
                 value={form.full_name}
                 onChange={handleChange}
                 required
-                className={inputFieldStyles}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
               />
+
               <input
                 type="email"
                 name="email"
@@ -512,10 +435,9 @@ export default function SignUp() {
                 value={form.email}
                 onChange={handleChange}
                 required
-                className={inputFieldStyles}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
               />
 
-              {/* Agent-Specific Field */}
               {selectedRole === 'agent' && (
                 <input
                   type="text"
@@ -524,36 +446,52 @@ export default function SignUp() {
                   value={form.phone_number}
                   onChange={handleChange}
                   required
-                  className={inputFieldStyles}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
                 />
               )}
 
-              {/* Password fields */}
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={handleChange}
-                required
-                className={inputFieldStyles}
-              />
-              <input
-                type="password"
-                name="confirm_password"
-                placeholder="Confirm Password"
-                value={form.confirm_password}
-                onChange={handleChange}
-                required
-                className={inputFieldStyles}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg pr-12 focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className={`absolute top-1/2 right-4 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
 
-              {/* Display password validation error */}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="confirm_password"
+                  placeholder="Confirm Password"
+                  value={form.confirm_password}
+                  onChange={handleChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg pr-12 focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className={`absolute top-1/2 right-4 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
               {passwordError && (
                 <p className={`text-sm text-center ${darkMode ? "text-red-400" : "text-red-500"}`}>{passwordError}</p>
               )}
 
-              {/* Agent-Specific Form Fields (Conditionally Rendered) */}
               {selectedRole === 'agent' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -562,20 +500,17 @@ export default function SignUp() {
                   transition={{ duration: 0.3 }}
                   className="space-y-4 overflow-hidden"
                 >
-                  {/* Toggle for Agency Affiliation Options */}
-                  <div className="flex items-center justify-between mt-4">
-                    <span className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>Affiliate with an agency?</span>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Affiliate with an agency?</span>
                     <button
                       type="button"
                       onClick={toggleAgencyAffiliationOptions}
-                      className={`px-4 py-2 rounded-full font-semibold transition duration-200 flex items-center
-                        ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-800"}`}
+                      className={`px-4 py-2 rounded-lg font-semibold transition ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}
                     >
                       {showAgencyAffiliationOptions ? 'Hide Options' : 'Show Options'}
                     </button>
                   </div>
 
-                  {/* Agency Section (Conditionally Rendered) */}
                   {showAgencyAffiliationOptions && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -584,13 +519,13 @@ export default function SignUp() {
                       transition={{ duration: 0.3 }}
                       className="space-y-4 overflow-hidden"
                     >
-                      <div className={`pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+                      <div className="pb-6">
                         <h3 className={`text-xl font-bold mb-4 flex items-center ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
                           <Landmark className="mr-2 text-orange-500" size={20} /> Agency Affiliation
                         </h3>
 
                         {agencyConnectionStatus === 'new_agency_pending' && (
-                          <div className={`p-4 rounded-xl border ${darkMode ? "border-green-700 bg-green-900/20" : "border-green-200 bg-green-50"}`}>
+                          <div className={`p-4 rounded-lg border ${darkMode ? "border-green-700 bg-green-900/20" : "border-green-200 bg-green-50"}`}>
                             <p className={`font-semibold ${darkMode ? "text-green-300" : "text-green-800"} flex items-center`}>
                               <CheckCircle size={20} className="mr-2" /> New Agency Details Captured
                             </p>
@@ -601,11 +536,10 @@ export default function SignUp() {
                               type="button"
                               onClick={() => {
                                 setShowRegisterAgencyForm(true);
-                                setAgencyConnectionStatus('none'); // Allow editing again
+                                setAgencyConnectionStatus('none');
                                 setSelectedAgencyId(null);
                               }}
-                              className={`mt-4 px-4 py-2 rounded-full font-semibold transition duration-200 flex items-center
-                                ${darkMode ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+                              className={`mt-4 px-4 py-2 rounded-lg font-semibold transition ${darkMode ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
                             >
                               Edit New Agency
                             </button>
@@ -613,7 +547,7 @@ export default function SignUp() {
                         )}
 
                         {selectedAgencyId && selectedAgencyId !== 'new_agency_pending' && (
-                          <div className={`p-4 rounded-xl border ${darkMode ? "border-green-700 bg-green-900/20" : "border-green-50"}`}>
+                          <div className={`p-4 rounded-lg border ${darkMode ? "border-green-700 bg-green-900/20" : "border-green-50"}`}>
                             <p className={`font-semibold ${darkMode ? "text-green-300" : "text-green-800"} flex items-center`}>
                               <UserRoundCheck size={20} className="mr-2" /> Selected Agency: {agencies.find(a => a.agency_id === selectedAgencyId)?.name || 'N/A'}
                             </p>
@@ -626,8 +560,7 @@ export default function SignUp() {
                                 setSelectedAgencyId(null);
                                 setAgencyConnectionStatus('none');
                               }}
-                              className={`mt-4 px-4 py-2 rounded-full font-semibold transition duration-200 flex items-center
-                                ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+                              className={`mt-4 px-4 py-2 rounded-lg font-semibold transition ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
                             >
                               Clear Selection
                             </button>
@@ -636,188 +569,158 @@ export default function SignUp() {
 
                         {(agencyConnectionStatus === 'none' || (selectedAgencyId === null && agencyConnectionStatus !== 'new_agency_pending')) && (
                           <div className="space-y-4">
-                              {showRegisterAgencyForm && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 20 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -20 }}
-                                  transition={{ duration: 0.3 }}
-                                  className={`relative mb-6 p-6 rounded-xl border ${darkMode ? "border-gray-700 bg-gray-800" : "border-gray-200 bg-green-50"}`}
+                            {showRegisterAgencyForm && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.2 }}
+                                className={`relative p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}
+                              >
+                                <h4 className={`text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Register New Agency</h4>
+                                <p className={`mt-2 text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Enter details to create a new agency.</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowRegisterAgencyForm(false)}
+                                  className={`absolute top-4 right-4 ${darkMode ? "text-gray-400 hover:text-gray-200" : "text-gray-600 hover:text-gray-800"}`}
+                                  aria-label="Close form"
                                 >
-                                  <h4 className={`text-lg font-bold mb-4 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Register New Agency</h4>
+                                  <X size={20} />
+                                </button>
+                                <div className="space-y-4 mt-4">
+                                  <div>
+                                    <input
+                                      type="text"
+                                      name="name"
+                                      placeholder="Agency Name"
+                                      value={newAgencyForm.name}
+                                      onChange={handleNewAgencyFormChange}
+                                      required
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="email"
+                                      name="email"
+                                      placeholder="Agency Email"
+                                      value={newAgencyForm.email}
+                                      onChange={handleNewAgencyFormChange}
+                                      required
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="tel"
+                                      name="phone"
+                                      placeholder="Agency Phone"
+                                      value={newAgencyForm.phone}
+                                      onChange={handleNewAgencyFormChange}
+                                      required
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="text"
+                                      name="address"
+                                      placeholder="Address"
+                                      value={newAgencyForm.address}
+                                      onChange={handleNewAgencyFormChange}
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="url"
+                                      name="website"
+                                      placeholder="Website"
+                                      value={newAgencyForm.website}
+                                      onChange={handleNewAgencyFormChange}
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <textarea
+                                      name="description"
+                                      placeholder="Brief description of your agency..."
+                                      value={newAgencyForm.description}
+                                      onChange={handleNewAgencyFormChange}
+                                      rows="3"
+                                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                                    ></textarea>
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="file"
+                                      name="new_agency_logo"
+                                      accept="image/*"
+                                      onChange={handleNewAgencyLogoChange}
+                                      className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold ${darkMode ? "file:bg-green-600 file:text-white file:hover:bg-green-700 text-gray-300" : "file:bg-green-50 file:text-green-700 hover:file:bg-green-50 text-gray-700"}`}
+                                    />
+                                    {newAgencyLogoPreview && (
+                                      <div className="mt-4 flex items-center space-x-4">
+                                        <img src={newAgencyLogoPreview} alt="Agency Logo" className="w-24 h-24 rounded-lg object-cover" />
+                                        <button
+                                          type="button"
+                                          onClick={handleClearNewAgencyLogo}
+                                          className={`px-4 py-2 rounded-lg font-semibold transition ${darkMode ? "bg-red-600 hover:bg-red-500 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+                                        >
+                                          Clear Logo
+                                        </button>
+                                      </div>
+                                    )}
+                                    <p className={`mt-2 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>PNG, JPG, or GIF up to 5MB.</p>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-3 mt-6">
                                   <button
                                     type="button"
                                     onClick={() => setShowRegisterAgencyForm(false)}
-                                    className={`absolute top-4 right-4 p-2 rounded-full ${darkMode ? "text-gray-400 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-200"}`}
-                                    aria-label="Close form"
+                                    className={`w-full py-2.5 rounded-lg font-semibold transition ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                                   >
-                                    <X size={20} />
+                                    Cancel
                                   </button>
-                                  <div className="space-y-4">
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_name">Agency Name <span className="text-red-500">*</span></label>
-                                      <input
-                                        type="text"
-                                        id="new_agency_name"
-                                        name="name"
-                                        value={newAgencyForm.name}
-                                        onChange={handleNewAgencyFormChange}
-                                        className={inputFieldStyles}
-                                        placeholder="e.g., Elite Properties Inc."
-                                        required
-                                      />
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_email">Agency Email <span className="text-red-500">*</span></label>
-                                      <input
-                                        type="email"
-                                        id="new_agency_email"
-                                        name="email"
-                                        value={newAgencyForm.email}
-                                        onChange={handleNewAgencyFormChange}
-                                        className={inputFieldStyles}
-                                        placeholder="contact@eliteproperties.com"
-                                        required
-                                      />
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_phone">Agency Phone <span className="text-red-500">*</span></label>
-                                      <input
-                                        type="tel"
-                                        id="new_agency_phone"
-                                        name="phone"
-                                        value={newAgencyForm.phone}
-                                        onChange={handleNewAgencyFormChange}
-                                        className={inputFieldStyles}
-                                        placeholder="+1234567890"
-                                        required
-                                      />
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_address">Address</label>
-                                      <input
-                                        type="text"
-                                        id="new_agency_address"
-                                        name="address"
-                                        value={newAgencyForm.address}
-                                        onChange={handleNewAgencyFormChange}
-                                        className={inputFieldStyles}
-                                        placeholder="123 Main St, City, Country"
-                                      />
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_website">Website</label>
-                                      <input
-                                        type="url"
-                                        id="new_agency_website"
-                                        name="website"
-                                        value={newAgencyForm.website}
-                                        onChange={handleNewAgencyFormChange}
-                                        className={inputFieldStyles}
-                                        placeholder="https://www.eliteproperties.com"
-                                      />
-                                    </div>
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_description">Description</label>
-                                      <textarea
-                                        id="new_agency_description"
-                                        name="description"
-                                        value={newAgencyForm.description}
-                                        onChange={handleNewAgencyFormChange}
-                                        rows="3"
-                                        className={`${inputFieldStyles} min-h-[80px]`}
-                                        placeholder="Brief description of your agency..."
-                                      ></textarea>
-                                    </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!newAgencyForm.name || !newAgencyForm.email || !newAgencyForm.phone) {
+                                        showMessage("Agency name, email, and phone are required.", "error");
+                                        return;
+                                      }
+                                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAgencyForm.email)) {
+                                        showMessage("Please enter a valid email address for the agency.", "error");
+                                        return;
+                                      }
+                                      showMessage("Agency details captured. Proceed with account creation.", "info");
+                                      setShowRegisterAgencyForm(false);
+                                      setSelectedAgencyId('new_agency_pending');
+                                      setAgencyConnectionStatus('new_agency_pending');
+                                    }}
+                                    disabled={registeringAgency}
+                                    className={`w-full py-2.5 rounded-lg font-semibold transition ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-600 hover:bg-green-700 text-white"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  >
+                                    {registeringAgency ? 'Capturing...' : 'Confirm Agency Details'}
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
 
-                                    {/* Agency Logo Upload */}
-                                    <div className={inputGroupStyles}>
-                                      <label className={labelStyles} htmlFor="new_agency_logo">Agency Logo</label>
-                                      <div className="flex flex-col items-center space-y-4 mt-2">
-                                        <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                          {newAgencyLogoPreview ? (
-                                            <img
-                                              src={newAgencyLogoPreview}
-                                              alt="Agency Logo"
-                                              className="w-full h-full object-cover"
-                                            />
-                                          ) : (
-                                            <Landmark className="w-12 h-12 text-gray-400" />
-                                          )}
-                                          {newAgencyLogoPreview && (
-                                            <button
-                                              type="button"
-                                              onClick={handleClearNewAgencyLogo}
-                                              className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                                              aria-label="Clear agency logo"
-                                            >
-                                              <X size={16} />
-                                            </button>
-                                          )}
-                                        </div>
-                                        <input
-                                          type="file"
-                                          id="new_agency_logo"
-                                          name="new_agency_logo"
-                                          accept="image/*"
-                                          onChange={handleNewAgencyLogoChange}
-                                          className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${darkMode ? "file:bg-green-600 file:text-white file:hover:bg-green-700 text-gray-300" : "file:bg-green-50 file:text-green-700 hover:file:bg-green-50 text-gray-700"}`}
-                                        />
-                                        <p className={`mt-2 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                          PNG, JPG, or GIF up to 5MB.
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end space-x-4 mt-6">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        // This button now just "captures" the details and sets the status
-                                        // Actual API call happens in handleSubmit
-                                        if (!newAgencyForm.name || !newAgencyForm.email || !newAgencyForm.phone) {
-                                          showMessage("Agency name, email, and phone are required.", "error");
-                                          return;
-                                        }
-                                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAgencyForm.email)) {
-                                          showMessage("Please enter a valid email address for the agency.", "error");
-                                          return;
-                                        }
-                                        showMessage("Agency details captured. Proceed with account creation.", "info");
-                                        setShowRegisterAgencyForm(false);
-                                        setSelectedAgencyId('new_agency_pending');
-                                        setAgencyConnectionStatus('new_agency_pending');
-                                      }}
-                                      disabled={registeringAgency}
-                                      className={`px-6 py-2 font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center
-                                        ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                                    >
-                                      {registeringAgency ? (
-                                        <Loader size={20} className="animate-spin mr-2" />
-                                      ) : (
-                                        <Landmark size={20} className="mr-2" />
-                                      )}
-                                      {registeringAgency ? "Capturing..." : "Confirm Agency Details"}
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-
-                            {!showRegisterAgencyForm && !selectedAgencyId && ( // Only show this button if the form is not open and no agency is selected
-                              <div className="flex justify-center">
+                            {!showRegisterAgencyForm && !selectedAgencyId && (
+                              <div>
                                 <button
                                   type="button"
                                   onClick={() => setShowRegisterAgencyForm(true)}
-                                  className={`font-semibold transition duration-200 flex items-center justify-center
-                                    ${darkMode ? "text-green-400 hover:text-green-300" : "text-green-600 hover:text-green-700"} hover:underline`}
+                                  className={`w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-green-600 text-white hover:bg-green-700 transition`}
                                 >
-                                  <Landmark size={20} className="mr-2" /> Register Your Agency
+                                  <Landmark className="w-4 h-4" /> Register Your Agency
                                 </button>
                               </div>
                             )}
 
                             {!showRegisterAgencyForm && !selectedAgencyId && (
-                              <div className="relative">
+                              <div className="space-y-4">
                                 <h4 className={`text-lg font-semibold mb-3 ${darkMode ? "text-gray-200" : "text-gray-800"}`}>Or Join an Existing Agency</h4>
                                 <div className="relative mb-4">
                                   <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
@@ -826,7 +729,7 @@ export default function SignUp() {
                                     placeholder="Search agencies by name or email..."
                                     value={agencySearchTerm}
                                     onChange={handleAgencySearchChange}
-                                    className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${darkMode ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400" : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                                    className={`w-full px-4 py-3 pl-10 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
                                   />
                                 </div>
 
@@ -835,8 +738,7 @@ export default function SignUp() {
                                     {filteredAgencies.map(agency => (
                                       <li
                                         key={agency.agency_id}
-                                        className={`p-3 rounded-xl border flex items-center justify-between transition-colors duration-200
-                                          ${darkMode ? "bg-gray-700 border-gray-600 hover:bg-gray-600" : "bg-white border-gray-200 hover:bg-gray-50"}`}
+                                        className={`p-3 rounded-lg border flex items-center justify-between transition-colors duration-200 ${darkMode ? "bg-gray-700 border-gray-600 hover:bg-gray-600" : "bg-white border-gray-200 hover:bg-gray-50"}`}
                                       >
                                         <div className="flex items-center space-x-3">
                                           {agency.logo_url ? (
@@ -852,8 +754,7 @@ export default function SignUp() {
                                         <button
                                           type="button"
                                           onClick={() => handleAgencySelect(agency.agency_id)}
-                                          className={`p-2 rounded-full transition-colors duration-200
-                                            ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+                                          className={`p-2 rounded-lg transition-colors duration-200 ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
                                           title="Select Agency"
                                         >
                                           <UserPlus size={20} />
@@ -874,21 +775,23 @@ export default function SignUp() {
                 </motion.div>
               )}
 
-              <button
-                type="submit" // This button now triggers the final handleSubmit
-                className="w-full py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
-              >
-                Create Account
-              </button>
-              <div className={`text-center text-sm ${darkMode ? "text-gray-400" : "text-gray-500"} pt-1`}>
-                Already have an account?{' '}
-                <a href="/signin" className="text-green-600 hover:underline">
-                  Sign In
-                </a>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Account
+                </button>
               </div>
-            </motion.div>
+
+              <div className={`flex justify-between items-center text-sm pt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                <span>Already have an account?</span>
+                <a href="/signin" className="font-medium text-green-500 hover:underline">Sign In</a>
+              </div>
+            </motion.form>
           )}
-      </form>
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

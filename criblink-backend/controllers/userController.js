@@ -948,3 +948,29 @@ exports.getUserAgencyStatus = async (req, res) => {
         res.status(500).json({ message: 'Failed to fetch user agency status.', error: err.message });
     }
 };
+
+exports.getCurrentUser = async (req, res) => {
+    const userId = req.user.user_id;
+
+    try {
+        const result = await db.query(
+            `SELECT user_id, full_name, email, role, date_joined, phone, agency, bio, location, profile_picture_url, status, agency_id,
+                    is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
+                    communication_email_updates, communication_marketing, communication_newsletter,
+                    notifications_settings, timezone, currency, default_landing_page, notification_email,
+                    preferred_communication_channel, social_links, share_favourites_with_agents,
+                    share_property_preferences_with_agents
+             FROM users WHERE user_id = $1`,
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.status(200).json({ user: result.rows[0] });
+    } catch (err) {
+        console.error('Error fetching current user:', err);
+        res.status(500).json({ message: 'Failed to fetch current user.', error: err.message });
+    }
+};

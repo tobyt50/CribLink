@@ -31,7 +31,6 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
-import AgentPerformance from './pages/admin/AgentPerformance';
 import AdminSettings from './pages/admin/Settings';
 
 // Agent Pages
@@ -80,6 +79,7 @@ import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard';
 import Members from './pages/agencyadmin/Members';
 import AgencyAdminSettings from './pages/agencyadmin/Settings';
 import AgencyAdminProfile from './pages/agencyadmin/AgencyAdminProfile';
+import AgentPerformance from './pages/agencyadmin/AgentPerformance';
 import AgencyInquiries from './pages/agencyadmin/AgencyInquiries';
 
 // CENTRALIZED LISTINGS PAGE
@@ -98,7 +98,6 @@ const adminRoutes = [
   { path: "staff", element: <AdminStaff /> },
   { path: "users", element: <AdminUsers /> },
   { path: "analytics", element: <AdminAnalytics /> },
-  { path: "agent-performance", element: <AgentPerformance /> },
   { path: "settings", element: <AdminSettings /> },
   { path: "agencies/:agencyId/members", element: <Members /> },
   ...listingRoutes
@@ -130,6 +129,7 @@ const agencyAdminRoutes = [
   { path: "members", element: <Members /> },
   { path: "clients", element: <Clients /> },
   { path: "client-profile/:clientId", element: <ClientProfile /> },
+  { path: "agent-performance", element: <AgentPerformance /> },
   { path: "inquiries", element: <AgencyInquiries /> },
   { path: "settings", element: <AgencyAdminSettings /> },
   ...listingRoutes // Add common listing routes

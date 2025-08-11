@@ -346,7 +346,7 @@ const ClientInquiries = () => {
   };
 
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-0 -mt-6 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {isMobile && (
         <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}>
           <AnimatePresence mode="wait" initial={false}>
@@ -499,7 +499,7 @@ const ClientInquiries = () => {
             ) : (
               // Desktop table view
               <div className="overflow-x-auto">
-                <table className={`w-full mt-4 text-left text-sm table-fixed min-w-max ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                <table className={`w-full mt-4 text-left text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                       {[{ key: 'agent_name', label: 'Agent' }, { key: 'property_title', label: 'Property' }, { key: 'last_message', label: 'Last Message' }, { key: 'last_message_timestamp', label: 'Last Activity' }, { key: 'status', label: 'Status' }].map(c => (
