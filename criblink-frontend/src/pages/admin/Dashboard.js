@@ -100,7 +100,7 @@ const AdminDashboard = () => {
   const [clientsCount, setClientsCount] = useState('--'); 
   const [totalListingsCount, setTotalListingsCount] = useState('--');
   const [availableListingsCount, setAvailableListingsCount] = useState('--');
-  const [soldListingsCount, setSoldListingsCount] = useState('--');
+  const [pendingListingsCount, setPendingListingsCount] = useState('--');
   const [totalInquiriesCount, setTotalInquiriesCount] = useState('--');
   const [totalResponsesCount, setTotalResponsesCount] = useState('--');
   const [totalDocumentsCount, setTotalDocumentsCount] = useState('--'); // New stat
@@ -118,9 +118,9 @@ const AdminDashboard = () => {
   const goToClients = () => navigate('/admin/users', { state: { roleFilter: 'client' } });
   const goToListings = () => navigate('/admin/listings');
   const goToAvailableListings = () => navigate('/admin/listings', { state: { statusFilter: 'available' } });
-  const goToSoldListings = () => navigate('/admin/listings', { state: { statusFilter: 'sold' } });
+  const goToPendingListings = () => navigate('/admin/listings', { state: { statusFilter: 'pending' } });
   const goToInquiries = () => navigate('/admin/inquiries'); // Assuming an admin inquiries page
-  const goToDocuments = () => navigate('/admin/documents');
+  const goToDocuments = () => navigate('/documents');
   const goToAddListing = () => navigate('/admin/add-listing');
   const goToSettings = () => navigate('/admin/settings');
   const goToAgentPerformance = () => navigate('/admin/agent-performance');
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
         setClientsCount('--');
         setTotalListingsCount('--');
         setAvailableListingsCount('--');
-        setSoldListingsCount('--');
+        setPendingListingsCount('--');
         setTotalInquiriesCount('--');
         setTotalResponsesCount('--');
         setTotalDocumentsCount('--');
@@ -154,7 +154,7 @@ const AdminDashboard = () => {
           clientsRes,
           listingsRes,
           availableListingsRes,
-          soldListingsRes,
+          pendingListingsRes,
           inquiriesRes,
           responsesRes,
           documentsRes
@@ -165,7 +165,7 @@ const AdminDashboard = () => {
           axiosInstance.get(`/admin/clients/count`, { headers }),
           axiosInstance.get(`/admin/listings/count`, { headers }),
           axiosInstance.get(`/admin/listings/available/count`, { headers }),
-          axiosInstance.get(`/admin/listings/sold/count`, { headers }),
+          axiosInstance.get(`/admin/listings/pending/count`, { headers }),
           axiosInstance.get(`/admin/inquiries/count`, { headers }), // Corrected path
           axiosInstance.get(`/admin/inquiries/responses/count`, { headers }), // Corrected path
           axiosInstance.get(`/admin/documents/count`, { headers })
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
         setClientsCount(clientsRes.data.count);
         setTotalListingsCount(listingsRes.data.count);
         setAvailableListingsCount(availableListingsRes.data.count);
-        setSoldListingsCount(soldListingsRes.data.count);
+        setPendingListingsCount(pendingListingsRes.data.count);
         setTotalInquiriesCount(inquiriesRes.data.count);
         setTotalResponsesCount(responsesRes.data.count);
         setTotalDocumentsCount(documentsRes.data.count);
@@ -362,7 +362,7 @@ const AdminDashboard = () => {
                     <div className="grid grid-cols-3 gap-4 w-full">
                         <StatCard label="Total" value={totalListingsCount} onClick={goToListings} textCentered={true} icon={<Home size={20} />} />
                         <StatCard label="Available" value={availableListingsCount} onClick={goToAvailableListings} textCentered={true} icon={<CheckCircle size={20} />} />
-                        <StatCard label="Sold" value={soldListingsCount} onClick={goToSoldListings} textCentered={true} icon={<DollarSign size={20} />} />
+                        <StatCard label="Pending" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<DollarSign size={20} />} />
                     </div>
                     </Card>
 

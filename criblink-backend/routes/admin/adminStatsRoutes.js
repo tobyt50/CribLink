@@ -13,7 +13,8 @@ const {
     getAllInquiriesCount, // Corrected import name
     getAgentResponsesCount,
     getDocumentsCount,
-    getPlatformActivity, // Import new activity function
+    getPlatformActivity,
+    getPendingListingsCount// Import new activity function
 } = require('../../controllers/adminStatsController');
 
 // Protect all admin routes
@@ -28,6 +29,7 @@ router.get('/clients/count', getClientsCount); // Total clients
 router.get('/listings/count', getListingsCount); // Total listings
 router.get('/listings/available/count', getAvailableListingsCount); // Total available listings
 router.get('/listings/sold/count', getSoldListingsCount); // Total sold listings
+router.get('/listings/pending/count', getPendingListingsCount); // Total pending listings
 
 router.get('/inquiries/count', getAllInquiriesCount); // Total inquiries (conversations)
 router.get('/inquiries/responses/count', getAgentResponsesCount); // Total agent responses

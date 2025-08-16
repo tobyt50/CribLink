@@ -14,7 +14,7 @@ import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import API_BASE_URL from '../config';
 import PurchaseCategoryFilter from '../components/PurchaseCategoryFilter';
 // Corrected import statement for lucide-react icons
-import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList } from 'lucide-react';
+import { Menu, X, Search, SlidersHorizontal, DollarSign, ListFilter, Plus, FileText, LayoutGrid, LayoutList, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
@@ -169,7 +169,7 @@ const Listings = () => {
     const [page, setPage] = useState(1);
     const [totalListings, setTotalListings] = useState(0); // Total count from backend
     const [totalPages, setTotalPages] = useState(1); // Total pages from backend
-    const limit = 10; // Items per page, sent to backend for pagination
+    const limit = 30; // Items per page, sent to backend for pagination
     const navigate = useNavigate();
     const { darkMode } = useTheme(); // Use the dark mode context
     const { showMessage } = useMessage(); // Initialize useMessage
@@ -683,6 +683,12 @@ const Listings = () => {
             setSortDirection('asc');
         }
     };
+    
+    const handlePageChange = useCallback((newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+          setPage(newPage);
+        }
+    }, [totalPages]);
 
     const renderSortIcon = (key) => {
         const sortableColumns = ['property_id', 'title', 'location', 'property_type', 'price', 'status', 'date_listed', 'purchase_category', 'bedrooms', 'bathrooms']; // Added new sortable columns
@@ -1363,25 +1369,29 @@ const Listings = () => {
                                         ))}
                                     </tbody>
                                 </table>
-
-
-                                <div className="flex justify-center items-center space-x-4 mt-4">
-                                    <button
-                                        disabled={page === 1}
-                                        onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-                                        className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-                                    >
-                                        Prev
-                                    </button>
-                                    <span className={`font-semibold ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Page {page} of {totalPages}</span>
-                                    <button
-                                        disabled={page === totalPages || totalPages === 0}
-                                        onClick={() => setPage(prev => prev + 1)}
-                                        className={`px-4 py-2 rounded-lg text-sm disabled:opacity-50 ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-100 text-gray-700"}`}
-                                    >
-                                        Next
-                                    </button>
-                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Pagination for both views */}
+                        {totalPages > 1 && !loading && (
+                            <div className="flex justify-center items-center gap-4 mt-10 pb-8">
+                                <button
+                                onClick={() => handlePageChange(page - 1)}
+                                disabled={page === 1}
+                                className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
+                                >
+                                <ChevronLeft size={18} /> Prev
+                                </button>
+                                <span className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                                Page {page} of {totalPages}
+                                </span>
+                                <button
+                                onClick={() => handlePageChange(page + 1)}
+                                disabled={page === totalPages || totalPages === 0}
+                                className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
+                                >
+                                Next <ChevronRight size={18} />
+                                </button>
                             </div>
                         )}
                     </motion.div>

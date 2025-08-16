@@ -21,9 +21,10 @@ const ListingOverview = ({
   // Determine the status to display. Show "Featured" if is_featured is true,
   // unless the status is "Sold", "Pending", or "Rejected".
   const excludedStatuses = ["Sold", "Pending", "Rejected"];
-  const displayStatus = listing.is_featured && !excludedStatuses.includes(listing.status)
-    ? "Featured"
-    : listing.status;
+  const displayStatus = listing.is_featured && !excludedStatuses.some(s => s.toLowerCase() === listing.status.toLowerCase())
+  ? "Featured"
+  : listing.status;
+
 
   const handleEditClick = () => {
     let basePath = '';

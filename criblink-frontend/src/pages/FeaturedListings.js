@@ -309,10 +309,13 @@ function FeaturedListings() {
     setLoading(true);
     try {
       const response = await axiosInstance.get(`/listings/featured`);
-      const listings = response.data.listings || [];
-      setAllFeaturedListings(listings);
-      setTotalPages(Math.ceil(listings.length / ITEMS_PER_PAGE));
-      setPaginatedListings(listings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE));
+      const allListings = response.data.listings || [];
+      // Filter for listings that are either 'available' or 'under offer'
+      const filteredListings = allListings.filter(l => l.status === 'available' || l.status === 'under offer');
+      
+      setAllFeaturedListings(filteredListings);
+      setTotalPages(Math.ceil(filteredListings.length / ITEMS_PER_PAGE));
+      setPaginatedListings(filteredListings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE));
     } catch (error) {
       showMessage(error.response?.data?.message || 'Failed to fetch featured listings.', 'error');
       setAllFeaturedListings([]); setPaginatedListings([]); setTotalPages(1);

@@ -83,6 +83,19 @@ exports.getSoldListingsCount = async (req, res) => {
   }
 };
 
+// Get count of sold listings
+exports.getPendingListingsCount = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'pending'`
+    );
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error fetching pending listings count:', err);
+    res.status(500).json({ error: 'Failed to fetch pending listings count' });
+  }
+};
+
 // Get count of all inquiries (conversations)
 exports.getAllInquiriesCount = async (req, res) => {
   try {

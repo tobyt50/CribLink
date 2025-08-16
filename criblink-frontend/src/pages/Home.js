@@ -81,7 +81,10 @@ function Home() {
     setFeaturedLoading(true);
     try {
       const response = await axiosInstance.get(`/listings/featured?limit=${FEATURED_CAROUSEL_LIMIT}`);
-      setFeaturedListings(response.data.listings || []);
+      const listings = response.data.listings || [];
+      // Filter for listings that are either 'available' or 'under offer'
+      const filtered = listings.filter(l => l.status === 'available' || l.status === 'under offer');
+      setFeaturedListings(filtered);
     } catch (error) {
       console.error("Failed to fetch featured listings:", error);
       setFeaturedListings([]);
