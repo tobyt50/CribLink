@@ -11,6 +11,12 @@ pg_restore --verbose --clean --no-owner `
 
 Neon restore:
 pg_restore --verbose --clean --no-owner --no-acl `
-  --dbname='postgresql://neondb_owner:npg_SuO7xUwoV6WF@ep-lingering-recipe-a8js9b0e-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require' `
+  --dbname='postgresql://neondb_owner:npg_J2w1lqGTPUEN@ep-old-union-a8mr0snv-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require' `
   'C:\Users\Mattted\Desktop\CribLink\db.backup'
+
+ALTER ROLE neondb_owner SET search_path = public;
+
+--Google AI Studio API Key
+AIzaSyBlLTvjgJ0GtsvQP0PzXZ_gzKNSF3vLGz8
+
 

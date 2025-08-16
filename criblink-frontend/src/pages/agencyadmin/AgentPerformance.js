@@ -204,7 +204,7 @@ const AgentPerformance = () => {
         }
 
         try {
-            const response = await axiosInstance.get(`${API_BASE_URL}/agencies/performance?${params.toString()}`, { headers });
+            const response = await axiosInstance.get(`${API_BASE_URL}/agent-performance/performance?${params.toString()}`, { headers });
 
             setPerformanceData(response.data.performance || []);
             setFilteredPerformance(response.data.performance || []);
@@ -272,7 +272,7 @@ const AgentPerformance = () => {
         }
 
         try {
-            await axiosInstance.delete(`${API_BASE_URL}/agencies/performance/${userId}`, {
+            await axiosInstance.delete(`${API_BASE_URL}/agent-performance/performance/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -455,7 +455,7 @@ const AgentPerformance = () => {
                             <div className="flex justify-between items-center mb-4">
                                 <button
                                     className="p-2 rounded-xl bg-green-500 text-white shadow-md h-10 w-10 flex items-center justify-center"
-                                    onClick={() => navigate('/agencies/performance/add')}
+                                    onClick={() => navigate('/agent-performance/performance/add')}
                                     title="Add New Performance Entry"
                                 >
                                     <Plus size={20} />
@@ -506,7 +506,7 @@ const AgentPerformance = () => {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         className="bg-green-500 text-white flex items-center justify-center px-4 h-10 rounded-xl hover:bg-green-600 text-sm font-medium"
-                                        onClick={() => navigate('/agencies/performance/add')}
+                                        onClick={() => navigate('/agent-performance/performance/add')}
                                     >
                                         +Add Entry
                                     </button>
@@ -600,7 +600,7 @@ const AgentPerformance = () => {
                                                     <div className="flex items-center gap-2">
                                                         <button
                                                             className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 text-xs"
-                                                            onClick={() => navigate(`/agencies/performance/edit/${entry.user_id}`)}
+                                                            onClick={() => navigate(`/agent-performance/performance/edit/${entry.user_id}`)}
                                                             title="Edit Entry"
                                                         >
                                                             <PencilIcon className="h-4 w-4 inline" />

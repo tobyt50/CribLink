@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../layouts/AppShell';
 import { User, Phone, Mail, Landmark, Star, Users, Hourglass, UserRoundCheck, CheckCircle, UserPlus, XCircle, X as XIcon, Flag } from 'lucide-react'; // Import Flag icon, renamed X to XIcon to avoid conflict
 import { TrashIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'; // Import TrashIcon for disconnect, ChatBubbleLeftRightIcon for chat
@@ -29,15 +29,6 @@ const AgentCard = ({
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
 
-  // --- Console Log for Debugging ---
-  useEffect(() => {
-    console.log("AgentCard: Agent data received:", agent);
-    if (!agent.agency_id) {
-      console.warn("AgentCard: Agent does not have an agency_id:", agent.full_name);
-    }
-  }, [agent]);
-  // --- End Console Log ---
-
   const getInitial = (name) => {
     const safeName = String(name || '');
     return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'N/A';
@@ -49,7 +40,6 @@ const AgentCard = ({
   // Function to handle agency name click
   const handleAgencyClick = (e) => {
     e.stopPropagation(); // Prevent any parent click handlers from triggering (like the card's onViewProfile)
-    console.log("Agency click detected for agent:", agent.full_name, "Agency ID:", agent.agency_id);
     if (agent.agency_id) {
       navigate(`/agencies/${agent.agency_id}`); // Redirect to AgencyProfile page
     } else {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import ListingCard from "../components/ListingCard";
-import API_BASE_URL from "../config";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useTheme } from "../layouts/AppShell";
@@ -9,8 +8,10 @@ import { useMessage } from "../context/MessageContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import axiosInstance from '../api/axiosInstance';
 import HomeSearchFilters from "../components/HomeSearchFilters";
+import { useAuth } from "../context/AuthContext";
 
 const ITEMS_PER_PAGE = 20;
+const FEATURED_CAROUSEL_LIMIT = 20;
 
 // Skeleton for a Listing Card (graphical view)
 const ListingCardSkeleton = ({ darkMode }) => (
@@ -29,213 +30,161 @@ function Home() {
   const [listings, setListings] = useState([]);
   const [featuredListings, setFeaturedListings] = useState([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
-  const [category, setCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [user, setUser] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("date_listed_desc");
+  const [loading, setLoading] = useState(true);
+  const [userFavourites, setUserFavourites] = useState([]);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    location: "", propertyType: "", subtype: "", bedrooms: "", bathrooms: "",
+    minPrice: "", maxPrice: "", purchaseCategory: "",
+  });
+
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const featuredCarouselRef = useRef(null);
   const autoSwipeIntervalRef = useRef(null);
   const initialScrollSet = useRef(false);
-  const [loading, setLoading] = useState(true);
-
-  const [userFavourites, setUserFavourites] = useState([]);
-
-  const [advancedFilters, setAdvancedFilters] = useState({
-    location: "",
-    propertyType: "",
-    subtype: "",
-    bedrooms: "",
-    bathrooms: "",
-    minPrice: "",
-    maxPrice: "",
-    purchaseCategory: "",
-  });
-
-  // FIX: Determine if the carousel functionality should be active.
+  
   const isCarousel = featuredListings.length > 1;
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-        localStorage.removeItem("user");
-      }
-    }
-  }, []);
-
   const currentUserRole = user?.role || 'guest';
   const currentUserId = user?.user_id || null;
   const currentUserAgencyId = user?.agency_id || null;
-
-  const getRoleBasePath = () => {
+  
+  const getRoleBasePath = useCallback(() => {
       if (currentUserRole === 'admin') return '/admin';
       if (currentUserRole === 'agency_admin') return '/agency';
       if (currentUserRole === 'agent') return '/agent';
       return '';
-  };
+  }, [currentUserRole]);
 
   const fetchUserFavourites = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (!isAuthenticated) {
       setUserFavourites([]);
       return;
     }
     try {
-      const response = await axiosInstance.get(`${API_BASE_URL}/favourites/properties`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axiosInstance.get(`/favourites/properties`);
       setUserFavourites(response.data.favourites.map(fav => fav.property_id));
     } catch (error) {
       console.error("Failed to fetch user favourites:", error);
       setUserFavourites([]);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  const handleFavoriteToggle = useCallback(async (propertyId, isCurrentlyFavorited) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      showMessage("Please log in to manage your favorites.", "error");
-      navigate('/signin');
-      return;
-    }
-
+  const fetchFeaturedListings = useCallback(async () => {
+    setFeaturedLoading(true);
     try {
-      if (isCurrentlyFavorited) {
-        await axiosInstance.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        showMessage("Removed from favorites!", "success");
-      } else {
-        await axiosInstance.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        showMessage("Added to favorites!", "success");
-      }
-      fetchUserFavourites();
+      const response = await axiosInstance.get(`/listings/featured?limit=${FEATURED_CAROUSEL_LIMIT}`);
+      setFeaturedListings(response.data.listings || []);
     } catch (error) {
-      console.error("Failed to toggle favorite status:", error);
-      let errorMessage = 'Failed to update favorites. Please try again.';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      showMessage(errorMessage, 'error');
+      console.error("Failed to fetch featured listings:", error);
+      setFeaturedListings([]);
+    } finally {
+      setFeaturedLoading(false);
     }
-  }, [fetchUserFavourites, showMessage, navigate]);
-
-  const handleDeleteListing = async (listingId) => {
-    showConfirm({
-        title: "Delete Listing",
-        message: "Are you sure you want to delete this listing permanently? This action cannot be undone.",
-        onConfirm: async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                showMessage('Authentication token not found. Please sign in.', 'error');
-                return;
-            }
-            try {
-                await axiosInstance.delete(`${API_BASE_URL}/listings/${listingId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                showMessage('Listing deleted successfully!', 'success');
-                fetchListings();
-            } catch (error) {
-                console.error('Error deleting listing:', error.response?.data || error.message);
-                showMessage('Failed to delete listing. Please try again.', 'error');
-            }
-        },
-        confirmLabel: "Delete",
-        cancelLabel: "Cancel"
-    });
-  };
-
-  useEffect(() => {
-    const fetchFeaturedListings = async () => {
-      setFeaturedLoading(true);
-      try {
-        const response = await axiosInstance.get(`${API_BASE_URL}/listings/featured`);
-        setFeaturedListings(response.data.listings || []);
-      } catch (error) {
-        console.error("Failed to fetch featured listings:", error);
-        setFeaturedListings([]);
-      } finally {
-        setFeaturedLoading(false);
-      }
-    };
-    fetchFeaturedListings();
   }, []);
-
-  const fetchListings = useCallback(async () => {
+  
+  // This function fetches the initial "Available Listings" for the homepage.
+  // It intentionally does not depend on search/filter state.
+  const fetchListings = useCallback(async (page = 1) => {
     setLoading(true);
     const params = new URLSearchParams();
-
-    if (advancedFilters.purchaseCategory) params.append("purchase_category", advancedFilters.purchaseCategory);
-    else if (category) params.append("purchase_category", category);
-    if (searchTerm) params.append("search", searchTerm);
-    params.append("page", currentPage);
+    params.append("page", page);
     params.append("limit", ITEMS_PER_PAGE);
-    params.append("sortBy", sortBy);
-    if (advancedFilters.location) params.append("location", advancedFilters.location);
-    if (advancedFilters.propertyType) params.append("property_type", advancedFilters.propertyType);
-    if (advancedFilters.bedrooms) params.append("bedrooms", advancedFilters.bedrooms);
-    if (advancedFilters.bathrooms) params.append("bathrooms", advancedFilters.bathrooms);
-    if (advancedFilters.minPrice) params.append("min_price", advancedFilters.minPrice);
-    if (advancedFilters.maxPrice) params.append("max_price", advancedFilters.maxPrice);
-
-    const url = `${API_BASE_URL}/listings?${params.toString()}`;
-    const token = localStorage.getItem("token");
-    const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+    params.append("sortBy", "date_listed_desc"); // Always sort by latest on home
 
     try {
-      const response = await axiosInstance.get(url, { headers });
+      const response = await axiosInstance.get(`/listings?${params.toString()}`);
       setListings(response.data.listings || []);
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch listings.';
+      const errorMessage = error.response?.data?.message || 'Failed to fetch listings.';
       showMessage(errorMessage, 'error');
       setListings([]);
       setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, [category, searchTerm, currentPage, sortBy, showMessage, advancedFilters]);
+  }, [showMessage]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-    fetchListings();
-    fetchUserFavourites();
-  }, [category, searchTerm, sortBy, advancedFilters, fetchListings, fetchUserFavourites]);
-
+  // This function's only job is to navigate to the search page.
   const handleSearch = useCallback((e) => {
     e.preventDefault();
     const queryParams = new URLSearchParams();
-    if (searchTerm.trim()) queryParams.append("query", searchTerm.trim());
-    if (advancedFilters.purchaseCategory || category) queryParams.append("category", advancedFilters.purchaseCategory || category);
+    if (searchTerm.trim()) {
+        queryParams.append("search", searchTerm.trim());
+    }
+    if (advancedFilters.purchaseCategory) queryParams.append("purchase_category", advancedFilters.purchaseCategory);
     if (advancedFilters.location) queryParams.append("location", advancedFilters.location);
     if (advancedFilters.propertyType) queryParams.append("property_type", advancedFilters.propertyType);
-    if (advancedFilters.subtype) queryParams.append("subtype", advancedFilters.subtype);
     if (advancedFilters.bedrooms) queryParams.append("bedrooms", advancedFilters.bedrooms);
     if (advancedFilters.bathrooms) queryParams.append("bathrooms", advancedFilters.bathrooms);
     if (advancedFilters.minPrice) queryParams.append("min_price", advancedFilters.minPrice);
     if (advancedFilters.maxPrice) queryParams.append("max_price", advancedFilters.maxPrice);
-
+    if (sortBy) queryParams.append("sortBy", sortBy);
+    
     if (queryParams.toString()) {
       navigate(`/search?${queryParams.toString()}`);
     } else {
-      showMessage('Please enter a search term or select a category/filter.', 'info');
+      showMessage('Please enter a search term or select a filter.', 'info');
     }
-  }, [searchTerm, category, advancedFilters, navigate, showMessage]);
+  }, [searchTerm, advancedFilters, sortBy, navigate, showMessage]);
+
+  const handleFavoriteToggle = useCallback(async (propertyId, isCurrentlyFavorited) => {
+    if (!isAuthenticated) {
+      showMessage("Please log in to manage your favorites.", "error");
+      navigate('/signin');
+      return;
+    }
+    try {
+      if (isCurrentlyFavorited) {
+        await axiosInstance.delete(`/favourites/properties/${propertyId}`);
+        showMessage("Removed from favorites!", "success");
+      } else {
+        await axiosInstance.post(`/favourites/properties`, { property_id: propertyId });
+        showMessage("Added to favorites!", "success");
+      }
+      fetchUserFavourites();
+    } catch (error) {
+      showMessage(error.response?.data?.message || 'Failed to update favorites.', 'error');
+    }
+  }, [isAuthenticated, fetchUserFavourites, showMessage, navigate]);
+  
+  const handleDeleteListing = useCallback((listingId) => {
+    showConfirm({
+        title: "Delete Listing",
+        message: "Are you sure you want to delete this listing permanently?",
+        onConfirm: async () => {
+            try {
+                await axiosInstance.delete(`/listings/${listingId}`);
+                showMessage('Listing deleted successfully!', 'success');
+                fetchListings(currentPage);
+                fetchFeaturedListings();
+            } catch (error) {
+                showMessage('Failed to delete listing. Please try again.', 'error');
+            }
+        },
+    });
+  }, [showConfirm, showMessage, fetchListings, fetchFeaturedListings, currentPage]);
+
+  useEffect(() => {
+    fetchFeaturedListings();
+  }, [fetchFeaturedListings]);
+  
+  // UPDATE: This main data-fetching useEffect now ONLY runs on initial auth load and pagination.
+  // It IGNORES changes to filters, search term, and sort by.
+  useEffect(() => {
+    if (!authLoading) {
+        fetchListings(currentPage);
+        fetchUserFavourites();
+    }
+  }, [currentPage, authLoading, fetchListings, fetchUserFavourites]);
 
   const handlePageChange = useCallback((newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -261,11 +210,9 @@ function Home() {
 
   const scrollFeatured = useCallback((direction) => {
     if (!isCarousel || !featuredCarouselRef.current) return;
-
     const carousel = featuredCarouselRef.current;
     const itemElement = carousel.querySelector('.featured-card-item');
     if (!itemElement) return;
-
     const itemStyle = window.getComputedStyle(itemElement);
     const itemMarginLeft = parseFloat(itemStyle.marginLeft);
     const itemMarginRight = parseFloat(itemStyle.marginRight);
@@ -277,13 +224,13 @@ function Home() {
     if (direction === 'next') {
       newScrollTarget += itemWidthWithMargins;
       if (newScrollTarget >= 2 * totalOriginalListWidth) {
-        carousel.scrollLeft = carousel.scrollLeft - totalOriginalListWidth;
+        carousel.scrollLeft -= totalOriginalListWidth;
         newScrollTarget = carousel.scrollLeft + itemWidthWithMargins;
       }
     } else {
       newScrollTarget -= itemWidthWithMargins;
       if (newScrollTarget < totalOriginalListWidth) {
-        carousel.scrollLeft = carousel.scrollLeft + totalOriginalListWidth;
+        carousel.scrollLeft += totalOriginalListWidth;
         newScrollTarget = carousel.scrollLeft - itemWidthWithMargins;
       }
     }
@@ -292,7 +239,6 @@ function Home() {
 
   useEffect(() => {
     if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-    // FIX: Only start auto-swipe if it is a carousel
     if (isCarousel) {
       autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 3000);
     }
@@ -338,14 +284,14 @@ function Home() {
 
         {featuredListings.length > 0 && (
           <motion.div
-            className={`-mt-4 mb-0 sm:mb-2 sm:py-2 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${darkMode ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}`}
+            className={`-mt-4 mb-4 sm:mb-6 sm:py-4 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${darkMode ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}`}
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             onTouchStart={isCarousel ? handleTouchStart : undefined}
             onTouchEnd={isCarousel ? handleTouchEnd : undefined}
           >
-            <h2 className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-2 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+            <h2 className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-4 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
               <Star size={20} className="text-yellow-400 fill-current" />
               Featured Properties
               <Star size={20} className="text-yellow-400 fill-current" />
@@ -353,7 +299,6 @@ function Home() {
             <div className="relative">
               <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
               
-              {/* FIX: Add navigation buttons only for carousel view */}
               {isCarousel && (
                 <>
                   <button onClick={() => scrollFeatured('prev')} className={`absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-200'}`} aria-label="Previous featured item">
@@ -376,7 +321,6 @@ function Home() {
                     </div>
                   ))
                 ) : (
-                  // FIX: Conditionally duplicate listings for carousel effect
                   (isCarousel ? [...featuredListings, ...featuredListings, ...featuredListings] : featuredListings).map((listing, index) => (
                     <div
                       key={`featured-${listing.property_id}-${index}`}
@@ -396,6 +340,11 @@ function Home() {
                   ))
                 )}
               </div>
+            </div>
+            <div className="text-center mt-6">
+                <Link to="/featured-listings" className={`inline-block py-2 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 ${darkMode ? 'bg-green-600 text-white hover:bg-green-500' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                    See All Featured Properties &rarr;
+                </Link>
             </div>
           </motion.div>
         )}

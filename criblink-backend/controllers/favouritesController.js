@@ -281,6 +281,7 @@ exports.getFavouriteAgents = async (req, res) => {
                 u.profile_picture_url,
                 u.date_joined,
                 u.status,
+                u.agency_id,
                 ufa.created_at AS favourited_at,
                 a.name AS agency_name,
                 a.logo_url AS agency_logo_url

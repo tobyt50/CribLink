@@ -4,12 +4,13 @@ const jwt = require('jsonwebtoken');
 const logActivity = require('../utils/logActivity');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
-const axios = require('axios'); // Import axios for HTTP requests
+const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary');
+const axios = require('axios');
+const SUBSCRIPTION_TIERS = require('../config/subscriptionConfig'); // NEW: Import subscription config
 
 const SECRET_KEY = process.env.JWT_KEY || 'lionel_messi_10_is_the_goat!';
-// Changed API key variable name to be more generic for different geocoding services
-const GEOCODING_API_KEY = process.env.OPENCAGE_GEOCODING_API_KEY; // Get API key from environment variables
+const GEOCODING_API_KEY = process.env.OPENCAGE_GEOCODING_API_KEY;
+
 
 // Configure Nodemailer (replace with your actual email service details)
 const transporter = nodemailer.createTransport({
@@ -59,6 +60,58 @@ async function reverseGeocode(latitude, longitude) {
     }
 }
 
+/**
+ * Updates a user's subscription tier.
+ * This is an admin-only action.
+ */
+exports.updateSubscription = async (req, res) => {
+    const { id: userId } = req.params; // The user whose subscription is being updated
+    const { subscription_type } = req.body; // e.g., 'pro', 'enterprise'
+    const performingUser = req.user; // The admin performing the action
+
+    // Validate the new tier against the config file
+    if (!SUBSCRIPTION_TIERS[subscription_type]) {
+        return res.status(400).json({ message: 'Invalid subscription tier provided.' });
+    }
+
+    const newTierConfig = SUBSCRIPTION_TIERS[subscription_type];
+
+    try {
+        // Update the user's subscription type and featured priority in the database.
+        // This targets the user's individual subscription. Agency subscriptions are handled separately.
+        const result = await db.query(
+            `UPDATE users SET 
+                subscription_type = $1, 
+                featured_priority = $2, 
+                updated_at = NOW() 
+             WHERE user_id = $3
+             RETURNING user_id, full_name, email, role, subscription_type, featured_priority`,
+            [subscription_type, newTierConfig.featuredPriority, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        const updatedUser = result.rows[0];
+
+        // Log the administrative activity
+        await logActivity(
+            `Admin ${performingUser.name} updated subscription for user ${updatedUser.full_name} to '${subscription_type}'`,
+            performingUser.user_id,
+            'subscription_change'
+        );
+
+        res.status(200).json({
+            message: `User subscription successfully updated to ${subscription_type}.`,
+            user: updatedUser
+        });
+
+    } catch (err) {
+        console.error('Error updating subscription:', err);
+        res.status(500).json({ message: 'Failed to update user subscription.', error: err.message });
+    }
+};
 
 exports.signupUser = async (req, res) => {
     // Destructure all fields that can be sent from SignUp.js, including optional ones
@@ -111,7 +164,8 @@ exports.signupUser = async (req, res) => {
         queryValues.push(false, false);
 
 
-        queryText += `) VALUES (${valuePlaceholders.join(', ')}) RETURNING user_id, full_name, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, agency, agency_id, username, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, default_landing_page, notification_email, preferred_communication_channel, social_links, share_favourites_with_agents, share_property_preferences_with_agents`; // NEW: Return agency_id and other fields
+        // UPDATE: Add subscription fields to the RETURNING clause
+        queryText += `) VALUES (${valuePlaceholders.join(', ')}) RETURNING user_id, full_name, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, agency, agency_id, username, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, default_landing_page, notification_email, preferred_communication_channel, social_links, share_favourites_with_agents, share_property_preferences_with_agents, subscription_type, featured_priority`;
 
         const result = await db.query(queryText, queryValues);
         const newUser = result.rows[0];
@@ -166,7 +220,9 @@ exports.signupUser = async (req, res) => {
                 preferred_communication_channel: newUser.preferred_communication_channel,
                 social_links: newUser.social_links,
                 share_favourites_with_agents: newUser.share_favourites_with_agents,
-                share_property_preferences_with_agents: newUser.share_property_preferences_with_agents
+                share_property_preferences_with_agents: newUser.share_property_preferences_with_agents,
+                subscription_type: newUser.subscription_type, // Will be 'basic' by default
+                featured_priority: newUser.featured_priority // Will be 0 by default
             },
         });
     } catch (err) {
@@ -197,13 +253,26 @@ exports.signinUser = async (req, res) => {
     try {
         // Try to find the user by email or username
         const result = await db.query(
-            `SELECT user_id, full_name, username, email, password_hash, role, date_joined, phone, agency, bio, location, profile_picture_url, profile_picture_public_id, status, agency_id,
-                    is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
-                    communication_email_updates, communication_marketing, communication_newsletter,
-                    notifications_settings, timezone, currency, default_landing_page, notification_email,
-                    preferred_communication_channel, social_links, share_favourites_with_agents,
-                    share_property_preferences_with_agents
-             FROM users WHERE email = $1 OR username = $1`, // Check both email and username
+            `SELECT 
+                u.user_id, u.full_name, u.username, u.email, u.password_hash, u.role, u.date_joined, u.phone, 
+                u.agency, u.bio, u.location, u.profile_picture_url, u.profile_picture_public_id, u.status, u.agency_id,
+                u.is_2fa_enabled, u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+                u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+                u.notifications_settings, u.timezone, u.currency, u.default_landing_page, u.notification_email,
+                u.preferred_communication_channel, u.social_links, u.share_favourites_with_agents,
+                u.share_property_preferences_with_agents,
+                -- NEW: Subscription Logic
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+                    ELSE u.subscription_type 
+                END AS subscription_type,
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+                    ELSE u.featured_priority
+                END AS featured_priority
+             FROM users u
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
+             WHERE u.email = $1 OR u.username = $1`,
             [identifier]
         );
         user = result.rows[0];
@@ -326,7 +395,9 @@ exports.signinUser = async (req, res) => {
                 preferred_communication_channel: user.preferred_communication_channel,
                 social_links: user.social_links,
                 share_favourites_with_agents: user.share_favourites_with_agents,
-                share_property_preferences_with_agents: user.share_property_preferences_with_agents
+                share_property_preferences_with_agents: user.share_property_preferences_with_agents,
+                subscription_type: user.subscription_type,
+                featured_priority: user.featured_priority
             }
         });
     } catch (err) {
@@ -349,8 +420,18 @@ exports.getProfile = async (req, res) => {
                 u.notifications_settings, u.timezone, u.currency, u.notification_email,
                 u.preferred_communication_channel, u.share_favourites_with_agents,
                 u.share_property_preferences_with_agents,
-                am.request_status AS agency_request_status -- Fetch agency_request_status
+                am.request_status AS agency_request_status,
+                -- NEW: Subscription Logic
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+                    ELSE u.subscription_type 
+                END AS subscription_type,
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+                    ELSE u.featured_priority
+                END AS featured_priority
              FROM users u
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
              LEFT JOIN agency_members am ON u.user_id = am.agent_id AND u.agency_id = am.agency_id
              WHERE u.user_id = $1`,
             [userId]
@@ -972,5 +1053,52 @@ exports.getCurrentUser = async (req, res) => {
     } catch (err) {
         console.error('Error fetching current user:', err);
         res.status(500).json({ message: 'Failed to fetch current user.', error: err.message });
+    }
+};
+
+/**
+ * @desc Get the current count of a user's active and featured listings.
+ * @route GET /api/users/listing-stats
+ * @access Private
+ */
+exports.getListingStats = async (req, res) => {
+    const { user_id, role, agency_id } = req.user;
+
+    try {
+        // Determine the scope for the query: either the agent's own ID or their agency's ID.
+        const scopeField = role === 'agency_admin' ? 'agency_id' : 'agent_id';
+        const scopeId = role === 'agency_admin' ? agency_id : user_id;
+
+        if (role === 'agency_admin' && !agency_id) {
+            // Edge case: an agency_admin who is somehow not linked to an agency.
+            return res.status(200).json({ activeListings: 0, activeFeatured: 0 });
+        }
+
+        // Query to count active listings (not sold, rented, or pending review by platform admin)
+        const activeQuery = db.query(
+            `SELECT COUNT(*) FROM property_listings WHERE ${scopeField} = $1 AND status NOT IN ('sold', 'pending', 'rented')`,
+            [scopeId]
+        );
+
+        // Query to count currently active featured listings
+        const featuredQuery = db.query(
+            `SELECT COUNT(*) FROM property_listings WHERE ${scopeField} = $1 AND is_featured = TRUE AND featured_expires_at > NOW()`,
+            [scopeId]
+        );
+
+        // Run both queries in parallel for efficiency
+        const [activeResult, featuredResult] = await Promise.all([activeQuery, featuredQuery]);
+
+        const activeListings = parseInt(activeResult.rows[0].count, 10);
+        const activeFeatured = parseInt(featuredResult.rows[0].count, 10);
+
+        res.status(200).json({
+            activeListings,
+            activeFeatured
+        });
+
+    } catch (error) {
+        console.error('Error fetching user listing stats:', error);
+        res.status(500).json({ message: 'Failed to fetch listing statistics.', error: error.message });
     }
 };

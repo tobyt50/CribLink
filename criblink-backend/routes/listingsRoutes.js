@@ -8,31 +8,36 @@ const {
     updateListing,
     deleteListing,
     getPurchaseCategories,
-    getFeaturedListings, // New: Import the new controller function
+    getFeaturedListings,
 } = require('../controllers/listingsController');
+
+// --- NEW: Import middleware ---
 const { authenticateToken, optionalAuthenticateToken } = require('../middleware/authMiddleware');
+const { enforceSubscriptionLimit } = require('../middleware/subscriptionEnforcer');
 
 // Public Routes
 router.get('/categories', getPurchaseCategories);
-router.get('/featured', getFeaturedListings); // New: Endpoint for featured listings
+router.get('/featured', getFeaturedListings);
 router.get('/:id', getListingById);
-
 router.get('/', optionalAuthenticateToken, getAllListings);
 
 // Protected Routes (require authentication)
-// Image data will be sent as base64 in the request body, no multer needed.
+
+// UPDATE: Added 'enforceSubscriptionLimit' middleware to the creation route.
+// This will check if the user is allowed to create a new listing based on their plan's maxListings limit.
 router.post(
     '/',
     authenticateToken,
+    enforceSubscriptionLimit('addListing'), // Middleware runs before the controller
     createListing
 );
 
-// Route for updating an existing listing (requires authentication)
-// Image data will be sent as base64 in the request body, no multer needed.
+// The update route remains the same. Complex checks (like featuring a listing)
+// are handled inside the controller for more accuracy.
 router.put(
-    '/:id', // Listing ID in the URL parameters
-    authenticateToken, // Authenticate the user
-    updateListing // The controller function to handle updating the listing
+    '/:id',
+    authenticateToken,
+    updateListing
 );
 
 // Route for deleting a listing (requires authentication)

@@ -3,7 +3,11 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
+const cron = require('node-cron');
 require('dotenv').config();
+
+const db = require('./db/index'); // Assumes knex instance exported as default
+const expireFeaturedListings = require('./jobs/expireFeatured');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,13 +47,8 @@ io.on('connection', (socket) => {
   });
 
   // Event for sending a message
-  // The backend controller (`inquiriesController`) will emit the 'new_message' event
-  // after successfully saving the message to the database. This ensures all clients
-  // receive the confirmed message from the single source of truth.
   socket.on('send_message', (messageData) => {
     console.log(`✉️ Broadcasting message to room: ${messageData.conversationId}`);
-    // The message is emitted to the room. The `inquiriesController` handles the primary 'new_message' emit.
-    // This can be used for things like "typing..." indicators in the future.
     io.to(messageData.conversationId).emit('new_message', messageData);
   });
 
@@ -61,14 +60,18 @@ io.on('connection', (socket) => {
 
 // 📂 Middleware
 app.use(cors());
-// Increased payload limit for JSON and URL-encoded bodies to 50MB
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-// Removed: app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // No longer needed for local storage
+
+// Add db to req
+app.use((req, res, next) => {
+  req.db = db;
+  next();
+});
 
 // 📦 Route imports
 const clientRoutes = require('./routes/clientRoutes');
-const clientStatsRoutes = require('./routes/clientStatsRoutes'); // NEW: Import client stats routes
+const clientStatsRoutes = require('./routes/clientStatsRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const listingsRoutes = require('./routes/listingsRoutes');
@@ -87,44 +90,52 @@ const adminSettingsRoutes = require('./routes/admin/settings');
 const agentSettingsRoutes = require('./routes/agentSettings');
 const clientSettingsRoutes = require('./routes/clientSettings');
 const agentRoutes = require('./routes/agentRoutes');
-const agencyRoutes = require('./routes/agencyRoutes'); // NEW: Import agency routes
-const agencyAdminRoutes = require('./routes/agencyAdminRoutes'); // NEW: Import agency admin routes
-const agencyStatsRoutes = require('./routes/agencyStatsRoutes'); // NEW: Import agency stats routes
+const agencyRoutes = require('./routes/agencyRoutes');
+const agencyAdminRoutes = require('./routes/agencyAdminRoutes');
+const agencyStatsRoutes = require('./routes/agencyStatsRoutes');
+const utilsRoutes = require('./routes/utilsRoutes'); // NEW: Import utility routes
 
 
 // 🚏 Route mounting
-app.use('/clients', clientRoutes);
-app.use('/client-stats', clientStatsRoutes); // NEW: Mount client stats routes
-app.use('/docs', documentRoutes);
-app.use('/finances', financeRoutes);
-app.use('/tickets', ticketRoutes);
-app.use('/admin', adminUserRoutes);
-app.use('/admin', adminStaffRoutes);
-app.use('/admin/activity', adminActivityRoutes);
-app.use('/admin', adminStatsRoutes);
-app.use('/admin/analytics', adminAnalyticsRoutes);
-app.use('/agent', agentStatsRoutes);
-app.use('/users', userRoutes);
-app.use('/listings', listingsRoutes);
-app.use('/agencies', agentPerformanceRoutes);
-app.use('/favourites', favouritesRoutes);
-app.use('/admin/settings', adminSettingsRoutes);
-app.use('/agent/settings', agentSettingsRoutes);
-app.use('/client/settings', clientSettingsRoutes);
-app.use('/agents', agentRoutes);
-app.use('/inquiries', inquiriesRoutes);
-app.use('/agencies', agencyRoutes); // NEW: Mount agency routes
-app.use('/agency-admins', agencyAdminRoutes); // NEW: Mount agency admin routes
-app.use('/agency-stats', agencyStatsRoutes); // NEW: Mount agency stats routes
+app.use('/api/clients', clientRoutes);
+app.use('/api/client-stats', clientStatsRoutes);
+app.use('/api/docs', documentRoutes);
+app.use('/api/finances', financeRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/admin', adminUserRoutes);
+app.use('/api/admin', adminStaffRoutes);
+app.use('/api/admin/activity', adminActivityRoutes);
+app.use('/api/admin', adminStatsRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/agent', agentStatsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/listings', listingsRoutes);
+app.use('/api/agent-performance', agentPerformanceRoutes); 
+app.use('/api/favourites', favouritesRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
+app.use('/api/agent/settings', agentSettingsRoutes);
+app.use('/api/client/settings', clientSettingsRoutes);
+app.use('/api/agents', agentRoutes);
+app.use('/api/inquiries', inquiriesRoutes);
+app.use('/api/agencies', agencyRoutes);
+app.use('/api/agency-admins', agencyAdminRoutes);
+app.use('/api/agency-stats', agencyStatsRoutes);
+app.use('/api/utils', utilsRoutes); // NEW: Mount utility routes
 
 
 // Serve static files from the React app (if applicable, usually in production)
 // app.use(express.static(path.join(__dirname, '../../criblink-frontend/build')));
 
-// The "catchall" handler: for any request that doesn't match one above, send back React's index.html file.
+// The "catchall" handler
 // app.get('*', (req, res) => {
 //   res.sendFile(path.join(__dirname, '../../criblink-frontend/build/index.html'));
 // });
 
+// Schedule daily featured expiry
+cron.schedule('0 0 * * *', () => {
+  console.log('Running daily job: expiring featured listings...');
+  expireFeaturedListings(db);
+});
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

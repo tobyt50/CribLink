@@ -18,12 +18,29 @@ const ListingOverview = ({
 }) => {
   const isLandProperty = listing?.property_type?.toLowerCase() === 'land';
 
+  // Determine the status to display. Show "Featured" if is_featured is true,
+  // unless the status is "Sold", "Pending", or "Rejected".
+  const excludedStatuses = ["Sold", "Pending", "Rejected"];
+  const displayStatus = listing.is_featured && !excludedStatuses.includes(listing.status)
+    ? "Featured"
+    : listing.status;
+
+  const handleEditClick = () => {
+    let basePath = '';
+    if (userRole === 'admin') {
+      basePath = '/admin';
+    } else if (userRole === 'agent') {
+      basePath = '/agent';
+    }
+    navigate(`${basePath}/edit-listing/${listing.property_id}`);
+  };
+
   return (
     <div className={`space-y-4 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>
       
       <div className="flex gap-2 items-center flex-wrap">
-        <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(listing.status)}`}>
-          {getStatusLabel(listing.status)}
+        <span className={`text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm ${getStatusColor(displayStatus)}`}>
+          {getStatusLabel(displayStatus)}
         </span>
         <span className="bg-green-400 text-white text-sm font-medium px-3 py-1 rounded-full shadow-sm">
           {getCategoryLabel(listing.purchase_category)}
@@ -69,7 +86,7 @@ const ListingOverview = ({
 
       {(userRole === 'admin' || (userRole === 'agent' && userId === listing.agent_id)) && (
         <button
-          onClick={() => navigate(`/edit-listing/${listing.property_id}`)}
+          onClick={handleEditClick}
           className="mt-6 bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition-colors duration-300 shadow-md"
         >
           ✏️ Edit Listing

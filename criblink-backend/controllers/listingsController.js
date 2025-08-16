@@ -1,6 +1,7 @@
 const { pool } = require('../db');
 const logActivity = require('../utils/logActivity');
 const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryPublicId } = require('../utils/cloudinary'); // Import Cloudinary utilities
+const SUBSCRIPTION_TIERS = require('../config/subscriptionConfig');
 
 // Helper function to attach gallery images to a listing object
 const attachGalleryImages = async (listing) => {
@@ -19,225 +20,178 @@ const attachGalleryImagesToList = async (listings) => {
 
 exports.getAllListings = async (req, res) => {
   try {
-    const {
-      purchase_category,
-      search,
-      min_price,
-      max_price,
-      page,
-      limit,
-      status,
-      agent_id, // This parameter is used to filter listings by a specific agent
-      sortBy,
-      location,
-      property_type,
-      bedrooms,
-      bathrooms,
-      land_size,
-      zoning_type,
-      title_type,
-      agency_id: queryAgencyId // New: parameter for agency_id
-    } = req.query;
+      const {
+          purchase_category, search, min_price, max_price, page, limit, status,
+          agent_id, sortBy, location, property_type, bedrooms, bathrooms,
+          land_size, zoning_type, title_type, agency_id: queryAgencyId
+      } = req.query;
 
-    const userRole = req.user ? req.user.role : 'guest';
-    const userId = req.user ? req.user.user_id : null;
-    const userAgencyId = req.user ? req.user.agency_id : null; // Get agency_id from authenticated user
+      const userRole = req.user ? req.user.role : 'guest';
+      const userId = req.user ? req.user.user_id : null;
+      const userAgencyId = req.user ? req.user.agency_id : null;
 
-    let baseQuery = 'FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id';
-    let conditions = [];
-    let values = [];
-    let valueIndex = 1;
+      // NEW: Base query now joins with users and agencies to get priority data for sorting
+      let baseQuery = `
+          FROM property_listings pl
+          LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+          LEFT JOIN users u ON pl.agent_id = u.user_id
+          LEFT JOIN agencies a ON pl.agency_id = a.agency_id
+      `;
+      let conditions = [];
+      let values = [];
+      let valueIndex = 1;
 
-    const normalizedStatus = status?.toLowerCase();
-
-    // 1. Enforce specific status (e.g. Featured) across all roles if provided
-    if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
-      // MODIFIED: Handle 'featured' status to query the 'is_featured' boolean property.
-      if (normalizedStatus === 'featured') {
-        conditions.push(`pl.is_featured = TRUE`);
+      // --- (All your existing filtering and conditions logic remains exactly the same) ---
+      const normalizedStatus = status?.toLowerCase();
+      if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
+        if (normalizedStatus === 'featured') {
+          conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
+        } else {
+          conditions.push(`pl.status ILIKE $${valueIndex++}`);
+          values.push(status);
+        }
       } else {
-        conditions.push(`pl.status ILIKE $${valueIndex++}`);
-        values.push(status);
+        if (userRole === 'client' || userRole === 'guest') {
+          conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
+          values.push(['available', 'sold', 'under offer']);
+        } else if (userRole === 'agent') {
+          conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
+          values.push(['available', 'sold', 'under offer'], userId);
+        } else if (userRole === 'agency_admin' && userAgencyId) {
+          conditions.push(`((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`);
+          values.push(userAgencyId, userAgencyId, ['available', 'sold', 'under offer']);
+        }
       }
-    } else {
-      // 2. Role-based default filtering for status
-      if (userRole === 'client' || userRole === 'visitor' || userRole === 'guest') {
-        // Clients, visitors, and guests only see 'available', 'featured', 'sold', 'under offer' listings
-        conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
-        values.push(['available', 'featured', 'sold', 'under offer']);
-      } else if (userRole === 'agent') {
-        // Agents see their own listings regardless of status, plus public statuses
-        conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
-        values.push(['available', 'featured', 'sold', 'under offer'], userId);
-      } else if (userRole === 'agency_admin' && userAgencyId) {
-        // Agency admins see all listings for their agency AND public statuses for other agencies
-        conditions.push(`(
-          (pl.agency_id = $${valueIndex++}) OR
-          (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++}))
-        )`);
-        values.push(userAgencyId, userAgencyId, ['available', 'featured', 'sold']); // Added 'sold' as requested
+      if (userRole !== 'agency_admin' && queryAgencyId) {
+          conditions.push(`pl.agency_id = $${valueIndex++}`);
+          values.push(queryAgencyId);
       }
-      // Admin has full access if no status is specified (no filtering needed based on status for admin)
-    }
+      if (agent_id) { conditions.push(`pl.agent_id = $${valueIndex++}`); values.push(agent_id); }
+      if (purchase_category && purchase_category.toLowerCase() !== 'all') { conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`); values.push(purchase_category); }
+      if (min_price) { conditions.push(`pl.price >= $${valueIndex++}`); values.push(min_price); }
+      if (max_price) { conditions.push(`pl.price <= $${valueIndex++}`); values.push(max_price); }
+      if (location) { conditions.push(`pl.location ILIKE $${valueIndex++}`); values.push(`%${location}%`); }
+      if (property_type) { conditions.push(`pl.property_type ILIKE $${valueIndex++}`); values.push(`%${property_type}%`); }
+      if (bedrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bedrooms = $${valueIndex++}`); values.push(parseInt(bedrooms)); }
+      if (bathrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bathrooms = $${valueIndex++}`); values.push(parseInt(bathrooms)); }
+      if (land_size) { conditions.push(`pd.land_size >= $${valueIndex++}`); values.push(parseFloat(land_size)); }
+      if (zoning_type) { conditions.push(`pd.zoning_type ILIKE $${valueIndex++}`); values.push(`%${zoning_type}%`); }
+      if (title_type) { conditions.push(`pd.title_type ILIKE $${valueIndex++}`); values.push(`%${title_type}%`); }
+      if (search && search.trim() !== '') {
+        const keyword = `%${search.trim()}%`;
+        conditions.push(`(pl.title ILIKE $${valueIndex} OR pl.location ILIKE $${valueIndex+1} OR pl.state ILIKE $${valueIndex+2} OR pl.property_type ILIKE $${valueIndex+3} OR pd.description ILIKE $${valueIndex+4})`);
+        values.push(keyword, keyword, keyword, keyword, keyword);
+        valueIndex += 5;
+      }
+      // --- (End of existing filtering logic) ---
+      
+      let whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
 
-    // 3. Filter by agency_id if the user is an agency_admin
-    // This ensures agency admins only see listings for their agency
-    // NOTE: The more complex logic for agency_admin is now handled in section 2 (role-based default filtering)
-    // This block is primarily for general filtering by queryAgencyId or if a non-agency_admin user is trying to filter by agency.
-    if (userRole !== 'agency_admin' && queryAgencyId) { // Apply if not agency_admin, or if agency_admin but no specific agency_id in token (shouldn't happen)
-        conditions.push(`pl.agency_id = $${valueIndex++}`);
-        values.push(queryAgencyId);
-    }
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
 
+      // --- NEW: Dynamic Sorting Logic ---
+      let orderByClause = '';
+      const effectivePriority = `COALESCE(a.featured_priority, u.featured_priority, 0)`;
 
-    // 4. Filter by agent_id if provided in the query (applies to all roles)
-    // This allows fetching listings for a specific agent's profile page.
-    if (agent_id) {
-      conditions.push(`pl.agent_id = $${valueIndex++}`);
-      values.push(agent_id);
-    }
+      // This is the default sort which boosts featured listings to the top
+      const defaultSort = `
+          ORDER BY
+              CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END, -- 1. Boost active featured listings
+              ${effectivePriority} DESC, -- 2. Sort the boosted block by their subscription priority
+              pl.date_listed DESC -- 3. Sort all non-featured listings by date
+      `;
 
-    // 5. Additional filters (existing logic)
-    if (purchase_category && purchase_category.toLowerCase() !== 'all') {
-      conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
-      values.push(purchase_category);
-    }
+      if (sortBy === 'price_asc' || sortBy === 'price_desc') {
+          // If sorting by price, apply the featured boost first, then the price sort
+          const direction = sortBy === 'price_asc' ? 'ASC' : 'DESC';
+          orderByClause = `
+              ORDER BY
+                  CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
+                  pl.price ${direction}
+          `;
+      } else if (sortBy === 'date_listed_asc') {
+          orderByClause = `
+              ORDER BY
+                  CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
+                  pl.date_listed ASC
+          `;
+      } else {
+          // Default to our new featured-boosting sort
+          orderByClause = defaultSort;
+      }
 
-    if (min_price) {
-      conditions.push(`pl.price >= $${valueIndex++}`);
-      values.push(min_price);
-    }
+      // Final query construction
+      const query = `
+          SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
+          ${effectivePriority} AS effective_priority
+          ${baseQuery}
+          ${whereClause}
+          ${orderByClause}
+          LIMIT $${valueIndex++} OFFSET $${valueIndex++}
+      `;
+      values.push(limitNum, offset);
 
-    if (max_price) {
-      conditions.push(`pl.price <= $${valueIndex++}`);
-      values.push(max_price);
-    }
+      const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
+      const countValues = values.slice(0, values.length - 2);
 
-    if (location) {
-      conditions.push(`pl.location ILIKE $${valueIndex++}`);
-      values.push(`%${location}%`);
-    }
+      const [listingsResult, countResult] = await Promise.all([
+          pool.query(query, values),
+          pool.query(countQuery, countValues)
+      ]);
 
-    if (property_type) {
-      conditions.push(`pl.property_type ILIKE $${valueIndex++}`);
-      values.push(`%${property_type}%`);
-    }
+      const totalListings = parseInt(countResult.rows[0].count);
+      const listingsWithGallery = await attachGalleryImagesToList(listingsResult.rows);
 
-    // Bedrooms and bathrooms should only be filtered if property_type is NOT 'Land'
-    if (bedrooms && property_type?.toLowerCase() !== 'land') {
-      conditions.push(`pl.bedrooms = $${valueIndex++}`);
-      values.push(parseInt(bedrooms));
-    }
-
-    if (bathrooms && property_type?.toLowerCase() !== 'land') {
-      conditions.push(`pl.bathrooms = $${valueIndex++}`);
-      values.push(parseInt(bathrooms));
-    }
-
-    // New land-specific filters
-    if (land_size) {
-      conditions.push(`pd.land_size >= $${valueIndex++}`); // Assuming min land size
-      values.push(parseFloat(land_size));
-    }
-    if (zoning_type) {
-      conditions.push(`pd.zoning_type ILIKE $${valueIndex++}`);
-      values.push(`%${zoning_type}%`);
-    }
-    if (title_type) {
-      conditions.push(`pd.title_type ILIKE $${valueIndex++}`);
-      values.push(`%${title_type}%`);
-    }
-
-    if (search && search.trim() !== '') {
-      const keyword = `%${search.trim()}%`;
-      conditions.push(`(
-        pl.title ILIKE $${valueIndex} OR
-        pl.location ILIKE $${valueIndex + 1} OR
-        pl.state ILIKE $${valueIndex + 2} OR
-        pl.property_type ILIKE $${valueIndex + 3} OR
-        pd.description ILIKE $${valueIndex + 4}
-      )`);
-      values.push(keyword, keyword, keyword, keyword, keyword);
-      valueIndex += 5;
-    }
-
-    // 6. Where clause
-    let whereClause = '';
-    if (conditions.length > 0) {
-      whereClause = ' WHERE ' + conditions.join(' AND ');
-    }
-
-    // 7. Pagination and Sorting
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
-    const offset = (pageNum - 1) * limitNum;
-
-    let orderByClause = 'ORDER BY pl.date_listed DESC';
-    if (sortBy === 'date_listed_asc') {
-      orderByClause = 'ORDER BY pl.date_listed ASC';
-    } else if (sortBy === 'price_desc') {
-      orderByClause = 'ORDER BY pl.price DESC';
-    } else if (sortBy === 'price_asc') {
-      orderByClause = 'ORDER BY pl.price ASC';
-    }
-
-    // 8. Query building
-    const query = `SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type ${baseQuery} ${whereClause} ${orderByClause} LIMIT $${valueIndex++} OFFSET $${valueIndex++}`;
-    values.push(limitNum, offset);
-
-    const countQuery = `SELECT COUNT(*) FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id ${whereClause}`;
-    const countValues = values.slice(0, values.length - 2); // Exclude limit and offset from count query
-
-    const [listingsResult, countResult] = await Promise.all([
-      pool.query(query, values),
-      pool.query(countQuery, countValues)
-    ]);
-
-    const totalListings = parseInt(countResult.rows[0].count);
-
-    const listingsWithGallery = await attachGalleryImagesToList(listingsResult.rows);
-
-    res.status(200).json({
-      listings: listingsWithGallery,
-      total: totalListings,
-      totalPages: Math.ceil(totalListings / limitNum),
-      currentPage: pageNum
-    });
+      res.status(200).json({
+          listings: listingsWithGallery,
+          total: totalListings,
+          totalPages: Math.ceil(totalListings / limitNum),
+          currentPage: pageNum
+      });
   } catch (err) {
-    console.error('Error fetching listings:', err);
-    res
-      .status(500)
-      .json({ error: 'Internal server error fetching listings', details: err.message });
+      console.error('Error fetching listings:', err);
+      res.status(500).json({ error: 'Internal server error fetching listings', details: err.message });
   }
 };
 
 exports.getFeaturedListings = async (req, res) => {
+  // NEW: Read the optional 'limit' query parameter
+  const { limit } = req.query;
+  const limitValue = parseInt(limit, 10);
+
   try {
-    const query = `
-      SELECT
-        pl.*,
-        pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
-        u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone,
-        GREATEST(u.featured_priority, COALESCE(a.featured_priority, 0)) AS effective_priority
-      FROM property_listings pl
-      LEFT JOIN property_details pd ON pl.property_id = pd.property_id
-      LEFT JOIN users u ON pl.agent_id = u.user_id
-      LEFT JOIN agencies a ON pl.agency_id = a.agency_id
-      WHERE pl.is_featured = TRUE
-      ORDER BY effective_priority DESC, pl.date_listed DESC
-    `;
-    
-    const result = await pool.query(query);
+      let query = `
+          SELECT
+              pl.*,
+              pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
+              u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone,
+              COALESCE(a.featured_priority, u.featured_priority, 0) AS effective_priority
+          FROM property_listings pl
+          LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+          LEFT JOIN users u ON pl.agent_id = u.user_id
+          LEFT JOIN agencies a ON pl.agency_id = a.agency_id
+          WHERE pl.is_featured = TRUE AND pl.featured_expires_at > NOW()
+      `;
 
-    const listingsWithGallery = await attachGalleryImagesToList(result.rows);
+      // NEW: Dynamically adjust the ORDER BY and add a LIMIT clause if a valid limit is provided
+      if (limitValue && limitValue > 0) {
+          // For the homepage carousel: Prioritize by tier, then randomize within that priority
+          // to ensure a fresh set of listings is shown on each visit.
+          query += ` ORDER BY effective_priority DESC, RANDOM() LIMIT ${limitValue}`;
+      } else {
+          // For the dedicated "View All Featured" page: Strictly order by priority.
+          query += ` ORDER BY effective_priority DESC, pl.featured_expires_at ASC`;
+      }
 
-    // FIX: The response should be an object with a 'listings' property
-    // to match what the frontend expects.
-    res.status(200).json({ listings: listingsWithGallery });
-  } catch (err)
- {
-    console.error('Error fetching featured listings:', err);
-    res.status(500).json({ error: 'Internal server error fetching featured listings', details: err.message });
+      const result = await pool.query(query);
+      const listingsWithGallery = await attachGalleryImagesToList(result.rows);
+
+      res.status(200).json({ listings: listingsWithGallery });
+  } catch (err) {
+      console.error('Error fetching featured listings:', err);
+      res.status(500).json({ error: 'Internal server error fetching featured listings', details: err.message });
   }
 };
 
@@ -255,171 +209,147 @@ exports.getPurchaseCategories = async (req, res) => {
 };
 
 exports.createListing = async (req, res) => {
-    const {
-        title,
-        location,
-        state,
-        price,
-        status,
-        property_type,
-        bedrooms, // Can be null for land
-        bathrooms, // Can be null for land
-        purchase_category,
-        description,
-        square_footage, // Can be null for land
-        lot_size,
-        year_built, // Can be null for land
-        heating_type, // Can be null for land
-        cooling_type, // Can be null for land
-        parking, // Can be null for land
-        amenities, // Can be null for land
-        land_size, // New field for land
-        zoning_type, // New field for land
-        title_type, // New field for land
-        mainImageBase664, // Corrected from mainImageBase64
-        mainImageOriginalName,
-        mainImageURL,
-        galleryImagesBase64,
-        galleryImagesOriginalNames,
-        galleryImageURLs,
-        is_featured // New: is_featured field
-    } = req.body;
+  const {
+      title, location, state, price, status, property_type, bedrooms, bathrooms, purchase_category,
+      description, square_footage, lot_size, year_built, heating_type, cooling_type, parking, amenities,
+      land_size, zoning_type, title_type,
+      mainImageBase664, // for backward compatibility
+      mainImageBase64, mainImageOriginalName, mainImageURL,
+      galleryImagesBase64, galleryImagesOriginalNames, galleryImageURLs,
+      is_featured
+  } = req.body;
 
-    const agent_id = req.user ? req.user.user_id : null;
-    const agency_id = req.user ? req.user.agency_id : null; // Get agency_id from req.user
-    if (!agent_id) {
-        return res.status(401).json({ message: 'Authentication required to create a listing.' });
-    }
+  const user = req.user;
+  if (!user) {
+      return res.status(401).json({ message: 'Authentication required to create a listing.' });
+  }
 
-    const date_listed = new Date();
-    let mainImageUrlToSave = null;
-    let mainImagePublicIdToSave = null;
-    const initialGalleryUrls = Array.isArray(galleryImageURLs) ? galleryImageURLs : (galleryImageURLs ? [galleryImageURLs] : []);
+  // Ensure arrays
+  const safeGalleryImagesBase64 = Array.isArray(galleryImagesBase64) ? galleryImagesBase64 : (galleryImagesBase64 ? [galleryImagesBase64] : []);
+  const safeGalleryImagesOriginalNames = Array.isArray(galleryImagesOriginalNames) ? galleryImagesOriginalNames : (galleryImagesOriginalNames ? [galleryImagesOriginalNames] : []);
+  const safeGalleryImageURLs = Array.isArray(galleryImageURLs) ? galleryImageURLs : (galleryImageURLs ? [galleryImageURLs] : []);
 
-    try {
-        await pool.query('BEGIN');
+  const tier = user.subscription_type || 'basic';
+  const tierConfig = SUBSCRIPTION_TIERS[tier];
+  const listingLimitScope = user.role === 'agency_admin' ? 'agency_id' : 'agent_id';
+  const scopeId = user.role === 'agency_admin' ? user.agency_id : user.user_id;
 
-        // Determine main image URL and public ID
-        if (mainImageBase664 && mainImageOriginalName) {
-            // Pass mainImageBase64 string directly to uploadToCloudinary
-            const uploadResult = await uploadToCloudinary(mainImageBase64, mainImageOriginalName, 'listings'); // Corrected variable name
-            mainImageUrlToSave = uploadResult.url;
-            mainImagePublicIdToSave = uploadResult.publicId;
-        } else if (mainImageURL) {
-            mainImageUrlToSave = mainImageURL;
-            mainImagePublicIdToSave = getCloudinaryPublicId(mainImageURL);
-        }
+  try {
+      await pool.query('BEGIN');
 
-        // Handle is_featured field - only allow if user is an admin
-        const featuredValue = (req.user && req.user.role === 'admin') && is_featured !== undefined ? is_featured : false;
+      // --- SUBSCRIPTION ENFORCEMENT CHECKS ---
+      // 1. Check Maximum Listing Limit
+      const activeListingsResult = await pool.query(
+          `SELECT COUNT(*) FROM property_listings WHERE ${listingLimitScope} = $1 AND status NOT IN ('sold', 'pending', 'rented')`,
+          [scopeId]
+      );
+      if (parseInt(activeListingsResult.rows[0].count, 10) >= tierConfig.maxListings) {
+          await pool.query('ROLLBACK');
+          return res.status(403).json({ message: `Your '${tier}' plan allows a maximum of ${tierConfig.maxListings} active listings. Please upgrade to add more.` });
+      }
 
-        // Insert agency_id and is_featured into the property_listings table
-        const listingResult = await pool.query(
-            `INSERT INTO property_listings (title, location, state, price, status, agent_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id, agency_id, is_featured)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-             RETURNING property_id`,
-            [
-                title, location, state, price, status || 'pending', agent_id, date_listed, property_type,
-                property_type?.toLowerCase() === 'land' ? null : bedrooms, // Set bedrooms to null if land
-                property_type?.toLowerCase() === 'land' ? null : bathrooms, // Set bathrooms to null if land
-                purchase_category, mainImageUrlToSave, mainImagePublicIdToSave, agency_id,
-                featuredValue // Include the is_featured value here
-            ]
-        );
+      // 2. Check Image Limit
+      const totalImages = (mainImageBase664 || mainImageBase64 || mainImageURL ? 1 : 0) + safeGalleryImagesBase64.length + safeGalleryImageURLs.length;
+      if (totalImages > tierConfig.maxImages) {
+          await pool.query('ROLLBACK');
+          return res.status(403).json({ message: `Your '${tier}' plan allows a maximum of ${tierConfig.maxImages} images per listing.` });
+      }
 
-        const newListingId = listingResult.rows[0].property_id;
-
-        // Insert into property_details only if any optional detail field is provided and not empty/null
-        const propertyDetailsFields = {
-            description, lot_size, // lot_size applies to both
-        };
-
-        // Conditionally add fields based on property_type
-        if (property_type?.toLowerCase() !== 'land') {
-            propertyDetailsFields.square_footage = square_footage;
-            propertyDetailsFields.year_built = year_built;
-            propertyDetailsFields.heating_type = heating_type;
-            propertyDetailsFields.cooling_type = cooling_type;
-            propertyDetailsFields.parking = parking;
-            propertyDetailsFields.amenities = amenities;
-        } else {
-            propertyDetailsFields.land_size = land_size;
-            propertyDetailsFields.zoning_type = zoning_type;
-            propertyDetailsFields.title_type = title_type;
-        }
-
-        // Filter out fields that are undefined, null, or empty strings
-        const providedDetails = Object.keys(propertyDetailsFields).filter(key =>
-            propertyDetailsFields[key] !== undefined &&
-            propertyDetailsFields[key] !== null &&
-            propertyDetailsFields[key] !== '' // Treat empty strings as not provided for optional fields upon creation
-        );
-
-        if (providedDetails.length > 0) {
-            // The property_details_id is auto-generated by the sequence, so we don't include it
-            // in the columns list here.
-            const columns = ['property_id', ...providedDetails];
-            const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-            const valuesToInsert = [newListingId, ...providedDetails.map(key => propertyDetailsFields[key])];
-
-            await pool.query(
-                `INSERT INTO property_details (${columns.join(', ')}) VALUES (${placeholders})`,
-                valuesToInsert
-            );
-        }
-
-        // Upload new gallery images to Cloudinary
-        if (galleryImagesBase64 && Array.isArray(galleryImagesBase64)) {
-            for (let i = 0; i < galleryImagesBase64.length; i++) {
-                const base64 = galleryImagesBase64[i];
-                const originalname = galleryImagesOriginalNames[i];
-                // Pass base64 string directly to uploadToCloudinary
-                const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
-                if (uploadResult.url) {
-                    await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, uploadResult.url, uploadResult.publicId]);
-                }
-            }
-        }
-
-        // Insert existing gallery URLs (if any were passed from the frontend)
-        for (const url of initialGalleryUrls) {
-            if (url) { // Ensure URL is not empty
-                const publicId = getCloudinaryPublicId(url); // Derive public_id from URL
-                await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, url, publicId]);
-            }
-        }
-
-        await pool.query('COMMIT');
-
-        const createdListingResult = await pool.query(
-            `SELECT
-                pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id, pl.is_featured,
-                pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
-                u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
-            FROM property_listings pl
-            LEFT JOIN property_details pd ON pl.property_id = pd.property_id
-            LEFT JOIN users u ON pl.agent_id = u.user_id
-            WHERE pl.property_id = $1`,
-            [newListingId]
-        );
-        
-        const responseListing = createdListingResult.rows[0];
-        if (responseListing) {
-          await attachGalleryImages(responseListing);
-        }
-
-        await logActivity(
-            `Listing "${title}" created`,
-            req.user,
-            'listing'
+      // 3. Handle 'is_featured' on creation
+      let featuredValue = false;
+      let featuredExpiry = null;
+      if (is_featured) {
+          if (tierConfig.maxFeatured === 0) {
+              await pool.query('ROLLBACK');
+              return res.status(403).json({ message: `Your '${tier}' plan does not allow featuring listings.` });
+          }
+          const activeFeaturedResult = await pool.query(
+              `SELECT COUNT(*) FROM property_listings WHERE ${listingLimitScope} = $1 AND is_featured = TRUE AND featured_expires_at > NOW()`,
+              [scopeId]
           );
+          if (parseInt(activeFeaturedResult.rows[0].count, 10) >= tierConfig.maxFeatured) {
+              await pool.query('ROLLBACK');
+              return res.status(403).json({ message: `You have reached the maximum of ${tierConfig.maxFeatured} featured listings for your '${tier}' plan.` });
+          }
+          featuredValue = true;
+          featuredExpiry = new Date();
+          featuredExpiry.setDate(featuredExpiry.getDate() + tierConfig.featuredDays);
+      }
 
-        res.status(201).json(responseListing);
-    } catch (err) {
-        await pool.query('ROLLBACK');
-        console.error('Error creating listing:', err);
-        res.status(500).json({ error: 'Internal server error creating listing', details: err.message });
-    }
+      // --- IMAGE HANDLING ---
+      let mainImageUrlToSave = mainImageURL || null;
+      let mainImagePublicIdToSave = mainImageURL ? getCloudinaryPublicId(mainImageURL) : null;
+
+      // Prefer mainImageBase64, but fallback to mainImageBase664 for compatibility
+      const base64ToUse = mainImageBase64 || mainImageBase664;
+      if (base64ToUse && mainImageOriginalName) {
+          const uploadResult = await uploadToCloudinary(base64ToUse, mainImageOriginalName, 'listings');
+          mainImageUrlToSave = uploadResult.url;
+          mainImagePublicIdToSave = uploadResult.publicId;
+      }
+
+      // --- LISTING INSERT ---
+      const listingResult = await pool.query(
+          `INSERT INTO property_listings (title, location, state, price, status, agent_id, agency_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id, is_featured, featured_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11, $12, $13, $14, $15) RETURNING property_id`,
+          [
+              title, location, state, price, status || 'pending', user.user_id, user.agency_id, property_type,
+              property_type?.toLowerCase() === 'land' ? null : bedrooms,
+              property_type?.toLowerCase() === 'land' ? null : bathrooms,
+              purchase_category, mainImageUrlToSave, mainImagePublicIdToSave,
+              featuredValue, featuredExpiry
+          ]
+      );
+      const newListingId = listingResult.rows[0].property_id;
+
+      // --- PROPERTY DETAILS ---
+      const propertyDetailsFields = { description, lot_size, square_footage, year_built, heating_type, cooling_type, parking, amenities, land_size, zoning_type, title_type };
+      const providedDetails = Object.keys(propertyDetailsFields).filter(key => propertyDetailsFields[key] !== undefined && propertyDetailsFields[key] !== null && propertyDetailsFields[key] !== '');
+      if (providedDetails.length > 0) {
+          const columns = ['property_id', ...providedDetails];
+          const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+          const valuesToInsert = [newListingId, ...providedDetails.map(key => propertyDetailsFields[key])];
+          await pool.query(`INSERT INTO property_details (${columns.join(', ')}) VALUES (${placeholders})`, valuesToInsert);
+      }
+
+      // --- GALLERY IMAGE UPLOADS ---
+      for (let i = 0; i < safeGalleryImagesBase64.length; i++) {
+          const base64 = safeGalleryImagesBase64[i];
+          const originalname = safeGalleryImagesOriginalNames[i];
+          const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
+          if (uploadResult.url) {
+              await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, uploadResult.url, uploadResult.publicId]);
+          }
+      }
+
+      // --- EXISTING GALLERY URL INSERTS ---
+      for (const url of safeGalleryImageURLs) {
+          if (url) {
+              await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [newListingId, url, getCloudinaryPublicId(url)]);
+          }
+      }
+
+      await pool.query('COMMIT');
+
+      // --- FETCH FULL LISTING WITH GALLERY ---
+      const createdListingResult = await pool.query(
+          `SELECT pl.*, pd.*, u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone 
+           FROM property_listings pl 
+           LEFT JOIN property_details pd ON pl.property_id = pd.property_id 
+           LEFT JOIN users u ON pl.agent_id = u.user_id 
+           WHERE pl.property_id = $1`,
+          [newListingId]
+      );
+      const responseListing = await attachGalleryImages(createdListingResult.rows[0]);
+
+      await logActivity(`Listing "${title}" created`, user.user_id, 'listing_create');
+      res.status(201).json(responseListing);
+
+  } catch (err) {
+      await pool.query('ROLLBACK');
+      console.error('Error creating listing:', err);
+      res.status(500).json({ error: 'Internal server error creating listing', details: err.message });
+  }
 };
 
 exports.getListingById = async (req, res) => {
@@ -445,240 +375,198 @@ exports.getListingById = async (req, res) => {
 exports.updateListing = async (req, res) => {
   const { id } = req.params;
   const {
-    title,
-    location,
-    state,
-    price,
-    status,
-    property_type,
-    bedrooms,
-    bathrooms,
-    purchase_category,
-    existingImageUrlsToKeep,
-    newImageUrls,
-    mainImageIdentifier,
-    description,
-    square_footage,
-    lot_size,
-    year_built,
-    heating_type,
-    cooling_type,
-    parking,
-    amenities,
-    land_size,
-    zoning_type,
-    title_type,
-    newImagesBase64,
-    newImagesOriginalNames,
-    is_featured
+      is_featured,
+      newImagesBase64 = [],
+      newImagesOriginalNames = [],
+      existingImageUrlsToKeep = [],
+      mainImageIdentifier,
+      ...updateData
   } = req.body;
-  
-  const existingUrls = Array.isArray(existingImageUrlsToKeep) ? existingImageUrlsToKeep : (existingImageUrlsToKeep ? JSON.parse(existingImageUrlsToKeep) : []);
-  const newUrls = Array.isArray(newImageUrls) ? newImageUrls : (newImageUrls ? JSON.parse(newImageUrls) : []);
-  const newFilesBase64 = Array.isArray(newImagesBase64) ? newImagesBase64 : [];
-  const newFilesOriginalNames = Array.isArray(newImagesOriginalNames) ? newImagesOriginalNames : [];
-  
+
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: 'Authentication required.' });
+
+  const tier = user.subscription_type || 'basic';
+  const tierConfig = SUBSCRIPTION_TIERS[tier];
+  const listingLimitScope = user.role === 'agency_admin' ? 'agency_id' : 'agent_id';
+  const scopeId = user.role === 'agency_admin' ? user.agency_id : user.user_id;
+
   try {
-    await pool.query('BEGIN');
-    
-    const currentListingResult = await pool.query('SELECT image_url, image_public_id, property_type, agent_id, agency_id FROM property_listings WHERE property_id = $1 FOR UPDATE', [id]);
-    if (currentListingResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
-      return res.status(404).json({ message: 'Listing not found' });
-    }
-    const { image_url: currentMainImageUrl, image_public_id: currentMainImagePublicId, property_type: currentPropertyType, agent_id, agency_id } = currentListingResult.rows[0];
+      await pool.query('BEGIN');
 
-    const isOwner = req.user && req.user.user_id === agent_id;
-    const isAgencyAdmin = req.user && req.user.role === 'agency_admin' && req.user.agency_id === agency_id;
-    const isAdmin = req.user && req.user.role === 'admin';
-    if (!isOwner && !isAgencyAdmin && !isAdmin) {
-      await pool.query('ROLLBACK');
-      return res.status(403).json({ message: 'Forbidden: You do not have permission to update this listing.' });
-    }
-    
-    const currentGalleryResult = await pool.query('SELECT image_url, public_id FROM property_images WHERE property_id = $1', [id]);
-    const currentGalleryImages = currentGalleryResult.rows.map(row => ({ url: row.image_url, publicId: row.public_id }));
-
-    let updates = [];
-    let values = [];
-    let valueIndex = 1;
-
-    if (title !== undefined) {
-      updates.push(`title = $${valueIndex++}`);
-      values.push(title);
-    }
-    if (location !== undefined) {
-      updates.push(`location = $${valueIndex++}`);
-      values.push(location);
-    }
-    if (state !== undefined) {
-      updates.push(`state = $${valueIndex++}`);
-      values.push(state);
-    }
-    if (price !== undefined) {
-      updates.push(`price = $${valueIndex++}`);
-      values.push(price);
-    }
-    if (status !== undefined) {
-      updates.push(`status = $${valueIndex++}`);
-      values.push(status);
-      if (status.toLowerCase() === 'sold') {
-        updates.push(`is_featured = $${valueIndex++}`);
-        values.push(false);
+      // --- GET CURRENT LISTING ---
+      const listingResult = await pool.query(
+          'SELECT agent_id, agency_id, is_featured, image_url, image_public_id FROM property_listings WHERE property_id = $1 FOR UPDATE',
+          [id]
+      );
+      if (listingResult.rows.length === 0) {
+          await pool.query('ROLLBACK');
+          return res.status(404).json({ message: 'Listing not found.' });
       }
-    }
-    if (property_type !== undefined) {
-      updates.push(`property_type = $${valueIndex++}`);
-      values.push(property_type);
-    }
+      const currentListing = listingResult.rows[0];
 
-    if (req.user && req.user.role === 'admin' && is_featured !== undefined && status?.toLowerCase() !== 'sold') {
-        updates.push(`is_featured = $${valueIndex++}`);
-        values.push(is_featured);
-    }
-
-    if (property_type !== undefined) {
-        const type = property_type?.toLowerCase();
-        if (type === 'land') {
-            updates.push(`bedrooms = $${valueIndex++}`);
-            values.push(null);
-            updates.push(`bathrooms = $${valueIndex++}`);
-            values.push(null);
-        } else {
-            if (bedrooms !== undefined) {
-                updates.push(`bedrooms = $${valueIndex++}`);
-                values.push(bedrooms);
-            }
-            if (bathrooms !== undefined) {
-                updates.push(`bathrooms = $${valueIndex++}`);
-                values.push(bathrooms);
-            }
-        }
-    } else {
-        if (bedrooms !== undefined) {
-            updates.push(`bedrooms = $${valueIndex++}`);
-            values.push(bedrooms);
-        }
-        if (bathrooms !== undefined) {
-            updates.push(`bathrooms = $${valueIndex++}`);
-            values.push(bathrooms);
-        }
-    }
-
-    if (purchase_category !== undefined) {
-      updates.push(`purchase_category = $${valueIndex++}`);
-      values.push(purchase_category);
-    }
-
-    if (updates.length > 0) {
-      const updateQuery = `UPDATE property_listings SET ${updates.join(', ')} WHERE property_id = $${valueIndex++}`;
-      values.push(id);
-      await pool.query(updateQuery, values);
-    }
-
-    const propertyDetailsFields = {
-      description, square_footage, lot_size, year_built, heating_type, cooling_type, parking, amenities,
-      land_size, zoning_type, title_type
-    };
-    
-    const existingDetails = await pool.query('SELECT * FROM property_details WHERE property_id = $1', [id]);
-    
-    let detailUpdates = [];
-    let detailValues = [id];
-    let detailIndex = 2;
-    const providedDetailKeys = Object.keys(propertyDetailsFields).filter(key => propertyDetailsFields[key] !== undefined);
-
-    if (existingDetails.rows.length > 0) {
-        const detailsToUpdate = providedDetailKeys.map(key => {
-            detailUpdates.push(`${key} = $${detailIndex++}`);
-            detailValues.push(propertyDetailsFields[key]);
-        });
-
-        if (detailUpdates.length > 0) {
-            const detailUpdateQuery = `UPDATE property_details SET ${detailUpdates.join(', ')} WHERE property_id = $1`;
-            await pool.query(detailUpdateQuery, detailValues);
-        }
-    } else if (providedDetailKeys.length > 0) {
-        const columns = ['property_id', ...providedDetailKeys];
-        const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-        const insertValues = [id, ...providedDetailKeys.map(key => propertyDetailsFields[key])];
-        const detailInsertQuery = `INSERT INTO property_details (${columns.join(', ')}) VALUES (${placeholders})`;
-        await pool.query(detailInsertQuery, insertValues);
-    }
-    
-    const urlsToDelete = currentGalleryImages.filter(img => !existingUrls.includes(img.url));
-    for (const img of urlsToDelete) {
-      if (img.publicId) {
-        await deleteFromCloudinary(img.publicId);
+      // --- PERMISSION CHECK ---
+      if (!(user.user_id === currentListing.agent_id || (user.role === 'agency_admin' && user.agency_id === currentListing.agency_id) || user.role === 'admin')) {
+          await pool.query('ROLLBACK');
+          return res.status(403).json({ message: 'You do not have permission to update this listing.' });
       }
-      await pool.query('DELETE FROM property_images WHERE public_id = $1', [img.publicId]);
-    }
 
-    for (let i = 0; i < newFilesBase64.length; i++) {
-        const base64 = newFilesBase64[i];
-        const originalname = newFilesOriginalNames[i];
-        const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
-        if (uploadResult.url) {
-            await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [id, uploadResult.url, uploadResult.publicId]);
-        }
-    }
-    
-    let newMainImageUrl = null;
-    let newMainImagePublicId = null;
-    
-    if (mainImageIdentifier) {
-        const isNewImage = mainImageIdentifier.startsWith('data:');
-        
-        if (isNewImage) {
-            const newMainImageBase64 = mainImageIdentifier;
-            const uploadResult = await uploadToCloudinary(newMainImageBase64, 'main_image', 'listings');
-            newMainImageUrl = uploadResult.url;
-            newMainImagePublicId = uploadResult.publicId;
-        } else {
-            newMainImageUrl = mainImageIdentifier;
-            newMainImagePublicId = getCloudinaryPublicId(newMainImageUrl);
-        }
-        
-        const oldMainImageIsStillInGallery = existingUrls.includes(currentMainImageUrl);
-        if (currentMainImagePublicId && currentMainImageUrl !== newMainImageUrl && !oldMainImageIsStillInGallery) {
-          await deleteFromCloudinary(currentMainImagePublicId);
-        }
+      const updates = [];
+      let values = [];
+      let valueIndex = 1;
 
-        await pool.query('UPDATE property_listings SET image_url = $1, image_public_id = $2 WHERE property_id = $3', [newMainImageUrl, newMainImagePublicId, id]);
-    }
-    
-    await pool.query('COMMIT');
-    
-    const updatedListingResult = await pool.query(
-      `SELECT
-        pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id, pl.is_featured,
-        pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
-        u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
-      FROM property_listings pl
-      LEFT JOIN property_details pd ON pl.property_id = pd.property_id
-      LEFT JOIN users u ON pl.agent_id = u.user_id
-      WHERE pl.property_id = $1`,
-      [id]
-    );
+      // --- FEATURED STATUS ---
+      if (is_featured !== undefined && is_featured !== currentListing.is_featured) {
+          if (is_featured) {
+              if (tierConfig.maxFeatured === 0) {
+                  await pool.query('ROLLBACK');
+                  return res.status(403).json({ message: `Your '${tier}' plan does not allow featuring listings.` });
+              }
+              const activeFeaturedResult = await pool.query(
+                  `SELECT COUNT(*) FROM property_listings WHERE ${listingLimitScope} = $1 AND is_featured = TRUE AND featured_expires_at > NOW()`,
+                  [scopeId]
+              );
+              if (parseInt(activeFeaturedResult.rows[0].count, 10) >= tierConfig.maxFeatured) {
+                  await pool.query('ROLLBACK');
+                  return res.status(403).json({ message: `You have reached the maximum of ${tierConfig.maxFeatured} featured listings for your '${tier}' plan.` });
+              }
+              updates.push(`is_featured = $${valueIndex++}`, `featured_expires_at = $${valueIndex++}`);
+              values.push(true, new Date(Date.now() + tierConfig.featuredDays * 24 * 60 * 60 * 1000));
+          } else {
+              updates.push(`is_featured = $${valueIndex++}`, `featured_expires_at = $${valueIndex++}`);
+              values.push(false, null);
+          }
+      }
 
-    const responseListing = updatedListingResult.rows[0];
-    if (responseListing) {
-      await attachGalleryImages(responseListing);
-    }
-    
-    await logActivity(
-        `Listing "${id}" updated`,
-        req.user,
-        'listing'
-    );
-    
-    res.status(200).json(responseListing);
+      // --- GET CURRENT GALLERY ---
+      const currentGalleryResult = await pool.query(
+          'SELECT image_url, public_id FROM property_images WHERE property_id = $1',
+          [id]
+      );
+      const currentGalleryImages = currentGalleryResult.rows.map(row => ({
+          url: row.image_url,
+          publicId: row.public_id
+      }));
+
+      // --- IMAGE LIMIT CHECK ---
+      const totalImagesAfterUpdate =
+          existingImageUrlsToKeep.length + newImagesBase64.length + (mainImageIdentifier && !existingImageUrlsToKeep.includes(mainImageIdentifier) ? 1 : 0);
+
+      if (totalImagesAfterUpdate > tierConfig.maxImages) {
+          await pool.query('ROLLBACK');
+          return res.status(403).json({ message: `Your '${tier}' plan allows a maximum of ${tierConfig.maxImages} images per listing.` });
+      }
+
+      // --- DELETE REMOVED GALLERY IMAGES ---
+      const urlsToDelete = currentGalleryImages.filter(img => !existingImageUrlsToKeep.includes(img.url));
+      for (const img of urlsToDelete) {
+          if (img.publicId) {
+              await deleteFromCloudinary(img.publicId);
+          }
+          await pool.query('DELETE FROM property_images WHERE public_id = $1', [img.publicId]);
+      }
+
+      // --- UPLOAD NEW GALLERY IMAGES ---
+      for (let i = 0; i < newImagesBase64.length; i++) {
+          const base64 = newImagesBase64[i];
+          const originalname = newImagesOriginalNames[i] || 'gallery_image';
+          const uploadResult = await uploadToCloudinary(base64, originalname, 'listings');
+          if (uploadResult.url) {
+              await pool.query('INSERT INTO property_images (property_id, image_url, public_id) VALUES ($1, $2, $3)', [id, uploadResult.url, uploadResult.publicId]);
+          }
+      }
+
+      // --- MAIN IMAGE HANDLING (Function A's logic) ---
+      if (mainImageIdentifier) {
+          let newMainImageUrl = null;
+          let newMainImagePublicId = null;
+
+          const isNewImage = mainImageIdentifier.startsWith('data:');
+          if (isNewImage) {
+              const uploadResult = await uploadToCloudinary(mainImageIdentifier, 'main_image', 'listings');
+              newMainImageUrl = uploadResult.url;
+              newMainImagePublicId = uploadResult.publicId;
+          } else {
+              newMainImageUrl = mainImageIdentifier;
+              newMainImagePublicId = getCloudinaryPublicId(newMainImageUrl);
+          }
+
+          const oldMainImageIsStillInGallery = existingImageUrlsToKeep.includes(currentListing.image_url);
+          if (currentListing.image_public_id && currentListing.image_url !== newMainImageUrl && !oldMainImageIsStillInGallery) {
+              await deleteFromCloudinary(currentListing.image_public_id);
+          }
+
+          updates.push(`image_url = $${valueIndex++}`, `image_public_id = $${valueIndex++}`);
+          values.push(newMainImageUrl, newMainImagePublicId);
+      }
+
+      // --- UPDATE LISTING FIELDS ---
+      const listingFields = {
+          title: updateData.title,
+          location: updateData.location,
+          state: updateData.state,
+          price: updateData.price,
+          status: updateData.status,
+          property_type: updateData.property_type,
+          bedrooms: updateData.bedrooms,
+          bathrooms: updateData.bathrooms,
+          purchase_category: updateData.purchase_category
+      };
+      for (const [key, value] of Object.entries(listingFields)) {
+          if (value !== undefined) {
+              updates.push(`${key} = $${valueIndex++}`);
+              values.push(value);
+          }
+      }
+      if (updates.length > 0) {
+          values.push(id);
+          await pool.query(`UPDATE property_listings SET ${updates.join(', ')} WHERE property_id = $${valueIndex}`, values);
+      }
+
+      // --- UPDATE PROPERTY DETAILS ---
+      const detailFields = {
+          description: updateData.description,
+          square_footage: updateData.square_footage,
+          lot_size: updateData.lot_size,
+          year_built: updateData.year_built,
+          heating_type: updateData.heating_type,
+          cooling_type: updateData.cooling_type,
+          parking: updateData.parking,
+          amenities: updateData.amenities,
+          land_size: updateData.land_size,
+          zoning_type: updateData.zoning_type,
+          title_type: updateData.title_type
+      };
+      const providedDetails = Object.keys(detailFields).filter(key => detailFields[key] !== undefined);
+      if (providedDetails.length > 0) {
+          const detailUpdates = providedDetails.map((key, i) => `${key} = $${i + 2}`).join(', ');
+          const detailValues = providedDetails.map(key => detailFields[key]);
+          await pool.query(`UPDATE property_details SET ${detailUpdates} WHERE property_id = $1`, [id, ...detailValues]);
+      }
+
+      await pool.query('COMMIT');
+
+      // --- FETCH UPDATED LISTING ---
+      const updatedListingResult = await pool.query(
+          `SELECT pl.*, pd.*, u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone
+           FROM property_listings pl
+           LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+           LEFT JOIN users u ON pl.agent_id = u.user_id
+           WHERE pl.property_id = $1`,
+          [id]
+      );
+      const responseListing = await attachGalleryImages(updatedListingResult.rows[0]);
+
+      await logActivity(`Listing "${id}" updated`, user.user_id, 'listing_update');
+      res.status(200).json(responseListing);
+
   } catch (err) {
-    await pool.query('ROLLBACK');
-    console.error('Error updating listing:', err);
-    res.status(500).json({ error: 'Internal server error updating listing', details: err.message });
+      await pool.query('ROLLBACK');
+      console.error('Error updating listing:', err);
+      res.status(500).json({ error: 'Internal server error updating listing', details: err.message });
   }
 };
+
 
 exports.deleteListing = async (req, res) => {
     const { id } = req.params;

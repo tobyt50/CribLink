@@ -9,6 +9,20 @@ router.post('/signin', userController.signinUser);
 router.get('/profile', authenticateToken, userController.getProfile);
 router.put('/update', authenticateToken, userController.updateProfile);
 
+// --- NEW: Subscription Management Route ---
+/**
+ * @route PUT /api/users/:id/subscription
+ * @desc Updates a user's subscription plan.
+ * @access Private (Admin only)
+ */
+router.put(
+    '/:id/subscription',
+    authenticateToken,
+    authorizeRoles('admin'), // Protects this route, allowing only users with the 'admin' role
+    userController.updateSubscription
+);
+
+
 // --- Password Recovery ---
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password', userController.resetPassword);
@@ -39,20 +53,10 @@ router.delete('/sessions/:sessionId', authenticateToken, userController.revokeSe
 // --- Login History ---
 router.get('/login-history', authenticateToken, userController.getLoginHistory);
 
-// --- NEW: Get Current User ---
-/**
- * @route GET /api/users/me
- * @desc Gets the authenticated user's details.
- * @access Private
- */
+// --- Get Current User ---
 router.get('/me', authenticateToken, userController.getCurrentUser);
 
-// --- NEW: Revert Agency Admin to Agent ---
-/**
- * @route PUT /api/users/revert-to-agent
- * @desc Allows an agency admin to revert their role to a regular agent.
- * @access Private (Agency Admin only)
- */
+// --- Revert Agency Admin to Agent ---
 router.put(
   '/revert-to-agent',
   authenticateToken,
@@ -60,16 +64,22 @@ router.put(
   userController.revertToAgent
 );
 
-// --- NEW: Get User Agency Status ---
-/**
- * @route GET /api/users/:userId/agency-status
- * @desc Gets the current agency membership status for a user (connected, pending, rejected, none).
- * @access Private (User can only check their own status)
- */
+// --- Get User Agency Status ---
 router.get(
     '/:userId/agency-status',
     authenticateToken,
     userController.getUserAgencyStatus
+);
+
+/**
+ * @route GET /api/users/listing-stats
+ * @desc Gets the current user's active and featured listing counts.
+ * @access Private
+ */
+router.get(
+  '/listing-stats',
+  authenticateToken,
+  userController.getListingStats
 );
 
 module.exports = router;

@@ -7,32 +7,44 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Initial loading state is true
+  const [loading, setLoading] = useState(true);
 
-  // Function to fetch the full user profile from the backend
+  /**
+   * Fetches the full user profile from the backend.
+   * This now includes all user details PLUS subscription information
+   * (subscription_type, featured_priority) which is set into the global state.
+   */
   const fetchUserProfile = useCallback(async () => {
     try {
-      const response = await axiosInstance.get('/users/profile'); // Your user profile endpoint
-      // Ensure the default_landing_page is set, as it might not be in the token
+      const response = await axiosInstance.get('/users/profile');
+      
+      // The response.data object now contains the user's subscription tier.
+      // We set the entire object into state.
       const fetchedUser = {
         ...response.data,
+        // Ensure default values are present if the API doesn't return them
+        subscription_type: response.data.subscription_type || 'basic',
+        featured_priority: response.data.featured_priority || 0,
         default_landing_page: response.data.default_landing_page || null,
       };
+
       setUser(fetchedUser);
-      // Optionally, update localStorage 'user' with the full fetched data
+      // Update localStorage to keep the full user profile in sync.
       localStorage.setItem('user', JSON.stringify(fetchedUser));
+
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
-      // If fetching fails, clear user data to ensure a clean state
+      // On failure, perform a full logout to clean up stale data.
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       setUser(null);
     } finally {
-      setLoading(false); // Set loading to false after profile fetch attempt
+      setLoading(false);
     }
   }, []);
 
-  // This function is now responsible for decoding the token AND triggering a full profile fetch
+  // This function decodes the token and triggers a full profile fetch.
+  // No changes are needed here as its logic is sound.
   const decodeAndSetUser = useCallback(async (token) => {
     if (token) {
       try {
@@ -40,41 +52,42 @@ export const AuthProvider = ({ children }) => {
         const currentTime = Date.now() / 1000;
 
         if (decodedToken.exp > currentTime) {
-          // Token is valid, now fetch the complete user profile from the backend
+          // Token is valid, so fetch the complete user profile.
+          // This ensures we always have the latest data, including any subscription changes.
           await fetchUserProfile();
         } else {
-          console.log("Token expired during sync. Clearing user data.");
+          console.log("Token expired. Clearing user data.");
           localStorage.removeItem("token");
-          localStorage.removeItem("user"); // Clear user from localStorage too
+          localStorage.removeItem("user");
           setUser(null);
-          setLoading(false); // Ensure loading is set to false even if token expired
+          setLoading(false);
         }
       } catch (error) {
-        console.error("Invalid token during sync:", error);
+        console.error("Invalid token:", error);
         localStorage.removeItem("token");
-        localStorage.removeItem("user"); // Clear user from localStorage too
+        localStorage.removeItem("user");
         setUser(null);
-        setLoading(false); // Ensure loading is set to false on error
+        setLoading(false);
       }
     } else {
       setUser(null);
-      setLoading(false); // If no token, stop loading
+      setLoading(false);
     }
   }, [fetchUserProfile]);
 
+  // This useEffect hook handles initial auth state and listens for changes.
+  // No changes are needed here.
   useEffect(() => {
     const token = localStorage.getItem("token");
     decodeAndSetUser(token);
 
     const handleStorageChange = (event) => {
-      // Listen for changes to 'token' or any storage clear event
-      if (event.key === 'token' || !event.key) { // event.key === null for clear()
+      if (event.key === 'token' || event.key === null) {
         decodeAndSetUser(localStorage.getItem('token'));
       }
     };
 
     const handleAuthChange = () => {
-      // This custom event can be dispatched by other components (e.g., after login/logout)
       decodeAndSetUser(localStorage.getItem('token'));
     };
 
@@ -90,25 +103,39 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(() => {
     console.log('Logging out user from AuthContext.');
     localStorage.removeItem('token');
-    localStorage.removeItem('user'); // Ensure user is removed on logout
+    localStorage.removeItem('user');
     setUser(null);
-    setLoading(false); // Set loading to false on logout
-    window.dispatchEvent(new Event('authChange')); // Dispatch custom event to notify other listeners
+    setLoading(false);
+    window.dispatchEvent(new Event('authChange'));
   }, []);
 
-  // Function to allow other components to update the user state in context
+  /**
+   * Allows other components (e.g., Profile Update page) to update the user state.
+   * The newUserData object should be the complete user object returned from the API,
+   * which will include the latest subscription details.
+   */
   const updateUser = useCallback((newUserData) => {
-    setUser(newUserData);
-    // Optionally, update localStorage 'user' with the new data
+    // Ensure the incoming data is merged with existing state to prevent data loss
+    // and explicitly include subscription fields.
+    setUser(currentUser => ({
+      ...currentUser,
+      ...newUserData,
+      subscription_type: newUserData.subscription_type || 'basic',
+      featured_priority: newUserData.featured_priority !== undefined ? newUserData.featured_priority : 0,
+    }));
+    
+    // Also update the user object in localStorage.
     localStorage.setItem('user', JSON.stringify(newUserData));
   }, []);
 
+  // The context value now implicitly contains the user's subscription tier
+  // through the 'user' object.
   const authContextValue = {
     user,
     isAuthenticated: !!user,
-    loading, // Expose the loading state
+    loading,
     logout,
-    updateUser, // Expose updateUser function
+    updateUser,
   };
 
   return (
@@ -118,10 +145,15 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// The useAuth hook remains the same. Any component calling it will get the
+// user object which now contains subscription data.
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  // Example of how a component would access the new data:
+  // const { user } = useAuth();
+  // const userTier = user.subscription_type; // 'basic', 'pro', etc.
   return context;
 };

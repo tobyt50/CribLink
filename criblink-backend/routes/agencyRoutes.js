@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const agencyController = require('../controllers/agencyController');
 const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
-const userController = require('../controllers/userController'); // Import userController for user-related routes
+const userController = require('../controllers/userController');
 
 /**
  * @route POST /api/agencies
@@ -40,6 +40,20 @@ router.get('/:id', agencyController.getAgencyById);
  * @access Private (Agency Admin or Super Admin)
  */
 router.put('/:id', authenticateToken, authorizeRoles(['agency_admin', 'admin']), agencyController.updateAgency);
+
+// --- NEW: Route for updating an agency's subscription ---
+/**
+ * @route PUT /api/agencies/:id/subscription
+ * @desc Updates an agency's subscription plan.
+ * @access Private (Admin only)
+ */
+router.put(
+    '/:id/subscription',
+    authenticateToken,
+    authorizeRoles('admin'), // Only system-wide admins can change agency plans
+    agencyController.updateAgencySubscription
+);
+
 
 /**
  * @route DELETE /api/agencies/:id
@@ -99,7 +113,7 @@ router.get('/agent/:agentId/pending-requests', authenticateToken, authorizeRoles
 router.delete(
   '/:agencyId/members/:agentId',
   authenticateToken,
-  authorizeRoles(['agency_admin', 'admin', 'agent']), // Added 'agent' role to allow self-removal
+  authorizeRoles(['agency_admin', 'admin', 'agent']),
   agencyController.removeAgencyMember
 );
 
@@ -110,7 +124,6 @@ router.delete(
  */
 router.delete('/:agencyId/admin-delete', authenticateToken, authorizeRoles(['agency_admin']), agencyController.adminDeleteAgency);
 
-// --- NEW: Promote/Demote Member Roles within Agency (Moved from userRoutes) ---
 /**
  * @route PUT /api/agencies/:agencyId/members/:memberId/promote-to-admin
  * @desc Promotes a member within an agency to 'agency_admin' role.
@@ -119,8 +132,8 @@ router.delete('/:agencyId/admin-delete', authenticateToken, authorizeRoles(['age
 router.put(
   '/:agencyId/members/:memberId/promote-to-admin',
   authenticateToken,
-  authorizeRoles(['agency_admin', 'admin']), // Allow super admin to promote/demote
-  agencyController.promoteMemberToAdmin // Renamed function
+  authorizeRoles(['agency_admin', 'admin']),
+  agencyController.promoteMemberToAdmin
 );
 
 /**
@@ -131,11 +144,10 @@ router.put(
 router.put(
   '/:agencyId/members/:memberId/demote-to-agent',
   authenticateToken,
-  authorizeRoles(['agency_admin', 'admin']), // Allow super admin to promote/demote
-  agencyController.demoteMemberToAgent // Renamed function
+  authorizeRoles(['agency_admin', 'admin']),
+  agencyController.demoteMemberToAgent
 );
 
-// --- NEW: Update Member Status (VIP/Regular) ---
 /**
  * @route PUT /api/agencies/:agencyId/members/:memberId/status
  * @desc Updates a member's status (e.g., 'vip', 'regular') within an agency.
@@ -148,7 +160,6 @@ router.put(
   agencyController.updateMemberStatus
 );
 
-// New route for getting all agency memberships for a specific agent
 /**
  * @route GET /api/users/:agentId/agency-memberships
  * @desc Get all agency memberships (connected, pending, rejected) for a specific agent
@@ -156,7 +167,6 @@ router.put(
  */
 router.get('/:agentId/agency-memberships', authenticateToken, authorizeRoles(['agent', 'agency_admin', 'admin']), agencyController.getAgentAgencyMemberships);
 
-// NEW Route: Get count of agency administrators for a specific agency
 /**
  * @route GET /api/agencies/:agencyId/admin-count
  * @desc Get the count of agency administrators for a specific agency.
@@ -167,10 +177,9 @@ router.get('/:agencyId/admin-count', authenticateToken, authorizeRoles(['agency_
 /**
  * @route GET /api/agencies/:agencyId/listings
  * @desc Get all listings associated with a specific agency
- * @access Public (or Private if listings are sensitive)
+ * @access Public
  */
-router.get('/:agencyId/listings', agencyController.getAgencyListings); // No authentication needed if public
+router.get('/:agencyId/listings', agencyController.getAgencyListings);
 
 
 module.exports = router;
-

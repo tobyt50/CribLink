@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import React, { useEffect } from 'react';
 import socket from './socket';
 
@@ -6,7 +6,6 @@ import socket from './socket';
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
 import ProtectedBaseRoute from "./components/ProtectedBaseRoute";
 import Header from "./components/Header";
-import Footer from "./components/Footer";
 import MainLayout from "./layouts/MainLayout";
 import AppShell from "./layouts/AppShell";
 import ScrollToTop from "./components/ScrollToTop";
@@ -21,7 +20,6 @@ import ConfirmDialog from "./components/ConfirmDialog";
 
 // Axios Interceptor
 import AxiosErrorInterceptor from './components/AxiosErrorInterceptor';
-import { setLoadingFunctions } from './api/axiosInstance';
 
 // Authentication Context
 import { AuthProvider } from './context/AuthContext';
@@ -50,6 +48,7 @@ import Agents from "./pages/client/Agents";
 
 // Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
+import FeaturedListings from "./pages/FeaturedListings";
 import AddListing from "./pages/AddListing";
 import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
@@ -68,6 +67,8 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFoundPage from "./pages/NotFoundPage";
 import Agencies from "./pages/Agencies";
 import AgencyProfile from "./pages/AgencyProfile";
+import Subscriptions from "./pages/Subscriptions";
+import Checkout from "./pages/Checkout";
 
 // NEW: Import AddLegalDocument component (shared between admin and agency admin)
 import AddLegalDocument from "./pages/AddLegalDocument";
@@ -85,66 +86,68 @@ import AgencyInquiries from './pages/agencyadmin/AgencyInquiries';
 // CENTRALIZED LISTINGS PAGE
 import Listings from './pages/Listings';
 
-
-// Define routes for each role
-const listingRoutes = [
-  { path: "add-listing", element: <AddListing /> },
-  { path: "edit-listing/:id", element: <EditListing /> },
-];
-
-const adminRoutes = [
-  { path: "dashboard", element: <AdminDashboard /> },
-  { path: "listings", element: <Listings /> },
-  { path: "staff", element: <AdminStaff /> },
-  { path: "users", element: <AdminUsers /> },
-  { path: "analytics", element: <AdminAnalytics /> },
-  { path: "settings", element: <AdminSettings /> },
-  { path: "agencies/:agencyId/members", element: <Members /> },
-  ...listingRoutes
-];
-
-const agentRoutes = [
-  { path: "dashboard", element: <AgentDashboard /> },
-  { path: "listings", element: <Listings /> },
-  { path: "clients", element: <Clients /> },
-  { path: "client-profile/:clientId", element: <ClientProfile /> },
-  { path: "inquiries", element: <AgentInquiries /> },
-  { path: "archive", element: <Archive /> },
-  { path: "settings", element: <AgentSettings /> },
-  ...listingRoutes
-];
-
-const clientRoutes = [
-  { path: "dashboard", element: <ClientDashboard /> },
-  { path: "inquiries", element: <ClientInquiries /> },
-  { path: "settings", element: <ClientSettings /> },
-  { path: "agent-profile/:agentId", element: <AgentProfile /> },
-  { path: "agents", element: <Agents /> },
-];
-
-// NEW: Agency Admin Routes
-const agencyAdminRoutes = [
-  { path: "dashboard", element: <AgencyAdminDashboard /> },
-  { path: "listings", element: <Listings /> },
-  { path: "members", element: <Members /> },
-  { path: "clients", element: <Clients /> },
-  { path: "client-profile/:clientId", element: <ClientProfile /> },
-  { path: "agent-performance", element: <AgentPerformance /> },
-  { path: "inquiries", element: <AgencyInquiries /> },
-  { path: "settings", element: <AgencyAdminSettings /> },
-  ...listingRoutes // Add common listing routes
-];
-
 function AppContent() {
+  const location = useLocation();
+
+  // Routes that get smaller header offset (50px instead of 96px)
+  const smallerHeaderOffsetRoutes = ["/subscriptions", "/subscriptions/checkout", "/some-other-page"];
+  // Compute padding class conditionally
+  const headerPaddingClass = smallerHeaderOffsetRoutes.includes(location.pathname) ? "pt-[56px]" : "pt-[96px]";
+
+  // Define routes for each role
+  const listingRoutes = [
+    { path: "add-listing", element: <AddListing /> },
+    { path: "edit-listing/:id", element: <EditListing /> },
+  ];
+
+  const adminRoutes = [
+    { path: "dashboard", element: <AdminDashboard /> },
+    { path: "listings", element: <Listings /> },
+    { path: "staff", element: <AdminStaff /> },
+    { path: "users", element: <AdminUsers /> },
+    { path: "analytics", element: <AdminAnalytics /> },
+    { path: "settings", element: <AdminSettings /> },
+    { path: "agencies/:agencyId/members", element: <Members /> },
+    ...listingRoutes
+  ];
+
+  const agentRoutes = [
+    { path: "dashboard", element: <AgentDashboard /> },
+    { path: "listings", element: <Listings /> },
+    { path: "clients", element: <Clients /> },
+    { path: "client-profile/:clientId", element: <ClientProfile /> },
+    { path: "inquiries", element: <AgentInquiries /> },
+    { path: "archive", element: <Archive /> },
+    { path: "settings", element: <AgentSettings /> },
+    ...listingRoutes
+  ];
+
+  const clientRoutes = [
+    { path: "dashboard", element: <ClientDashboard /> },
+    { path: "inquiries", element: <ClientInquiries /> },
+    { path: "settings", element: <ClientSettings /> },
+    { path: "agent-profile/:agentId", element: <AgentProfile /> },
+    { path: "agents", element: <Agents /> },
+  ];
+
+  const agencyAdminRoutes = [
+    { path: "dashboard", element: <AgencyAdminDashboard /> },
+    { path: "listings", element: <Listings /> },
+    { path: "members", element: <Members /> },
+    { path: "clients", element: <Clients /> },
+    { path: "client-profile/:clientId", element: <ClientProfile /> },
+    { path: "agent-performance", element: <AgentPerformance /> },
+    { path: "inquiries", element: <AgencyInquiries /> },
+    { path: "settings", element: <AgencyAdminSettings /> },
+    ...listingRoutes
+  ];
 
   useEffect(() => {
-    // Connect the socket when the component mounts
     if (!socket.connected) {
       socket.connect();
       console.log('App.js: Socket connecting globally...');
     }
 
-    // Add listeners for global connection status for debugging
     socket.on('connect', () => {
       console.log('App.js: Global Socket connected successfully!');
     });
@@ -157,13 +160,11 @@ function AppContent() {
       console.error('App.js: Global Socket connection error:', error);
     });
 
-    // Clean up the socket connection when the component unmounts
     return () => {
       if (socket.connected) {
         socket.disconnect();
         console.log('App.js: Global Socket disconnected on App unmount.');
       }
-      // Remove listeners to prevent memory leaks
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
@@ -171,13 +172,14 @@ function AppContent() {
   }, []);
 
   return (
-    <> 
+    <>
       <Header />
-      <main className="pt-[96px] min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <main className={`${headerPaddingClass} min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300`}>
         <Routes>
           {/* Public & shared pages */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
+            <Route path="/featured-listings" element={<FeaturedListings />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
@@ -189,7 +191,6 @@ function AppContent() {
             <Route path="*" element={<NotFoundPage />} />
             <Route path="/agencies/:id" element={<AgencyProfile />} />
             <Route path="/agencies" element={<Agencies />} />
-            {/* NEW ROUTE FOR AGENCY-SPECIFIC LISTINGS */}
             <Route path="/listings/agency/:agencyId" element={<Listings />} />
           </Route>
 
@@ -202,7 +203,9 @@ function AppContent() {
               <Route path="privacy" element={<Privacy />} />
             </Route>
             <Route path="favourites" element={<Favourites />} />
-            
+            <Route path="subscriptions" element={<Subscriptions />} />
+            <Route path="/subscriptions/checkout" element={<Checkout />} />
+
             <Route path="/client-profile/:clientId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
               <Route index element={<ClientProfile />} />
             </Route>
@@ -215,10 +218,10 @@ function AppContent() {
               <Route index element={<AgencyAdminProfile />} />
             </Route>
 
-            {/* SHARED Legal Document Routes for Admin and Agency Admin */}
+            {/* Legal Document Routes */}
             <Route path="/documents" element={<RoleProtectedRoute allowedRole={["admin", "agency_admin"]} />}>
-                <Route index element={<LegalDocuments />} />
-                <Route path="add" element={<AddLegalDocument />} /> {/* Use a nested path like /documents/add */}
+              <Route index element={<LegalDocuments />} />
+              <Route path="add" element={<AddLegalDocument />} />
             </Route>
           </Route>
 
@@ -246,14 +249,13 @@ function AppContent() {
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-
         </Routes>
       </main>
     </>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <Router>
       <ScrollToTop />
@@ -264,7 +266,7 @@ function App() {
             <ConfirmDialog />
             <AxiosErrorInterceptor>
               <AppShell>
-                  <AppContent />
+                <AppContent />
               </AppShell>
             </AxiosErrorInterceptor>
           </ConfirmDialogProvider>
@@ -273,5 +275,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;

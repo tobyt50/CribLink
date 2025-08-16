@@ -48,7 +48,11 @@ function Header() {
         darkMode ? "bg-gray-900/80 text-white border-gray-800" : "bg-white/70 text-gray-900 border-gray-200"
       }`}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 flex justify-between items-center">
+      <div 
+  className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 flex justify-between items-center"
+  style={{ '--header-height': '96px' }}
+>
+
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           {/* Use the dynamically selected logo */}
