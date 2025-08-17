@@ -8,6 +8,7 @@ import { jwtDecode } from 'jwt-decode';
 import { useTheme } from '../layouts/AppShell';
 import { useMessage } from '../context/MessageContext';
 import { useConfirmDialog } from '../context/ConfirmDialogContext';
+import { useAuth } from '../context/AuthContext';
 import socket from '../socket';
 
 // Import new components
@@ -171,6 +172,9 @@ const ListingDetails = () => {
   const { showMessage } = useMessage();
   const { showConfirm } = useConfirmDialog();
 
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const [userFavourites, setUserFavourites] = useState([]);
+
   const [isFavorited, setIsFavorited] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('none');
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -249,6 +253,20 @@ const ListingDetails = () => {
     }
   }, [userRole, userId, showMessage]);
 
+  const fetchUserFavourites = useCallback(async () => {
+    if (!isAuthenticated) {
+        setUserFavourites([]);
+        return;
+    }
+    try {
+        const response = await axiosInstance.get(`/favourites/properties`);
+        setUserFavourites(response.data.favourites.map(fav => fav.property_id));
+    } catch (error) {
+        console.error("Failed to fetch user favourites:", error);
+        setUserFavourites([]); // Set to empty on error
+    }
+}, [isAuthenticated]);
+
   const fetchListing = useCallback(async () => {
     if (!id || userRole === '') return;
 
@@ -323,6 +341,12 @@ const ListingDetails = () => {
   useEffect(() => {
     fetchListing();
   }, [fetchListing]);
+
+  useEffect(() => {
+    if (!authLoading) { // Only run when the auth state is resolved
+        fetchUserFavourites();
+    }
+}, [authLoading, fetchUserFavourites]);
 
   useEffect(() => {
     if (userRole && userId && agentInfo && agentInfo.id) {
@@ -991,6 +1015,8 @@ const ListingDetails = () => {
         <SimilarListingsCarousel
           similarListings={similarListings}
           darkMode={darkMode}
+          userFavourites={userFavourites} // Pass the state array
+          onFavoriteToggle={handleToggleFavorite}
         />
       )}
 

@@ -13,8 +13,48 @@ import { useAuth } from "../context/AuthContext";
 
 const ITEMS_PER_PAGE = 20;
 const MIN_LISTINGS_FOR_CATEGORY = 1;
-const MAX_DYNAMIC_CATEGORIES = 4;
-// REMOVED: const OPENCAGE_API_KEY = process.env.REACT_APP_OPENCAGE_API_KEY; // This is no longer needed
+const MAX_DYNAMIC_CATEGORIES = 4;// Normalize state names from geocoder to match DB format
+
+// --- Helpers ---
+const normalizeState = (s) => {
+  if (!s) return "";
+  let clean = s.trim();
+  if (clean.endsWith(" State")) {
+    clean = clean.replace(/ State$/i, "").trim();
+  }
+  if (clean === "Federal Capital Territory" || clean === "Abuja Federal Capital Territory") {
+    return "Abuja";
+  }
+  return clean;
+};
+
+const getGroupsBy = (listings, key) =>
+  listings.reduce((acc, l) => {
+    if (l[key]) {
+      acc[l[key]] = (acc[l[key]] || []).concat(l);
+    }
+    return acc;
+  }, {});
+
+// Zone-based fallbacks
+const ZONE_FALLBACKS = {
+  NorthCentral: ["Abuja", "Nasarawa", "Kogi", "Niger", "Benue", "Kwara", "Plateau"],
+  NorthEast: ["Borno", "Bauchi", "Adamawa", "Gombe", "Taraba", "Yobe"],
+  NorthWest: ["Kano", "Kaduna", "Katsina", "Kebbi", "Sokoto", "Zamfara", "Jigawa"],
+  SouthEast: ["Anambra", "Abia", "Ebonyi", "Enugu", "Imo"],
+  SouthSouth: ["Rivers", "Akwa Ibom", "Bayelsa", "Cross River", "Delta", "Edo"],
+  SouthWest: ["Lagos", "Ekiti", "Ogun", "Ondo", "Osun", "Oyo"],
+};
+
+// Map each state → dominant hub in its zone
+const ZONE_HUBS = {
+  ...Object.fromEntries(
+    Object.entries(ZONE_FALLBACKS).flatMap(([zone, states]) =>
+      states.map((st) => [st, states[0]]) // pick the 1st as hub
+    )
+  ),
+};
+
 
 // Skeleton component remains the same
 const ListingCardSkeleton = ({ darkMode }) => (
@@ -29,111 +69,99 @@ const ListingCardSkeleton = ({ darkMode }) => (
   </div>
 );
 
+// Apple-style smooth scroll animation
+const animateScroll = (element, to, duration = 800, onComplete) => {
+  const start = element.scrollLeft;
+  const change = to - start;
+  const startTime = performance.now();
+
+  const spring = (t) => 1 - Math.cos(t * 4.5 * Math.PI) * Math.exp(-t * 6);
+
+  const animate = (time) => {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    element.scrollLeft = start + change * spring(progress);
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else if (onComplete) {
+      onComplete();
+    }
+  };
+
+  requestAnimationFrame(animate);
+};
+
+
 // Carousel row component remains the same
 const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFavoriteToggle, ...otherProps }) => {
-    const { darkMode } = useTheme();
-    const carouselRef = useRef(null);
-    const autoSwipeIntervalRef = useRef(null);
-    const initialScrollSet = useRef(false);
-    
-    const isCarousel = listings.length > 1;
+  const { darkMode } = useTheme();
+  const carouselRef = useRef(null);
+  const autoSwipeIntervalRef = useRef(null);
 
-    const scrollCarousel = useCallback((direction) => {
-        if (!isCarousel || !carouselRef.current) return;
-        const carousel = carouselRef.current;
-        const itemElement = carousel.querySelector('.carousel-item');
-        if (!itemElement) return;
+  const isCarousel = listings.length > 1;
 
-        const itemStyle = window.getComputedStyle(itemElement);
-        const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-        const itemMarginRight = parseFloat(itemStyle.marginRight);
-        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-        const numOriginalItems = listings.length;
-        const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-        let newScrollTarget = carousel.scrollLeft;
+  // ✅ New auto-swipe logic
+  useEffect(() => {
+    if (!isCarousel || !carouselRef.current) return;
+    const carousel = carouselRef.current;
 
-        if (direction === 'next') {
-            newScrollTarget += itemWidthWithMargins;
-            if (newScrollTarget >= 2 * totalOriginalListWidth) {
-                carousel.scrollLeft -= totalOriginalListWidth;
-                newScrollTarget = carousel.scrollLeft + itemWidthWithMargins;
-            }
-        } else {
-            newScrollTarget -= itemWidthWithMargins;
-            if (newScrollTarget < totalOriginalListWidth) {
-                carousel.scrollLeft += totalOriginalListWidth;
-                newScrollTarget = carousel.scrollLeft - itemWidthWithMargins;
-            }
-        }
-        carousel.scrollTo({ left: newScrollTarget, behavior: 'smooth' });
-    }, [listings.length, isCarousel]);
+    const itemElement = carousel.querySelector(".featured-card-item");
+    if (!itemElement) return;
 
-    useEffect(() => {
-        if (isCarousel && carouselRef.current && !initialScrollSet.current) {
-            const carousel = carouselRef.current;
-            const itemElement = carousel.querySelector('.carousel-item');
-            if (itemElement) {
-                const itemStyle = window.getComputedStyle(itemElement);
-                const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-                const itemMarginRight = parseFloat(itemStyle.marginRight);
-                const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-                const numOriginalItems = listings.length;
-                carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
-                initialScrollSet.current = true;
-            }
-        }
-    }, [listings.length, isCarousel]);
+    const itemStyle = window.getComputedStyle(itemElement);
+    const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+    const itemMarginRight = parseFloat(itemStyle.marginRight);
+    const itemWidthWithMargins =
+      itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
 
-    useEffect(() => {
-        if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-        if (isCarousel) {
-            autoSwipeIntervalRef.current = setInterval(() => scrollCarousel('next'), 4000);
-        }
-        return () => {
-            if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-        };
-    }, [isCarousel, scrollCarousel]);
+    let index = 0;
+    autoSwipeIntervalRef.current = setInterval(() => {
+      index = (index + 1) % listings.length; // loop over real items
+      const newScrollTarget = index * itemWidthWithMargins;
+      animateScroll(carousel, newScrollTarget, 800);
+    }, 3000);
 
-    const handleTouchStart = useCallback(() => {
-        if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-    }, []);
+    return () => clearInterval(autoSwipeIntervalRef.current);
+  }, [isCarousel, listings.length]);
 
-    const handleTouchEnd = useCallback(() => {
-        if (isCarousel) {
-            autoSwipeIntervalRef.current = setInterval(() => scrollCarousel('next'), 4000);
-        }
-    }, [isCarousel, scrollCarousel]);
-
-    return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="flex justify-between items-center mb-4">
-                <Link to={searchLink} className="group">
-                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"} group-hover:text-green-900 dark:group-hover:text-green-400 transition-colors`}>
-                        {title}
-                    </h3>
-                </Link>
-                {isCarousel && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => scrollCarousel('prev')} className={`p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-700 hover:bg-gray-200'}`} aria-label="Previous item"><ChevronLeft size={20} /></button>
-                        <button onClick={() => scrollCarousel('next')} className={`p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white text-gray-700 hover:bg-gray-200'}`} aria-label="Next item"><ChevronRight size={20} /></button>
-                    </div>
-                )}
-            </div>
-            <div 
-                ref={carouselRef} 
-                className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll snap-x snap-mandatory no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0' : 'justify-center'}`}
-                onTouchStart={isCarousel ? handleTouchStart : undefined}
-                onTouchEnd={isCarousel ? handleTouchEnd : undefined}
-            >
-                {(isCarousel ? [...listings, ...listings, ...listings] : listings).map((listing, index) => (
-                    <div key={`${listing.property_id}-${index}`} className={`flex-shrink-0 carousel-item ${isCarousel ? 'snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4' : 'w-full max-w-sm px-2'}`}>
-                        <ListingCard listing={listing} isFavorited={userFavourites.includes(listing.property_id)} onFavoriteToggle={onFavoriteToggle} {...otherProps} />
-                    </div>
-                ))}
-            </div>
-        </motion.div>
-    );
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <div className="flex justify-between items-center mb-4">
+        <Link to={searchLink} className="group">
+          <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"} group-hover:text-green-900 dark:group-hover:text-green-400 transition-colors`}>
+            {title}
+          </h3>
+        </Link>
+      </div>
+      <div
+        ref={carouselRef}
+        className={`flex flex-nowrap pb-4 -mb-4 ${
+          isCarousel ? "overflow-x-scroll no-scrollbar" : "justify-center"
+        }`}
+      >
+        {listings.map((listing) => (
+          <div
+            key={listing.property_id}
+            className={`featured-card-item flex-shrink-0 ${
+              isCarousel
+                ? "w-[45%] sm:w-[45%] px-2 md:w-1/3 lg:w-1/5"
+                : "w-full max-w-sm px-2"
+            }`}
+          >
+            <ListingCard
+              listing={listing}
+              isFavorited={userFavourites.includes(listing.property_id)}
+              onFavoriteToggle={onFavoriteToggle}
+              {...otherProps}
+            />
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
 };
+
 
 // --- START OF UPDATE ---
 // Geocoding helper function now calls the secure backend endpoint
@@ -199,103 +227,94 @@ function FeaturedListings() {
   }, []);
 
   const dynamicCategories = useMemo(() => {
-    if (loading || authLoading || allFeaturedListings.length === 0) return [];
+    if (loading || authLoading || !allFeaturedListings.length) return [];
   
+    // 1. Work out a safe effective state
+    const normalizedUserState = normalizeState(userState);
+  
+    const effectiveUserState = normalizedUserState || (() => {
+      const counts = allFeaturedListings.reduce((acc, l) => {
+        const st = normalizeState(l.state);
+        if (!st) return acc;
+        acc[st] = (acc[st] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lagos";
+    })();
+  
+    // 2. Work out the zone
+    const zoneName = Object.entries(ZONE_FALLBACKS)
+      .find(([, states]) => states.includes(effectiveUserState))?.[0];
+  
+    // 3. Build an ordered list of states to try
+    const statesToTry = [
+      effectiveUserState,
+      ZONE_HUBS[effectiveUserState],
+      ...(zoneName ? ZONE_FALLBACKS[zoneName] : []),
+    ]
+      .filter(Boolean)
+      .filter((s, i, arr) => arr.indexOf(s) === i);
+  
+    // 4. Helper to get listings by category
+    const getListingsInZone = (filterFn) => {
+      for (const st of statesToTry) {
+        const hits = allFeaturedListings.filter(
+          (l) => normalizeState(l.state) === st && filterFn(l)
+        );
+        if (hits.length >= MIN_LISTINGS_FOR_CATEGORY) return hits;
+      }
+      return allFeaturedListings.filter(filterFn); // global fallback
+    };
+  
+    // 5. Build categories WITH search links
     const categories = [];
-    const usedLocations = new Set();
   
-    const getGroupsBy = (listings, key) => listings.reduce((acc, l) => {
-      if (l[key]) {
-        acc[l[key]] = (acc[l[key]] || []).concat(l);
-      }
-      return acc;
-    }, {});
+    const addCategory = (title, filterFn, paramsBuilder) => {
+      const listings = getListingsInZone(filterFn);
+      if (!listings.length) return;
   
-    if (userState) {
-      const localListings = allFeaturedListings.filter(l => l.state === userState);
-      const localGroups = getGroupsBy(localListings, 'location');
-      const mostPopulousLocal = Object.values(localGroups).sort((a,b) => b.length - a.length)[0];
+      const sample = listings[0];
+      const state = sample.state;
+      const location = sample.location;
   
-      if (mostPopulousLocal && mostPopulousLocal.length >= MIN_LISTINGS_FOR_CATEGORY) {
-        const location = mostPopulousLocal[0].location;
-        const state = mostPopulousLocal[0].state;
-        const params = new URLSearchParams({ status: 'featured', location, state });
-        categories.push({
-          title: `Top Picks in ${location}, ${state} →`,
-          listings: mostPopulousLocal,
-          searchLink: `/search?${params.toString()}`
-        });
-        usedLocations.add(location);
-      }
-    }
+      const params = paramsBuilder({ state, location, sample });
+      const searchLink = `/search?${params.toString()}`;
   
-    if (categories.length < MAX_DYNAMIC_CATEGORIES) {
-      const remaining = allFeaturedListings.filter(l => !usedLocations.has(l.location));
-      const allGroups = getGroupsBy(remaining, 'location');
-      const mostPopulousOverall = Object.values(allGroups).sort((a,b) => b.length - a.length)[0];
+      categories.push({
+        title: `${title} →`,
+        listings,
+        searchLink,
+      });
+    };
   
-      if (mostPopulousOverall && mostPopulousOverall.length >= MIN_LISTINGS_FOR_CATEGORY) {
-        const location = mostPopulousOverall[0].location;
-        const state = mostPopulousOverall[0].state;
-        const params = new URLSearchParams({ status: 'featured', location, state });
-        categories.push({
-          title: `Popular in ${location}, ${state} →`,
-          listings: mostPopulousOverall,
-          searchLink: `/search?${params.toString()}`
-        });
-        usedLocations.add(location);
-      }
-    }
+    addCategory(
+      "Bungalows Near You",
+      (l) => (l.property_type || "").toLowerCase() === "bungalow",
+      ({ state }) => new URLSearchParams({ status: "featured", property_type: "bungalow", state })
+    );
   
-    if (categories.length < MAX_DYNAMIC_CATEGORIES) {
-      const remaining = allFeaturedListings.filter(l => !usedLocations.has(l.location));
-      const types = getGroupsBy(remaining, 'property_type');
-      const mostPopularType = Object.entries(types).sort((a,b) => b[1].length - a[1].length)[0];
+    addCategory(
+      "Duplexes Near You",
+      (l) => (l.property_type || "").toLowerCase() === "duplex",
+      ({ state }) => new URLSearchParams({ status: "featured", property_type: "duplex", state })
+    );
   
-      if (mostPopularType) {
-        const [type, listings] = mostPopularType;
-        const locationsInType = getGroupsBy(listings, 'location');
-        const mostPopulousLocationForType = Object.values(locationsInType).sort((a,b) => b.length - a.length)[0];
-        
-        if (mostPopulousLocationForType && mostPopulousLocationForType.length >= MIN_LISTINGS_FOR_CATEGORY) {
-            const location = mostPopulousLocationForType[0].location;
-            const state = mostPopulousLocationForType[0].state;
-            const params = new URLSearchParams({ status: 'featured', property_type: type, location });
-            categories.push({
-                title: `Best ${type} Properties in ${location}, ${state} →`,
-                listings: mostPopulousLocationForType,
-                searchLink: `/search?${params.toString()}`
-            });
-            usedLocations.add(location);
-        }
-      }
-    }
+    addCategory(
+      "Rentals Near You",
+      (l) => (l.purchase_category || "").toLowerCase() === "rent",
+      ({ state }) => new URLSearchParams({ status: "featured", purchase_category: "rent", state })
+    );
   
-    if (categories.length < MAX_DYNAMIC_CATEGORIES) {
-        const remaining = allFeaturedListings.filter(l => !usedLocations.has(l.location));
-        const cats = getGroupsBy(remaining, 'purchase_category');
-        const mostPopularCat = Object.entries(cats).sort((a,b) => b[1].length - a[1].length)[0];
-    
-        if (mostPopularCat) {
-            const [cat, listings] = mostPopularCat;
-            const locationsInCat = getGroupsBy(listings, 'location');
-            const mostPopulousLocationForCat = Object.values(locationsInCat).sort((a,b) => b.length - a.length)[0];
-
-            if (mostPopulousLocationForCat && mostPopulousLocationForCat.length >= MIN_LISTINGS_FOR_CATEGORY) {
-                const location = mostPopulousLocationForCat[0].location;
-                const state = mostPopulousLocationForCat[0].state;
-                const params = new URLSearchParams({ status: 'featured', purchase_category: cat, location });
-                categories.push({
-                    title: `Best Properties for ${cat} in ${location}, ${state} →`,
-                    listings: mostPopulousLocationForCat,
-                    searchLink: `/search?${params.toString()}`
-                });
-                usedLocations.add(location);
-            }
-        }
-    }
-    return categories;
-  }, [allFeaturedListings, userState, loading, authLoading]);
+    addCategory(
+      "Properties for Sale Near You",
+      (l) => (l.purchase_category || "").toLowerCase() === "sale",
+      ({ state }) => new URLSearchParams({ status: "featured", purchase_category: "sale", state })
+    );
+  
+    return categories.slice(0, MAX_DYNAMIC_CATEGORIES);
+  }, [loading, authLoading, userState, allFeaturedListings]);
+  
+  
   
   const fetchUserFavourites = useCallback(async () => {
     if (!isAuthenticated) { setUserFavourites([]); return; }
@@ -385,13 +404,10 @@ function FeaturedListings() {
       <div className={`pt-0 -mt-6 pb-10 px-4 md:px-8 min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"}`}>
         <motion.div className="text-center max-w-4xl mx-auto" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
           <h1 className={`text-2xl md:text-3xl font-extrabold mb-1 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-            <Star size={25} className="text-yellow-400 fill-current" />
+          <Star size={15} className="text-yellow-400 fill-current" />
             Featured Properties
-            <Star size={25} className="text-yellow-400 fill-current" />
+            <Star size={15} className="text-yellow-400 fill-current" />
           </h1>
-          <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1`}>
-            Explore premium listings with top visibility.
-          </p>
           <div className="w-full max-w-4xl mx-auto mt-2">
             <HomeSearchFilters
               filters={advancedFilters}

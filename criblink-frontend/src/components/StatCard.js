@@ -25,11 +25,12 @@ const StatCard = ({ label, value, onClick, textCentered }) => {
       <h2 className={`font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>
         {label}
       </h2>
-    
+      </ReactFitty>
+      <ReactFitty maxSize={12} minSize={8}>
       <p className={`text-3xl font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
         {value}
         </p>
-        </ReactFitty>
+        </ReactFitty> 
     </motion.div>
   );
 };

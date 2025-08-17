@@ -129,7 +129,7 @@ const StaffSkeleton = ({ darkMode, viewMode }) => (
         ))}
       </div>
     ) : (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={{ overflow: "visible" }}>
         <table className={`w-full mt-4 text-sm  table-auto`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -583,7 +583,7 @@ const Staff = () => {
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" style={{ overflow: "visible" }}>
                 <table className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
                   <thead>
                     <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>

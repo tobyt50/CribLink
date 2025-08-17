@@ -94,7 +94,7 @@ const agencyRoutes = require('./routes/agencyRoutes');
 const agencyAdminRoutes = require('./routes/agencyAdminRoutes');
 const agencyStatsRoutes = require('./routes/agencyStatsRoutes');
 const utilsRoutes = require('./routes/utilsRoutes'); // NEW: Import utility routes
-
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // 🚏 Route mounting
 app.use('/api/clients', clientRoutes);
@@ -121,7 +121,7 @@ app.use('/api/agencies', agencyRoutes);
 app.use('/api/agency-admins', agencyAdminRoutes);
 app.use('/api/agency-stats', agencyStatsRoutes);
 app.use('/api/utils', utilsRoutes); // NEW: Mount utility routes
-
+app.use('/api/payments', paymentRoutes);
 
 // Serve static files from the React app (if applicable, usually in production)
 // app.use(express.static(path.join(__dirname, '../../criblink-frontend/build')));

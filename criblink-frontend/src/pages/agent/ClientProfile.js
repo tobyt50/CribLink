@@ -22,33 +22,44 @@ import {
 } from 'lucide-react';
 import AgentSidebar from '../../components/agent/Sidebar';
 
-// Skeleton for a general content block
+// Skeleton for a general content block (used for Chat skeleton)
 const ContentBlockSkeleton = ({ darkMode, height = 'h-40' }) => (
   <div className={`p-6 rounded-2xl shadow-xl animate-pulse ${darkMode ? "bg-gray-800" : "bg-white"} ${height}`}>
     <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
     <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
-    <div className={`h-4 w-5/6 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
-    <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+    <div className={`h-4 w-5/6 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
   </div>
 );
 
-// Skeleton for Client Info section
+// REVISED Skeleton for Client Info section for better accuracy
 const ClientInfoSkeleton = ({ darkMode }) => (
   <div className={`p-6 rounded-2xl shadow-xl animate-pulse ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-    <div className="flex justify-between items-center mb-4">
+    {/* Header: Name and Bookmark */}
+    <div className="flex justify-between items-center mb-6">
       <div className={`h-8 w-48 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      <div className={`h-8 w-10 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className={`h-8 w-8 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
     </div>
-    <div className="flex items-start space-x-4 mb-6">
-      <div className={`w-32 h-32 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
-      <div className="flex-1">
-        <div className={`h-4 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
-        <div className={`h-6 w-48 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mt-4 mb-2`}></div>
-        <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+
+    {/* Profile Pic & Contact Info */}
+    <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+      <div className={`w-32 h-32 rounded-full flex-shrink-0 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+      <div className="flex-1 w-full space-y-3">
+        <div className={`h-4 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-px w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} my-2`}></div>
+        <div className={`h-5 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
+        <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
         <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
       </div>
     </div>
-    <div className={`h-6 w-40 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+
+    {/* Other Details, Notes, and Preferences Sections Placeholder */}
+    <div className={`h-px w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} my-6`}></div>
+    <div className={`h-5 w-1/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-3`}></div>
+    <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
+    <div className={`h-4 w-5/6 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-6`}></div>
+    
+    <div className={`h-px w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"} my-6`}></div>
+    <div className={`h-5 w-1/3 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-3`}></div>
     <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-2`}></div>
     <div className={`h-4 w-full rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}></div>
   </div>
@@ -66,6 +77,18 @@ const ListingCardSkeleton = ({ darkMode }) => (
     </div>
   </div>
 );
+
+// NEW Skeleton for Listings sections (Favourites, Recommended)
+const ListingsSectionSkeleton = ({ darkMode }) => (
+    <div className={`p-6 rounded-2xl shadow-xl animate-pulse ${darkMode ? "bg-gray-800" : "bg-white"}`}>
+      <div className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[...Array(2)].map((_, i) => ( // Showing 2 is enough to represent the grid without taking too much vertical space
+          <ListingCardSkeleton key={i} darkMode={darkMode} />
+        ))}
+      </div>
+    </div>
+  );
 
 
 const ClientProfile = () => {
@@ -850,7 +873,8 @@ const ClientProfile = () => {
 
   if (loading) {
     return (
-      <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
+      // FIX: Removed px-4 from outer container to prevent double padding and potential overflow
+      <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 min-h-screen flex flex-col`}>
         {/* Sidebar placeholder */}
         {userRole === 'agent' && (
           <div className={`fixed top-0 left-0 h-full ${isCollapsed ? 'w-20' : 'w-64'} ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg transition-all duration-300`}>
@@ -867,20 +891,28 @@ const ClientProfile = () => {
           animate={{ marginLeft: contentShift }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
           initial={false}
+          // FIX: Removed problematic `style` prop. `min-w-0` and `flex-1` are sufficient for flexbox to handle resizing.
           className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
-          style={{ minWidth: `calc(100% - ${contentShift}px)` }}
         >
           <div className={`h-10 w-1/2 md:w-1/4 rounded mx-auto mb-6 animate-pulse ${darkMode ? "bg-gray-800" : "bg-gray-200"}`}></div>
 
           <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
             <div className="w-full lg:w-3/5 space-y-8">
+              {/* ACCURACY: Use the more detailed ClientInfoSkeleton */}
               <ClientInfoSkeleton darkMode={darkMode} />
+              
+              {/* Chat skeleton for mobile */}
               {isMobile && userRole === 'agent' && <ContentBlockSkeleton darkMode={darkMode} height="h-32" />}
-              <ContentBlockSkeleton darkMode={darkMode} height="h-64" /> {/* Favourites */}
+              
+              {/* ACCURACY: Use the new ListingsSectionSkeleton for Favourites */}
+              <ListingsSectionSkeleton darkMode={darkMode} />
             </div>
             <div className="w-full lg:w-2/5 space-y-8">
+              {/* Chat skeleton for desktop */}
               {!isMobile && userRole === 'agent' && <ContentBlockSkeleton darkMode={darkMode} height="h-32" />}
-              <ContentBlockSkeleton darkMode={darkMode} height="h-64" /> {/* Recommended */}
+              
+              {/* ACCURACY: Use the new ListingsSectionSkeleton for Recommended */}
+              <ListingsSectionSkeleton darkMode={darkMode} />
             </div>
           </div>
         </motion.div>
@@ -935,7 +967,7 @@ const ClientProfile = () => {
         className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
         style={{ minWidth: `calc(100% - ${contentShift}px)` }}
       >
-        <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Client Profile</h1>
+        <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Client Profile</h1>
 
         <div className="flex flex-col lg:flex-row gap-8 lg:max-w-7xl lg:mx-auto">
           <div className="w-full lg:w-3/5 space-y-8">
@@ -991,21 +1023,58 @@ const ClientProfile = () => {
                   onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/120x120/${darkMode ? '374151' : 'E0F7FA'}/${darkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(client.full_name)}`; }}
                 />
                 {/* Client ID and Contact Information */}
-                <div className="flex-1">
-                  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Client ID: {client.user_id}</p>
-                  <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
-                    <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
-                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      ✉️ <strong className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>Email:</strong> <a href={`mailto:${client.email}`} className="text-blue-500 hover:underline">{client.email}</a>
-                    </p>
-                    <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                      📞 <strong className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}>Phone:</strong>
-                      {client.phone ? (
-                        <a href={`tel:${client.phone}`} className="text-blue-500 hover:underline">{client.phone}</a>
-                      ) : 'N/A'}
-                    </p>
-                  </div>
-                </div>
+                <div className="flex-1 min-w-0 break-words">
+  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+    Client ID: {client.user_id}
+  </p>
+
+  <div
+    className={`space-y-3 pt-4 border-t ${
+      darkMode ? "border-gray-700" : "border-gray-200"
+    }`}
+  >
+    <h3
+      className={`text-xl font-bold ${
+        darkMode ? "text-green-400" : "text-green-700"
+      }`}
+    >
+      Contact
+    </h3>
+
+    <p
+      className={`flex items-center gap-2 text-base ${
+        darkMode ? "text-gray-300" : "text-gray-700"
+      }`}
+    >
+      ✉️{" "}
+      <a
+        href={`mailto:${client.email}`}
+        className="text-blue-500 hover:underline break-all"
+      >
+        {client.email}
+      </a>
+    </p>
+
+    <p
+      className={`flex items-center gap-2 text-base ${
+        darkMode ? "text-gray-300" : "text-gray-700"
+      }`}
+    >
+      📞{" "}
+      {client.phone ? (
+        <a
+          href={`tel:${client.phone}`}
+          className="text-blue-500 hover:underline break-all"
+        >
+          {client.phone}
+        </a>
+      ) : (
+        "N/A"
+      )}
+    </p>
+  </div>
+</div>
+
               </div>
 
               <div className={`space-y-3 pb-6 ${darkMode ? "border-gray-700" : "border-gray-200"} border-b`}>

@@ -85,12 +85,78 @@ export default function SignIn() {
 
     try {
       const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, enableHighAccuracy: false });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 10000, 
+          enableHighAccuracy: true,
+          maximumAge: 0
+        });
       });
-      locationInfo = `Lat: ${position.coords.latitude.toFixed(2)}, Lon: ${position.coords.longitude.toFixed(2)}`;
+    
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+    
+      if (process.env.NODE_ENV === "development") {
+        console.log("📍 Raw coords:", { lat, lon });
+      }
+    
+      // 🔄 Call your backend instead of OpenCage directly
+      const res = await fetch(`/api/utils/reverse-geocode?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+    
+      if (res.ok && data) {
+        const { components, confidence, geometry } = data;
+        const { city, town, village, state, country } = components || {};
+        const lat = geometry?.lat || position.coords.latitude;
+        const lon = geometry?.lng || position.coords.longitude;
+      
+        if (process.env.NODE_ENV === "development") {
+          console.log("🛰️ Backend reverseGeocode result:", data);
+          console.log("🔎 Confidence score:", confidence);
+        }
+      
+        // --- Abuja fallback zone ---
+        const abujaLat = 9.08;
+        const abujaLon = 7.49;
+        const haversine = (lat1, lon1, lat2, lon2) => {
+          const toRad = (deg) => (deg * Math.PI) / 180;
+          const R = 6371; // Earth radius in km
+          const dLat = toRad(lat2 - lat1);
+          const dLon = toRad(lon2 - lon1);
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(toRad(lat1)) *
+              Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c; // km
+        };
+      
+        const distanceFromAbuja = haversine(lat, lon, abujaLat, abujaLon);
+      
+        if (confidence >= 7 && (city || town || village)) {
+          locationInfo = `${city || town || village}, ${state || ""}, ${country}`;
+        } else if (distanceFromAbuja <= 50) {
+          locationInfo = "Abuja, FCT, Nigeria";
+        } else {
+          locationInfo = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)} (${state || country})`;
+        }
+      
+        if (process.env.NODE_ENV === "development") {
+          console.log("📏 Distance from Abuja:", distanceFromAbuja, "km");
+          console.log("✅ Final location string:", locationInfo);
+        }
+      } else {
+        locationInfo = `Lat: ${lat.toFixed(2)}, Lon: ${lon.toFixed(2)}`;
+        if (process.env.NODE_ENV === "development") {
+          console.log("⚠️ No valid geocode result, using raw coords:", locationInfo);
+        }
+      }
+      
     } catch (err) {
-      console.warn('Could not get location info:', err.message);
+      console.warn("❌ Could not get precise location:", err.message);
     }
+    
 
     try {
       const { data } = await axiosInstance.post('/users/signin', { ...form, device_info: deviceInfo, location_info: locationInfo });
@@ -219,14 +285,24 @@ export default function SignIn() {
               <input
                 type="text" name="identifier" placeholder="Email or Username"
                 value={form.identifier} onChange={handleChange} required
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                }`}
+                
               />
 
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'} name="password" placeholder="Password"
                   value={form.password} onChange={handleChange} required
-                  className={`w-full px-4 py-3 border rounded-lg pr-12 focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500 focus:border-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600 focus:border-green-600"}`}
+                  className={`w-full px-4 py-3 border rounded-lg pr-12 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                    darkMode
+                      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                      : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                  }`}
+                  
                 />
                 <button type="button" onClick={() => setShowPassword(p => !p)} className={`absolute top-1/2 right-4 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -266,7 +342,12 @@ export default function SignIn() {
               <input
                 type="email" placeholder="Your Email" value={forgotPasswordEmail}
                 onChange={(e) => setForgotPasswordEmail(e.target.value)} required
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-500" : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+                }`}
+                
               />
               <div className="flex flex-col sm:flex-row gap-3">
                 <button type="button" onClick={() => setShowForgotPasswordModal(false)} className={`w-full py-2.5 rounded-lg font-semibold transition ${darkMode ? "bg-gray-700 text-gray-200 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>

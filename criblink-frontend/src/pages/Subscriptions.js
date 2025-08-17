@@ -3,10 +3,14 @@ import { Check, Star, Crown, Building2, Rocket, Zap } from "lucide-react";
 import { useTheme } from '../layouts/AppShell';
 import Footer from '../components/Footer';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function SubscriptionPage() {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const currentUserPlan = user?.subscription_type || 'basic';
 
   const plans = [
     {
@@ -78,8 +82,14 @@ export default function SubscriptionPage() {
 
   const selectPlan = (plan) => {
     const { icon, ...planWithoutIcon } = plan;
-    navigate('/subscriptions/checkout', { state: { selectedPlan: planWithoutIcon } });
+    navigate('/subscriptions/checkout', { 
+      state: { 
+        selectedPlan: planWithoutIcon,
+        currentUserPlan // pass the current user plan
+      } 
+    });
   };
+  
 
   return (
     <div
@@ -92,9 +102,9 @@ export default function SubscriptionPage() {
         transition={{ repeat: Infinity, duration: 20, ease: "easeInOut" }}
       />
 
-      <section className="text-center pb-8 relative z-10" style={{ paddingTop: "var(--header-height, 16px)" }}>
+      <section className="text-center -mt-6 pb-2 relative z-10">
         <motion.h1
-          className={`text-5xl md:text-6xl font-light tracking-wide mb-4 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
+          className={`text-4xl md:text-6xl font-light tracking-wide mb-4 ${darkMode ? "text-green-400" : "text-green-600"}`}
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
@@ -112,53 +122,85 @@ export default function SubscriptionPage() {
       </section>
 
       <section className="relative z-10 px-6 md:px-12 grid md:grid-cols-3 gap-6 pb-10 max-w-7xl mx-auto">
-        {plans.map((plan, i) => (
-          <motion.div
-            key={i}
-            className={`rounded-3xl bg-gradient-to-br ${plan.gradient} p-6 shadow-lg flex flex-col justify-between cursor-pointer ${darkMode ? "shadow-black/50" : "shadow-gray-200"} backdrop-blur-sm`}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.03, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-            transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
-            viewport={{ once: true }}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-2xl ${darkMode ? "bg-neutral-800/50" : "bg-gray-100/50"}`}>{plan.icon}</div>
-                {plan.name === "Pro" && <Star className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
-                {plan.name === "Enterprise" && <Crown className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
-              </div>
-              <h3 className={`text-2xl font-semibold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>{plan.name}</h3>
-              <p className={`text-4xl font-bold tracking-tight my-2 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>{plan.price}</p>
-              <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-4 ${darkMode ? "bg-neutral-700/50 text-neutral-300" : "bg-gray-200/50 text-neutral-700"}`}>
-                {plan.tag}
-              </span>
-              <motion.ul
-                className="space-y-2 text-sm"
-                variants={container}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-              >
-                {plan.features.map((f, idx) => (
-                  <motion.li
-                    key={idx}
-                    className={`flex items-center gap-2 ${darkMode ? "text-neutral-300" : "text-neutral-700"} font-medium`}
-                    variants={item}
-                  >
-                    <Check className={darkMode ? "text-blue-400" : "text-blue-600"} size={16} /> {f}
-                  </motion.li>
-                ))}
-              </motion.ul>
-            </div>
-            <button
-              onClick={() => selectPlan(plan)}
-              className={`mt-6 w-full font-semibold py-3 rounded-2xl transition-all duration-300 ${darkMode ? "bg-white/10 text-white hover:bg-white/20" : "bg-black/5 text-black hover:bg-black/10"}`}
+        {plans.map((plan, i) => {
+          const isCurrentPlan = plan.name.toLowerCase() === currentUserPlan;
+          const isBasicPlan = plan.name === 'Basic';
+
+          let buttonText = 'Upgrade';
+          if (isCurrentPlan) {
+            buttonText = 'Current Plan';
+          } else if (isBasicPlan) {
+            buttonText = 'Default Plan';
+          } else if (currentUserPlan === 'enterprise' && plan.name === 'Pro') {
+            buttonText = 'Change Plan';
+          }
+
+          return (
+            <motion.div
+              key={i}
+              className={`rounded-3xl bg-gradient-to-br ${plan.gradient} p-6 shadow-lg flex flex-col justify-between ${darkMode ? "shadow-black/50" : "shadow-gray-200"} backdrop-blur-sm ${!isBasicPlan && !isCurrentPlan ? 'cursor-pointer' : ''}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              whileHover={
+                !isBasicPlan && !isCurrentPlan
+                  ? { scale: 1.03, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }
+                  : { boxShadow: "0 10px 25px rgba(0,0,0,0.08)" }
+              }
+              transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+              viewport={{ once: true }}
             >
-              {plan.name === "Basic" ? "Get Started" : "Upgrade Now"}
-            </button>
-          </motion.div>
-        ))}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-3 rounded-2xl ${darkMode ? "bg-neutral-800/50" : "bg-gray-100/50"}`}>{plan.icon}</div>
+                  {plan.name === "Pro" && <Star className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
+                  {plan.name === "Enterprise" && <Crown className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
+                </div>
+                <h3 className={`text-2xl font-semibold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>{plan.name}</h3>
+
+                <div className="flex items-center justify-between my-3">
+                  <p className={`text-4xl font-bold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>
+                    {plan.price}
+                  </p>
+                  <button
+                    onClick={() => !isCurrentPlan && !isBasicPlan && selectPlan(plan)}
+                    disabled={isCurrentPlan || isBasicPlan}
+                    className={`ml-4 font-semibold px-5 py-2 rounded-xl transition-all duration-300 ${
+                      isCurrentPlan
+                        ? (darkMode ? "bg-green-500/30 text-green-300 cursor-default" : "bg-green-600 text-white cursor-default")
+                        : isBasicPlan
+                        ? (darkMode ? "bg-neutral-700/50 text-neutral-400 cursor-default" : "bg-gray-200/50 text-neutral-500 cursor-default")
+                        : (darkMode ? "bg-white/10 text-white hover:bg-white/20" : "bg-black/5 text-black hover:bg-black/10")
+                    }`}
+                  >
+                    {buttonText}
+                  </button>
+                </div>
+
+                <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-4 ${darkMode ? "bg-neutral-700/50 text-neutral-300" : "bg-gray-200/50 text-neutral-700"}`}>
+                  {plan.tag}
+                </span>
+
+                <motion.ul
+                  className="space-y-2 text-sm"
+                  variants={container}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                >
+                  {plan.features.map((f, idx) => (
+                    <motion.li
+                      key={idx}
+                      className={`flex items-center gap-2 ${darkMode ? "text-neutral-300" : "text-neutral-700"} font-medium`}
+                      variants={item}
+                    >
+                      <Check className={darkMode ? "text-blue-400" : "text-blue-600"} size={16} /> {f}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              </div>
+            </motion.div>
+          )
+        })}
       </section>
 
       <section className={`relative z-10 text-center py-10 ${darkMode ? "bg-gray-800/50" : "bg-white/50"} backdrop-blur-md`}>
@@ -184,7 +226,7 @@ export default function SubscriptionPage() {
           onClick={() => selectPlan(plans[1])}
           className={`px-8 py-3 font-semibold rounded-2xl shadow-md transition-all duration-300 ${darkMode ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
         >
-          Upgrade My Plan
+          {currentUserPlan === 'enterprise' ? 'Change My Plan' : 'Upgrade My Plan'}
         </button>
       </section>
 

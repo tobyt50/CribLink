@@ -82,7 +82,6 @@ function Home() {
     try {
       const response = await axiosInstance.get(`/listings/featured?limit=${FEATURED_CAROUSEL_LIMIT}`);
       const listings = response.data.listings || [];
-      // Filter for listings that are either 'available' or 'under offer'
       const filtered = listings.filter(l => l.status === 'available' || l.status === 'under offer');
       setFeaturedListings(filtered);
     } catch (error) {
@@ -93,14 +92,12 @@ function Home() {
     }
   }, []);
   
-  // This function fetches the initial "Available Listings" for the homepage.
-  // It intentionally does not depend on search/filter state.
   const fetchListings = useCallback(async (page = 1) => {
     setLoading(true);
     const params = new URLSearchParams();
     params.append("page", page);
     params.append("limit", ITEMS_PER_PAGE);
-    params.append("sortBy", "date_listed_desc"); // Always sort by latest on home
+    params.append("sortBy", "date_listed_desc");
 
     try {
       const response = await axiosInstance.get(`/listings?${params.toString()}`);
@@ -116,7 +113,6 @@ function Home() {
     }
   }, [showMessage]);
 
-  // This function's only job is to navigate to the search page.
   const handleSearch = useCallback((e) => {
     e.preventDefault();
     const queryParams = new URLSearchParams();
@@ -180,8 +176,6 @@ function Home() {
     fetchFeaturedListings();
   }, [fetchFeaturedListings]);
   
-  // UPDATE: This main data-fetching useEffect now ONLY runs on initial auth load and pagination.
-  // It IGNORES changes to filters, search term, and sort by.
   useEffect(() => {
     if (!authLoading) {
         fetchListings(currentPage);
@@ -211,39 +205,88 @@ function Home() {
     }
   }, [featuredListings.length, isCarousel]);
 
-  const scrollFeatured = useCallback((direction) => {
+  // Apple-style smooth scroll animation
+const animateScroll = (element, to, duration = 800, onComplete) => {
+  const start = element.scrollLeft;
+  const change = to - start;
+  const startTime = performance.now();
+
+  const spring = (t) => 1 - Math.cos(t * 4.5 * Math.PI) * Math.exp(-t * 6);
+
+  const animate = (time) => {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    element.scrollLeft = start + change * spring(progress);
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else if (onComplete) {
+      onComplete();
+    }
+  };
+
+  requestAnimationFrame(animate);
+};
+
+const scrollFeatured = useCallback(
+  (direction) => {
     if (!isCarousel || !featuredCarouselRef.current) return;
     const carousel = featuredCarouselRef.current;
-    const itemElement = carousel.querySelector('.featured-card-item');
+    const itemElement = carousel.querySelector(".featured-card-item");
     if (!itemElement) return;
+
+    const itemStyle = window.getComputedStyle(itemElement);
+    const itemMarginLeft = parseFloat(itemStyle.marginLeft);
+    const itemMarginRight = parseFloat(itemStyle.marginRight);
+    const itemWidthWithMargins =
+      itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+    const numOriginalItems = featuredListings.length;
+    const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
+
+    let newScrollTarget =
+      carousel.scrollLeft +
+      (direction === "next" ? itemWidthWithMargins : -itemWidthWithMargins);
+
+    // Always animate first
+    animateScroll(carousel, newScrollTarget, 800, () => {
+      // After animation, silently reset if we’ve drifted too far
+      if (carousel.scrollLeft >= 2 * totalOriginalListWidth) {
+        carousel.scrollLeft -= totalOriginalListWidth;
+      } else if (carousel.scrollLeft < totalOriginalListWidth) {
+        carousel.scrollLeft += totalOriginalListWidth;
+      }
+    });
+  },
+  [featuredListings.length, isCarousel]
+);
+
+  // Re-align carousel when window resizes (fixes partial cards after switching breakpoints)
+useEffect(() => {
+  const handleResize = () => {
+    if (!featuredCarouselRef.current) return;
+    const carousel = featuredCarouselRef.current;
+    const itemElement = carousel.querySelector(".featured-card-item");
+    if (!itemElement) return;
+
     const itemStyle = window.getComputedStyle(itemElement);
     const itemMarginLeft = parseFloat(itemStyle.marginLeft);
     const itemMarginRight = parseFloat(itemStyle.marginRight);
     const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
     const numOriginalItems = featuredListings.length;
-    const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-    let newScrollTarget = carousel.scrollLeft;
 
-    if (direction === 'next') {
-      newScrollTarget += itemWidthWithMargins;
-      if (newScrollTarget >= 2 * totalOriginalListWidth) {
-        carousel.scrollLeft -= totalOriginalListWidth;
-        newScrollTarget = carousel.scrollLeft + itemWidthWithMargins;
-      }
-    } else {
-      newScrollTarget -= itemWidthWithMargins;
-      if (newScrollTarget < totalOriginalListWidth) {
-        carousel.scrollLeft += totalOriginalListWidth;
-        newScrollTarget = carousel.scrollLeft - itemWidthWithMargins;
-      }
-    }
-    carousel.scrollTo({ left: newScrollTarget, behavior: 'smooth' });
-  }, [featuredListings.length, isCarousel]);
+    // Reset to the "middle clone set" after resize
+    carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
+  };
+
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, [featuredListings.length]);
+
 
   useEffect(() => {
     if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
     if (isCarousel) {
-      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 3000);
+      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 2500);
     }
     return () => {
       if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
@@ -256,7 +299,7 @@ function Home() {
 
   const handleTouchEnd = useCallback(() => {
     if (isCarousel) {
-      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 3000);
+      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 2500);
     }
   }, [isCarousel, scrollFeatured]);
 
@@ -269,7 +312,7 @@ function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className={`font-script text-xl md:text-2xl mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+          <h1 className={`font-script text-xl mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
             Find Your Dream Property
           </h1>
           <div className="w-full max-w-4xl mx-auto">
@@ -295,40 +338,37 @@ function Home() {
             onTouchEnd={isCarousel ? handleTouchEnd : undefined}
           >
             <h2 className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-4 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-              <Star size={20} className="text-yellow-400 fill-current" />
+              <Star size={15} className="text-yellow-400 fill-current" />
               Featured Properties
-              <Star size={20} className="text-yellow-400 fill-current" />
+              <Star size={15} className="text-yellow-400 fill-current" />
             </h2>
             <div className="relative">
               <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-              
-              {isCarousel && (
-                <>
-                  <button onClick={() => scrollFeatured('prev')} className={`absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-200'}`} aria-label="Previous featured item">
-                    <ChevronLeft size={24} />
-                  </button>
-                  <button onClick={() => scrollFeatured('next')} className={`absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full shadow-md transition-colors ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-200'}`} aria-label="Next featured item">
-                    <ChevronRight size={24} />
-                  </button>
-                </>
-              )}
 
               <div
                 ref={featuredCarouselRef}
-                className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll snap-x snap-mandatory no-scrollbar pl-[25vw] pr-[25vw] md:pl-0 md:pr-0' : 'justify-center'}`}
+                // UPDATED: Removed the large mobile padding that centered the first card
+                className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll no-scrollbar' : 'justify-center'}`}
+
               >
                 {featuredLoading ? (
-                  [...Array(4)].map((_, i) => (
-                    <div key={i} className="flex-shrink-0 snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item">
+                  [...Array(5)].map((_, i) => (
+                    // UPDATED: Adjusted skeleton widths to match the new layout
+                    <div key={i} className="flex-shrink-0 snap-center w-[45vw] px-2 md:w-1/3 lg:w-1/5 featured-card-item">
                       <ListingCardSkeleton darkMode={darkMode} />
                     </div>
                   ))
                 ) : (
                   (isCarousel ? [...featuredListings, ...featuredListings, ...featuredListings] : featuredListings).map((listing, index) => (
                     <div
-                      key={`featured-${listing.property_id}-${index}`}
-                      className={`flex-shrink-0 ${isCarousel ? 'snap-center w-[50vw] px-2 md:w-1/2 lg:w-1/4 featured-card-item' : 'w-full max-w-sm px-2'}`}
-                    >
+  key={`featured-${listing.property_id}-${index}`}
+  className={`flex-shrink-0 ${
+    isCarousel
+      ? 'snap-start w-[45%] px-2 md:w-1/3 lg:w-1/5 featured-card-item -mb-4'
+      : 'w-full max-w-sm px-2'
+  }`}
+>
+
                       <ListingCard
                         listing={listing}
                         isFavorited={userFavourites.includes(listing.property_id)}
@@ -344,17 +384,17 @@ function Home() {
                 )}
               </div>
             </div>
-            <div className="text-center mt-6">
-                <Link to="/featured-listings" className={`inline-block py-2 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 ${darkMode ? 'bg-green-600 text-white hover:bg-green-500' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                    See All Featured Properties &rarr;
+            <div className="text-right text-sm mt-6">
+                <Link to="/featured-listings" className={`inline-block pt-0 pb-0 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 bg-transparent ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}>
+                    See all featured &rarr;
                 </Link>
             </div>
           </motion.div>
         )}
 
         {!loading && (
-          <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-4 pb-0 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-            Available Listings
+          <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-0 pb-0 -mt-2 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+            Explore Listings
           </h2>
         )}
         <motion.div

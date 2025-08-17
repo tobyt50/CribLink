@@ -44,8 +44,8 @@ function SearchPage() {
   // State for all search and filter parameters
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    location: "", propertyType: "", subtype: "", bedrooms: "", bathrooms: "",
-    minPrice: "", maxPrice: "", purchaseCategory: "",
+    location: "", state: "", propertyType: "", subtype: "", bedrooms: "",
+    bathrooms: "", minPrice: "", maxPrice: "", purchaseCategory: "",
   });
   const [sortBy, setSortBy] = useState("date_listed_desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -103,6 +103,7 @@ function SearchPage() {
     setSearchTerm(params.get('search') || '');
     setFilters({
       location: params.get('location') || "",
+      state: params.get('state') || "",
       propertyType: params.get('property_type') || "",
       subtype: params.get('subtype') || "",
       bedrooms: params.get('bedrooms') || "",
@@ -111,6 +112,7 @@ function SearchPage() {
       maxPrice: params.get('max_price') || "",
       purchaseCategory: params.get('purchase_category') || "",
     });
+    
     setSortBy(params.get('sortBy') || 'date_listed_desc');
     setCurrentPage(parseInt(params.get('page') || '1', 10));
   }, [location.search]);
@@ -129,6 +131,7 @@ function SearchPage() {
     if (searchTerm.trim()) params.set('search', searchTerm.trim());
     if (filters.purchaseCategory) params.set('purchase_category', filters.purchaseCategory);
     if (filters.location) params.set('location', filters.location);
+    if (filters.state) params.set('state', filters.state);
     if (filters.propertyType) params.set('property_type', filters.propertyType);
     if (filters.bedrooms) params.set('bedrooms', filters.bedrooms);
     if (filters.bathrooms) params.set('bathrooms', filters.bathrooms);

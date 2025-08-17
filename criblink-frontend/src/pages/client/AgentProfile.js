@@ -760,7 +760,7 @@ const AgentProfile = () => {
         className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0"
         style={{ minWidth: `calc(100% - ${contentShift}px)` }}
       >
-        <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Profile</h1>
+        <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agent Profile</h1>
 
         {isLoading ? ( // Conditionally render skeleton when loading
           <AgentProfileSkeleton darkMode={darkMode} />
@@ -795,20 +795,63 @@ const AgentProfile = () => {
                     />
                   </div>
                   {/* Agent ID, Agency, and Contact Information */}
-                  <div className="flex-1">
-                    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agent ID: {agent.user_id}</p>
-                    {agent.agency && <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Agency: {agent.agency}</p>}
+                  <div className="flex-1 min-w-0 break-words">
+  <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+    Agent ID: {agent.user_id}
+  </p>
+  {agent.agency && (
+    <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+      Agency: {agent.agency}
+    </p>
+  )}
 
-                    <div className={`space-y-3 pt-4 ${darkMode ? "border-gray-700" : "border-gray-200"} border-t`}>
-                      <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Contact Information</h3>
-                      <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                        ✉️ <strong>Email:</strong> <a href={`mailto:${agent.email}`} className="text-blue-500 hover:underline">{agent.email}</a>
-                      </p>
-                      <p className={`flex items-center gap-2 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                        📞 <strong>Phone:</strong> {agent.phone || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
+  <div
+    className={`space-y-3 pt-4 border-t ${
+      darkMode ? "border-gray-700" : "border-gray-200"
+    }`}
+  >
+    <h3
+      className={`text-xl font-bold ${
+        darkMode ? "text-green-400" : "text-green-700"
+      }`}
+    >
+      Contact
+    </h3>
+
+    <p
+      className={`flex items-center gap-2 text-base ${
+        darkMode ? "text-gray-300" : "text-gray-700"
+      }`}
+    >
+      ✉️{" "}
+      <a
+        href={`mailto:${agent.email}`}
+        className="text-blue-500 hover:underline break-all"
+      >
+        {agent.email}
+      </a>
+    </p>
+
+    <p
+      className={`flex items-center gap-2 text-base ${
+        darkMode ? "text-gray-300" : "text-gray-700"
+      }`}
+    >
+      📞{" "}
+      {agent.phone ? (
+        <a
+          href={`tel:${agent.phone}`}
+          className="text-blue-500 hover:underline break-all"
+        >
+          {agent.phone}
+        </a>
+      ) : (
+        "N/A"
+      )}
+    </p>
+  </div>
+</div>
+
                 </div>
 
 

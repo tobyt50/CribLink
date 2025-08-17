@@ -22,7 +22,7 @@ exports.getAllListings = async (req, res) => {
   try {
       const {
           purchase_category, search, min_price, max_price, page, limit, status,
-          agent_id, sortBy, location, property_type, bedrooms, bathrooms,
+          agent_id, sortBy, location, state, property_type, bedrooms, bathrooms,
           land_size, zoning_type, title_type, agency_id: queryAgencyId
       } = req.query;
 
@@ -71,6 +71,10 @@ exports.getAllListings = async (req, res) => {
       if (min_price) { conditions.push(`pl.price >= $${valueIndex++}`); values.push(min_price); }
       if (max_price) { conditions.push(`pl.price <= $${valueIndex++}`); values.push(max_price); }
       if (location) { conditions.push(`pl.location ILIKE $${valueIndex++}`); values.push(`%${location}%`); }
+      if (state) {  // <-- ✅ NEW filter
+    conditions.push(`pl.state ILIKE $${valueIndex++}`); 
+    values.push(state); 
+}
       if (property_type) { conditions.push(`pl.property_type ILIKE $${valueIndex++}`); values.push(`%${property_type}%`); }
       if (bedrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bedrooms = $${valueIndex++}`); values.push(parseInt(bedrooms)); }
       if (bathrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bathrooms = $${valueIndex++}`); values.push(parseInt(bathrooms)); }
