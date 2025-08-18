@@ -65,6 +65,9 @@ const AddListing = () => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [statusValue, setStatusValue] = useState('');
   const isLandProperty = propertyType === 'Land';
+const [showPreview, setShowPreview] = useState(false);
+const [previewIndex, setPreviewIndex] = useState(0);
+const previewRef = useRef(null);
 
   // Subscription-related state
   const [stats, setStats] = useState({ activeListings: 0, activeFeatured: 0 });
@@ -108,6 +111,26 @@ const AddListing = () => {
     ...newImages.map(img => ({ url: img.base64, identifier: img.originalname, type: 'newFile' })),
     ...newImageURLs.map(url => ({ url, identifier: url, type: 'newUrl' }))
   ], [newImages, newImageURLs]);
+
+  // Keyboard navigation for preview modal
+useEffect(() => {
+  if (!showPreview) return;
+
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowLeft") {
+      setPreviewIndex(
+        (prev) => (prev - 1 + allImagesForDisplay.length) % allImagesForDisplay.length
+      );
+    } else if (e.key === "ArrowRight") {
+      setPreviewIndex((prev) => (prev + 1) % allImagesForDisplay.length);
+    } else if (e.key === "Escape") {
+      setShowPreview(false);
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [showPreview, allImagesForDisplay.length]);
   
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: (acceptedFiles) => {
@@ -248,6 +271,9 @@ const AddListing = () => {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className={`relative min-h-screen ${darkMode ? "bg-gray-900" : "bg-gray-50"} pt-2 pb-10`}>
       <motion.form onSubmit={handleSubmit} className={`max-w-4xl mx-auto p-8 rounded-3xl shadow-2xl relative ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white text-gray-900"}`}>
+      <button type="button" onClick={handleExit} className="absolute top-4 right-4 p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 z-10">
+            <CloseIcon className="h-5 w-5" />
+        </button>
       <fieldset disabled={!!formDisabledMessage} className="space-y-8">
         <div className="mb-6">
             <div className="flex flex-col md:grid md:grid-cols-3 md:items-center">
@@ -279,10 +305,7 @@ const AddListing = () => {
                 </div>
             )}
         </div>
-        <button type="button" onClick={handleExit} className="absolute -top-4 right-4 p-1 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 z-10">
-            <CloseIcon className="h-5 w-5" />
-        </button>
-            
+    
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="space-y-6">
               <h2 className={sectionTitleClass}>Core Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="md:col-span-1"><label htmlFor="purchaseCategory" className={labelClass}>Purchase Category <span className="text-red-500">*</span></label><Dropdown options={purchaseCategoryOptions} value={purchaseCategory} onChange={setPurchaseCategory} placeholder="Select a category"/></div><div className="md:col-span-2"><label htmlFor="title" className={labelClass}>Title <span className="text-red-500">*</span></label><input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Beautiful 3-Bedroom Duplex" className={uniformInputClass()} required /></div></div>
@@ -296,7 +319,129 @@ const AddListing = () => {
               <div className="space-y-4">
                 <div {...getRootProps()} className={`border border-dashed rounded-2xl py-6 px-4 text-center cursor-pointer transition-all duration-300 ${darkMode ? "border-gray-600 hover:border-green-500 text-gray-400" : "border-gray-300 hover:border-green-500 text-gray-500"}`}><input {...getInputProps()} /><p>Drag 'n' drop some files here, or click to select files</p><p className="text-xs mt-1">(Maximum {tierConfig.maxImages} images allowed on the '{tierConfig.name}' plan)</p></div>
                 <div className="flex items-center space-x-2"><input type="text" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="Or paste an image URL here..." className={uniformInputClass()} /><button type="button" onClick={handleAddImageUrl} className={`bg-green-600 text-white py-2 px-6 rounded-2xl transition-colors duration-200 hover:bg-green-700 font-bold whitespace-nowrap`}>Add URL</button></div>
-                {allImagesForDisplay.length > 0 && (<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">{allImagesForDisplay.map((item, index) => (<motion.div key={item.identifier || index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative group overflow-hidden rounded-2xl shadow-lg border"><img src={item.url} alt={`Listing Image ${index + 1}`} className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105" /><div className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveImage(item.identifier, item.type)}><CloseIcon className="h-4 w-4 text-white" /></div><div className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold ${item.identifier === thumbnailIdentifier ? "bg-green-700 text-white" : "bg-white/80 text-gray-800 backdrop-blur-sm"}`}>{item.identifier === thumbnailIdentifier ? 'Thumbnail (Selected)' : 'Set as Thumbnail'}</div><button type="button" onClick={() => setAsThumbnail(item.identifier)} className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100"></button></motion.div>))}</div>)}
+                {/* Uploaded Images Grid */}
+{allImagesForDisplay.length > 0 && (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+    {allImagesForDisplay.map((item, index) => (
+      <motion.div
+        key={item.identifier || index}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="relative group overflow-hidden rounded-2xl shadow-lg border"
+      >
+        {/* Image - clicking opens preview */}
+        <img
+          src={item.url}
+          alt={`Listing ${index + 1}`}
+          className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+          onClick={() => {
+            setPreviewIndex(index);
+            setShowPreview(true);
+          }}
+        />
+
+        {/* Remove button */}
+        <div
+          className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => handleRemoveImage(item.identifier, item.type)}
+        >
+          <CloseIcon className="h-4 w-4 text-white" />
+        </div>
+
+        {/* Thumbnail toggle */}
+        <div
+          onClick={() => setThumbnailIdentifier(item.identifier)}
+          className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold cursor-pointer ${
+            item.identifier === thumbnailIdentifier
+              ? "bg-green-700 text-white"
+              : "bg-white/80 text-gray-800 backdrop-blur-sm hover:bg-green-600 hover:text-white"
+          }`}
+        >
+          {item.identifier === thumbnailIdentifier ? "Thumbnail" : "Set as Thumbnail"}
+        </div>
+      </motion.div>
+    ))}
+  </div>
+)}
+
+<AnimatePresence>
+  {showPreview && allImagesForDisplay.length > 0 && (
+    <motion.div
+      className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div ref={previewRef} className="relative">
+        {/* Swipeable image */}
+        <motion.img
+          key={allImagesForDisplay[previewIndex].url}
+          src={allImagesForDisplay[previewIndex].url}
+          alt="Preview"
+          className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.x < -100) {
+              setPreviewIndex((prev) => (prev + 1) % allImagesForDisplay.length);
+            } else if (info.offset.x > 100) {
+              setPreviewIndex(
+                (prev) =>
+                  (prev - 1 + allImagesForDisplay.length) %
+                  allImagesForDisplay.length
+              );
+            }
+          }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+
+        {/* Left arrow */}
+        {allImagesForDisplay.length > 1 && (
+          <button
+            type="button"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPreviewIndex(
+                (prev) =>
+                  (prev - 1 + allImagesForDisplay.length) %
+                  allImagesForDisplay.length
+              );
+            }}
+          >
+            <span className="text-[8rem] leading-none select-none">‹</span>
+          </button>
+        )}
+
+        {/* Right arrow */}
+        {allImagesForDisplay.length > 1 && (
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPreviewIndex((prev) => (prev + 1) % allImagesForDisplay.length);
+            }}
+          >
+            <span className="text-[8rem] leading-none select-none">›</span>
+          </button>
+        )}
+
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={() => setShowPreview(false)}
+          className="absolute top-2 right-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 z-30"
+        >
+          <CloseIcon className="h-5 w-5" />
+        </button>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
               </div>
             </motion.div>
 

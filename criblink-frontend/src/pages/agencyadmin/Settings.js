@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search, Languages, Palette, Link, Landmark, Loader, Save, UserPlus, Hourglass, UserRoundCheck, UserX, Trash2, ShieldAlert, CheckCircle, PencilIcon } from 'lucide-react'; // Added new icons and CheckCircle
+import { Settings as SettingsIcon, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search, Languages, Palette, Link, Landmark, Loader, Save, UserPlus, Hourglass, UserRoundCheck, UserX, Trash2, ShieldAlert, CheckCircle, PencilIcon, Phone, Globe, MapPin, FileText, Hash,  } from 'lucide-react'; // Added new icons and CheckCircle
 import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar.js'; // Import the new AgencyAdminSidebar
 import { useTheme } from '../../layouts/AppShell.js';
 import { useMessage } from '../../context/MessageContext.js';
@@ -931,12 +931,12 @@ const AgencyAdminSettings = () => {
             >
                 {/* Mobile View Main Header */}
                 <div className="md:hidden flex items-center justify-center mb-4">
-                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Agency Settings</h1>
+                    <h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>Settings</h1>
                 </div>
 
                 {/* Desktop View Main Header */}
                 <div className="hidden md:block mb-6">
-                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Agency Settings</h1>
+                    <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Settings</h1>
                 </div>
 
                 <motion.div
@@ -965,137 +965,157 @@ const AgencyAdminSettings = () => {
 
                             {/* Agency Information Section */}
                             {filterSection("agencyInfo") && agencyInfo && (
-                                <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
-                                    <h3 className={`text-xl md:text-2xl font-bold mb-5 flex items-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
-                                        <Landmark className="mr-3 text-orange-500" size={24} /> Agency Information
-                                    </h3>
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.1 }}
-                                        className="space-y-6"
-                                    >
-                                        <div className="flex flex-col items-center mb-6">
-                                            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                                {newLogoPreview ? (
-                                                    <img src={newLogoPreview} alt="Agency Logo" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <Landmark className="w-16 h-16 text-gray-400" />
-                                                )}
-                                                {editingAgencyInfo && newLogoPreview && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleClearLogo}
-                                                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
-                                                        aria-label="Clear agency logo"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            {editingAgencyInfo && (
-                                                <input
-                                                    type="file"
-                                                    id="agency_logo"
-                                                    name="agency_logo"
-                                                    accept="image/*"
-                                                    onChange={handleLogoChange}
-                                                    className={`mt-4 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${darkMode ? "file:bg-green-600 file:text-white file:hover:bg-green-700 text-gray-300" : "file:bg-green-50 file:text-green-700 hover:file:bg-green-100 text-gray-700"}`}
-                                                />
-                                            )}
-                                        </div>
+  <div className="pb-8 mb-8 border-b border-gray-200 dark:border-gray-700">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="space-y-8"
+    >
+      {/* Header Row */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Agency Name</label>
-                                                {editingAgencyInfo ? (
-                                                    <input type="text" name="name" value={agencyForm.name} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.name}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Email</label>
-                                                {editingAgencyInfo ? (
-                                                    <input type="email" name="email" value={agencyForm.email} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.email}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Phone</label>
-                                                {editingAgencyInfo ? (
-                                                    <input type="tel" name="phone" value={agencyForm.phone} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.phone}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Website</label>
-                                                {editingAgencyInfo ? (
-                                                    <input type="url" name="website" value={agencyForm.website} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.website || 'N/A'}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Address</label> {/* Added Address field */}
-                                                {editingAgencyInfo ? (
-                                                    <input type="text" name="address" value={agencyForm.address} onChange={handleAgencyFormChange} className={inputFieldStyles} />
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.address || 'N/A'}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Description</label>
-                                                {editingAgencyInfo ? (
-                                                    <textarea name="description" value={agencyForm.description} onChange={handleAgencyFormChange} className={`${inputFieldStyles} min-h-[100px]`} rows="4"></textarea>
-                                                ) : (
-                                                    <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.description || 'N/A'}</p>
-                                                )}
-                                            </div>
-                                            <div className={inputGroupStyles}>
-                                                <label className={labelStyles}>Agency ID</label>
-                                                <p className={`text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>{agencyInfo.agency_id}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end space-x-4 mt-6">
-                                            {editingAgencyInfo ? (
-                                                <>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingAgencyInfo(false);
-                                                            fetchAgencyInfo(); // Revert changes
-                                                        }}
-                                                        className={`px-6 py-2 rounded-full font-semibold transition duration-200 ${darkMode ? "bg-gray-600 hover:bg-gray-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button
-                                                        onClick={handleUpdateAgencyInfo}
-                                                        disabled={updatingAgency}
-                                                        className={`px-6 py-2 font-semibold rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center
-                                                            ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                                                    >
-                                                        {updatingAgency ? <Loader size={20} className="animate-spin mr-2" /> : <Save size={20} className="mr-2" />}
-                                                        {updatingAgency ? "Saving..." : "Save Changes"}
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setEditingAgencyInfo(true)}
-                                                    className={`px-6 py-2 rounded-full font-semibold transition duration-200 flex items-center
-                                                        ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
-                                                >
-                                                    <PencilIcon size={20} className="mr-2" />
-                                                    Edit Info
-                                                </button>
+        {/* Logo + Name */}
+        <div className="flex items-center space-x-4">
+          <div className="relative w-14 h-14 rounded-full overflow-hidden 
+                          border-2 border-green-500 shadow-sm bg-gray-100 dark:bg-gray-800 
+                          flex items-center justify-center">
+            {newLogoPreview ? (
+              <img
+                src={newLogoPreview}
+                alt="Agency Logo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Landmark className="w-7 h-7 text-gray-400" />
+            )}
 
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            )}
+            {editingAgencyInfo && newLogoPreview && (
+              <button
+                type="button"
+                onClick={handleClearLogo}
+                className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 
+                           text-white rounded-full p-1 shadow-md transition"
+                aria-label="Clear agency logo"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <h3
+            className={`text-xl md:text-2xl font-bold 
+              ${darkMode ? "text-green-400" : "text-green-700"}`}
+          >
+            Agency Overview
+          </h3>
+        </div>
+
+        {/* Edit / Save Buttons */}
+        <div className="flex space-x-2 sm:space-x-3">
+          {editingAgencyInfo ? (
+            <>
+              <button
+                onClick={() => {
+                  setEditingAgencyInfo(false);
+                  fetchAgencyInfo();
+                }}
+                className={`px-4 py-1.5 rounded-full font-medium transition text-sm
+                  ${darkMode ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-800"}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateAgencyInfo}
+                disabled={updatingAgency}
+                className={`px-4 py-1.5 font-medium rounded-full transition flex items-center 
+                  text-sm shadow-sm
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+              >
+                {updatingAgency ? (
+                  <Loader size={16} className="animate-spin mr-1" />
+                ) : (
+                  <Save size={16} className="mr-1" />
+                )}
+                {updatingAgency ? "Saving..." : "Save"}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setEditingAgencyInfo(true)}
+              className={`px-4 py-1.5 rounded-full font-medium transition flex items-center 
+                text-sm shadow-sm hover:shadow-md
+                ${darkMode ? "bg-green-600 hover:bg-green-700 text-white" : "bg-green-500 hover:bg-green-600 text-white"}`}
+            >
+              <PencilIcon size={16} className="mr-1" />
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Info Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[
+          { label: "Agency Name", value: agencyInfo.name, name: "name", type: "text", icon: <Landmark size={18} className="text-green-500" /> },
+          { label: "Email", value: agencyInfo.email, name: "email", type: "email", icon: <Mail size={18} className="text-blue-500" /> },
+          { label: "Phone", value: agencyInfo.phone, name: "phone", type: "tel", icon: <Phone size={18} className="text-yellow-500" /> },
+          { label: "Website", value: agencyInfo.website || "N/A", name: "website", type: "url", icon: <Globe size={18} className="text-purple-500" /> },
+          { label: "Address", value: agencyInfo.address || "N/A", name: "address", type: "text", icon: <MapPin size={18} className="text-red-500" /> },
+          { label: "Description", value: agencyInfo.description || "N/A", name: "description", type: "textarea", icon: <FileText size={18} className="text-gray-500" /> },
+        ].map((field, idx) => (
+          editingAgencyInfo ? (
+            // CLEAN EDIT MODE (no nested cards, just labels + inputs)
+            <div key={idx} className="flex flex-col">
+              <label className={`text-sm font-medium mb-2 flex items-center space-x-2 
+                ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                {field.icon}
+                <span>{field.label}</span>
+              </label>
+              {field.type === "textarea" ? (
+                <textarea
+                  name={field.name}
+                  value={agencyForm[field.name]}
+                  onChange={handleAgencyFormChange}
+                  rows="3"
+                  className={`${inputFieldStyles} min-h-[80px]`}
+                />
+              ) : (
+                <input
+                  type={field.type}
+                  name={field.name}
+                  value={agencyForm[field.name]}
+                  onChange={handleAgencyFormChange}
+                  className={inputFieldStyles}
+                />
+              )}
+            </div>
+          ) : (
+            // VIEW MODE (nice card style)
+            <div
+              key={idx}
+              className={`flex flex-col p-4 rounded-xl shadow-sm border 
+                ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} 
+                transition hover:shadow-md`}
+            >
+              <label className={`text-sm font-medium mb-2 flex items-center space-x-2 
+                ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                {field.icon}
+                <span>{field.label}</span>
+              </label>
+              <p className={`text-base md:text-lg leading-relaxed break-words 
+                ${darkMode ? "text-gray-100" : "text-gray-900"}`}>
+                {field.value}
+              </p>
+            </div>
+          )
+        ))}
+      </div>
+    </motion.div>
+  </div>
+)}
+
+
 
                             {/* Agency Members Section */}
                             {filterSection("members") && (

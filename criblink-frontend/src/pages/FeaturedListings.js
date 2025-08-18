@@ -68,62 +68,51 @@ const ListingCardSkeleton = ({ darkMode }) => (
     </div>
   </div>
 );
-
-// Apple-style smooth scroll animation
-const animateScroll = (element, to, duration = 800, onComplete) => {
-  const start = element.scrollLeft;
-  const change = to - start;
-  const startTime = performance.now();
-
-  const spring = (t) => 1 - Math.cos(t * 4.5 * Math.PI) * Math.exp(-t * 6);
-
-  const animate = (time) => {
-    const elapsed = time - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    element.scrollLeft = start + change * spring(progress);
-
-    if (progress < 1) {
-      requestAnimationFrame(animate);
-    } else if (onComplete) {
-      onComplete();
-    }
-  };
-
-  requestAnimationFrame(animate);
-};
-
-
 // Carousel row component remains the same
 const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFavoriteToggle, ...otherProps }) => {
   const { darkMode } = useTheme();
   const carouselRef = useRef(null);
-  const autoSwipeIntervalRef = useRef(null);
+
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
 
   const isCarousel = listings.length > 1;
 
-  // ✅ New auto-swipe logic
+  // Track scroll position to show/hide arrows
+  const updateArrows = () => {
+    if (!carouselRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
+    setShowLeftArrow(scrollLeft > 5); // small threshold
+    setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 5);
+  };
+
+  // Attach scroll listener
   useEffect(() => {
     if (!isCarousel || !carouselRef.current) return;
     const carousel = carouselRef.current;
+    updateArrows();
+    carousel.addEventListener("scroll", updateArrows);
+    window.addEventListener("resize", updateArrows); // recalc on resize
+    return () => {
+      carousel.removeEventListener("scroll", updateArrows);
+      window.removeEventListener("resize", updateArrows);
+    };
+  }, [isCarousel, listings.length]);
 
-    const itemElement = carousel.querySelector(".featured-card-item");
+  // Scroll by one card width
+  const scrollByCard = (direction) => {
+    if (!carouselRef.current) return;
+    const itemElement = carouselRef.current.querySelector(".featured-card-item");
     if (!itemElement) return;
 
     const itemStyle = window.getComputedStyle(itemElement);
     const itemMarginLeft = parseFloat(itemStyle.marginLeft);
     const itemMarginRight = parseFloat(itemStyle.marginRight);
-    const itemWidthWithMargins =
-      itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+    const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
 
-    let index = 0;
-    autoSwipeIntervalRef.current = setInterval(() => {
-      index = (index + 1) % listings.length; // loop over real items
-      const newScrollTarget = index * itemWidthWithMargins;
-      animateScroll(carousel, newScrollTarget, 800);
-    }, 3000);
-
-    return () => clearInterval(autoSwipeIntervalRef.current);
-  }, [isCarousel, listings.length]);
+    const newScrollLeft = carouselRef.current.scrollLeft + itemWidthWithMargins * direction;
+    carouselRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" });
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -134,33 +123,49 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
           </h3>
         </Link>
       </div>
-      <div
-        ref={carouselRef}
-        className={`flex flex-nowrap pb-4 -mb-4 ${
-          isCarousel ? "overflow-x-scroll no-scrollbar" : "justify-center"
-        }`}
-      >
-        {listings.map((listing) => (
-          <div
-            key={listing.property_id}
-            className={`featured-card-item flex-shrink-0 ${
-              isCarousel
-                ? "w-[45%] sm:w-[45%] px-2 md:w-1/3 lg:w-1/5"
-                : "w-full max-w-sm px-2"
-            }`}
+
+      <div className="relative">
+        {showLeftArrow && (
+          <button
+            onClick={() => scrollByCard(-1)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <ListingCard
-              listing={listing}
-              isFavorited={userFavourites.includes(listing.property_id)}
-              onFavoriteToggle={onFavoriteToggle}
-              {...otherProps}
-            />
-          </div>
-        ))}
+            <ChevronLeft size={24} />
+          </button>
+        )}
+
+        <div
+          ref={carouselRef}
+          className={`flex flex-nowrap pb-4 -mb-4 ${isCarousel ? "overflow-x-scroll no-scrollbar" : "justify-center"}`}
+        >
+          {listings.map((listing) => (
+            <div
+              key={listing.property_id}
+              className={`featured-card-item flex-shrink-0 ${isCarousel ? "w-[45%] sm:w-[45%] px-2 md:w-1/3 lg:w-1/5" : "w-full max-w-sm px-2"}`}
+            >
+              <ListingCard
+                listing={listing}
+                isFavorited={userFavourites.includes(listing.property_id)}
+                onFavoriteToggle={onFavoriteToggle}
+                {...otherProps}
+              />
+            </div>
+          ))}
+        </div>
+
+        {showRightArrow && (
+          <button
+            onClick={() => scrollByCard(1)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white dark:bg-gray-800 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <ChevronRight size={24} />
+          </button>
+        )}
       </div>
     </motion.div>
   );
 };
+
 
 
 // --- START OF UPDATE ---

@@ -75,6 +75,7 @@ const AgentDashboard = () => {
   const [totalListings, setTotalListings] = useState('--');
   const [underOfferListings, setUnderOfferListings] = useState('--');
   const [soldListings, setSoldListings] = useState('--');
+  const [pendingListings, setPendingListings] = useState('--');
   const [totalClientInquiries, setTotalClientInquiries] = useState('--');
   const [totalAgentResponses, setTotalAgentResponses] = useState('--');
   const [activities, setActivities] = useState([]);
@@ -93,6 +94,7 @@ const AgentDashboard = () => {
   const goToListings = () => navigate('/agent/listings');
   const goToUnderOfferListings = () => navigate('/agent/listings', { state: { statusFilter: 'under offer' } });
   const goToSoldListings = () => navigate('/agent/listings', { state: { statusFilter: 'sold' } });
+  const goToPendingListings = () => navigate('/agent/listings', { state: { statusFilter: 'pending' } });
   const goToClients = () => navigate('/agent/clients');
   const goToSettings = () => navigate('/agent/settings');
   const goToAddListing = () => navigate('/agent/add-listing');
@@ -116,6 +118,7 @@ const AgentDashboard = () => {
           activityRes, 
           underOfferRes, 
           soldRes,
+          pendingRes,
           userListingStatsRes // New endpoint for subscription stats
         ] = await Promise.all([
           axiosInstance.get(`/agent/dashboard/stats`),
@@ -124,6 +127,7 @@ const AgentDashboard = () => {
           axiosInstance.get(`/agent/dashboard/activity`),
           axiosInstance.get(`/agent/listings/under-offer/count`),
           axiosInstance.get(`/agent/listings/sold/count`),
+          axiosInstance.get(`/agent/listings/pending/count`),
           axiosInstance.get(`/users/listing-stats`) // New call
         ]);
 
@@ -133,6 +137,7 @@ const AgentDashboard = () => {
         setTotalAgentResponses(responsesRes.data.count);
         setUnderOfferListings(underOfferRes.data.count);
         setSoldListings(soldRes.data.count);
+        setPendingListings(pendingRes.data.count);
 
         // Set new subscription state variables
         setSubscriptionStats({
@@ -191,10 +196,11 @@ const AgentDashboard = () => {
                         <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Listings Overview</h3>
                         <Home size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
                         <StatCard label="Total" value={totalListings} onClick={goToListings} textCentered={true} icon={<ListChecks size={20} />} />
                         <StatCard label="Under Offer" value={underOfferListings} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} />
                         <StatCard label="Sold" value={soldListings} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
+                        <StatCard label="Pending" value={pendingListings} onClick={goToPendingListings} textCentered={true} icon={<CheckCircle size={20} />} />
                     </div>
               </Card>
               <Card className="lg:col-span-1 flex flex-col">

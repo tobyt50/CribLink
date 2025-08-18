@@ -43,25 +43,33 @@ exports.getAllListings = async (req, res) => {
 
       // --- (All your existing filtering and conditions logic remains exactly the same) ---
       const normalizedStatus = status?.toLowerCase();
-      if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
-        if (normalizedStatus === 'featured') {
-          conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
-        } else {
-          conditions.push(`pl.status ILIKE $${valueIndex++}`);
-          values.push(status);
-        }
-      } else {
-        if (userRole === 'client' || userRole === 'guest') {
-          conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
-          values.push(['available', 'sold', 'under offer']);
-        } else if (userRole === 'agent') {
-          conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
-          values.push(['available', 'sold', 'under offer'], userId);
-        } else if (userRole === 'agency_admin' && userAgencyId) {
-          conditions.push(`((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`);
-          values.push(userAgencyId, userAgencyId, ['available', 'sold', 'under offer']);
-        }
-      }
+      // --- (status handling above) ---
+if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
+    if (normalizedStatus === 'featured') {
+      conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
+    } else {
+      conditions.push(`pl.status ILIKE $${valueIndex++}`);
+      values.push(status);
+    }
+  } else {
+    if (userRole === 'client' || userRole === 'guest') {
+      conditions.push(`pl.status ILIKE ANY($${valueIndex++})`);
+      values.push(['available', 'sold', 'under offer']);
+    } else if (userRole === 'agent') {
+      conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
+      values.push(['available', 'sold', 'under offer'], userId);
+    } else if (userRole === 'agency_admin' && userAgencyId) {
+      conditions.push(`((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`);
+      values.push(userAgencyId, userAgencyId, ['available', 'sold', 'under offer']);
+    }
+  }
+  
+  if (req.query.context === "home" && !status && !search) {
+    // Exclude featured listings for homepage general pool only
+    conditions.push(`NOT (pl.is_featured = TRUE AND pl.featured_expires_at > NOW())`);
+  }
+  
+  
       if (userRole !== 'agency_admin' && queryAgencyId) {
           conditions.push(`pl.agency_id = $${valueIndex++}`);
           values.push(queryAgencyId);

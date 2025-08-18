@@ -98,7 +98,8 @@ function Home() {
     params.append("page", page);
     params.append("limit", ITEMS_PER_PAGE);
     params.append("sortBy", "date_listed_desc");
-
+    params.append("context", "home");  // ⬅️ tell backend this is homepage pool
+  
     try {
       const response = await axiosInstance.get(`/listings?${params.toString()}`);
       setListings(response.data.listings || []);
@@ -112,6 +113,7 @@ function Home() {
       setLoading(false);
     }
   }, [showMessage]);
+  
 
   const handleSearch = useCallback((e) => {
     e.preventDefault();
@@ -329,19 +331,22 @@ useEffect(() => {
         </motion.div>
 
         {featuredListings.length > 0 && (
-          <motion.div
-            className={`-mt-4 mb-4 sm:mb-6 sm:py-4 relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border ${darkMode ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}`}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            onTouchStart={isCarousel ? handleTouchStart : undefined}
-            onTouchEnd={isCarousel ? handleTouchEnd : undefined}
-          >
-            <h2 className={`text-1.5xl md:text-2xl font-bold text-center py-0 mb-4 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-              <Star size={15} className="text-yellow-400 fill-current" />
-              Featured Properties
-              <Star size={15} className="text-yellow-400 fill-current" />
-            </h2>
+  <motion.div
+    className={`
+      ${darkMode 
+        ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" 
+        : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}
+      relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border
+      -mt-4 mb-2   // 🔥 reduced top (-mt-2) and bottom (mb-2) padding for mobile
+      sm:-mt-4 sm:mb-6 sm:py-4   // keep desktop spacing as-is
+    `}
+    initial={{ opacity: 0, y: 50 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.8, delay: 0.2 }}
+    onTouchStart={isCarousel ? handleTouchStart : undefined}
+    onTouchEnd={isCarousel ? handleTouchEnd : undefined}
+  >
+
             <div className="relative">
               <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
@@ -390,12 +395,6 @@ useEffect(() => {
                 </Link>
             </div>
           </motion.div>
-        )}
-
-        {!loading && (
-          <h2 className={`text-1.5xl md:text-2xl font-bold text-center pt-0 pb-0 -mt-2 mb-2 ${darkMode ? "text-green-400" : "text-green-800"}`}>
-            Explore Listings
-          </h2>
         )}
         <motion.div
           className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"

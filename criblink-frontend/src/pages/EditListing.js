@@ -49,6 +49,12 @@ const EditListing = () => {
   const [thumbnailIdentifier, setThumbnailIdentifier] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ activeFeatured: 0 });
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const previewRef = useRef(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+
   
   const tier = useMemo(() => user?.subscription_type || 'basic', [user]);
   const tierConfig = useMemo(() => SUBSCRIPTION_TIERS[tier] || SUBSCRIPTION_TIERS['basic'], [tier]);
@@ -61,35 +67,54 @@ const EditListing = () => {
       navigate('/signin');
       return;
     }
-
+  
     const fetchListingData = async () => {
       setLoading(true);
       try {
         const [listingRes, statsRes] = await Promise.all([
-            axiosInstance.get(`/listings/${id}`),
-            axiosInstance.get('/users/listing-stats')
+          axiosInstance.get(`/listings/${id}`),
+          axiosInstance.get('/users/listing-stats') // ✅ keep subscription stats
         ]);
-
+  
         const data = listingRes.data;
         const fetchedState = {
-          purchaseCategory: data.purchase_category || '', title: data.title || '', location: data.location || '',
-          stateValue: data.state || '', propertyType: data.property_type || '',
-          bedrooms: String(data.bedrooms || ''), bathrooms: String(data.bathrooms || ''), price: String(data.price || ''),
-          description: data.description || '', squareFootage: String(data.square_footage || ''), lotSize: data.lot_size || '',
-          yearBuilt: String(data.year_built || ''), heatingType: data.heating_type || '', coolingType: data.cooling_type || '',
-          parking: data.parking || '', amenities: data.amenities || '', landSize: data.land_size || '',
-          zoningType: data.zoning_type || '', titleType: data.title_type || '',
-          isFeatured: data.is_featured || false, statusValue: data.status || '',
+          purchaseCategory: data.purchase_category || '',
+          title: data.title || '',
+          location: data.location || '',
+          stateValue: data.state || '',
+          propertyType: data.property_type || '',
+          bedrooms: String(data.bedrooms || ''),
+          bathrooms: String(data.bathrooms || ''),
+          price: String(data.price || ''),
+          description: data.description || '',
+          squareFootage: String(data.square_footage || ''),
+          lotSize: data.lot_size || '',
+          yearBuilt: String(data.year_built || ''),
+          heatingType: data.heating_type || '',
+          coolingType: data.cooling_type || '',
+          parking: data.parking || '',
+          amenities: data.amenities || '',
+          landSize: data.land_size || '',
+          zoningType: data.zoning_type || '',
+          titleType: data.title_type || '',
+          isFeatured: data.is_featured || false,
+          statusValue: data.status || '',
         };
-        
+  
         setTempState(fetchedState);
         setInitialState(fetchedState);
-
-        const allGalleryImages = data.gallery_images ? data.gallery_images.map(url => ({ url, identifier: url, type: 'existing' })) : [];
+  
+        // ✅ include main image + gallery
+        const allGalleryImages = [
+          ...(data.image_url ? [{ url: data.image_url, identifier: data.image_url, type: 'main' }] : []),
+          ...(data.gallery_images ? data.gallery_images.map(url => ({ url, identifier: url, type: 'existing' })) : [])
+        ];
+  
         setExistingImages(allGalleryImages);
         setThumbnailIdentifier(data.image_url || allGalleryImages[0]?.identifier || null);
+  
+        // ✅ now stats is used again
         setStats(statsRes.data);
-
       } catch (error) {
         showMessage('Failed to load listing data.', 'error');
         navigate(-1);
@@ -97,8 +122,30 @@ const EditListing = () => {
         setLoading(false);
       }
     };
+  
     fetchListingData();
   }, [id, user, authLoading, showMessage, navigate]);
+  
+  
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setShowPreview(false);
+    };
+    const handleClickOutside = (e) => {
+      if (showPreview && previewRef.current && !previewRef.current.contains(e.target)) {
+        setShowPreview(false);
+      }
+    };
+    if (showPreview) {
+      document.addEventListener("keydown", handleEscape);
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showPreview]);
+  
 
   const allImagesForDisplay = useMemo(() => [
     ...existingImages,
@@ -126,6 +173,26 @@ const EditListing = () => {
     accept: { 'image/*': [] }
   });
 
+  useEffect(() => {
+    if (!showPreview) return;
+  
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") {
+        setPreviewIndex(
+          (prev) => (prev - 1 + allImagesForDisplay.length) % allImagesForDisplay.length
+        );
+      } else if (e.key === "ArrowRight") {
+        setPreviewIndex((prev) => (prev + 1) % allImagesForDisplay.length);
+      } else if (e.key === "Escape") {
+        setShowPreview(false);
+      }
+    };
+  
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showPreview, allImagesForDisplay.length]);
+  
+
   const handleAddImageUrl = () => {
     if (allImagesForDisplay.length >= tierConfig.maxImages) {
         showMessage(`Your '${tierConfig.name}' plan allows a maximum of ${tierConfig.maxImages} images.`, 'error');
@@ -142,15 +209,20 @@ const EditListing = () => {
   };
 
   const handleRemoveImage = (identifierToRemove, type) => {
+    if (type === 'main') {
+      showMessage("You cannot remove the main image directly. Set another thumbnail instead.", "error");
+      return;
+    }
     if (type === 'existing') setExistingImages(prev => prev.filter(img => img.identifier !== identifierToRemove));
     else if (type === 'newFile') setNewImages(prev => prev.filter(img => img.originalname !== identifierToRemove));
     else setNewImageURLs(prev => prev.filter(url => url !== identifierToRemove));
-
+  
     if (thumbnailIdentifier === identifierToRemove) {
       const nextBestThumbnail = allImagesForDisplay.find(img => img.identifier !== identifierToRemove);
       setThumbnailIdentifier(nextBestThumbnail?.identifier || null);
     }
   };
+  
   
   const handleTempStateChange = (field, value) => {
     let newState = { ...tempState, [field]: value };
@@ -320,7 +392,138 @@ const EditListing = () => {
           <div className="space-y-4">
             <div {...getRootProps()} className={`border border-dashed rounded-2xl py-6 px-4 text-center cursor-pointer transition-all duration-300 ${darkMode ? "border-gray-600 hover:border-green-500 text-gray-400" : "border-gray-300 hover:border-green-500 text-gray-500"}`}><input {...getInputProps()} /><p>Drag 'n' drop, or click to add more images</p><p className="text-xs mt-1">(Maximum {tierConfig.maxImages} total images on your '{tierConfig.name}' plan. Currently {allImagesForDisplay.length}.)</p></div>
             <div className="flex items-center space-x-2"><input type="text" value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} placeholder="Or paste an image URL here..." className={uniformInputClass()} /><button type="button" onClick={handleAddImageUrl} className={`bg-green-600 text-white py-2 px-6 rounded-2xl transition-colors duration-200 hover:bg-green-700 font-bold whitespace-nowrap`}>Add URL</button></div>
-            {allImagesForDisplay.length > 0 && (<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">{allImagesForDisplay.map((item, index) => (<motion.div key={item.identifier || index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative group overflow-hidden rounded-2xl shadow-lg border"><img src={item.url} alt={`Listing ${index + 1}`} className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105" /><div className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveImage(item.identifier, item.type)}><CloseIcon className="h-4 w-4 text-white" /></div><div className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold ${item.identifier === thumbnailIdentifier ? "bg-green-700 text-white" : "bg-white/80 text-gray-800 backdrop-blur-sm"}`}>{item.identifier === thumbnailIdentifier ? 'Thumbnail' : 'Set as Thumbnail'}</div><button type="button" onClick={() => setThumbnailIdentifier(item.identifier)} className="absolute inset-0 z-10"></button></motion.div>))}</div>)}
+            {allImagesForDisplay.length > 0 && (
+  <>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+    {allImagesForDisplay.map((item, index) => (
+  <motion.div
+    key={item.identifier || index}
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9 }}
+    className="relative group overflow-hidden rounded-2xl shadow-lg border"
+  >
+    {/* Image - clicking opens preview */}
+    <img
+      src={item.url}
+      alt={`Listing ${index + 1}`}
+      className="w-full h-32 object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+      onClick={() => {
+        setPreviewIndex(index);
+        setShowPreview(true);
+      }}
+    />
+
+    {/* Remove button */}
+    <div
+      className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+      onClick={() => handleRemoveImage(item.identifier, item.type)}
+    >
+      <CloseIcon className="h-4 w-4 text-white" />
+    </div>
+
+    {/* Thumbnail toggle (localized button) */}
+    <div
+      onClick={() => setThumbnailIdentifier(item.identifier)}
+      className={`absolute bottom-0 left-0 right-0 p-2 text-center text-xs font-semibold cursor-pointer ${
+        item.identifier === thumbnailIdentifier
+          ? "bg-green-700 text-white"
+          : "bg-white/80 text-gray-800 backdrop-blur-sm hover:bg-green-600 hover:text-white"
+      }`}
+    >
+      {item.identifier === thumbnailIdentifier ? "Thumbnail" : "Set as Thumbnail"}
+    </div>
+  </motion.div>
+))}
+
+    </div>
+
+    {/* Fullscreen Preview Modal */}
+    <AnimatePresence>
+  {showPreview && allImagesForDisplay.length > 0 && (
+    <motion.div
+      className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Image container (resizes to image naturally) */}
+      <div ref={previewRef} className="relative">
+        {/* Swipeable image */}
+        <motion.img
+          key={allImagesForDisplay[previewIndex].url}
+          src={allImagesForDisplay[previewIndex].url}
+          alt="Preview"
+          className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.x < -100) {
+              setPreviewIndex(
+                (prev) => (prev + 1) % allImagesForDisplay.length
+              );
+            } else if (info.offset.x > 100) {
+              setPreviewIndex(
+                (prev) =>
+                  (prev - 1 + allImagesForDisplay.length) %
+                  allImagesForDisplay.length
+              );
+            }
+          }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+
+        {/* Left arrow */}
+{allImagesForDisplay.length > 1 && (
+  <button
+    type="button"
+    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+    onClick={(e) => {
+      e.stopPropagation();
+      setPreviewIndex(
+        (prev) =>
+          (prev - 1 + allImagesForDisplay.length) %
+          allImagesForDisplay.length
+      );
+    }}
+  >
+    <span className="text-[8rem] leading-none select-none">‹</span>
+  </button>
+)}
+
+{/* Right arrow */}
+{allImagesForDisplay.length > 1 && (
+  <button
+    type="button"
+    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+    onClick={(e) => {
+      e.stopPropagation();
+      setPreviewIndex((prev) => (prev + 1) % allImagesForDisplay.length);
+    }}
+  >
+    <span className="text-[8rem] leading-none select-none">›</span>
+  </button>
+)}
+
+
+        {/* Close button (top-right corner of image) */}
+        <button
+          type="button"
+          onClick={() => setShowPreview(false)}
+          className="absolute top-2 right-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 z-30"
+        >
+          <CloseIcon className="h-5 w-5" />
+        </button>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
+
+  </>
+)}
+
           </div>
         </motion.div>
 

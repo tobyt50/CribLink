@@ -210,8 +210,8 @@ const AgencyDashboard = () => {
       )}
       <AgencyAdminSidebar collapsed={isMobile ? false : isCollapsed} setCollapsed={isMobile ? () => {} : setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} userRole="agency_admin" />
       <motion.div key={isMobile ? 'mobile' : 'desktop'} style={{ marginLeft: contentShift }} animate={{ marginLeft: contentShift }} transition={{ duration: 0.3 }} initial={false} className="pt-6 px-4 md:px-8">
-        <div className="md:hidden flex items-center justify-center mb-4"><h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>{agencyName} Dashboard</h1></div>
-        <div className="hidden md:block mb-4"><h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>{agencyName} Dashboard</h1></div>
+        <div className="md:hidden flex items-center justify-center mb-4"><h1 className={`text-2xl font-extrabold text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>{agencyName}</h1></div>
+        <div className="hidden md:block mb-4"><h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>{agencyName}</h1></div>
 
         {loading || authLoading ? (
             <AgencyDashboardSkeleton darkMode={darkMode} />
@@ -229,16 +229,18 @@ const AgencyDashboard = () => {
                         <h3 className={`text-lg font-semibold ${darkMode ? "text-green-300" : "text-green-600"}`}>Agency At a Glance</h3>
                         <Briefcase size={24} className={`${darkMode ? "text-gray-400" : "text-gray-500"}`} />
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
-                        <StatCard label="Admins" value={adminsCount} onClick={goToMembersAdmins} textCentered={true} icon={<UserCog size={20} />} />
-                    <StatCard label="Agents" value={agentsCount} onClick={goToMembersAgents} textCentered={true} icon={<Users size={20} />} />
-                    <StatCard label="Pending Agents" value={pendingAgentRequestsCount} onClick={goToPendingAgentRequests} textCentered={true} icon={<UserPlus size={20} />} />
-                        <StatCard label="Total Listings" value={listingsCount} onClick={goToListings} textCentered={true} icon={<ListChecks size={20} />} />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full">
+                    <StatCard label="Total Listings" value={listingsCount} onClick={goToListings} textCentered={true} icon={<ListChecks size={20} />} />
+                    <StatCard label="Pending Listings" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<Clock size={20} />} />
                         <StatCard label="Sold" value={soldListingsCount} onClick={goToSoldListings} textCentered={true} icon={<CheckCircle size={20} />} />
-                        {/* <StatCard label="Under Offer" value={underOfferListingsCount} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} /> */}
-                        <StatCard label="Pending Listings" value={pendingListingsCount} onClick={goToPendingListings} textCentered={true} icon={<Clock size={20} />} />
-                        <StatCard label="Inquiries" value={clientInquiriesCount} textCentered={true} icon={<MessageSquare size={20} />} />
-                        <StatCard label="Clients" value={clientsCount} onClick={goToClients} textCentered={true} icon={<UserPlus size={20} />} />
+                    {/* <StatCard label="Under Offer" value={underOfferListingsCount} onClick={goToUnderOfferListings} textCentered={true} icon={<Clock size={20} />} /> */}
+                    <StatCard label="Clients" value={clientsCount} onClick={goToClients} textCentered={true} icon={<UserPlus size={20} />} />
+                    <StatCard label="Inquiries" value={clientInquiriesCount} textCentered={true} icon={<MessageSquare size={20} />} />
+                        <StatCard label="Pending Agents" value={pendingAgentRequestsCount} onClick={goToPendingAgentRequests} textCentered={true} icon={<UserPlus size={20} />} />
+                    
+                    <StatCard label="Agents" value={agentsCount} onClick={goToMembersAgents} textCentered={true} icon={<Users size={20} />} />
+                        <StatCard label="Admins" value={adminsCount} onClick={goToMembersAdmins} textCentered={true} icon={<UserCog size={20} />} />
+                    
                     </div>
                 </Card>
                 <Card className="lg:col-span-1 flex flex-col">

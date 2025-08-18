@@ -6,7 +6,8 @@ const {
     getAgentDashboardStats,
     getAgentActivity,
     getAgentUnderOfferListingsCount, // Import the new function
-    getAgentSoldListingsCount,       // Import the new function
+    getAgentSoldListingsCount,
+    getAgentPendingListingsCount// Import the new function
 } = require('../controllers/agentStatsController');
 
 // All agent routes require authentication
@@ -23,6 +24,9 @@ router.get('/listings/under-offer/count', getAgentUnderOfferListingsCount);
 
 // ✅ NEW: Agent's sold listings count
 router.get('/listings/sold/count', getAgentSoldListingsCount);
+
+// ✅ NEW: Agent's pending listings count
+router.get('/listings/pending/count', getAgentPendingListingsCount);
 
 // (Optional) Full agent performance listing
 router.get('/all', getAllAgents);

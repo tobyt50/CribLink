@@ -65,6 +65,19 @@ const getAgentSoldListingsCount = async (req, res) => {
   }
 };
 
+const getAgentPendingListingsCount = async (req, res) => {
+  try {
+    const agentId = req.user.user_id;
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM property_listings WHERE agent_id = $1 AND TRIM(LOWER(status)) = 'pending'`,
+      [agentId]
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error fetching agent pending listings count:', err);
+    res.status(500).json({ error: 'Failed to fetch agent pending listings count' });
+  }
+};
 
 // ✅ NEW: Recent activity relevant to agent
 const getAgentActivity = async (req, res) => {
@@ -95,4 +108,5 @@ module.exports = {
   getAgentActivity,
   getAgentUnderOfferListingsCount, // Export the new function
   getAgentSoldListingsCount,       // Export the new function
+  getAgentPendingListingsCount,       // Export the new function
 };
