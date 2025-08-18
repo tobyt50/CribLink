@@ -337,7 +337,7 @@ useEffect(() => {
         ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" 
         : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}
       relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border
-      -mt-4 mb-2   // 🔥 reduced top (-mt-2) and bottom (mb-2) padding for mobile
+      -mt-6 mb-2   // 🔥 reduced top (-mt-2) and bottom (mb-2) padding for mobile
       sm:-mt-4 sm:mb-6 sm:py-4   // keep desktop spacing as-is
     `}
     initial={{ opacity: 0, y: 50 }}
@@ -345,7 +345,12 @@ useEffect(() => {
     transition={{ duration: 0.8, delay: 0.2 }}
     onTouchStart={isCarousel ? handleTouchStart : undefined}
     onTouchEnd={isCarousel ? handleTouchEnd : undefined}
-  >
+          >
+            <h2 className={`text-sm md:text-lg font-bold text-center mb-2 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-800"}`}>
+              <Star size={13} className="text-yellow-400 fill-current" />
+              Featured Properties
+              <Star size={13} className="text-yellow-400 fill-current" />
+            </h2>
 
             <div className="relative">
               <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
@@ -389,7 +394,7 @@ useEffect(() => {
                 )}
               </div>
             </div>
-            <div className="text-right text-sm mt-6">
+            <div className="text-center text-sm mt-6">
                 <Link to="/featured-listings" className={`inline-block pt-0 pb-0 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 bg-transparent ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}>
                     See all featured &rarr;
                 </Link>

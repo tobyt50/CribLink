@@ -118,7 +118,7 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <div className="flex justify-between items-center mb-4">
         <Link to={searchLink} className="group">
-          <h3 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"} group-hover:text-green-900 dark:group-hover:text-green-400 transition-colors`}>
+          <h3 className={`text-lg font-bold ${darkMode ? "text-green-400" : "text-green-700"} group-hover:text-green-900 dark:group-hover:text-green-400 transition-colors`}>
             {title}
           </h3>
         </Link>
@@ -445,7 +445,7 @@ function FeaturedListings() {
         </div>
 
         <div className="border-t pt-4 mt-4 border-dashed border-gray-300 dark:border-gray-700">
-            <h2 className={`text-2xl font-bold mb-6 text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>All Featured Listings</h2>
+            <h2 className={`text-xl font-bold mb-6 text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>All Featured Listings</h2>
             <motion.div className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5" initial="hidden" animate="visible" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}>
             {loading ? (
                 [...Array(ITEMS_PER_PAGE)].map((_, i) => (

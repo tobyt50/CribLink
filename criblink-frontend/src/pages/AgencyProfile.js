@@ -1566,10 +1566,10 @@ const AgencyProfile = () => {
             ))}
           </div>
           {agencyListings.length > 0 && (
-            <div className="text-right text-sm mt-6">
+            <div className="text-center text-sm mt-2">
               <button
                 onClick={() => navigate(`/listings/agency/${id}`)}
-                className={`inline-block pt-0 pb-0 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 bg-transparent ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}
+                className={`inline-block pt-0 pb-0 rounded-full font-semibold transition-transform duration-200 hover:scale-105 bg-transparent ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}
               >
                 View All Listings ({agencyListings.length}) &rarr;
               </button>
