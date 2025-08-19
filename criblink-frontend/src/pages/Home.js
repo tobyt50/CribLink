@@ -247,55 +247,35 @@ function Home() {
   useEffect(() => {
     const fetchCategoryListings = async () => {
       const normalizedUserState = normalizeState(userState);
-      const effectiveUserState = normalizedUserState || "Lagos";
 
-      const zoneName = Object.entries(ZONE_FALLBACKS)
-        .find(([, states]) => states.includes(effectiveUserState))?.[0];
-
-      const statesToTry = [
-        effectiveUserState,
-        ZONE_HUBS[effectiveUserState],
-        ...(zoneName ? ZONE_FALLBACKS[zoneName] : []),
-      ]
-        .filter(Boolean)
-        .filter((s, i, arr) => arr.indexOf(s) === i);
+      const effectiveUserState = normalizedUserState || (() => {
+        const counts = featuredListings.reduce((acc, l) => {
+          const st = normalizeState(l.state);
+          if (!st) return acc;
+          acc[st] = (acc[st] || 0) + 1;
+          return acc;
+        }, {});
+        return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lagos";
+      })();
 
       for (const def of categoryDefinitions) {
         let fetchedListings = [];
-        for (const st of statesToTry) {
-          const params = new URLSearchParams({
-            limit: 20,
-            ...(def.property_type ? { property_type: def.property_type } : {}),
-            ...(def.purchase_category ? { purchase_category: def.purchase_category } : {}),
-            state: st,
-          });
+        const st = effectiveUserState;
+        const params = new URLSearchParams({
+          limit: 20,
+          ...(def.property_type ? { property_type: def.property_type } : {}),
+          ...(def.purchase_category ? { purchase_category: def.purchase_category } : {}),
+          state: st,
+        });
 
-          try {
-            const res = await axiosInstance.get(`/listings?${params.toString()}`);
-            const filtered = (res.data.listings || []).filter(l => l.status === 'available' || l.status === 'under offer');
-            if (filtered.length >= MIN_LISTINGS_FOR_CATEGORY) {
-              fetchedListings = filtered;
-              break;
-            }
-          } catch (err) {
-            console.warn("Error fetching category with state", st, def.title, err.message);
+        try {
+          const res = await axiosInstance.get(`/listings?${params.toString()}`);
+          const filtered = (res.data.listings || []).filter(l => l.status === 'available' || l.status === 'under offer');
+          if (filtered.length >= MIN_LISTINGS_FOR_CATEGORY) {
+            fetchedListings = filtered;
           }
-        }
-
-        // Global fallback if no hits
-        if (fetchedListings.length < MIN_LISTINGS_FOR_CATEGORY) {
-          const params = new URLSearchParams({
-            limit: 10,
-            ...(def.property_type ? { property_type: def.property_type } : {}),
-            ...(def.purchase_category ? { purchase_category: def.purchase_category } : {}),
-          });
-
-          try {
-            const res = await axiosInstance.get(`/listings?${params.toString()}`);
-            fetchedListings = (res.data.listings || []).filter(l => l.status === 'available' || l.status === 'under offer');
-          } catch (err) {
-            console.warn("Error fetching global category", def.title, err.message);
-          }
+        } catch (err) {
+          console.warn("Error fetching category with state", st, def.title, err.message);
         }
 
         setCategoryListings(prev => ({
@@ -306,7 +286,7 @@ function Home() {
     };
 
     fetchCategoryListings();
-  }, [userState, categoryDefinitions]);
+  }, [userState, featuredListings, categoryDefinitions]);
 
   const fetchUserFavourites = useCallback(async () => {
     if (!isAuthenticated) {
@@ -640,7 +620,7 @@ function Home() {
           >
             <h2 className={`text-sm md:text-lg font-bold text-center mb-2 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-700"}`}>
               <Star size={13} className="text-yellow-400 fill-current" />
-              Featured Properties
+              Featured properties
               <Star size={13} className="text-yellow-400 fill-current" />
             </h2>
 
@@ -696,10 +676,22 @@ function Home() {
               const listings = categoryListings[def.title] || [];
               if (!listings.length) return null;
 
+              const normalizedUserState = normalizeState(userState);
+
+              const effectiveUserState = normalizedUserState || (() => {
+                const counts = featuredListings.reduce((acc, l) => {
+                  const st = normalizeState(l.state);
+                  if (!st) return acc;
+                  acc[st] = (acc[st] || 0) + 1;
+                  return acc;
+                }, {});
+                return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lagos";
+              })();
+
               const params = new URLSearchParams({
                 ...(def.property_type ? { property_type: def.property_type } : {}),
                 ...(def.purchase_category ? { purchase_category: def.purchase_category } : {}),
-                ...(userState ? { state: normalizeState(userState) } : {}),
+                state: effectiveUserState,
               });
 
               const searchLink = `/search?${params.toString()}`;
