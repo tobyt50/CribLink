@@ -11,7 +11,6 @@ import HomeSearchFilters from "../components/HomeSearchFilters";
 import { useAuth } from "../context/AuthContext";
 
 const ITEMS_PER_PAGE = 20;
-const FEATURED_CAROUSEL_LIMIT = 20;
 const MIN_LISTINGS_FOR_CATEGORY = 3;
 
 // --- Helpers ---
@@ -137,7 +136,7 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
           {listings.map((listing) => (
             <div
               key={listing.property_id}
-              className={`featured-card-item flex-shrink-0 ${isCarousel ? "w-[45%] sm:w-[45%] px-2 md:w-1/3 lg:w-1/5" : "w-full max-w-sm px-2"}`}
+              className={`featured-card-item flex-shrink-0 ${isCarousel ? "w-[48%] sm:w-[48%] px-1 md:px-2 md:w-1/3 lg:w-1/5" : "w-full max-w-sm px-2"}`}
             >
               <ListingCard
                 listing={listing}
@@ -184,8 +183,6 @@ const reverseGeocode = async (latitude, longitude) => {
 
 function Home() {
   const [listings, setListings] = useState([]);
-  const [featuredListings, setFeaturedListings] = useState([]);
-  const [featuredLoading, setFeaturedLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -205,11 +202,6 @@ function Home() {
   const { showConfirm } = useConfirmDialog();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
-  const featuredCarouselRef = useRef(null);
-  const autoSwipeIntervalRef = useRef(null);
-  const initialScrollSet = useRef(false);
-
-  const isCarousel = featuredListings.length > 1;
   const currentUserRole = user?.role || 'guest';
   const currentUserId = user?.user_id || null;
   const currentUserAgencyId = user?.agency_id || null;
@@ -248,15 +240,7 @@ function Home() {
     const fetchCategoryListings = async () => {
       const normalizedUserState = normalizeState(userState);
 
-      const effectiveUserState = normalizedUserState || (() => {
-        const counts = featuredListings.reduce((acc, l) => {
-          const st = normalizeState(l.state);
-          if (!st) return acc;
-          acc[st] = (acc[st] || 0) + 1;
-          return acc;
-        }, {});
-        return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lagos";
-      })();
+      const effectiveUserState = normalizedUserState || "Lagos";
 
       for (const def of categoryDefinitions) {
         let fetchedListings = [];
@@ -286,7 +270,7 @@ function Home() {
     };
 
     fetchCategoryListings();
-  }, [userState, featuredListings, categoryDefinitions]);
+  }, [userState, categoryDefinitions]);
 
   const fetchUserFavourites = useCallback(async () => {
     if (!isAuthenticated) {
@@ -301,21 +285,6 @@ function Home() {
       setUserFavourites([]);
     }
   }, [isAuthenticated]);
-
-  const fetchFeaturedListings = useCallback(async () => {
-    setFeaturedLoading(true);
-    try {
-      const response = await axiosInstance.get(`/listings/featured?limit=${FEATURED_CAROUSEL_LIMIT}`);
-      const listings = response.data.listings || [];
-      const filtered = listings.filter(l => l.status === 'available' || l.status === 'under offer');
-      setFeaturedListings(filtered);
-    } catch (error) {
-      console.error("Failed to fetch featured listings:", error);
-      setFeaturedListings([]);
-    } finally {
-      setFeaturedLoading(false);
-    }
-  }, []);
 
   const fetchListings = useCallback(async (page = 1) => {
     setLoading(true);
@@ -433,17 +402,12 @@ function Home() {
                 await axiosInstance.delete(`/listings/${listingId}`);
                 showMessage('Listing deleted successfully!', 'success');
                 fetchListings(currentPage);
-                fetchFeaturedListings();
             } catch (error) {
                 showMessage('Failed to delete listing. Please try again.', 'error');
             }
         },
     });
-  }, [showConfirm, showMessage, fetchListings, fetchFeaturedListings, currentPage]);
-
-  useEffect(() => {
-    fetchFeaturedListings();
-  }, [fetchFeaturedListings]);
+  }, [showConfirm, showMessage, fetchListings, currentPage]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -461,119 +425,6 @@ function Home() {
   useEffect(() => {
     setCurrentPage(1);
   }, [advancedFilters, sortBy]);
-
-  useEffect(() => {
-    if (isCarousel && featuredCarouselRef.current && !initialScrollSet.current) {
-      const carousel = featuredCarouselRef.current;
-      const itemElement = carousel.querySelector('.featured-card-item');
-      if (itemElement) {
-        const itemStyle = window.getComputedStyle(itemElement);
-        const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-        const itemMarginRight = parseFloat(itemStyle.marginRight);
-        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-        const numOriginalItems = featuredListings.length;
-        carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
-        initialScrollSet.current = true;
-      }
-    }
-  }, [featuredListings.length, isCarousel]);
-
-  // Apple-style smooth scroll animation
-  const animateScroll = (element, to, duration = 800, onComplete) => {
-    const start = element.scrollLeft;
-    const change = to - start;
-    const startTime = performance.now();
-
-    const spring = (t) => 1 - Math.cos(t * 4.5 * Math.PI) * Math.exp(-t * 6);
-
-    const animate = (time) => {
-      const elapsed = time - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      element.scrollLeft = start + change * spring(progress);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else if (onComplete) {
-        onComplete();
-      }
-    };
-
-    requestAnimationFrame(animate);
-  };
-
-  const scrollFeatured = useCallback(
-    (direction) => {
-      if (!isCarousel || !featuredCarouselRef.current) return;
-      const carousel = featuredCarouselRef.current;
-      const itemElement = carousel.querySelector(".featured-card-item");
-      if (!itemElement) return;
-
-      const itemStyle = window.getComputedStyle(itemElement);
-      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-      const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins =
-        itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-      const numOriginalItems = featuredListings.length;
-      const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
-
-      const sign = direction === 'next' ? 1 : -1;
-      let newScrollTarget =
-        carousel.scrollLeft + sign * itemWidthWithMargins;
-
-      // Always animate first
-      animateScroll(carousel, newScrollTarget, 800, () => {
-        // After animation, silently reset if we’ve drifted too far
-        if (carousel.scrollLeft >= 2 * totalOriginalListWidth) {
-          carousel.scrollLeft -= totalOriginalListWidth;
-        } else if (carousel.scrollLeft < totalOriginalListWidth) {
-          carousel.scrollLeft += totalOriginalListWidth;
-        }
-      });
-    },
-    [featuredListings.length, isCarousel]
-  );
-
-  // Re-align carousel when window resizes (fixes partial cards after switching breakpoints)
-  useEffect(() => {
-    const handleResize = () => {
-      if (!featuredCarouselRef.current) return;
-      const carousel = featuredCarouselRef.current;
-      const itemElement = carousel.querySelector(".featured-card-item");
-      if (!itemElement) return;
-
-      const itemStyle = window.getComputedStyle(itemElement);
-      const itemMarginLeft = parseFloat(itemStyle.marginLeft);
-      const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
-      const numOriginalItems = featuredListings.length;
-
-      // Reset to the "middle clone set" after resize
-      carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [featuredListings.length]);
-
-  useEffect(() => {
-    if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-    if (isCarousel) {
-      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 2500);
-    }
-    return () => {
-      if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-    };
-  }, [isCarousel, scrollFeatured]);
-
-  const handleTouchStart = useCallback(() => {
-    if (autoSwipeIntervalRef.current) clearInterval(autoSwipeIntervalRef.current);
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    if (isCarousel) {
-      autoSwipeIntervalRef.current = setInterval(() => scrollFeatured('next'), 2500);
-    }
-  }, [isCarousel, scrollFeatured]);
 
   const hasActiveFilters = Object.values(advancedFilters).some(v => !!v);
 
@@ -602,74 +453,6 @@ function Home() {
           </div>
         </motion.div>
 
-        {featuredListings.length > 0 && (
-          <motion.div
-            className={`
-              ${darkMode 
-                ? "sm:bg-gradient-to-br sm:from-gray-800 sm:to-gray-900 sm:border-green-700" 
-                : "sm:bg-gradient-to-br sm:from-green-50 sm:to-green-100 sm:border-green-200"}
-              relative overflow-hidden sm:px-6 sm:rounded-3xl sm:shadow-xl sm:border
-              -mt-6 mb-2   // 🔥 reduced top (-mt-2) and bottom (mb-2) padding for mobile
-              sm:-mt-4 sm:mb-6 sm:py-4   // keep desktop spacing as-is
-            `}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            onTouchStart={isCarousel ? handleTouchStart : undefined}
-            onTouchEnd={isCarousel ? handleTouchEnd : undefined}
-          >
-            <h2 className={`text-sm md:text-lg font-bold text-center mb-2 flex items-center justify-center gap-3 ${darkMode ? "text-green-400" : "text-green-700"}`}>
-              <Star size={13} className="text-yellow-400 fill-current" />
-              Featured properties
-              <Star size={13} className="text-yellow-400 fill-current" />
-            </h2>
-
-            <div className="relative">
-              <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-
-              <div
-                ref={featuredCarouselRef}
-                className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll no-scrollbar' : 'justify-center'}`}
-              >
-                {featuredLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <div key={i} className="flex-shrink-0 snap-center w-[45vw] px-2 md:w-1/3 lg:w-1/5 featured-card-item">
-                      <ListingCardSkeleton darkMode={darkMode} />
-                    </div>
-                  ))
-                ) : (
-                  (isCarousel ? [...featuredListings, ...featuredListings, ...featuredListings] : featuredListings).map((listing, index) => (
-                    <div
-                      key={`featured-${listing.property_id}-${index}`}
-                      className={`flex-shrink-0 ${
-                        isCarousel
-                          ? 'snap-start w-[45%] px-2 md:w-1/3 lg:w-1/5 featured-card-item -mb-4'
-                          : 'w-full max-w-sm px-2'
-                      }`}
-                    >
-                      <ListingCard
-                        listing={listing}
-                        isFavorited={userFavourites.includes(listing.property_id)}
-                        onFavoriteToggle={handleFavoriteToggle}
-                        userRole={currentUserRole}
-                        userId={currentUserId}
-                        userAgencyId={currentUserAgencyId}
-                        getRoleBasePath={getRoleBasePath}
-                        onDeleteListing={handleDeleteListing}
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div className="text-center text-sm mt-6">
-              <Link to="/featured-listings" className={`inline-block pt-0 pb-0 px-6 rounded-full font-semibold transition-transform duration-200 hover:scale-105 bg-transparent ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}>
-                  See all featured &rarr;
-              </Link>
-            </div>
-          </motion.div>
-        )}
-
         {!hasActiveFilters && (
           <div className="space-y-8 my-8">
             {categoryDefinitions.map(def => {
@@ -678,15 +461,7 @@ function Home() {
 
               const normalizedUserState = normalizeState(userState);
 
-              const effectiveUserState = normalizedUserState || (() => {
-                const counts = featuredListings.reduce((acc, l) => {
-                  const st = normalizeState(l.state);
-                  if (!st) return acc;
-                  acc[st] = (acc[st] || 0) + 1;
-                  return acc;
-                }, {});
-                return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Lagos";
-              })();
+              const effectiveUserState = normalizedUserState || "Lagos";
 
               const params = new URLSearchParams({
                 ...(def.property_type ? { property_type: def.property_type } : {}),
@@ -740,7 +515,7 @@ function Home() {
           </div>
         )}
 
-<h2 className={`text-sm md:text-lg font-bold text-center pt-0 pb-0 -mt-6 mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+<h2 className={`text-md md:text-lg font-bold text-center pt-0 pb-0 -mt-2 mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
             Explore other listings
           </h2>        
         <motion.div

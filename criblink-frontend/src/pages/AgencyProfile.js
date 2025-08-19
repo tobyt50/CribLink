@@ -1546,7 +1546,7 @@ const AgencyProfile = () => {
                   isMobileView
                     ? ''
                     : isCarousel
-                      ? 'snap-start w-[45%] px-2 md:w-1/3 lg:w-1/5 agency-listing-card-item'
+                      ? 'snap-start w-[48%] px-1 md:px-2 md:w-1/3 lg:w-1/5 agency-listing-card-item'
                       : 'w-full max-w-sm px-2'
                 }`}
               >

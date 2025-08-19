@@ -48,7 +48,6 @@ import Agents from "./pages/client/Agents";
 
 // Pages (Common, Public, or Specific)
 import Home from "./pages/Home";
-import FeaturedListings from "./pages/FeaturedListings";
 import AddListing from "./pages/AddListing";
 import EditListing from "./pages/EditListing";
 import ListingDetails from "./pages/ListingDetails";
@@ -179,7 +178,6 @@ function AppContent() {
           {/* Public & shared pages */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/featured-listings" element={<FeaturedListings />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />

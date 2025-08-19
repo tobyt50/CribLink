@@ -47,7 +47,7 @@ function SearchPage() {
     location: "", state: "", propertyType: "", subtype: "", bedrooms: "",
     bathrooms: "", minPrice: "", maxPrice: "", purchaseCategory: "",
   });
-  const [sortBy, setSortBy] = useState("date_listed_desc");
+  const [sortBy, setSortBy] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
 
@@ -113,7 +113,7 @@ function SearchPage() {
       purchaseCategory: params.get('purchase_category') || "",
     });
     
-    setSortBy(params.get('sortBy') || 'date_listed_desc');
+    setSortBy(params.get('sortBy') || '');
     setCurrentPage(parseInt(params.get('page') || '1', 10));
   }, [location.search]);
 

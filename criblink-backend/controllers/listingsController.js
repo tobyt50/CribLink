@@ -20,242 +20,304 @@ const attachGalleryImagesToList = async (listings) => {
 };
 
 exports.getAllListings = async (req, res) => {
-  try {
-    const {
-      purchase_category, search, min_price, max_price, page, limit, status,
-      agent_id, sortBy, location, state, property_type, bedrooms, bathrooms,
-      land_size, zoning_type, title_type, agency_id: queryAgencyId
-    } = req.query;
-
-    const userRole = req.user ? req.user.role : 'guest';
-    const userId = req.user ? req.user.user_id : null;
-    const userAgencyId = req.user ? req.user.agency_id : null;
-
-    let baseQuery = `
-      FROM property_listings pl
-      LEFT JOIN property_details pd ON pl.property_id = pd.property_id
-      LEFT JOIN users u ON pl.agent_id = u.user_id
-      LEFT JOIN agencies a ON pl.agency_id = a.agency_id
-    `;
-    let conditions = [];
-    let values = [];
-    let valueIndex = 1;
-
-    // --- Status handling ---
-    const normalizedStatus = status?.toLowerCase();
-    if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
-        if (normalizedStatus === 'featured') {
-          conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
+    try {
+      const {
+        purchase_category, search, min_price, max_price, page, limit, status,
+        agent_id, sortBy, location, state, property_type, bedrooms, bathrooms,
+        land_size, zoning_type, title_type, agency_id: queryAgencyId
+      } = req.query;
+  
+      const userRole = req.user ? req.user.role : 'guest';
+      const userId = req.user ? req.user.user_id : null;
+      const userAgencyId = req.user ? req.user.agency_id : null;
+  
+      const searchConfig = require('../config/searchSynonyms.json');
+  
+      let baseQuery = `
+        FROM property_listings pl
+        LEFT JOIN property_details pd ON pl.property_id = pd.property_id
+        LEFT JOIN users u ON pl.agent_id = u.user_id
+        LEFT JOIN agencies a ON pl.agency_id = a.agency_id
+      `;
+      let conditions = [];
+      let values = [];
+      let valueIndex = 1;
+  
+      // --- Status handling ---
+      const normalizedStatus = status?.toLowerCase();
+      if (status && normalizedStatus !== 'all' && normalizedStatus !== 'all statuses') {
+          if (normalizedStatus === 'featured') {
+            conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
+          } else {
+            conditions.push(`pl.status ILIKE $${valueIndex++}`);
+            values.push(status);
+          }
         } else {
-          conditions.push(`pl.status ILIKE $${valueIndex++}`);
-          values.push(status);
+          if (userRole === 'client' || userRole === 'guest') {
+            // 🔒 Only show available listings to clients/guests
+            conditions.push(`pl.status ILIKE $${valueIndex++}`);
+            values.push('available');
+          } else if (userRole === 'agent') {
+            conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
+            values.push(['available', 'sold', 'under offer'], userId);
+          } else if (userRole === 'agency_admin' && userAgencyId) {
+            conditions.push(`((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`);
+            values.push(userAgencyId, userAgencyId, ['available', 'sold', 'under offer']);
+          }
         }
-      } else {
-        if (userRole === 'client' || userRole === 'guest') {
-          // 🔒 Only show available listings to clients/guests
-          conditions.push(`pl.status ILIKE $${valueIndex++}`);
-          values.push('available');
-        } else if (userRole === 'agent') {
-          conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
-          values.push(['available', 'sold', 'under offer'], userId);
-        } else if (userRole === 'agency_admin' && userAgencyId) {
-          conditions.push(`((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`);
-          values.push(userAgencyId, userAgencyId, ['available', 'sold', 'under offer']);
-        }
+        
+  
+      if (req.query.context === "home" && !status && !search) {
+        conditions.push(`NOT (pl.is_featured = TRUE AND pl.featured_expires_at > NOW())`);
       }
-      
-
-    if (req.query.context === "home" && !status && !search) {
-      conditions.push(`NOT (pl.is_featured = TRUE AND pl.featured_expires_at > NOW())`);
-    }
-
-    if (userRole !== 'agency_admin' && queryAgencyId) {
-      conditions.push(`pl.agency_id = $${valueIndex++}`);
-      values.push(queryAgencyId);
-    }
-    if (agent_id) { conditions.push(`pl.agent_id = $${valueIndex++}`); values.push(agent_id); }
-    if (purchase_category && purchase_category.toLowerCase() !== 'all') { conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`); values.push(purchase_category); }
-    if (min_price) { conditions.push(`pl.price >= $${valueIndex++}`); values.push(min_price); }
-    if (max_price) { conditions.push(`pl.price <= $${valueIndex++}`); values.push(max_price); }
-    if (location) { conditions.push(`pl.location ILIKE $${valueIndex++}`); values.push(`%${location}%`); }
-    if (state) {
-      conditions.push(`pl.state ILIKE $${valueIndex++}`);
-      values.push(state);
-    }
-
-    // --- Property type / bedrooms ---
-    if (property_type && bedrooms && property_type.toLowerCase() === 'apartment' && parseInt(bedrooms) === 1) {
-      conditions.push(`(pl.property_type ILIKE ANY($${valueIndex++}))`);
-      values.push(['Apartment', 'Self-Contain']);
-      conditions.push(`pl.bedrooms = $${valueIndex++}`);
-      values.push(1);
-    } else if (property_type) {
-      conditions.push(`pl.property_type ILIKE $${valueIndex++}`);
-      values.push(`%${property_type}%`);
-    }
-
-    if (bedrooms && (!property_type || property_type.toLowerCase() !== 'land')) {
-      if (!(property_type && property_type.toLowerCase() === 'apartment' && parseInt(bedrooms) === 1)) {
+  
+      if (userRole !== 'agency_admin' && queryAgencyId) {
+        conditions.push(`pl.agency_id = $${valueIndex++}`);
+        values.push(queryAgencyId);
+      }
+      if (agent_id) { conditions.push(`pl.agent_id = $${valueIndex++}`); values.push(agent_id); }
+      if (purchase_category && purchase_category.toLowerCase() !== 'all') { conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`); values.push(purchase_category); }
+      if (min_price) { conditions.push(`pl.price >= $${valueIndex++}`); values.push(min_price); }
+      if (max_price) { conditions.push(`pl.price <= $${valueIndex++}`); values.push(max_price); }
+      if (location) { conditions.push(`pl.location ILIKE $${valueIndex++}`); values.push(`%${location}%`); }
+      if (state) {
+        conditions.push(`pl.state ILIKE $${valueIndex++}`);
+        values.push(state);
+      }
+  
+      // --- Property type / bedrooms ---
+      if (property_type && bedrooms && property_type.toLowerCase() === 'apartment' && parseInt(bedrooms) === 1) {
+        conditions.push(`(pl.property_type ILIKE ANY($${valueIndex++}))`);
+        values.push(['Apartment', 'Self-Contain']);
         conditions.push(`pl.bedrooms = $${valueIndex++}`);
-        values.push(parseInt(bedrooms));
+        values.push(1);
+      } else if (property_type) {
+        conditions.push(`pl.property_type ILIKE $${valueIndex++}`);
+        values.push(`%${property_type}%`);
       }
-    }
-
-    if (bathrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bathrooms = $${valueIndex++}`); values.push(parseInt(bathrooms)); }
-    if (land_size) { conditions.push(`pd.land_size >= $${valueIndex++}`); values.push(parseFloat(land_size)); }
-    if (zoning_type) { conditions.push(`pd.zoning_type ILIKE $${valueIndex++}`); values.push(`%${zoning_type}%`); }
-    if (title_type) { conditions.push(`pd.title_type ILIKE $${valueIndex++}`); values.push(`%${title_type}%`); }
-
-    // --- 🔎 Smart Search with Nigeria JSON ---
-    let rankSelect = '';
-    if (search && search.trim() !== '') {
-      let remainingSearch = search.trim().toLowerCase();
-      let detectedState = null;
-      let detectedCity = null;
-
-      // --- Detect state ---
-      for (const st of nigeriaLocations.states) {
-        if (remainingSearch.includes(st.toLowerCase())) {
-          detectedState = st;
-          remainingSearch = remainingSearch.replace(new RegExp(st, "i"), "").trim();
-          break;
+  
+      if (bedrooms && (!property_type || property_type.toLowerCase() !== 'land')) {
+        if (!(property_type && property_type.toLowerCase() === 'apartment' && parseInt(bedrooms) === 1)) {
+          conditions.push(`pl.bedrooms = $${valueIndex++}`);
+          values.push(parseInt(bedrooms));
         }
       }
-
-      // --- Detect city ---
-      if (!detectedState) {
+  
+      if (bathrooms && property_type?.toLowerCase() !== 'land') { conditions.push(`pl.bathrooms = $${valueIndex++}`); values.push(parseInt(bathrooms)); }
+      if (land_size) { conditions.push(`pd.land_size >= $${valueIndex++}`); values.push(parseFloat(land_size)); }
+      if (zoning_type) { conditions.push(`pd.zoning_type ILIKE $${valueIndex++}`); values.push(`%${zoning_type}%`); }
+      if (title_type) { conditions.push(`pd.title_type ILIKE $${valueIndex++}`); values.push(`%${title_type}%`); }
+  
+      // --- 🔎 Smart Search with Nigeria JSON ---
+      let rankSelect = '';
+      if (search && search.trim() !== '') {
+        let remainingSearch = search.trim();
+        let lowerSearch = remainingSearch.toLowerCase();
+        let detectedState = null;
+        let detectedCity = null;
+  
+        // --- Detect city ---
         for (const [city, mappedState] of Object.entries(nigeriaLocations.cityToState)) {
-          if (remainingSearch.includes(city.toLowerCase())) {
+          if (lowerSearch.includes(city.toLowerCase())) {
             detectedCity = city;
             detectedState = mappedState;
-            remainingSearch = remainingSearch.replace(new RegExp(city, "i"), "").trim();
+            remainingSearch = remainingSearch.replace(new RegExp(`\\b${city}\\b`, "i"), "").trim();
             break;
           }
         }
+  
+        // --- Detect state if no city ---
+        if (!detectedState) {
+          for (const st of nigeriaLocations.states) {
+            if (lowerSearch.includes(st.toLowerCase())) {
+              detectedState = st;
+              remainingSearch = remainingSearch.replace(new RegExp(`\\b${st}\\b`, "i"), "").trim();
+              break;
+            }
+          }
+        }
+  
+        // Apply filters if not provided in query
+        if (detectedCity && !location) {
+          conditions.push(`pl.location ILIKE $${valueIndex++}`);
+          values.push(`%${detectedCity}%`);
+        }
+        if (detectedState && !state) {
+          conditions.push(`pl.state ILIKE $${valueIndex++}`);
+          values.push(`%${detectedState}%`);
+        }
+  
+        // --- Detect purchase_category ---
+        let detectedPurchase = null;
+        const purchaseRegex = /\b(for\s+)?((to\s+)?let|rent(al)?|sale|buy)\b/gi;
+        let match = purchaseRegex.exec(remainingSearch);
+        if (match && !purchase_category) {
+          let term = match[2].toLowerCase().replace(/\s+/g, ' ');
+          if (term.includes('let') || term.includes('rent')) {
+            detectedPurchase = 'Rent';
+          } else if (term.includes('sale') || term.includes('buy')) {
+            detectedPurchase = 'Sale';
+          }
+          if (detectedPurchase) {
+            conditions.push(`pl.purchase_category ILIKE $${valueIndex++}`);
+            values.push(detectedPurchase);
+            remainingSearch = remainingSearch.replace(match[0], '').trim();
+          }
+        }
+  
+        // --- Detect property_type ---
+        let detectedType = null;
+        for (let synonym in searchConfig.propertySynonyms) {
+          const regex = new RegExp(`\\b${synonym}\\b`, 'gi');
+          if (regex.test(remainingSearch)) {
+            detectedType = searchConfig.propertySynonyms[synonym];
+            remainingSearch = remainingSearch.replace(regex, '').trim();
+            break;
+          }
+        }
+        if (detectedType && !property_type) {
+          conditions.push(`pl.property_type ILIKE $${valueIndex++}`);
+          values.push(`%${detectedType}%`);
+        }
+  
+        // --- Detect bedrooms ---
+        const bedRegex = new RegExp(`(\\d+)\\s*(${searchConfig.bedTerms.join('|')})\\b`, 'gi');
+        match = bedRegex.exec(remainingSearch);
+        if (match && !bedrooms) {
+          let detectedBeds = parseInt(match[1]);
+          conditions.push(`pl.bedrooms = $${valueIndex++}`);
+          values.push(detectedBeds);
+          remainingSearch = remainingSearch.replace(match[0], '').trim();
+        }
+  
+        // --- Detect bathrooms ---
+        const bathRegex = new RegExp(`(\\d+)\\s*(${searchConfig.bathTerms.join('|')})\\b`, 'gi');
+        match = bathRegex.exec(remainingSearch);
+        if (match && !bathrooms) {
+          let detectedBaths = parseInt(match[1]);
+          conditions.push(`pl.bathrooms = $${valueIndex++}`);
+          values.push(detectedBaths);
+          remainingSearch = remainingSearch.replace(match[0], '').trim();
+        }
+  
+        remainingSearch = remainingSearch.trim();
+  
+        // Build search vector if remaining
+        if (remainingSearch) {
+          const searchVector = `
+            setweight(to_tsvector('english', coalesce(pl.title,'')), 'A') ||
+            setweight(to_tsvector('english', coalesce(pl.location,'')), 'B') ||
+            setweight(to_tsvector('english', coalesce(pl.state,'')), 'B') ||
+            setweight(to_tsvector('english', coalesce(pl.property_type,'')), 'B') ||
+            setweight(to_tsvector('english', coalesce(pd.description,'')), 'C')
+          `;
+          const tsQuery = `plainto_tsquery('english', $${valueIndex++})`;
+  
+          conditions.push(`(
+            ${searchVector} @@ ${tsQuery}
+            OR similarity(pl.title, $${valueIndex}) > 0.3
+            OR similarity(pl.location, $${valueIndex}) > 0.3
+            OR similarity(pl.state, $${valueIndex}) > 0.3
+            OR similarity(pl.property_type, $${valueIndex}) > 0.3
+            OR similarity(pd.description, $${valueIndex}) > 0.3
+          )`);
+          values.push(remainingSearch, remainingSearch);
+  
+          // --- Ranking with city boost ---
+          rankSelect = `,
+            ts_rank(${searchVector}, ${tsQuery}, 1)
+              + GREATEST(
+                  similarity(pl.title, $${valueIndex}),
+                  similarity(pl.location, $${valueIndex}),
+                  similarity(pl.state, $${valueIndex}),
+                  similarity(pl.property_type, $${valueIndex}),
+                  similarity(pd.description, $${valueIndex})
+                )
+              ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity}%' THEN 2 ELSE 0 END)` : ''}
+            AS rank
+          `;
+          valueIndex++;
+        }
       }
-
-      // Apply strict state filter if found
-      if (detectedState) {
-        conditions.push(`pl.state ILIKE $${valueIndex++}`);
-        values.push(`%${detectedState}%`);
-      }
-
-      // Build search vector
-      if (remainingSearch) {
-        const searchVector = `
-          setweight(to_tsvector('english', coalesce(pl.title,'')), 'A') ||
-          setweight(to_tsvector('english', coalesce(pl.location,'')), 'B') ||
-          setweight(to_tsvector('english', coalesce(pl.state,'')), 'B') ||
-          setweight(to_tsvector('english', coalesce(pl.property_type,'')), 'B') ||
-          setweight(to_tsvector('english', coalesce(pd.description,'')), 'C')
-        `;
-        const tsQuery = `plainto_tsquery('english', $${valueIndex++})`;
-
-        conditions.push(`(
-          ${searchVector} @@ ${tsQuery}
-          OR similarity(pl.title, $${valueIndex}) > 0.3
-          OR similarity(pl.location, $${valueIndex}) > 0.3
-          OR similarity(pl.state, $${valueIndex}) > 0.3
-          OR similarity(pl.property_type, $${valueIndex}) > 0.3
-          OR similarity(pd.description, $${valueIndex}) > 0.3
-        )`);
-        values.push(remainingSearch, remainingSearch);
-
-        // --- Ranking with city boost ---
-        rankSelect = `,
-          ts_rank(${searchVector}, ${tsQuery}, 1)
-            + GREATEST(
-                similarity(pl.title, $${valueIndex}),
-                similarity(pl.location, $${valueIndex}),
-                similarity(pl.state, $${valueIndex}),
-                similarity(pl.property_type, $${valueIndex}),
-                similarity(pd.description, $${valueIndex})
-              )
-            ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity}%' THEN 2 ELSE 0 END)` : ''}
-          AS rank
-        `;
-        valueIndex++;
-      }
-    }
-
-    // --- Where clause ---
-    let whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
-
-    // --- Pagination ---
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
-    const offset = (pageNum - 1) * limitNum;
-
-    // --- Ordering ---
-    let orderByClause = '';
-    const effectivePriority = `COALESCE(a.featured_priority, u.featured_priority, 0)`;
-
-    const defaultSort = `
-      ORDER BY
-          CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
-          ${effectivePriority} DESC,
-          pl.date_listed DESC
-    `;
-
-    if (search && search.trim() !== '') {
-      orderByClause = `
+  
+      // --- Where clause ---
+      let whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+  
+      // --- Pagination ---
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+  
+      // --- Ordering ---
+      let orderByClause = '';
+      const effectivePriority = `COALESCE(a.featured_priority, u.featured_priority, 0)`;
+  
+      const defaultSort = `
         ORDER BY
-            rank DESC,
             CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
             ${effectivePriority} DESC,
             pl.date_listed DESC
       `;
-    } else if (sortBy === 'price_asc' || sortBy === 'price_desc') {
-      const direction = sortBy === 'price_asc' ? 'ASC' : 'DESC';
-      orderByClause = `
-        ORDER BY
-            CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
-            pl.price ${direction}
+  
+      if (rankSelect !== '') { 
+        orderByClause = `
+          ORDER BY
+              rank DESC,
+              CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
+              ${effectivePriority} DESC,
+              pl.date_listed DESC
+        `;
+      } else if (sortBy === 'price_asc' || sortBy === 'price_desc') {
+        const direction = sortBy === 'price_asc' ? 'ASC' : 'DESC';
+        orderByClause = `
+          ORDER BY
+              CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
+              pl.price ${direction}
+        `;
+      } else if (sortBy === 'date_listed_asc') {
+        orderByClause = `
+          ORDER BY
+              CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
+              pl.date_listed ASC
+        `;
+      } else {
+        orderByClause = defaultSort;
+      }
+  
+      // --- Final queries ---
+      const query = `
+        SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
+        ${effectivePriority} AS effective_priority
+        ${rankSelect}
+        ${baseQuery}
+        ${whereClause}
+        ${orderByClause}
+        LIMIT $${valueIndex++} OFFSET $${valueIndex++}
       `;
-    } else if (sortBy === 'date_listed_asc') {
-      orderByClause = `
-        ORDER BY
-            CASE WHEN pl.is_featured = TRUE AND pl.featured_expires_at > NOW() THEN 0 ELSE 1 END,
-            pl.date_listed ASC
-      `;
-    } else {
-      orderByClause = defaultSort;
+      values.push(limitNum, offset);
+  
+      const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
+      const countValues = values.slice(0, values.length - 2);
+  
+      const [listingsResult, countResult] = await Promise.all([
+        pool.query(query, values),
+        pool.query(countQuery, countValues)
+      ]);
+  
+      const totalListings = parseInt(countResult.rows[0].count);
+      const listingsWithGallery = await attachGalleryImagesToList(listingsResult.rows);
+  
+      res.status(200).json({
+        listings: listingsWithGallery,
+        total: totalListings,
+        totalPages: Math.ceil(totalListings / limitNum),
+        currentPage: pageNum
+      });
+    } catch (err) {
+      console.error('Error fetching listings:', err);
+      res.status(500).json({ error: 'Internal server error fetching listings', details: err.message });
     }
-
-    // --- Final queries ---
-    const query = `
-      SELECT pl.*, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type,
-      ${effectivePriority} AS effective_priority
-      ${rankSelect}
-      ${baseQuery}
-      ${whereClause}
-      ${orderByClause}
-      LIMIT $${valueIndex++} OFFSET $${valueIndex++}
-    `;
-    values.push(limitNum, offset);
-
-    const countQuery = `SELECT COUNT(*) ${baseQuery} ${whereClause}`;
-    const countValues = values.slice(0, values.length - 2);
-
-    const [listingsResult, countResult] = await Promise.all([
-      pool.query(query, values),
-      pool.query(countQuery, countValues)
-    ]);
-
-    const totalListings = parseInt(countResult.rows[0].count);
-    const listingsWithGallery = await attachGalleryImagesToList(listingsResult.rows);
-
-    res.status(200).json({
-      listings: listingsWithGallery,
-      total: totalListings,
-      totalPages: Math.ceil(totalListings / limitNum),
-      currentPage: pageNum
-    });
-  } catch (err) {
-    console.error('Error fetching listings:', err);
-    res.status(500).json({ error: 'Internal server error fetching listings', details: err.message });
-  }
-};
+  };
 
 exports.getFeaturedListings = async (req, res) => {
   // NEW: Read the optional 'limit' query parameter

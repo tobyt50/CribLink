@@ -146,7 +146,7 @@ const SimilarListingsCarousel = ({
           {(isCarousel ? [...similarListings, ...similarListings, ...similarListings] : similarListings).map((similarListing, index) => (
             <div
               key={`similar-${similarListing.property_id}-${index}`}
-              className={`flex-shrink-0 ${isCarousel ? 'snap-start w-[45%] px-2 md:w-1/3 lg:w-1/5 similar-card-item' : 'w-full max-w-sm px-2'}`}
+              className={`flex-shrink-0 ${isCarousel ? 'snap-start w-[48%] px-1 md:px-2 md:w-1/3 lg:w-1/5 similar-card-item' : 'w-full max-w-sm px-2'}`}
             >
               <ListingCard
                 listing={similarListing}
