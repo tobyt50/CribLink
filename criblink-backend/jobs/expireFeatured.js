@@ -1,8 +1,14 @@
-async function expireFeaturedListings(db) {
-    await db('property_listings')
-      .where('is_featured', true)
-      .andWhere('featured_expires_at', '<', db.fn.now())
-      .update({ is_featured: false, featured_expires_at: null });
-  }
-  
-  module.exports = expireFeaturedListings;
+// jobs/expireFeatured.js
+const { query } = require('../db'); // adjust path if needed
+
+async function expireFeaturedListings() {
+  await query(
+    `UPDATE property_listings
+     SET is_featured = false,
+         featured_expires_at = NULL
+     WHERE is_featured = true
+       AND featured_expires_at < NOW()`
+  );
+}
+
+module.exports = expireFeaturedListings;

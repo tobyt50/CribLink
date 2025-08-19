@@ -12,7 +12,7 @@ import HomeSearchFilters from "../components/HomeSearchFilters";
 import { useAuth } from "../context/AuthContext";
 
 const ITEMS_PER_PAGE = 20;
-const MIN_LISTINGS_FOR_CATEGORY = 1;
+const MIN_LISTINGS_FOR_CATEGORY = 3;
 const MAX_DYNAMIC_CATEGORIES = 4;// Normalize state names from geocoder to match DB format
 
 // --- Helpers ---

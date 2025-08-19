@@ -3,9 +3,9 @@ import { useTheme } from "../layouts/AppShell";
 import { ArrowDown, ArrowUp, SlidersHorizontal, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const PROPERTY_TYPES = ["Duplex", "Bungalow", "Apartment", "Penthouse", "Detached House", "Semi-Detached House", "Condo", "Land", "Commercial", "Other"];
+const PROPERTY_TYPES = ["Self-Contain", "Bungalow", "Duplex", "Land", "Apartment", "Penthouse", "Detached House", "Semi-Detached House", "Condo", "Commercial", "Other"];
 const BED_BATH_COUNTS = ["1", "2", "3", "4", "5+"];
-const PURCHASE_CATEGORIES = ["Rent", "Sale", "Lease", "Shortlet", "Longlet"];
+const PURCHASE_CATEGORIES = ["Rent", "Sale", "Lease", "Short let", "Long let"];
 
 function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm, setSearchTerm, handleSearch }) {
   const { darkMode } = useTheme();
@@ -143,6 +143,24 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
     });
   }, [setSortBy]);
 
+  const handleReset = () => {
+    setFilters({
+      location: "",
+      propertyType: "",
+      subtype: "",
+      bedrooms: "",
+      bathrooms: "",
+      minPrice: "",
+      maxPrice: "",
+      purchaseCategory: "",
+    });
+    setSortBy("date_listed_desc");
+    setMinPriceValue(0);
+    setMaxPriceValue(1000000000);
+    setHasEditedFilters(false);
+    setShowMoreAdvancedFilters(false);
+  };
+
   const getButtonClass = useCallback((isActive) => {
     return `px-3 py-1.5 rounded-2xl border text-sm transition-all duration-200 whitespace-nowrap flex items-center gap-1 ${
       isActive
@@ -221,10 +239,27 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.25 }}
             className={`absolute top-full mt-4 p-4 rounded-2xl shadow-2xl z-20
-  w-[calc(100%-24px)] sm:w-[calc(100%-24px)] md:w-[calc(100%-24px)]
-  ${darkMode ? "bg-gray-800 border border-green-700" : "bg-white border border-green-200"}`}
+              w-[calc(100%-24px)] sm:w-[calc(100%-24px)] md:w-[calc(100%-24px)]
+              ${darkMode ? "bg-gray-800 border border-green-700" : "bg-white border border-green-200"}`}
             onMouseDown={(e) => e.stopPropagation()}
           >
+            <div className="absolute top-3 right-5 flex gap-2">
+              <button
+                type="button"
+                onClick={handleReset}
+                className={`px-3 py-1 rounded-2xl text-sm font-medium ${darkMode ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters(false)}
+                className="text-green-600 text-sm"
+              >
+                Hide
+              </button>
+            </div>
+
             {/* Sort Listings Section */}
             <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
                 <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>

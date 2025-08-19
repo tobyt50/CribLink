@@ -165,8 +165,9 @@ function SearchFilters({ filters, setFilters }) {
 
   const propertyTypeOptions = [
     { value: "", label: "All Types" },
-    { value: "Duplex", label: "Duplex" },
+    { value: "Self-Contain", label: "Self-Contain" },
     { value: "Bungalow", label: "Bungalow" },
+    { value: "Duplex", label: "Duplex" },
     { value: "Apartment", label: "Apartment" },
     { value: "Penthouse", label: "Penthouse" },
     { value: "Detached House", label: "Detached House" },

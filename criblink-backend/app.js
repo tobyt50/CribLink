@@ -132,9 +132,14 @@ app.use('/api/payments', paymentRoutes);
 // });
 
 // Schedule daily featured expiry
-cron.schedule('0 0 * * *', () => {
+cron.schedule('0 0 * * *', async () => {
   console.log('Running daily job: expiring featured listings...');
-  expireFeaturedListings(db);
+  try {
+    await expireFeaturedListings();
+    console.log('✅ Expired featured listings successfully');
+  } catch (err) {
+    console.error('❌ Error expiring featured listings:', err);
+  }
 });
 
 const PORT = process.env.PORT || 5000;
