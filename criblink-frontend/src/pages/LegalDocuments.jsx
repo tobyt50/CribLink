@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdminSidebar from '../components/admin/Sidebar';
-import AgencyAdminSidebar from '../components/agencyadmin/Sidebar'; // Import the new sidebar
+import AgencyAdminSidebar from '../components/agency/Sidebar'; // Import the new sidebar
 import axiosInstance from '../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import {

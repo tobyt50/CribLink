@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Assuming a new sidebar for agency admin
+import AgencyAdminSidebar from '../../components/agency/Sidebar'; // Assuming a new sidebar for agency admin
 import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react'; // Added icons for mobile view
 import { useTheme } from '../../layouts/AppShell';
 import AgentInquiryModal from '../../components/AgentInquiryModal'; // Reusing AgentInquiryModal for display
-import ReassignAgentModal from '../../components/agencyadmin/ReassignAgentModal'; // New component for reassigning
+import ReassignAgentModal from '../../components/agency/ReassignAgentModal'; // New component for reassigning
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
 import { useSidebarState } from '../../hooks/useSidebarState';

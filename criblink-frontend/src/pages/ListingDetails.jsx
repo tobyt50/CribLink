@@ -16,7 +16,6 @@ import ImageGallery from '../components/ListingDetails/ImageGallery';
 import ListingOverview from '../components/ListingDetails/ListingOverview';
 import PropertyFeatures from '../components/ListingDetails/PropertyFeatures';
 import AgentContactCard from '../components/ListingDetails/AgentContactCard';
-import MoreActions from '../components/ListingDetails/MoreActions';
 import LocationMap from '../components/ListingDetails/LocationMap';
 import SimilarListingsCarousel from '../components/ListingDetails/SimilarListingsCarousel';
 import ModalsContainer from '../components/ListingDetails/ModalsContainer'; // New component for modals
@@ -116,14 +115,6 @@ const ListingDetailsSkeleton = ({ darkMode }) => {
               {[...Array(3)].map((_, i) => (
                 <div key={i} className={`h-16 w-24 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
               ))}
-            </div>
-          </div>
-
-          {/* More Actions Skeleton */}
-          <div className={`space-y-4 p-6 rounded-2xl shadow-xl ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-            <div className={`h-8 w-32 rounded-md ${skeletonBgClass} ${skeletonPulseClass}`}></div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <div className={`h-10 w-48 rounded-xl ${skeletonBgClass} ${skeletonPulseClass}`}></div>
             </div>
           </div>
 
@@ -998,13 +989,7 @@ const ListingDetails = () => {
               optionsMenuRef={optionsMenuRef}
             />
           )}
-
-          <MoreActions
-            setIsShareModalOpen={setIsShareModalOpen}
-            darkMode={darkMode}
-          />
-
-          <LocationMap
+      <LocationMap
             listing={listing}
             darkMode={darkMode}
           />

@@ -106,7 +106,7 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <div className="flex justify-between items-center -mt-6 mb-2">
+      <div className="flex justify-between items-center -mt-7 mb-2">
         <Link to={searchLink} className="group">
           <h3 className={`flex items-center gap-2 text-sm md:text-lg font-bold ${darkMode ? "text-green-400" : "text-green-700"} group-hover:text-green-900 dark:group-hover:text-green-400 transition-colors`}>
             {Icon && <Icon size={18} />}
@@ -119,7 +119,7 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
         {showLeftArrow && (
           <button
             type="button"
-            className="absolute left-2 top-[40%] -translate-y-1/2 z-20 text-white opacity-65 hover:opacity-100 transition-opacity"
+            className="hidden md:block absolute left-2 top-[40%] -translate-y-1/2 z-20 text-white opacity-65 hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               scrollByCard(-1);
@@ -151,7 +151,7 @@ const FeaturedCategoryRow = ({ title, listings, searchLink, userFavourites, onFa
         {showRightArrow && (
           <button
             type="button"
-            className="absolute right-2 top-[40%] -translate-y-1/2 z-20 text-white opacity-65 hover:opacity-100 transition-opacity"
+            className="hidden md:block absolute right-2 top-[40%] -translate-y-1/2 z-20 text-white opacity-65 hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               scrollByCard(1);
@@ -440,7 +440,7 @@ function Home() {
           <h1 className={`font-script text-xl mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>
             Find Your Dream Property
           </h1>
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full max-w-4xl mb-12 mx-auto">
             <HomeSearchFilters
               filters={advancedFilters}
               setFilters={setAdvancedFilters}

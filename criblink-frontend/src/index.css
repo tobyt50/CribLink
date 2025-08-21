@@ -6,7 +6,7 @@
 html {
   /* Use tailwind-scrollbar utility classes for basic styling */
   /* Light mode: very light grey thumb, slightly darker light grey track */
-  @apply scrollbar scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100;
+  @apply scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100;
 }
 
 /* Dark mode adjustments for the scrollbar */

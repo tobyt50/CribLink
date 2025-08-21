@@ -1,4 +1,4 @@
-// AuthContext.js
+// AuthContext
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import axiosInstance from '../api/axiosInstance'; // Import axiosInstance to fetch full user profile

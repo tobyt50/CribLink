@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
+import AgencyAdminSidebar from '../../components/agency/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';

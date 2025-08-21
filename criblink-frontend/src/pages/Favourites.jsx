@@ -8,7 +8,7 @@ import {
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import AgentSidebar from '../components/agent/Sidebar';
-import AgencyAdminSidebar from '../components/agencyadmin/Sidebar';
+import AgencyAdminSidebar from '../components/agency/Sidebar';
 import ClientSidebar from '../components/client/Sidebar';
 import AdminSidebar from '../components/admin/Sidebar'; // Import AdminSidebar
 import API_BASE_URL from '../config';

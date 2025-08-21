@@ -16,7 +16,7 @@ import {
   ChatBubbleLeftRightIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
+import AgencyAdminSidebar from '../../components/agency/Sidebar';
 import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
@@ -26,7 +26,7 @@ import { useSidebarState } from '../../hooks/useSidebarState';
 import { useAuth } from '../../context/AuthContext';
 
 // Import the refactored MemberCard component
-import MemberCard from '../../components/agencyadmin/MemberCard'; // Adjust path as needed based on your file structure
+import MemberCard from '../../components/agency/MemberCard'; // Adjust path as needed based on your file structure
 
 // Reusable Dropdown Component (copied for self-containment)
 const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
@@ -205,7 +205,7 @@ const MembersSkeleton = ({ darkMode, viewMode }) => (
 );
 
 
-const Members = () => {
+const AgencyMembers = () => {
   const [members, setMembers] = useState([]);
   const [filteredMembers, setFilteredMembers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1187,4 +1187,4 @@ const Members = () => {
   );
 };
 
-export default Members;
+export default AgencyMembers;

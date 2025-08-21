@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings as SettingsIcon, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search, Languages, Palette, Link, Landmark, Loader, Save, UserPlus, Hourglass, UserRoundCheck, UserX, Trash2, ShieldAlert, CheckCircle, PencilIcon, Phone, Globe, MapPin, FileText, Hash,  } from 'lucide-react'; // Added new icons and CheckCircle
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar.js'; // Import the new AgencyAdminSidebar
-import { useTheme } from '../../layouts/AppShell.js';
-import { useMessage } from '../../context/MessageContext.js';
+import AgencyAdminSidebar from '../../components/agency/Sidebar'; // Import the new AgencyAdminSidebar
+import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
 import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
 import { useConfirmDialog } from '../../context/ConfirmDialogContext'; // Import useConfirmDialog

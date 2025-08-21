@@ -1,4 +1,4 @@
-// src/context/ConfirmDialogContext.js
+// src/context/ConfirmDialogContext
 import { createContext, useContext, useState } from "react";
 
 const ConfirmDialogContext = createContext();

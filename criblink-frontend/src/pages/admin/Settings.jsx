@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings as SettingsIcon, Menu, X, Monitor, Sun, Moon, LayoutGrid, LayoutList, ChevronDownIcon, Bell, Mail, Shield, Zap, Megaphone, Server, Key, HardDrive, Clock, ClipboardList, Search, Languages, Palette, Link, Landmark, Loader, Save } from 'lucide-react'; // Added new icons
-import AdminSidebar from '../../components/admin/Sidebar.js';
-import { useTheme } from '../../layouts/AppShell.js';
-import { useMessage } from '../../context/MessageContext.js';
+import AdminSidebar from '../../components/admin/Sidebar';
+import { useTheme } from '../../layouts/AppShell';
+import { useMessage } from '../../context/MessageContext';
 import { useSidebarState } from '../../hooks/useSidebarState';
 import { useAuth } from '../../context/AuthContext'; // Import useAuth hook
 import axiosInstance from '../../api/axiosInstance'; // Import axiosInstance

@@ -19,7 +19,7 @@ import {
   EnvelopeIcon, // Import EnvelopeIcon for email button
 } from '@heroicons/react/24/outline';
 import AgentSidebar from '../../components/agent/Sidebar';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar'; // Import AgencyAdminSidebar
+import AgencyAdminSidebar from '../../components/agency/Sidebar'; // Import AgencyAdminSidebar
 import API_BASE_URL from '../../config';
 import { Menu, X, Search, SlidersHorizontal, FileText, LayoutGrid, LayoutList, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';

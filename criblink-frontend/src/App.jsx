@@ -74,13 +74,14 @@ import AddLegalDocument from "./pages/AddLegalDocument";
 // NEW: Import LegalDocuments component (shared between admin and agency admin)
 import LegalDocuments from "./pages/LegalDocuments";
 
-// NEW: Agency Admin Pages
-import AgencyAdminDashboard from './pages/agencyadmin/AgencyDashboard';
-import Members from './pages/agencyadmin/Members';
-import AgencyAdminSettings from './pages/agencyadmin/Settings';
-import AgencyAdminProfile from './pages/agencyadmin/AgencyAdminProfile';
-import AgentPerformance from './pages/agencyadmin/AgentPerformance';
-import AgencyInquiries from './pages/agencyadmin/AgencyInquiries';
+// NEW: Agency Pages
+import AgencyDashboard from './pages/agency/AgencyDashboard';
+import AgencyMembers from './pages/agency/AgencyMembers';
+import AgencySettings from './pages/agency/Settings';
+import AgencyAdminProfile from './pages/agency/AgencyAdminProfile';
+import AgentPerformance from './pages/agency/AgentPerformance';
+import AgencyInquiries from './pages/agency/AgencyInquiries';
+import AgencyAnalytics from './pages/agency/AgencyAnalytics';
 
 // CENTRALIZED LISTINGS PAGE
 import Listings from './pages/Listings';
@@ -106,7 +107,7 @@ function AppContent() {
     { path: "users", element: <AdminUsers /> },
     { path: "analytics", element: <AdminAnalytics /> },
     { path: "settings", element: <AdminSettings /> },
-    { path: "agencies/:agencyId/members", element: <Members /> },
+    { path: "agencies/:agencyId/members", element: <AgencyMembers /> },
     ...listingRoutes
   ];
 
@@ -129,15 +130,16 @@ function AppContent() {
     { path: "agents", element: <Agents /> },
   ];
 
-  const agencyAdminRoutes = [
-    { path: "dashboard", element: <AgencyAdminDashboard /> },
+  const agencyRoutes = [
+    { path: "dashboard", element: <AgencyDashboard /> },
     { path: "listings", element: <Listings /> },
-    { path: "members", element: <Members /> },
+    { path: "members", element: <AgencyMembers /> },
     { path: "clients", element: <Clients /> },
     { path: "client-profile/:clientId", element: <ClientProfile /> },
     { path: "agent-performance", element: <AgentPerformance /> },
     { path: "inquiries", element: <AgencyInquiries /> },
-    { path: "settings", element: <AgencyAdminSettings /> },
+    { path: "settings", element: <AgencySettings /> },
+    { path: "analytics", element: <AgencyAnalytics /> },
     ...listingRoutes
   ];
 
@@ -243,7 +245,7 @@ function AppContent() {
           </Route>
 
           <Route path="/agency" element={<RoleProtectedRoute allowedRole={["agency_admin", "admin"]} />}>
-            {agencyAdminRoutes.map(({ path, element }) => (
+            {agencyRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>

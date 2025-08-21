@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 // Import all sidebar components
 import AdminSidebar from '../components/admin/Sidebar';
-import AgencyAdminSidebar from '../components/agencyadmin/Sidebar';
+import AgencyAdminSidebar from '../components/agency/Sidebar';
 import AgentSidebar from '../components/agent/Sidebar';
 import { useLocation, useNavigate, useParams } from 'react-router-dom'; // Import useParams
 import ListingCard from '../components/ListingCard';

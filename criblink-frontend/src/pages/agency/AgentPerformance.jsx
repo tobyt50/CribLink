@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AgencyAdminSidebar from '../../components/agencyadmin/Sidebar';
+import AgencyAdminSidebar from '../../components/agency/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import {

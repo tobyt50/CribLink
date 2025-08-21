@@ -11,7 +11,7 @@ import {
   X,
   Users, // NEW: Import Users icon for Agents page
 } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell.js'; // Ensure .js extension for consistency
+import { useTheme } from '../../layouts/AppShell'; // Ensure .js extension for consistency
 
 const MENU_ITEMS = [
   { name: 'Dashboard', to: '/client/dashboard', icon: <Home />, key: 'client-dashboard' },

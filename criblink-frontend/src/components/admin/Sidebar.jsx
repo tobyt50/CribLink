@@ -4,33 +4,31 @@ import {
   Menu,
   ChevronLeft,
   Home,
-  LayoutGrid, // For Listings
-  Users, // For Members and Clients
-  Settings, // For Settings
-  X,
+  Users,
   Shield,
-  FileText,
-  Landmark, // For Agency Info
-  MessageSquare, // For Inquiries
+  LayoutGrid,
+  Inbox,
+  BarChart2,
+  FileText, // Added FileText icon for legal documents
+  Settings,
+  X,
+  Award,
   Bookmark,
-  Award// Import the Bookmark icon here
 } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell.js';
+import { useTheme } from '../../layouts/AppShell'; // Added .js extension
 
-// Define the menu items specifically for Agency Admin
 const MENU_ITEMS = [
-  { name: 'Dashboard', to: '/agency/dashboard', icon: <Home />, key: 'dashboard' },
-  { name: 'Listings', to: '/agency/listings', icon: <LayoutGrid />, key: 'listings' }, // Updated path
-  { name: 'Members', to: '/agency/members', icon: <Users />, key: 'members' },
-  { name: 'Clients', to: '/agency/clients', icon: <Shield />, key: 'clients' }, // Added Clients
-  { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' },
-  { name: 'Agent Performance', to: '/agency/agent-performance', icon: <Award />, key: 'agent-performance' },
-  { name: 'Inquiries', to: '/agency/inquiries', icon: <MessageSquare />, key: 'inquiries' },
+  { name: 'Dashboard', to: '/admin/dashboard', icon: <Home />, key: 'dashboard' },
+  { name: 'Users', to: '/admin/users', icon: <Users />, key: 'users' },
+  { name: 'Staff', to: '/admin/staff', icon: <Shield />, key: 'staff' },
+  { name: 'Listings', to: '/admin/listings', icon: <LayoutGrid />, key: 'listings' },
+  { name: 'Legal Docs', to: '/documents', icon: <FileText />, key: 'documents' }, // NEW: Legal Documents link
+  { name: 'Analytics', to: '/admin/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
-  { name: 'Settings', to: '/agency/settings', icon: <Settings />, key: 'settings' },
+  { name: 'Settings', to: '/admin/settings', icon: <Settings />, key: 'settings' },
 ];
 
-const AgencyAdminSidebar = ({
+const AdminSidebar = ({
   collapsed, // Now directly receives the collapsed state from parent
   setCollapsed, // Receives the setter function from parent
   activeSection,
@@ -128,4 +126,4 @@ const AgencyAdminSidebar = ({
   );
 };
 
-export default AgencyAdminSidebar;
+export default AdminSidebar;
