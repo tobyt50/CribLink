@@ -12,6 +12,8 @@ const expireFeaturedListings = require('./jobs/expireFeatured');
 const app = express();
 const server = http.createServer(app);
 
+const healthRoutes = require('./routes/healthRoutes'); // Health check routes
+
 // 🚀 Setup Socket.IO
 const io = new Server(server, {
   cors: {
@@ -68,6 +70,8 @@ app.use((req, res, next) => {
   req.db = db;
   next();
 });
+
+app.use('/health', healthRoutes);
 
 // 📦 Route imports
 const clientRoutes = require('./routes/clientRoutes');
