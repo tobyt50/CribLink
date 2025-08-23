@@ -24,7 +24,7 @@ export default function SelectRole() {
         transition={{ duration: 0.6 }}
         className="w-full max-w-4xl mt-[-60px]"
       >
-        <h1 className={`text-3xl font-bold text-center mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>Create Your Criblink Account</h1>
+        <h1 className={`text-3xl font-bold text-center mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}>Create Your Havo Account</h1>
         <p className={`text-center mb-10 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Choose your role to continue</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 justify-center">

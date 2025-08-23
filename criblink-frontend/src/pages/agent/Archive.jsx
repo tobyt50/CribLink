@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpIcon, ArrowDownIcon, TrashIcon, ArchiveBoxIcon } from '@heroicons/react/24/outline'; // Added ArchiveBoxIcon
-import { Menu, X, Users, MessageSquare, RefreshCw, Building, Tag, Clock, User } from 'lucide-react'; // Added Clock, User for consistency
+import { Menu, X, Users, MessageSquare, RefreshCw, Building, Tag, Clock, User, ArrowLeft } from 'lucide-react'; // Added Clock, User for consistency
 import { useTheme } from '../../layouts/AppShell';
 import { useMessage } from '../../context/MessageContext';
 import { useConfirmDialog } from '../../context/ConfirmDialogContext';
@@ -489,27 +489,14 @@ const Archive = () => {
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Mobile Sidebar Toggle Button */}
-      {isMobile && (
-        <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
-          initial={false}
-          animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
+      <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
         >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 90 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
+          <ArrowLeft size={20} />
+        </button>
 
       <AgentSidebar
         collapsed={isMobile ? false : isCollapsed}

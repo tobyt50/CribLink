@@ -10,26 +10,22 @@ import MainLayout from "./layouts/MainLayout";
 import AppShell from "./layouts/AppShell";
 import ScrollToTop from "./components/ScrollToTop";
 
-// Global Messaging
+// Global Messaging & Contexts
 import { MessageProvider } from "./context/MessageContext";
 import GlobalMessageToasts from "./components/GlobalMessageToasts";
-
-// Confirmation Dialog
 import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
 import ConfirmDialog from "./components/ConfirmDialog";
-
-// Axios Interceptor
 import AxiosErrorInterceptor from './components/AxiosErrorInterceptor';
-
-// Authentication Context
 import { AuthProvider } from './context/AuthContext';
+
+// --- NEW UNIFIED SETTINGS COMPONENT ---
+import Settings from './pages/settings/Settings';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminStaff from './pages/admin/Staff';
 import AdminUsers from './pages/admin/Users';
 import AdminAnalytics from "./pages/admin/Analytics";
-import AdminSettings from './pages/admin/Settings';
 
 // Agent Pages
 import AgentDashboard from './pages/agent/Dashboard';
@@ -37,16 +33,14 @@ import Clients from './pages/agent/Clients';
 import ClientProfile from './pages/agent/ClientProfile';
 import AgentInquiries from './pages/agent/AgentInquiries';
 import Archive from './pages/agent/Archive';
-import AgentSettings from './pages/agent/Settings';
 
 // Client Pages
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientInquiries from "./pages/client/ClientInquiries";
-import ClientSettings from "./pages/client/Settings";
 import AgentProfile from "./pages/client/AgentProfile";
 import Agents from "./pages/client/Agents";
 
-// Pages (Common, Public, or Specific)
+// Common/Public Pages
 import Home from "./pages/Home";
 import AddListing from "./pages/AddListing";
 import EditListing from "./pages/EditListing";
@@ -56,10 +50,6 @@ import SearchPage from "./pages/SearchPage";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import SelectRole from "./pages/SelectRole";
-import ManageProfile from "./pages/ManageProfile";
-import General from './pages/profile/General';
-import Security from './pages/profile/Security';
-import Privacy from './pages/profile/Privacy';
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import ResetPassword from "./pages/ResetPassword";
@@ -68,16 +58,12 @@ import Agencies from "./pages/Agencies";
 import AgencyProfile from "./pages/AgencyProfile";
 import Subscriptions from "./pages/Subscriptions";
 import Checkout from "./pages/Checkout";
-
-// NEW: Import AddLegalDocument component (shared between admin and agency admin)
 import AddLegalDocument from "./pages/AddLegalDocument";
-// NEW: Import LegalDocuments component (shared between admin and agency admin)
 import LegalDocuments from "./pages/LegalDocuments";
 
-// NEW: Agency Pages
+// Agency Pages
 import AgencyDashboard from './pages/agency/AgencyDashboard';
 import AgencyMembers from './pages/agency/AgencyMembers';
-import AgencySettings from './pages/agency/Settings';
 import AgencyAdminProfile from './pages/agency/AgencyAdminProfile';
 import AgentPerformance from './pages/agency/AgentPerformance';
 import AgencyInquiries from './pages/agency/AgencyInquiries';
@@ -88,13 +74,10 @@ import Listings from './pages/Listings';
 
 function AppContent() {
   const location = useLocation();
-
-  // Routes that get smaller header offset (50px instead of 96px)
-  const smallerHeaderOffsetRoutes = ["/subscriptions", "/subscriptions/checkout", "/some-other-page"];
-  // Compute padding class conditionally
+  const smallerHeaderOffsetRoutes = ["/subscriptions", "/subscriptions/checkout"];
   const headerPaddingClass = smallerHeaderOffsetRoutes.includes(location.pathname) ? "pt-[56px]" : "pt-[96px]";
 
-  // Define routes for each role
+  // Define routes for each role (settings removed from here)
   const listingRoutes = [
     { path: "add-listing", element: <AddListing /> },
     { path: "edit-listing/:id", element: <EditListing /> },
@@ -106,7 +89,6 @@ function AppContent() {
     { path: "staff", element: <AdminStaff /> },
     { path: "users", element: <AdminUsers /> },
     { path: "analytics", element: <AdminAnalytics /> },
-    { path: "settings", element: <AdminSettings /> },
     { path: "agencies/:agencyId/members", element: <AgencyMembers /> },
     ...listingRoutes
   ];
@@ -118,14 +100,12 @@ function AppContent() {
     { path: "client-profile/:clientId", element: <ClientProfile /> },
     { path: "inquiries", element: <AgentInquiries /> },
     { path: "archive", element: <Archive /> },
-    { path: "settings", element: <AgentSettings /> },
     ...listingRoutes
   ];
 
   const clientRoutes = [
     { path: "dashboard", element: <ClientDashboard /> },
     { path: "inquiries", element: <ClientInquiries /> },
-    { path: "settings", element: <ClientSettings /> },
     { path: "agent-profile/:agentId", element: <AgentProfile /> },
     { path: "agents", element: <Agents /> },
   ];
@@ -138,37 +118,19 @@ function AppContent() {
     { path: "client-profile/:clientId", element: <ClientProfile /> },
     { path: "agent-performance", element: <AgentPerformance /> },
     { path: "inquiries", element: <AgencyInquiries /> },
-    { path: "settings", element: <AgencySettings /> },
     { path: "analytics", element: <AgencyAnalytics /> },
     ...listingRoutes
   ];
 
   useEffect(() => {
+    // Socket connection logic remains the same
     if (!socket.connected) {
       socket.connect();
-      console.log('App.js: Socket connecting globally...');
     }
-
-    socket.on('connect', () => {
-      console.log('App.js: Global Socket connected successfully!');
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('App.js: Global Socket disconnected:', reason);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('App.js: Global Socket connection error:', error);
-    });
-
     return () => {
       if (socket.connected) {
         socket.disconnect();
-        console.log('App.js: Global Socket disconnected on App unmount.');
       }
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
     };
   }, []);
 
@@ -188,20 +150,18 @@ function AppContent() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/select-role" element={<SelectRole />} />
             <Route path="/listings/:id" element={<ListingDetails />} />
-            <Route path="*" element={<NotFoundPage />} />
             <Route path="/agencies/:id" element={<AgencyProfile />} />
             <Route path="/agencies" element={<Agencies />} />
             <Route path="/listings/agency/:agencyId" element={<Listings />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           {/* Authenticated base user routes */}
           <Route element={<ProtectedBaseRoute />}>
-            <Route path="profile" element={<ManageProfile />}>
-              <Route index element={<Navigate to="general" replace />} />
-              <Route path="general" element={<General />} />
-              <Route path="security" element={<Security />} />
-              <Route path="privacy" element={<Privacy />} />
-            </Route>
+            {/* --- UNIFIED SETTINGS ROUTE --- */}
+            <Route path="settings" element={<Settings />} />
+
+            {/* Other authenticated routes */}
             <Route path="favourites" element={<Favourites />} />
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="/subscriptions/checkout" element={<Checkout />} />
@@ -209,16 +169,12 @@ function AppContent() {
             <Route path="/client-profile/:clientId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
               <Route index element={<ClientProfile />} />
             </Route>
-
             <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin", "agent", "admin"]} />}>
               <Route index element={<AgentProfile />} />
             </Route>
-
             <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
               <Route index element={<AgencyAdminProfile />} />
             </Route>
-
-            {/* Legal Document Routes */}
             <Route path="/documents" element={<RoleProtectedRoute allowedRole={["admin", "agency_admin"]} />}>
               <Route index element={<LegalDocuments />} />
               <Route path="add" element={<AddLegalDocument />} />
@@ -231,19 +187,16 @@ function AppContent() {
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-
           <Route path="/agent" element={<RoleProtectedRoute allowedRole="agent" />}>
             {agentRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-
           <Route path="/client" element={<RoleProtectedRoute allowedRole="client" />}>
             {clientRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-
           <Route path="/agency" element={<RoleProtectedRoute allowedRole={["agency_admin", "admin"]} />}>
             {agencyRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />

@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import ClientSidebar from '../../components/client/Sidebar';
 import API_BASE_URL from '../../config';
-import { Menu, X, Search, LayoutGrid, LayoutList, Plus, X as XMarkIcon } from 'lucide-react'; // Added Plus and XMarkIcon
+import { Menu, X, Search, LayoutGrid, LayoutList, Plus, X as XMarkIcon, ArrowLeft } from 'lucide-react'; // Added Plus and XMarkIcon
 import { useTheme } from '../../layouts/AppShell';
 import AgentCard from '../../components/client/AgentCard';
 import { useMessage } from '../../context/MessageContext';
@@ -972,27 +972,14 @@ const Agents = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {isMobile && (
-        <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
-          initial={false}
-          animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
+      <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
         >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 90 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
+          <ArrowLeft size={20} />
+        </button>
 
       <ClientSidebar
         collapsed={isMobile ? false : isCollapsed}

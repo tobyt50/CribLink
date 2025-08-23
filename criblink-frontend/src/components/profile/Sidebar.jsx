@@ -46,7 +46,7 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
       {isMobile && (
         <motion.button
           onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
+          className={`fixed mt-5 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
           transition={{ duration: 0.05 }}

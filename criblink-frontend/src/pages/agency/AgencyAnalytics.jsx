@@ -5,7 +5,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, TrendingUp, Users, Home, MessageSquare, BriefcaseBusiness, AlertCircle, Menu, X, ChevronDownIcon, Lock, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Home, MessageSquare, BriefcaseBusiness, AlertCircle, Menu, X, ChevronDownIcon, Lock, Download, ArrowLeft } from 'lucide-react';
 
 import AgencyAdminSidebar from '../../components/agency/Sidebar'; // Using agency-specific sidebar
 import { useTheme } from '../../layouts/AppShell';
@@ -166,11 +166,14 @@ const AgencyAnalytics = () => {
 
     return (
         <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
-            {isMobile && (
-                 <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`} animate={{ rotate: isSidebarOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
-                    <AnimatePresence mode="wait" initial={false}><motion.div key={isSidebarOpen ? 'close' : 'menu'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>{isSidebarOpen ? <X size={20} /> : <Menu size={20} />}</motion.div></AnimatePresence>
-                </motion.button>
-            )}
+            <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
+        >
+          <ArrowLeft size={20} />
+        </button>
 
             <AgencyAdminSidebar collapsed={isMobile ? false : isCollapsed} setCollapsed={isMobile ? () => {} : setIsCollapsed} activeSection="analytics" isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 

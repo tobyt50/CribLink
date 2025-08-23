@@ -45,7 +45,7 @@ const AdminSidebar = ({
 
   const sidebarClasses = `
     transition-all duration-300 shadow-2xl border-r
-    flex flex-col items-start ${isMobile ? 'pt-8' : 'pt-0'} pb-10
+    flex flex-col items-start pb-10
     h-screen fixed top-14 left-0 z-50
     ${sidebarWidthClass}
     ${isMobile ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}
@@ -55,14 +55,7 @@ const AdminSidebar = ({
   return (
     <>
       <div className={sidebarClasses}>
-        {/* Mobile close button */}
-        {isMobile && (
-          <div className="w-full flex px-6 mb-2">
-            <button onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar" className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-              <X size={24} />
-            </button>
-          </div>
-        )}
+        
 
         {/* Toggle Button - only desktop */}
         {!isMobile && (

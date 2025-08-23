@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AgentSidebar from '../../components/agent/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, ArchiveBoxIcon, TrashIcon } from '@heroicons/react/24/outline'; // Added ArchiveBoxIcon, TrashIcon
-import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react';
+import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import AgentInquiryModal from '../../components/AgentInquiryModal';
 import { useMessage } from '../../context/MessageContext';
@@ -385,7 +385,14 @@ const AgentInquiries = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {isMobile && <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}><AnimatePresence mode="wait"><motion.div key={isSidebarOpen ? 'x' : 'm'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }}>{isSidebarOpen ? <X size={20} /> : <Menu size={20} />}</motion.div></AnimatePresence></motion.button>}
+      <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
+        >
+          <ArrowLeft size={20} />
+        </button>
       <AgentSidebar collapsed={isCollapsed} setCollapsed={setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       <motion.div key={isMobile ? 'mobile' : 'desktop'} animate={{ marginLeft: contentShift }} transition={{ duration: 0.3 }} className="pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0">
         <h1 className={`text-3xl font-extrabold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>Inquiries</h1>

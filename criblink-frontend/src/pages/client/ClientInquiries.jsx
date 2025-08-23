@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ClientSidebar from '../../components/client/Sidebar';
 import { ArrowUpIcon, ArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag } from 'lucide-react'; // Added icons for mobile view
+import { Menu, X, Users, RefreshCw, MessageSquare, Clock, Building, User, Tag, ArrowLeft } from 'lucide-react'; // Added icons for mobile view
 import { useTheme } from '../../layouts/AppShell';
 import ClientInquiryModal from '../../components/ClientInquiryModal';
 import { useMessage } from '../../context/MessageContext';
@@ -347,15 +347,14 @@ const ClientInquiries = () => {
 
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
-      {isMobile && (
-        <motion.button onClick={() => setIsSidebarOpen(p => !p)} className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={isSidebarOpen ? 'x' : 'm'} initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
+      <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
+        >
+          <ArrowLeft size={20} />
+        </button>
 
       <ClientSidebar collapsed={isCollapsed} setCollapsed={setIsCollapsed} activeSection={activeSection} setActiveSection={setActiveSection} isMobile={isMobile} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       

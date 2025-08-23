@@ -4,7 +4,7 @@ import ClientSidebar from '../../components/client/Sidebar';
 import axiosInstance from '../../api/axiosInstance';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, User, Home, MessageSquare, X, Heart, Search, Phone, Mail, Star, Settings, UserPlus, Landmark, ArrowLeft, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical } from 'lucide-react';
+import { Menu, User, Home, MessageSquare, X, Heart, Search, Phone, Mail, Star, Settings, UserPlus, Landmark, Hourglass, UserRoundCheck, CheckCircle, UserX, EllipsisVertical, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../layouts/AppShell';
 import Card from '../../components/ui/Card';
 import StatCard from '../../components/StatCard';
@@ -213,27 +213,14 @@ const ClientDashboard = () => {
   return (
     <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
       {/* Mobile Sidebar Toggle Button */}
-      {isMobile && (
-        <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
-          className={`fixed top-20 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
-          initial={false}
-          animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
+      <button
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+          className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
+            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
         >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 90 }}
-              transition={{ duration: 0.2 }}
-            >
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.div>
-          </AnimatePresence>
-        </motion.button>
-      )}
+          <ArrowLeft size={20} />
+        </button>
 
       {/* Sidebar */}
       <ClientSidebar
