@@ -29,7 +29,6 @@ const MENU_ITEMS = [
   { name: 'Analytics', to: '/agent/analytics', icon: <BarChart2 />, key: 'analytics' },
   { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
   { name: 'Archive', to: '/agent/archive', icon: <Archive />, key: 'archive' },
-  { name: 'Settings', to: '/agent/settings', icon: <Settings />, key: 'settings' },
 ];
 
 /**
