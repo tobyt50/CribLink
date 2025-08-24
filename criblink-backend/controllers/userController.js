@@ -385,7 +385,6 @@ exports.signinUser = async (req, res) => {
         [
           user.user_id,
           device_info || "Unknown",
-exports.signinUser = async (req, res) => {
   const { identifier, password, device_info, location_info } = req.body || {};
   const ip_address = req.ip || req.connection?.remoteAddress || "Unknown IP";
 
