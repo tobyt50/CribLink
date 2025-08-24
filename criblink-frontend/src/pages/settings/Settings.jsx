@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom"; // Restored useLocation import
+import { useLocation, useNavigate } from "react-router-dom"; // Restored useLocation import
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../layouts/AppShell";
 
@@ -38,6 +38,7 @@ const useMediaQuery = (query) => {
 
 const Settings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation(); // Restored location hook
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { isCollapsed, setIsCollapsed } = useSidebarState();
@@ -258,10 +259,25 @@ const Settings = () => {
 
   const handleSelectCategory = (categoryId) => {
     setActiveCategory(categoryId);
+    const params = new URLSearchParams(location.search);
+    params.set("category", categoryId);
+    navigate({
+      pathname: location.pathname,
+      search: params.toString(),
+    });
     if (isMobile) setMobileView("detail");
   };
+  
 
-  const handleBackToHub = () => setMobileView("hub");
+  const handleBackToHub = () => {
+    setMobileView("hub");
+    const params = new URLSearchParams(location.search);
+    params.delete("category"); // clear the forced category
+    navigate({
+      pathname: location.pathname,
+      search: params.toString(),
+    });
+  };
 
   const mainContentMargin = isCollapsed ? "ml-20" : "ml-64";
 
