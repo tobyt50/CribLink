@@ -458,6 +458,48 @@ exports.signinUser = async (req, res) => {
     res.status(500).json({ message: "Sign in failed unexpectedly.", error: err.message });
   }
 };
+
+exports.getProfile = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+
+        // Query to get user details and their agency_request_status if associated with an agency
+        const result = await db.query(
+            `SELECT
+                u.user_id, u.full_name, u.username, u.email, u.role, u.date_joined, u.last_login, u.status,
+                u.profile_picture_url, u.bio, u.location, u.phone, u.social_links, u.agency, u.agency_id, u.default_landing_page,
+                u.is_2fa_enabled, u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+                u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+                u.notifications_settings, u.timezone, u.currency, u.notification_email,
+                u.preferred_communication_channel, u.share_favourites_with_agents,
+                u.share_property_preferences_with_agents,
+                am.request_status AS agency_request_status,
+                -- NEW: Subscription Logic
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+                    ELSE u.subscription_type 
+                END AS subscription_type,
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+                    ELSE u.featured_priority
+                END AS featured_priority
+             FROM users u
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
+             LEFT JOIN agency_members am ON u.user_id = am.agent_id AND u.agency_id = am.agency_id
+             WHERE u.user_id = $1`,
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching profile:', err);
+        res.status(500).json({ message: 'Failed to fetch profile.', error: err.message });
+    }
+};
             
 exports.updateProfile = async (req, res) => {
   const userId = req.user.user_id;
