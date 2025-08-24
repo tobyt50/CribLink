@@ -385,125 +385,158 @@ exports.signinUser = async (req, res) => {
         [
           user.user_id,
           device_info || "Unknown",
-          location_info || "Unknown",
-          ip_address,
-          loginStatus,
-          "Account deactivated",
-        ],
-      );
-      return res
-        .status(403)
-        .json({
-          message:
-            "Your account is deactivated. Please reactivate it to sign in.",
-        });
+exports.signinUser = async (req, res) => {
+  const { identifier, password, device_info, location_info } = req.body || {};
+  const ip_address = req.ip || req.connection?.remoteAddress || "Unknown IP";
+
+  if (!identifier || !password) {
+    return res.status(400).json({ message: "Identifier and password are required." });
+  }
+
+  let user = null;
+  let loginStatus = "Failed";
+  let safeDevice = (device_info || "Unknown").toString().slice(0, 255);
+  let safeLocation = (location_info || "Unknown").toString().slice(0, 255);
+
+  try {
+    // Fetch user safely
+    const result = await db.query(
+      `SELECT 
+        u.user_id, u.full_name, u.username, u.email, u.password_hash, u.role, u.status, u.agency_id,
+        u.date_joined, u.phone, u.agency, u.bio, u.location, u.profile_picture_url, u.is_2fa_enabled,
+        u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+        u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+        u.notifications_settings, u.timezone, u.currency, u.default_landing_page, u.notification_email,
+        u.preferred_communication_channel, u.social_links, u.share_favourites_with_agents,
+        u.share_property_preferences_with_agents,
+        CASE 
+          WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+          ELSE u.subscription_type 
+        END AS subscription_type,
+        CASE 
+          WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+          ELSE u.featured_priority
+        END AS featured_priority
+      FROM users u
+      LEFT JOIN agencies a ON u.agency_id = a.agency_id
+      WHERE u.email = $1 OR u.username = $1`,
+      [identifier]
+    );
+
+    user = result.rows[0];
+
+    // Constant-time password check to avoid timing attacks
+    let passwordMatch = false;
+    if (user?.password_hash) {
+      passwordMatch = await bcrypt.compare(password, user.password_hash);
+    } else {
+      // Fake hash comparison to prevent user enumeration timing
+      await bcrypt.compare(password, "$2b$10$1234567890123456789012");
     }
 
-    // --- NEW: Perform reverse geocoding on the backend if location_info is lat/lon ---
-    if (location_info && location_info.startsWith("Lat:")) {
+    if (!user || !passwordMatch) {
+      // Log failed login generically
+      await db.query(
+        user
+          ? `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
+             VALUES ($1, $2, $3, $4, $5, $6)`
+          : `INSERT INTO user_login_history (device, location, ip_address, status, message)
+             VALUES ($1, $2, $3, $4, $5)`,
+        user
+          ? [user.user_id, safeDevice, safeLocation, ip_address, loginStatus, "Invalid credentials"]
+          : [safeDevice, safeLocation, ip_address, loginStatus, "Invalid credentials"]
+      );
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check account status
+    if (["banned", "deactivated"].includes(user.status)) {
+      loginStatus = "Failed";
+      await logActivity(
+        `Sign-in attempt by ${user.status} user: ${user.full_name} (${user.email})`,
+        user,
+        `auth_${user.status}`
+      );
+
+      await db.query(
+        `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          user.user_id,
+          safeDevice,
+          safeLocation,
+          ip_address,
+          loginStatus,
+          `Account ${user.status}`
+        ]
+      );
+
+      return res.status(403).json({
+        message:
+          user.status === "banned"
+            ? "Your account has been banned."
+            : "Your account is deactivated. Please reactivate to sign in."
+      });
+    }
+
+    // Optional: reverse geocode if location_info is lat/lon
+    let finalLocation = safeLocation;
+    if (location_info?.startsWith("Lat:")) {
       const latLonMatch = location_info.match(/Lat: ([\d.-]+), Lon: ([\d.-]+)/);
       if (latLonMatch) {
         const latitude = parseFloat(latLonMatch[1]);
         const longitude = parseFloat(latLonMatch[2]);
-        const formattedLocation = await reverseGeocode(latitude, longitude);
-        if (formattedLocation) {
-          location_info = formattedLocation;
-        }
+        const geocoded = await reverseGeocode(latitude, longitude);
+        if (geocoded) finalLocation = geocoded.slice(0, 255);
       }
     }
-    // --- END NEW ---
 
-    // Create a new session (is_current will be true for this new session, status active)
+    // Create a new session
     const sessionResult = await db.query(
       `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current, status)
-             VALUES ($1, $2, $3, $4, TRUE, 'active') RETURNING session_id`, // NEW: Added status column
-      // NEW: Pass device_info and location_info, use backend-derived ip_address
-      [
-        user.user_id,
-        device_info || "Unknown",
-        location_info || "Unknown",
-        ip_address,
-      ],
+       VALUES ($1, $2, $3, $4, TRUE, 'active') RETURNING session_id`,
+      [user.user_id, safeDevice, finalLocation, ip_address]
     );
     const newSessionId = sessionResult.rows[0].session_id;
 
     loginStatus = "Success";
     await db.query(
       `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-      // NEW: Pass device_info and location_info, use backend-derived ip_address
-      [
-        user.user_id,
-        device_info || "Unknown",
-        location_info || "Unknown",
-        ip_address,
-        loginStatus,
-        "Successful login",
-      ],
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.user_id, safeDevice, finalLocation, ip_address, loginStatus, "Successful login"]
     );
 
+    // Minimal JWT payload
     const token = jwt.sign(
       {
         user_id: user.user_id,
-        name: user.full_name,
-        email: user.email,
         role: user.role,
-        status: user.status,
-        session_id: newSessionId, // Include the new session ID in the token
-        agency_id: user.agency_id,
+        session_id: newSessionId,
       },
       SECRET_KEY,
-      { expiresIn: "7d" },
+      { expiresIn: "7d" }
     );
 
-    await logActivity(
-      `Sign in by ${user.role}: ${user.full_name}`,
-      user,
-      "auth",
-    );
+    await logActivity(`Sign in by ${user.role}: ${user.full_name}`, user, "auth");
 
     res.json({
       token,
       user: {
         user_id: user.user_id,
         full_name: user.full_name,
-        role: user.role,
+        username: user.username,
         email: user.email,
+        role: user.role,
         status: user.status,
-        phone: user.phone,
         agency: user.agency,
         agency_id: user.agency_id,
-        username: user.username,
-        bio: user.bio,
-        location: user.location,
-        profile_picture_url: user.profile_picture_url,
-        date_joined: user.date_joined,
-        is_2fa_enabled: user.is_2fa_enabled,
-        data_collection_opt_out: user.data_collection_opt_out,
-        personalized_ads: user.personalized_ads,
-        cookie_preferences: user.cookie_preferences,
-        communication_email_updates: user.communication_email_updates,
-        communication_marketing: user.communication_marketing,
-        communication_newsletter: user.communication_newsletter,
-        notifications_settings: user.notifications_settings,
-        timezone: user.timezone,
-        currency: user.currency,
-        default_landing_page: user.default_landing_page,
-        notification_email: user.notification_email,
-        preferred_communication_channel: user.preferred_communication_channel,
-        social_links: user.social_links,
-        share_favourites_with_agents: user.share_favourites_with_agents,
-        share_property_preferences_with_agents:
-          user.share_property_preferences_with_agents,
         subscription_type: user.subscription_type,
         featured_priority: user.featured_priority,
       },
     });
   } catch (err) {
     console.error("Sign in error:", err);
-    res
-      .status(500)
-      .json({ message: "Sign in failed unexpectedly.", error: err.message });
+    res.status(500).json({ message: "Sign in failed unexpectedly." });
   }
 };
 
