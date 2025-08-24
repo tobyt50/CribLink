@@ -1,94 +1,127 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Search, Phone, Mail, UserPlus, Landmark, ArrowLeft, Hourglass,
-  UserRoundCheck, CheckCircle, UserX, EllipsisVertical, ArrowRight,
-  Users, User, MessageSquare, PlusCircle, Trash2, Link, LogOut
-} from 'lucide-react';
-import Card from '../ui/Card';
-import axiosInstance from '../../api/axiosInstance';
-import { useMessage } from '../../context/MessageContext';
-import { useAuth } from '../../context/AuthContext';
+  X,
+  Search,
+  Phone,
+  Mail,
+  UserPlus,
+  Landmark,
+  ArrowLeft,
+  Hourglass,
+  UserRoundCheck,
+  CheckCircle,
+  UserX,
+  EllipsisVertical,
+  ArrowRight,
+  Users,
+  User,
+  MessageSquare,
+  PlusCircle,
+  Trash2,
+  Link,
+  LogOut,
+} from "lucide-react";
+import Card from "../ui/Card";
+import axiosInstance from "../../api/axiosInstance";
+import { useMessage } from "../../context/MessageContext";
+import { useAuth } from "../../context/AuthContext";
 
-const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents, fetchClientDashboardData }) => {
+const FindAgentModal = ({
+  isOpen,
+  onClose,
+  connectedAgents: propConnectedAgents,
+  fetchClientDashboardData,
+}) => {
   const { darkMode } = useAuth(); // Assuming darkMode is available from useAuth or passed down
   const { showMessage } = useMessage();
   const { user } = useAuth(); // Get authenticated user details
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
 
-  const [activeTab, setActiveTab] = useState('find'); // 'connected' or 'find'
+  const [activeTab, setActiveTab] = useState("find"); // 'connected' or 'find'
   const [allAgents, setAllAgents] = useState([]);
   const [filteredAgents, setFilteredAgents] = useState([]);
-  const [agentSearchTerm, setAgentSearchTerm] = useState('');
-  const [selectedAgentForConnection, setSelectedAgentForConnection] = useState(null);
-  const [selectedAgentConnectionStatus, setSelectedAgentConnectionStatus] = useState('none');
+  const [agentSearchTerm, setAgentSearchTerm] = useState("");
+  const [selectedAgentForConnection, setSelectedAgentForConnection] =
+    useState(null);
+  const [selectedAgentConnectionStatus, setSelectedAgentConnectionStatus] =
+    useState("none");
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   // Local state for connected agents to manage disconnects without immediate prop mutation
-  const [localConnectedAgents, setLocalConnectedAgents] = useState(propConnectedAgents);
+  const [localConnectedAgents, setLocalConnectedAgents] =
+    useState(propConnectedAgents);
 
   const scrollContainerRef = useRef(null);
 
   // Define inputFieldStyles here so it's accessible within the component
-  const inputFieldStyles =
-    `w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-      darkMode
-        ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
-        : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
-    }`;
-
+  const inputFieldStyles = `w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+    darkMode
+      ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+      : "bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+  }`;
 
   // Update local connected agents when prop changes
   useEffect(() => {
     setLocalConnectedAgents(propConnectedAgents);
   }, [propConnectedAgents]);
 
-  const fetchAgents = useCallback(async (page, search, append = false) => {
-    if (!token) return;
-    setIsLoading(true);
-    const headers = { Authorization: `Bearer ${token}` };
-    try {
-      const response = await axiosInstance.get(`/clients/all-agents?page=${page}&limit=5&search=${search}`, { headers });
-      const newAgents = response.data.agents;
-      const totalPages = response.data.totalPages;
+  const fetchAgents = useCallback(
+    async (page, search, append = false) => {
+      if (!token) return;
+      setIsLoading(true);
+      const headers = { Authorization: `Bearer ${token}` };
+      try {
+        const response = await axiosInstance.get(
+          `/clients/all-agents?page=${page}&limit=5&search=${search}`,
+          { headers },
+        );
+        const newAgents = response.data.agents;
+        const totalPages = response.data.totalPages;
 
-      // Filter out agents that are already connected or have pending requests
-      const alreadyInvolvedAgentIds = new Set(
-        localConnectedAgents.map(agent => agent.user_id)
-      );
+        // Filter out agents that are already connected or have pending requests
+        const alreadyInvolvedAgentIds = new Set(
+          localConnectedAgents.map((agent) => agent.user_id),
+        );
 
-      // Fetch pending requests separately to accurately filter
-      const pendingRequestsRes = await axiosInstance.get(`/clients/${user.user_id}/pending-agent-requests`, { headers });
-      pendingRequestsRes.data.requests.forEach(req => alreadyInvolvedAgentIds.add(req.agent_id));
+        // Fetch pending requests separately to accurately filter
+        const pendingRequestsRes = await axiosInstance.get(
+          `/clients/${user.user_id}/pending-agent-requests`,
+          { headers },
+        );
+        pendingRequestsRes.data.requests.forEach((req) =>
+          alreadyInvolvedAgentIds.add(req.agent_id),
+        );
 
+        const filteredNewAgents = newAgents.filter(
+          (agent) => !alreadyInvolvedAgentIds.has(agent.user_id),
+        );
 
-      const filteredNewAgents = newAgents.filter(agent => !alreadyInvolvedAgentIds.has(agent.user_id));
-
-
-      if (append) {
-        setAllAgents(prev => [...prev, ...filteredNewAgents]);
-        setFilteredAgents(prev => [...prev, ...filteredNewAgents]);
-      } else {
-        setAllAgents(filteredNewAgents);
-        setFilteredAgents(filteredNewAgents);
+        if (append) {
+          setAllAgents((prev) => [...prev, ...filteredNewAgents]);
+          setFilteredAgents((prev) => [...prev, ...filteredNewAgents]);
+        } else {
+          setAllAgents(filteredNewAgents);
+          setFilteredAgents(filteredNewAgents);
+        }
+        setHasMore(page < totalPages);
+      } catch (error) {
+        console.error("Error fetching agents:", error);
+        showMessage("Failed to load agents.", "error");
+      } finally {
+        setIsLoading(false);
       }
-      setHasMore(page < totalPages);
-    } catch (error) {
-      console.error("Error fetching agents:", error);
-      showMessage("Failed to load agents.", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, showMessage, localConnectedAgents, user]);
-
+    },
+    [token, showMessage, localConnectedAgents, user],
+  );
 
   useEffect(() => {
-    if (isOpen && activeTab === 'find') {
+    if (isOpen && activeTab === "find") {
       setCurrentPage(1); // Reset page when modal opens or tab changes
-      setAgentSearchTerm(''); // Clear search term
-      fetchAgents(1, '', false); // Initial fetch
+      setAgentSearchTerm(""); // Clear search term
+      fetchAgents(1, "", false); // Initial fetch
     }
   }, [isOpen, activeTab, fetchAgents]);
 
@@ -100,28 +133,35 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
   };
 
   const handleScroll = () => {
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    if (scrollHeight - scrollTop <= clientHeight + 50 && hasMore && !isLoading) {
-      setCurrentPage(prev => prev + 1);
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
+    if (
+      scrollHeight - scrollTop <= clientHeight + 50 &&
+      hasMore &&
+      !isLoading
+    ) {
+      setCurrentPage((prev) => prev + 1);
     }
   };
 
   useEffect(() => {
-    if (currentPage > 1 && activeTab === 'find') {
+    if (currentPage > 1 && activeTab === "find") {
       fetchAgents(currentPage, agentSearchTerm, true);
     }
   }, [currentPage, activeTab, agentSearchTerm, fetchAgents]);
-
 
   const handleSelectAgentForConnection = async (agent) => {
     setSelectedAgentForConnection(agent);
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      const response = await axiosInstance.get(`/clients/${user.user_id}/connection-requests/status/${agent.user_id}`, { headers });
+      const response = await axiosInstance.get(
+        `/clients/${user.user_id}/connection-requests/status/${agent.user_id}`,
+        { headers },
+      );
       setSelectedAgentConnectionStatus(response.data.status);
     } catch (error) {
       console.error("Error fetching agent connection status:", error);
-      setSelectedAgentConnectionStatus('none');
+      setSelectedAgentConnectionStatus("none");
     }
   };
 
@@ -129,15 +169,22 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
     if (!selectedAgentForConnection || !user) return;
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      const response = await axiosInstance.post(`/clients/${user.user_id}/connection-requests/send-to-agent/${selectedAgentForConnection.user_id}`, {}, { headers });
-      showMessage(response.data.message, 'success');
+      const response = await axiosInstance.post(
+        `/clients/${user.user_id}/connection-requests/send-to-agent/${selectedAgentForConnection.user_id}`,
+        {},
+        { headers },
+      );
+      showMessage(response.data.message, "success");
       setSelectedAgentConnectionStatus(response.data.status);
       fetchClientDashboardData(); // Refresh dashboard data
       // Re-fetch agents for the "Find Agents" tab to update status
       fetchAgents(1, agentSearchTerm, false);
     } catch (error) {
       console.error("Error sending connection request:", error);
-      showMessage(error.response?.data?.message || 'Failed to send connection request.', 'error');
+      showMessage(
+        error.response?.data?.message || "Failed to send connection request.",
+        "error",
+      );
     }
   };
 
@@ -146,15 +193,24 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
     const headers = { Authorization: `Bearer ${token}` };
     try {
       // Assuming a backend endpoint for disconnecting
-      await axiosInstance.post(`/clients/${user.user_id}/disconnect-agent/${agentId}`, {}, { headers });
-      showMessage('Disconnected from agent successfully!', 'success');
+      await axiosInstance.post(
+        `/clients/${user.user_id}/disconnect-agent/${agentId}`,
+        {},
+        { headers },
+      );
+      showMessage("Disconnected from agent successfully!", "success");
       fetchClientDashboardData(); // Refresh dashboard data
-      setLocalConnectedAgents(prev => prev.filter(agent => agent.user_id !== agentId)); // Optimistic update
+      setLocalConnectedAgents((prev) =>
+        prev.filter((agent) => agent.user_id !== agentId),
+      ); // Optimistic update
       // Re-fetch agents for the "Find Agents" tab to make this agent available again
       fetchAgents(1, agentSearchTerm, false);
     } catch (error) {
       console.error("Error disconnecting from agent:", error);
-      showMessage(error.response?.data?.message || 'Failed to disconnect from agent.', 'error');
+      showMessage(
+        error.response?.data?.message || "Failed to disconnect from agent.",
+        "error",
+      );
     }
   };
 
@@ -163,28 +219,40 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
     const headers = { Authorization: `Bearer ${token}` };
     try {
       // Find the request ID for the outgoing pending request to this agent
-      const pendingRequestsRes = await axiosInstance.get(`/clients/${user.user_id}/pending-agent-requests`, { headers });
+      const pendingRequestsRes = await axiosInstance.get(
+        `/clients/${user.user_id}/pending-agent-requests`,
+        { headers },
+      );
       const outgoingRequest = pendingRequestsRes.data.requests.find(
-        req => req.agent_id === agentId && req.is_outgoing
+        (req) => req.agent_id === agentId && req.is_outgoing,
       );
 
       if (outgoingRequest) {
-        await axiosInstance.post(`/clients/${user.user_id}/connection-requests/${outgoingRequest.request_id}/reject-from-agent`, {}, { headers });
-        showMessage('Connection request cancelled successfully!', 'success');
+        await axiosInstance.post(
+          `/clients/${user.user_id}/connection-requests/${outgoingRequest.request_id}/reject-from-agent`,
+          {},
+          { headers },
+        );
+        showMessage("Connection request cancelled successfully!", "success");
         fetchClientDashboardData(); // Refresh dashboard data
         // Re-fetch agents for the "Find Agents" tab to update status
         fetchAgents(1, agentSearchTerm, false);
       } else {
-        showMessage('Outgoing request not found to cancel.', 'error');
+        showMessage("Outgoing request not found to cancel.", "error");
       }
     } catch (error) {
       console.error("Error cancelling connection request:", error);
-      showMessage(error.response?.data?.message || 'Failed to cancel connection request.', 'error');
+      showMessage(
+        error.response?.data?.message || "Failed to cancel connection request.",
+        "error",
+      );
     }
   };
 
   const renderConnectionButton = () => {
-    const isAlreadyConnected = localConnectedAgents.some(a => a.user_id === selectedAgentForConnection.user_id);
+    const isAlreadyConnected = localConnectedAgents.some(
+      (a) => a.user_id === selectedAgentForConnection.user_id,
+    );
 
     if (isAlreadyConnected) {
       return (
@@ -198,7 +266,7 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
     }
 
     switch (selectedAgentConnectionStatus) {
-      case 'pending_sent':
+      case "pending_sent":
         return (
           <button
             className="w-full py-2 bg-yellow-600 text-white font-medium rounded-xl opacity-50 cursor-not-allowed"
@@ -207,23 +275,25 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
             <Hourglass size={20} className="inline-block mr-2" /> Request Sent
           </button>
         );
-      case 'pending_received':
-          return (
-              <button
-                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-xl opacity-50 cursor-not-allowed"
-                  disabled
-              >
-                  <UserRoundCheck size={20} className="inline-block mr-2" /> Incoming Request
-              </button>
-          );
-      case 'none':
-      case 'rejected':
+      case "pending_received":
+        return (
+          <button
+            className="w-full py-2 bg-blue-600 text-white font-medium rounded-xl opacity-50 cursor-not-allowed"
+            disabled
+          >
+            <UserRoundCheck size={20} className="inline-block mr-2" /> Incoming
+            Request
+          </button>
+        );
+      case "none":
+      case "rejected":
         return (
           <button
             onClick={handleSendConnectionRequest}
             className="w-full py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition"
           >
-            <UserPlus size={20} className="inline-block mr-2" /> Connect with this Agent
+            <UserPlus size={20} className="inline-block mr-2" /> Connect with
+            this Agent
           </button>
         );
       default:
@@ -235,7 +305,7 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
     <div className="space-y-4">
       {localConnectedAgents.length > 0 ? (
         <ul className="space-y-3">
-          {localConnectedAgents.map(agent => (
+          {localConnectedAgents.map((agent) => (
             <li
               key={agent.user_id}
               className={`flex items-center justify-between p-3 rounded-xl transition-all duration-200
@@ -249,20 +319,29 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
-                  <User size={24} className={`${darkMode ? "text-gray-400" : "text-gray-600"}`} />
+                  <User
+                    size={24}
+                    className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                  />
                 )}
                 <div>
-                  <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
+                  <p
+                    className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}
+                  >
                     {agent.full_name}
                   </p>
                   {agent.agency_name && (
-                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                    <p
+                      className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                    >
                       {agent.agency_name}
                     </p>
                   )}
                 </div>
               </div>
-              <div className="relative group"> {/* Added group for hover effect */}
+              <div className="relative group">
+                {" "}
+                {/* Added group for hover effect */}
                 <EllipsisVertical size={20} className="cursor-pointer" />
                 {/* Dropdown for Disconnect option */}
                 <div
@@ -274,7 +353,8 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
                     className={`flex items-center w-full px-4 py-2 text-left text-sm
                       hover:${darkMode ? "bg-red-600" : "bg-red-100"} rounded-md`}
                   >
-                    <Trash2 size={16} className="inline-block mr-2" /> Disconnect
+                    <Trash2 size={16} className="inline-block mr-2" />{" "}
+                    Disconnect
                   </button>
                 </div>
               </div>
@@ -282,7 +362,11 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
           ))}
         </ul>
       ) : (
-        <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>You are not connected to any agents yet.</p>
+        <p
+          className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+        >
+          You are not connected to any agents yet.
+        </p>
       )}
     </div>
   );
@@ -290,7 +374,10 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
   const renderFindAgentsTab = () => (
     <div className="space-y-4">
       <div className="relative mb-4">
-        <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`} />
+        <Search
+          size={20}
+          className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+        />
         <input
           type="text"
           placeholder="Search agents by name, email, or agency..."
@@ -302,8 +389,8 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
           <button
             type="button"
             onClick={() => {
-              setAgentSearchTerm('');
-              fetchAgents(1, '', false);
+              setAgentSearchTerm("");
+              fetchAgents(1, "", false);
             }}
             className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}
           >
@@ -334,30 +421,45 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
                 className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-green-500"
               />
             ) : (
-              <User size={64} className={`mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
+              <User
+                size={64}
+                className={`mb-4 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              />
             )}
-            <h3 className={`text-xl font-bold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
+            <h3
+              className={`text-xl font-bold ${darkMode ? "text-gray-100" : "text-gray-800"}`}
+            >
               {selectedAgentForConnection.full_name}
             </h3>
-            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{selectedAgentForConnection.email}</p>
+            <p
+              className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            >
+              {selectedAgentForConnection.email}
+            </p>
             {selectedAgentForConnection.phone && (
-              <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                <Phone size={14} className="inline-block mr-1" /> {selectedAgentForConnection.phone}
+              <p
+                className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                <Phone size={14} className="inline-block mr-1" />{" "}
+                {selectedAgentForConnection.phone}
               </p>
             )}
             {selectedAgentForConnection.agency_name && (
-              <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                <Landmark size={14} className="inline-block mr-1" /> {selectedAgentForConnection.agency_name}
+              <p
+                className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                <Landmark size={14} className="inline-block mr-1" />{" "}
+                {selectedAgentForConnection.agency_name}
               </p>
             )}
             {selectedAgentForConnection.bio && (
-              <p className={`text-sm italic mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+              <p
+                className={`text-sm italic mt-2 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
                 "{selectedAgentForConnection.bio}"
               </p>
             )}
-            <div className="mt-4 w-full">
-              {renderConnectionButton()}
-            </div>
+            <div className="mt-4 w-full">{renderConnectionButton()}</div>
           </Card>
         </motion.div>
       ) : (
@@ -367,7 +469,7 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
           className="space-y-3 max-h-[40vh] overflow-y-auto pr-2" // Added pr-2 for scrollbar spacing
         >
           {filteredAgents.length > 0 ? (
-            filteredAgents.map(agent => (
+            filteredAgents.map((agent) => (
               <li
                 key={agent.user_id}
                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200
@@ -382,22 +484,32 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <User size={24} className={`${darkMode ? "text-gray-400" : "text-gray-600"}`} />
+                    <User
+                      size={24}
+                      className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                    />
                   )}
                   <div>
-                    <p className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}>
+                    <p
+                      className={`font-semibold ${darkMode ? "text-gray-100" : "text-gray-800"}`}
+                    >
                       {agent.full_name}
                     </p>
                     {agent.agency_name && (
-                      <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      <p
+                        className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                      >
                         {agent.agency_name}
                       </p>
                     )}
                   </div>
                 </div>
-                {agent.connection_status === 'pending_sent' ? (
+                {agent.connection_status === "pending_sent" ? (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleCancelConnectionRequest(agent.user_id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelConnectionRequest(agent.user_id);
+                    }}
                     className="flex items-center text-sm text-yellow-500 hover:text-yellow-600"
                     title="Cancel Pending Request"
                   >
@@ -415,24 +527,37 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
               </li>
             ))
           ) : (
-            <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>No agents found matching your search.</p>
+            <p
+              className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            >
+              No agents found matching your search.
+            </p>
           )}
-          {isLoading && <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Loading more agents...</p>}
+          {isLoading && (
+            <p
+              className={`text-center ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            >
+              Loading more agents...
+            </p>
+          )}
           {!hasMore && !isLoading && filteredAgents.length > 0 && (
-            <p className={`text-center text-sm ${darkMode ? "text-gray-500" : "text-gray-400"}`}>End of list.</p>
+            <p
+              className={`text-center text-sm ${darkMode ? "text-gray-500" : "text-gray-400"}`}
+            >
+              End of list.
+            </p>
           )}
         </div>
       )}
     </div>
   );
 
-
   if (!isOpen) return null;
 
   const modalVariants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.9 }
+    exit: { opacity: 0, scale: 0.9 },
   };
 
   return (
@@ -447,7 +572,7 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
       >
         <motion.div
           className={`relative ${darkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"} rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col`}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           initial={{ y: "-100vh", opacity: 0 }}
           animate={{ y: "0", opacity: 1 }}
           exit={{ y: "100vh", opacity: 0 }}
@@ -459,28 +584,32 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
           >
             <X size={20} />
           </button>
-          <h2 className={`text-2xl font-bold mb-6 text-center ${darkMode ? "text-green-400" : "text-green-700"}`}>
+          <h2
+            className={`text-2xl font-bold mb-6 text-center ${darkMode ? "text-green-400" : "text-green-700"}`}
+          >
             Manage Agents
           </h2>
 
           {/* Tabs */}
-          <div className={`flex border-b ${darkMode ? "border-gray-700" : "border-gray-200"} mb-4`}>
+          <div
+            className={`flex border-b ${darkMode ? "border-gray-700" : "border-gray-200"} mb-4`}
+          >
             <button
-              className={`flex-1 py-2 text-center font-medium ${activeTab === 'connected' ? `${darkMode ? "text-green-400 border-green-400" : "text-green-700 border-green-700"} border-b-2` : `${darkMode ? "text-gray-400" : "text-gray-600"} hover:${darkMode ? "text-gray-300" : "text-gray-800"}`}`}
+              className={`flex-1 py-2 text-center font-medium ${activeTab === "connected" ? `${darkMode ? "text-green-400 border-green-400" : "text-green-700 border-green-700"} border-b-2` : `${darkMode ? "text-gray-400" : "text-gray-600"} hover:${darkMode ? "text-gray-300" : "text-gray-800"}`}`}
               onClick={() => {
-                setActiveTab('connected');
+                setActiveTab("connected");
                 setSelectedAgentForConnection(null); // Clear selection when switching tabs
-                setAgentSearchTerm(''); // Clear search when switching tabs
+                setAgentSearchTerm(""); // Clear search when switching tabs
               }}
             >
               <Users size={18} className="inline-block mr-2" /> Connected Agents
             </button>
             <button
-              className={`flex-1 py-2 text-center font-medium ${activeTab === 'find' ? `${darkMode ? "text-green-400 border-green-400" : "text-green-700 border-green-700"} border-b-2` : `${darkMode ? "text-gray-400" : "text-gray-600"} hover:${darkMode ? "text-gray-300" : "text-gray-800"}`}`}
+              className={`flex-1 py-2 text-center font-medium ${activeTab === "find" ? `${darkMode ? "text-green-400 border-green-400" : "text-green-700 border-green-700"} border-b-2` : `${darkMode ? "text-gray-400" : "text-gray-600"} hover:${darkMode ? "text-gray-300" : "text-gray-800"}`}`}
               onClick={() => {
-                setActiveTab('find');
+                setActiveTab("find");
                 setSelectedAgentForConnection(null); // Clear selection when switching tabs
-                setAgentSearchTerm(''); // Clear search when switching tabs
+                setAgentSearchTerm(""); // Clear search when switching tabs
               }}
             >
               <Search size={18} className="inline-block mr-2" /> Find Agents
@@ -489,9 +618,10 @@ const FindAgentModal = ({ isOpen, onClose, connectedAgents: propConnectedAgents,
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === 'connected' ? renderConnectedAgentsTab() : renderFindAgentsTab()}
+            {activeTab === "connected"
+              ? renderConnectedAgentsTab()
+              : renderFindAgentsTab()}
           </div>
-
         </motion.div>
       </motion.div>
     </AnimatePresence>

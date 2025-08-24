@@ -1,10 +1,16 @@
-import React, { useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Loader, Upload, Trash2, ImageOff } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell';
-import { useSidebarState } from '../../hooks/useSidebarState'; // Correct path
+import React, { useRef } from "react";
+import { motion } from "framer-motion";
+import { Loader, Upload, Trash2, ImageOff } from "lucide-react";
+import { useTheme } from "../../layouts/AppShell";
+import { useSidebarState } from "../../hooks/useSidebarState"; // Correct path
 
-function DisplayPicture({ userInfo, uploadingPicture, deletingPicture, uploadProfilePicture, handleDeleteProfilePicture }) {
+function DisplayPicture({
+  userInfo,
+  uploadingPicture,
+  deletingPicture,
+  uploadProfilePicture,
+  handleDeleteProfilePicture,
+}) {
   const { darkMode } = useTheme();
   const { isMobile, isCollapsed } = useSidebarState(); // Use the hook to get sidebar state
   const fileInputRef = useRef(null);
@@ -14,7 +20,9 @@ function DisplayPicture({ userInfo, uploadingPicture, deletingPicture, uploadPro
     if (!name) return "";
     const names = name.trim().split(" ");
     if (names.length === 1) return names[0][0]?.toUpperCase() || "";
-    return ((names[0]?.[0] || "") + (names[names.length - 1]?.[0] || "")).toUpperCase();
+    return (
+      (names[0]?.[0] || "") + (names[names.length - 1]?.[0] || "")
+    ).toUpperCase();
   };
 
   const handleFileChange = (event) => {
@@ -31,16 +39,22 @@ function DisplayPicture({ userInfo, uploadingPicture, deletingPicture, uploadPro
           src={userInfo.profile_picture_url}
           alt="Profile"
           className={`rounded-full object-cover border-2 shadow-md
-            ${(isMobile || !isCollapsed) ? "w-20 h-20" : "w-16 h-16 mx-auto"} ${darkMode ? "border-gray-700" : "border-white"}`}
+            ${isMobile || !isCollapsed ? "w-20 h-20" : "w-16 h-16 mx-auto"} ${darkMode ? "border-gray-700" : "border-white"}`}
           onError={(e) => {
             e.target.onerror = null;
             e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo.full_name)}&background=${darkMode ? "2D3748" : "10B981"}&color=fff&size=128`;
           }}
         />
       ) : (
-        <div className={`rounded-full object-cover border-2 shadow-md flex items-center justify-center
-          ${(isMobile || !isCollapsed) ? "w-20 h-20 text-4xl" : "w-16 h-16 mx-auto text-3xl"} ${darkMode ? "border-gray-700 bg-gray-600 text-gray-300" : "border-white bg-green-100 text-green-700"}`}>
-          {userInfo.full_name ? getInitials(userInfo.full_name) : <ImageOff size={40} />}
+        <div
+          className={`rounded-full object-cover border-2 shadow-md flex items-center justify-center
+          ${isMobile || !isCollapsed ? "w-20 h-20 text-4xl" : "w-16 h-16 mx-auto text-3xl"} ${darkMode ? "border-gray-700 bg-gray-600 text-gray-300" : "border-white bg-green-100 text-green-700"}`}
+        >
+          {userInfo.full_name ? (
+            getInitials(userInfo.full_name)
+          ) : (
+            <ImageOff size={40} />
+          )}
         </div>
       )}
 
@@ -62,7 +76,7 @@ function DisplayPicture({ userInfo, uploadingPicture, deletingPicture, uploadPro
             title="Upload New Picture"
           >
             {uploadingPicture ? (
-               <Loader size={20} className="animate-spin" />
+              <Loader size={20} className="animate-spin" />
             ) : (
               <Upload size={20} />
             )}

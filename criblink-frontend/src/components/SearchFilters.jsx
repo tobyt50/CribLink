@@ -1,12 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
-import axios from 'axios';
-import API_BASE_URL from '../config';
+import axios from "axios";
+import API_BASE_URL from "../config";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react"; // Import Search icon
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
 
 // Reusable Dropdown Component (embedded directly here for self-containment)
-const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
+const Dropdown = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { darkMode } = useTheme(); // Use the dark mode context within the dropdown
@@ -47,7 +53,12 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         staggerChildren: 0.02,
       },
     },
-    exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
+    exit: {
+      opacity: 0,
+      y: -10,
+      scale: 0.95,
+      transition: { duration: 0.15, ease: "easeOut" },
+    },
   };
 
   const itemVariants = {
@@ -55,7 +66,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     visible: { y: 0, opacity: 1 },
   };
 
-  const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
+  const selectedOptionLabel =
+    options.find((option) => option.value === value)?.label || placeholder;
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -64,9 +76,10 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         onClick={() => setIsOpen(!isOpen)}
         // Unified styling for the dropdown button to match input fields
         className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-          ${darkMode 
-            ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400" 
-            : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
+          ${
+            darkMode
+              ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
+              : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
           }`}
       >
         <span>{selectedOptionLabel}</span>
@@ -74,7 +87,9 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
+          <ChevronDown
+            className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+          />
         </motion.div>
       </button>
 
@@ -110,7 +125,6 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
-
 function SearchFilters({ filters, setFilters }) {
   const { darkMode } = useTheme(); // Use the dark mode context
   const [purchaseCategoryOptions, setPurchaseCategoryOptions] = useState([]);
@@ -122,7 +136,7 @@ function SearchFilters({ filters, setFilters }) {
     "For rent": "Rent",
     "For lease": "Lease",
     "For short let": "Short Let",
-    "For long let": "Long Let"
+    "For long let": "Long Let",
   };
 
   useEffect(() => {
@@ -131,16 +145,16 @@ function SearchFilters({ filters, setFilters }) {
         // This API call might not be strictly necessary if categoryMap is static
         // However, keeping it for consistency with original PurchaseCategoryFilter.js
         const response = await axios.get(`${API_BASE_URL}/listings/categories`);
-        const options = Object.keys(categoryMap).map(label => ({
+        const options = Object.keys(categoryMap).map((label) => ({
           value: categoryMap[label],
-          label: label
+          label: label,
         }));
         setPurchaseCategoryOptions(options);
       } catch (error) {
         console.error("Error fetching purchase categories:", error);
-        const options = Object.keys(categoryMap).map(label => ({
+        const options = Object.keys(categoryMap).map((label) => ({
           value: categoryMap[label],
-          label: label
+          label: label,
         }));
         setPurchaseCategoryOptions(options); // Changed to setPurchaseCategoryOptions
       }
@@ -148,7 +162,6 @@ function SearchFilters({ filters, setFilters }) {
 
     fetchCategories();
   }, []);
-
 
   const resetFilters = () => {
     setFilters({
@@ -177,31 +190,45 @@ function SearchFilters({ filters, setFilters }) {
 
   const bedroomOptions = [
     { value: "", label: "Any Bedrooms" },
-    ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bedroom(s)` })),
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Bedroom(s)`,
+    })),
   ];
 
   const bathroomOptions = [
     { value: "", label: "Any Bathrooms" },
-    ...[1, 2, 3, 4, 5].map((num) => ({ value: String(num), label: `${num} Bathroom(s)` })),
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Bathroom(s)`,
+    })),
   ];
 
-
   return (
-    <div className={`border rounded-3xl p-4 mb-6 shadow-lg ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white"}`}>
+    <div
+      className={`border rounded-3xl p-4 mb-6 shadow-lg ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white"}`}
+    >
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
         <div className="relative">
-          <Search size={20} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`} />
+          <Search
+            size={20}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-400" : "text-gray-400"}`}
+          />
           <input
             type="text"
             placeholder="Enter location or state"
             value={filters.location}
-            onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-            className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
-              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            onChange={(e) =>
+              setFilters({ ...filters, location: e.target.value })
+            }
+            className={`w-full py-2 pl-10 pr-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+              // Added transition-all duration-200
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             }`}
           />
         </div>
-
 
         <Dropdown
           placeholder="Select Property Type"
@@ -232,7 +259,9 @@ function SearchFilters({ filters, setFilters }) {
           placeholder="Select Purchase Category"
           options={purchaseCategoryOptions}
           value={filters.purchaseCategory}
-          onChange={(value) => setFilters({ ...filters, purchaseCategory: value })}
+          onChange={(value) =>
+            setFilters({ ...filters, purchaseCategory: value })
+          }
           className="w-full" // Apply width class to the Dropdown container
         />
 
@@ -241,18 +270,28 @@ function SearchFilters({ filters, setFilters }) {
             type="number"
             placeholder="Min Price (₦)"
             value={filters.minPrice}
-            onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
-              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            onChange={(e) =>
+              setFilters({ ...filters, minPrice: e.target.value })
+            }
+            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+              // Added transition-all duration-200
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             }`}
           />
           <input
             type="number"
             placeholder="Max Price (₦)"
             value={filters.maxPrice}
-            onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${ // Added transition-all duration-200
-              darkMode ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            onChange={(e) =>
+              setFilters({ ...filters, maxPrice: e.target.value })
+            }
+            className={`w-full sm:w-1/2 py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+              // Added transition-all duration-200
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
             }`}
           />
         </div>
@@ -262,7 +301,9 @@ function SearchFilters({ filters, setFilters }) {
         <button
           onClick={resetFilters}
           className={`px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${
-            darkMode ? "bg-gray-700 hover:bg-gray-600 text-gray-200 focus:ring-green-400" : "bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-green-600"
+            darkMode
+              ? "bg-gray-700 hover:bg-gray-600 text-gray-200 focus:ring-green-400"
+              : "bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-green-600"
           }`}
         >
           Reset Filters

@@ -1,5 +1,5 @@
-const pool = require('../db'); // Assuming your database connection pool is here
-const logActivity = require('../utils/logActivity'); // For logging activities
+const pool = require("../db"); // Assuming your database connection pool is here
+const logActivity = require("../utils/logActivity"); // For logging activities
 
 /**
  * @desc Get count of agents affiliated with a specific agency
@@ -7,29 +7,41 @@ const logActivity = require('../utils/logActivity'); // For logging activities
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyAgentCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
-
-        const result = await pool.query(
-            `SELECT COUNT(user_id) FROM users WHERE agency_id = $1 AND role = 'agent'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency agent count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency agent count.', error: err.message });
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
     }
+
+    const result = await pool.query(
+      `SELECT COUNT(user_id) FROM users WHERE agency_id = $1 AND role = 'agent'`,
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency agent count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency agent count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -38,31 +50,42 @@ exports.getAgencyAgentCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyAdminCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
-
-        const result = await pool.query(
-            `SELECT COUNT(user_id) FROM users WHERE agency_id = $1 AND role = 'agency_admin'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency admin count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency admin count.', error: err.message });
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
     }
-};
 
+    const result = await pool.query(
+      `SELECT COUNT(user_id) FROM users WHERE agency_id = $1 AND role = 'agency_admin'`,
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency admin count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency admin count.",
+        error: err.message,
+      });
+  }
+};
 
 /**
  * @desc Get count of clients who have an accepted relationship with agents from a specific agency
@@ -70,43 +93,55 @@ exports.getAgencyAdminCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyClientCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        // Get all agent_ids belonging to this agency with an 'accepted' membership status
-        const agencyAgentsResult = await pool.query(
-            `SELECT user_id FROM users WHERE agency_id = $1 AND role = 'agent'`,
-            [agencyId]
-        );
-        const agentIds = agencyAgentsResult.rows.map(row => row.user_id);
+    // Get all agent_ids belonging to this agency with an 'accepted' membership status
+    const agencyAgentsResult = await pool.query(
+      `SELECT user_id FROM users WHERE agency_id = $1 AND role = 'agent'`,
+      [agencyId],
+    );
+    const agentIds = agencyAgentsResult.rows.map((row) => row.user_id);
 
-        if (agentIds.length === 0) {
-            return res.status(200).json({ count: 0 });
-        }
+    if (agentIds.length === 0) {
+      return res.status(200).json({ count: 0 });
+    }
 
-        // Count distinct clients who have an accepted relationship with any of these agents
-        const result = await pool.query(
-            `SELECT COUNT(DISTINCT client_id)
+    // Count distinct clients who have an accepted relationship with any of these agents
+    const result = await pool.query(
+      `SELECT COUNT(DISTINCT client_id)
              FROM agent_clients
              WHERE agent_id = ANY($1::int[]) AND request_status = 'accepted'`,
-            [agentIds]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency client count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency client count.', error: err.message });
-    }
+      [agentIds],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency client count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency client count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -115,31 +150,43 @@ exports.getAgencyClientCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyListingsCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        const result = await pool.query(
-            `SELECT COUNT(pl.property_id)
+    const result = await pool.query(
+      `SELECT COUNT(pl.property_id)
              FROM property_listings pl
              WHERE pl.agency_id = $1`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency listings count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency listings count.', error: err.message });
-    }
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency listings count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency listings count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -148,31 +195,43 @@ exports.getAgencyListingsCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyPendingApprovalsCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        const result = await pool.query(
-            `SELECT COUNT(pl.property_id)
+    const result = await pool.query(
+      `SELECT COUNT(pl.property_id)
              FROM property_listings pl
              WHERE pl.agency_id = $1 AND TRIM(LOWER(pl.status)) = 'pending'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency pending listings count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency pending listings count.', error: err.message });
-    }
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency pending listings count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency pending listings count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -181,30 +240,42 @@ exports.getAgencyPendingApprovalsCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyPendingAgentRequestsCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
-
-        // Corrected table name: agency_members
-        const result = await pool.query(
-            `SELECT COUNT(agency_member_id) FROM agency_members WHERE agency_id = $1 AND request_status = 'pending'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency pending agent requests count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency pending agent requests count.', error: err.message });
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
     }
+
+    // Corrected table name: agency_members
+    const result = await pool.query(
+      `SELECT COUNT(agency_member_id) FROM agency_members WHERE agency_id = $1 AND request_status = 'pending'`,
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency pending agent requests count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency pending agent requests count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -213,30 +284,42 @@ exports.getAgencyPendingAgentRequestsCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyUnderOfferListingsCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        const result = await pool.query(
-            `SELECT COUNT(pl.property_id)
+    const result = await pool.query(
+      `SELECT COUNT(pl.property_id)
              FROM property_listings pl
              WHERE pl.agency_id = $1 AND TRIM(LOWER(pl.status)) = 'under offer'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency under offer listings count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency under offer listings count.', error: err.message });
-    }
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency under offer listings count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency under offer listings count.",
+        error: err.message,
+      });
+  }
 };
 
 /**
@@ -245,30 +328,42 @@ exports.getAgencyUnderOfferListingsCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencySoldListingsCount = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view stats for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view stats for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        const result = await pool.query(
-            `SELECT COUNT(pl.property_id)
+    const result = await pool.query(
+      `SELECT COUNT(pl.property_id)
              FROM property_listings pl
              WHERE pl.agency_id = $1 AND TRIM(LOWER(pl.status)) = 'sold'`,
-            [agencyId]
-        );
-        res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
-    } catch (err) {
-        console.error('Error fetching agency sold listings count:', err);
-        res.status(500).json({ message: 'Failed to fetch agency sold listings count.', error: err.message });
-    }
+      [agencyId],
+    );
+    res.status(200).json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error("Error fetching agency sold listings count:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency sold listings count.",
+        error: err.message,
+      });
+  }
 };
 
 // Removed getAgencyFeaturedListingsCount function
@@ -279,31 +374,42 @@ exports.getAgencySoldListingsCount = async (req, res) => {
  * @access Private (Agency Admin or Super Admin)
  */
 exports.getAgencyRecentActivity = async (req, res) => {
-    const { agencyId } = req.params;
-    const currentUserId = req.user.user_id;
-    const currentUserRole = req.user.role;
+  const { agencyId } = req.params;
+  const currentUserId = req.user.user_id;
+  const currentUserRole = req.user.role;
 
-    try {
-        // Authorization: Must be an agency admin of this agency or a super admin
-        if (currentUserRole === 'agency_admin') {
-            if (req.user.agency_id !== parseInt(agencyId)) {
-                return res.status(403).json({ message: 'Forbidden: You are not authorized to view activity for this agency.' });
-            }
-        } else if (currentUserRole !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
-        }
+  try {
+    // Authorization: Must be an agency admin of this agency or a super admin
+    if (currentUserRole === "agency_admin") {
+      if (req.user.agency_id !== parseInt(agencyId)) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Forbidden: You are not authorized to view activity for this agency.",
+          });
+      }
+    } else if (currentUserRole !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Insufficient permissions." });
+    }
 
-        // Get all user_ids (agents and admins) belonging to this agency
-        const agencyMembersResult = await pool.query(
-            `SELECT user_id, role FROM users WHERE agency_id = $1 AND (role = 'agent' OR role = 'agency_admin')`,
-            [agencyId]
-        );
-        const agentIds = agencyMembersResult.rows.filter(m => m.role === 'agent').map(row => row.user_id);
-        const adminIds = agencyMembersResult.rows.filter(m => m.role === 'agency_admin').map(row => row.user_id);
+    // Get all user_ids (agents and admins) belonging to this agency
+    const agencyMembersResult = await pool.query(
+      `SELECT user_id, role FROM users WHERE agency_id = $1 AND (role = 'agent' OR role = 'agency_admin')`,
+      [agencyId],
+    );
+    const agentIds = agencyMembersResult.rows
+      .filter((m) => m.role === "agent")
+      .map((row) => row.user_id);
+    const adminIds = agencyMembersResult.rows
+      .filter((m) => m.role === "agency_admin")
+      .map((row) => row.user_id);
 
-
-        // Fetch recent inquiries related to agents in this agency
-        const inquiries = await pool.query(`
+    // Fetch recent inquiries related to agents in this agency
+    const inquiries = await pool.query(
+      `
             SELECT
                 'inquiry' AS type,
                 i.message_content AS message,
@@ -315,54 +421,67 @@ exports.getAgencyRecentActivity = async (req, res) => {
             WHERE i.agent_id = ANY($1::int[]) -- Filter by agents in this agency
             ORDER BY i.created_at DESC
             LIMIT 5
-        `, [agentIds.length > 0 ? agentIds : [0]]); // Pass [0] if no agents to prevent error
+        `,
+      [agentIds.length > 0 ? agentIds : [0]],
+    ); // Pass [0] if no agents to prevent error
 
-        // Fetch recent agent joins for this agency
-        const newAgents = await pool.query(`
+    // Fetch recent agent joins for this agency
+    const newAgents = await pool.query(
+      `
             SELECT 'agent_join' AS type, full_name, 
                    COALESCE(TO_CHAR(date_joined, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), NOW()::text) AS timestamp
             FROM users
             WHERE agency_id = $1 AND role = 'agent'
             ORDER BY date_joined DESC
             LIMIT 5
-        `, [agencyId]);
+        `,
+      [agencyId],
+    );
 
-        // Fetch recent listings created by agents/admins in this agency
-        const newListings = await pool.query(`
+    // Fetch recent listings created by agents/admins in this agency
+    const newListings = await pool.query(
+      `
             SELECT 'listing' AS type, pl.title AS message, 
                    COALESCE(TO_CHAR(pl.date_listed, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), NOW()::text) AS timestamp
             FROM property_listings pl
             WHERE pl.agency_id = $1
             ORDER BY pl.date_listed DESC
             LIMIT 5
-        `, [agencyId]);
+        `,
+      [agencyId],
+    );
 
-        // Combine all activities and sort by timestamp
-        const allActivities = [
-            ...inquiries.rows.map(row => ({
-                type: 'inquiry',
-                message: `New inquiry from ${row.client_name}: "${row.message}" (Status: ${row.status})`,
-                timestamp: row.created_at
-            })),
-            ...newAgents.rows.map(row => ({
-                type: 'agent_join',
-                message: `New Agent joined: ${row.full_name}`,
-                timestamp: row.timestamp
-            })),
-            ...newListings.rows.map(row => ({
-                type: 'listing',
-                message: `New Listing added: "${row.message}"`,
-                timestamp: row.timestamp // Use the aliased timestamp from the query
-            }))
-        ];
+    // Combine all activities and sort by timestamp
+    const allActivities = [
+      ...inquiries.rows.map((row) => ({
+        type: "inquiry",
+        message: `New inquiry from ${row.client_name}: "${row.message}" (Status: ${row.status})`,
+        timestamp: row.created_at,
+      })),
+      ...newAgents.rows.map((row) => ({
+        type: "agent_join",
+        message: `New Agent joined: ${row.full_name}`,
+        timestamp: row.timestamp,
+      })),
+      ...newListings.rows.map((row) => ({
+        type: "listing",
+        message: `New Listing added: "${row.message}"`,
+        timestamp: row.timestamp, // Use the aliased timestamp from the query
+      })),
+    ];
 
-        const sortedActivities = allActivities
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 10); // Limit to top 10 recent activities
+    const sortedActivities = allActivities
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 10); // Limit to top 10 recent activities
 
-        res.status(200).json({ activities: sortedActivities });
-    } catch (err) {
-        console.error('Error fetching agency recent activity:', err);
-        res.status(500).json({ message: 'Failed to fetch agency recent activity.', error: err.message });
-    }
+    res.status(200).json({ activities: sortedActivities });
+  } catch (err) {
+    console.error("Error fetching agency recent activity:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch agency recent activity.",
+        error: err.message,
+      });
+  }
 };

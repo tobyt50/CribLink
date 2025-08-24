@@ -20,7 +20,14 @@ export const ConfirmDialogProvider = ({ children }) => {
     confirmLabel = "Yes",
     cancelLabel = "Cancel",
   }) => {
-    setState({ open: true, title, message, confirmLabel, cancelLabel, onConfirm });
+    setState({
+      open: true,
+      title,
+      message,
+      confirmLabel,
+      cancelLabel,
+      onConfirm,
+    });
   };
 
   const closeConfirm = () => setState((prev) => ({ ...prev, open: false }));
@@ -31,7 +38,9 @@ export const ConfirmDialogProvider = ({ children }) => {
   };
 
   return (
-    <ConfirmDialogContext.Provider value={{ showConfirm, closeConfirm, confirm, ...state }}>
+    <ConfirmDialogContext.Provider
+      value={{ showConfirm, closeConfirm, confirm, ...state }}
+    >
       {children}
     </ConfirmDialogContext.Provider>
   );

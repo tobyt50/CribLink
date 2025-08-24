@@ -3,15 +3,37 @@ import { useTheme } from "../layouts/AppShell";
 import { ArrowDown, ArrowUp, SlidersHorizontal, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const PROPERTY_TYPES = ["Self-Contain", "Bungalow", "Duplex", "Land", "Apartment", "Penthouse", "Detached House", "Semi-Detached House", "Condo", "Commercial", "Other"];
+const PROPERTY_TYPES = [
+  "Self-Contain",
+  "Bungalow",
+  "Duplex",
+  "Land",
+  "Apartment",
+  "Penthouse",
+  "Detached House",
+  "Semi-Detached House",
+  "Condo",
+  "Commercial",
+  "Other",
+];
 const BED_BATH_COUNTS = ["1", "2", "3", "4", "5+"];
 const PURCHASE_CATEGORIES = ["Rent", "Sale", "Lease", "Short let", "Long let"];
 
-function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm, setSearchTerm, handleSearch }) {
+function HomeSearchFilters({
+  filters,
+  setFilters,
+  sortBy,
+  setSortBy,
+  searchTerm,
+  setSearchTerm,
+  handleSearch,
+}) {
   const { darkMode } = useTheme();
 
   const [minPriceValue, setMinPriceValue] = useState(filters.minPrice || 0);
-  const [maxPriceValue, setMaxPriceValue] = useState(filters.maxPrice || 1000000000);
+  const [maxPriceValue, setMaxPriceValue] = useState(
+    filters.maxPrice || 1000000000,
+  );
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // Controls visibility of the main filter dropdown
   const [showMoreAdvancedFilters, setShowMoreAdvancedFilters] = useState(false); // Controls visibility of deeper advanced filters
   const [hasEditedFilters, setHasEditedFilters] = useState(false); // New state to track if filters have been edited
@@ -21,20 +43,29 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
   // Sync local slider state with external filters prop and manage filter visibility
   useEffect(() => {
     setMinPriceValue(filters.minPrice === "" ? 0 : Number(filters.minPrice));
-    setMaxPriceValue(filters.maxPrice === "" ? 1000000000 : Number(filters.maxPrice));
+    setMaxPriceValue(
+      filters.maxPrice === "" ? 1000000000 : Number(filters.maxPrice),
+    );
 
     const hasActiveDeepAdvancedFilter =
       (filters.propertyType !== "" && filters.propertyType !== undefined) ||
       (filters.bedrooms !== "" && filters.bedrooms !== undefined) ||
       (filters.bathrooms !== "" && filters.bathrooms !== undefined) ||
-      (filters.minPrice !== 0 && filters.minPrice !== "" && filters.minPrice !== undefined) ||
-      (filters.maxPrice !== 1000000000 && filters.maxPrice !== "" && filters.maxPrice !== undefined);
+      (filters.minPrice !== 0 &&
+        filters.minPrice !== "" &&
+        filters.minPrice !== undefined) ||
+      (filters.maxPrice !== 1000000000 &&
+        filters.maxPrice !== "" &&
+        filters.maxPrice !== undefined);
 
     // If any deep advanced filter is active, ensure both main and deep sections are open
     if (hasActiveDeepAdvancedFilter) {
       setShowAdvancedFilters(true);
       setShowMoreAdvancedFilters(true);
-    } else if (filters.purchaseCategory !== "" && filters.purchaseCategory !== undefined) {
+    } else if (
+      filters.purchaseCategory !== "" &&
+      filters.purchaseCategory !== undefined
+    ) {
       // If only purchase category is active, show only the initial filters (sort and category)
       setShowAdvancedFilters(true);
       setShowMoreAdvancedFilters(false); // Ensure deep filters are hidden if only category is active
@@ -52,7 +83,7 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
     filters.propertyType,
     filters.bedrooms,
     filters.bathrooms,
-    filters.purchaseCategory
+    filters.purchaseCategory,
   ]);
 
   // Effect to manage showMoreAdvancedFilters based on hasEditedFilters when the main dropdown opens
@@ -67,8 +98,12 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
           (filters.propertyType !== "" && filters.propertyType !== undefined) ||
           (filters.bedrooms !== "" && filters.bedrooms !== undefined) ||
           (filters.bathrooms !== "" && filters.bathrooms !== undefined) ||
-          (filters.minPrice !== 0 && filters.minPrice !== "" && filters.minPrice !== undefined) ||
-          (filters.maxPrice !== 1000000000 && filters.maxPrice !== "" && filters.maxPrice !== undefined);
+          (filters.minPrice !== 0 &&
+            filters.minPrice !== "" &&
+            filters.minPrice !== undefined) ||
+          (filters.maxPrice !== 1000000000 &&
+            filters.maxPrice !== "" &&
+            filters.maxPrice !== undefined);
 
         if (!hasActiveDeepAdvancedFilter) {
           setShowMoreAdvancedFilters(false);
@@ -96,52 +131,61 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleFilterChange = useCallback((filterName, value) => {
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [filterName]: prevFilters[filterName] === value ? "" : value,
-    }));
-    setHasEditedFilters(true); // Mark as edited
-  }, [setFilters]);
-
-  const handlePriceChange = useCallback((e, type) => {
-    const value = Number(e.target.value);
-    if (type === "min") {
-      setMinPriceValue(value);
+  const handleFilterChange = useCallback(
+    (filterName, value) => {
       setFilters((prevFilters) => ({
         ...prevFilters,
-        minPrice: value,
+        [filterName]: prevFilters[filterName] === value ? "" : value,
       }));
-    } else {
-      setMaxPriceValue(value);
-      setFilters((prevFilters) => ({
-        ...prevFilters,
-        maxPrice: value,
-      }));
-    }
-    setHasEditedFilters(true); // Mark as edited
-  }, [setFilters]);
+      setHasEditedFilters(true); // Mark as edited
+    },
+    [setFilters],
+  );
 
-  const handleSortToggle = useCallback((type) => {
-    setSortBy(prevSortBy => {
-      let newSortBy = prevSortBy;
-      if (type === 'date') {
-        if (prevSortBy === 'date_listed_desc') {
-          newSortBy = 'date_listed_asc';
-        } else {
-          newSortBy = 'date_listed_desc';
-        }
-      } else if (type === 'price') {
-        if (prevSortBy === 'price_desc') {
-          newSortBy = 'price_asc';
-        } else {
-          newSortBy = 'price_desc';
-        }
+  const handlePriceChange = useCallback(
+    (e, type) => {
+      const value = Number(e.target.value);
+      if (type === "min") {
+        setMinPriceValue(value);
+        setFilters((prevFilters) => ({
+          ...prevFilters,
+          minPrice: value,
+        }));
+      } else {
+        setMaxPriceValue(value);
+        setFilters((prevFilters) => ({
+          ...prevFilters,
+          maxPrice: value,
+        }));
       }
       setHasEditedFilters(true); // Mark as edited
-      return newSortBy;
-    });
-  }, [setSortBy]);
+    },
+    [setFilters],
+  );
+
+  const handleSortToggle = useCallback(
+    (type) => {
+      setSortBy((prevSortBy) => {
+        let newSortBy = prevSortBy;
+        if (type === "date") {
+          if (prevSortBy === "date_listed_desc") {
+            newSortBy = "date_listed_asc";
+          } else {
+            newSortBy = "date_listed_desc";
+          }
+        } else if (type === "price") {
+          if (prevSortBy === "price_desc") {
+            newSortBy = "price_asc";
+          } else {
+            newSortBy = "price_desc";
+          }
+        }
+        setHasEditedFilters(true); // Mark as edited
+        return newSortBy;
+      });
+    },
+    [setSortBy],
+  );
 
   const handleReset = () => {
     setFilters({
@@ -161,39 +205,68 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
     setShowMoreAdvancedFilters(false);
   };
 
-  const getButtonClass = useCallback((isActive) => {
-    return `px-3 py-1.5 rounded-2xl border text-sm transition-all duration-200 whitespace-nowrap flex items-center gap-1 ${
-      isActive
-        ? darkMode
-          ? "bg-green-500 text-white border-green-500 shadow-sm" // Changed shadow-lg to shadow-sm
-          : "bg-green-600 text-white border-green-600 shadow-sm" // Changed shadow-lg to shadow-sm
-        : darkMode
-          ? "text-gray-300 border-gray-600 hover:bg-gray-700 shadow-sm" // Changed shadow-md to shadow-sm
-          : "text-gray-700 border-gray-300 hover:bg-gray-100 shadow-sm" // Changed shadow-md to shadow-sm
-    }`;
-  }, [darkMode]);
+  const getButtonClass = useCallback(
+    (isActive) => {
+      return `px-3 py-1.5 rounded-2xl border text-sm transition-all duration-200 whitespace-nowrap flex items-center gap-1 ${
+        isActive
+          ? darkMode
+            ? "bg-green-500 text-white border-green-500 shadow-sm" // Changed shadow-lg to shadow-sm
+            : "bg-green-600 text-white border-green-600 shadow-sm" // Changed shadow-lg to shadow-sm
+          : darkMode
+            ? "text-gray-300 border-gray-600 hover:bg-gray-700 shadow-sm" // Changed shadow-md to shadow-sm
+            : "text-gray-700 border-gray-300 hover:bg-gray-100 shadow-sm" // Changed shadow-md to shadow-sm
+      }`;
+    },
+    [darkMode],
+  );
 
-  const getSortTextAndIcon = useCallback((sortType) => {
-    if (sortType === 'date') {
-      if (sortBy === 'date_listed_desc') {
-        return <>Latest<ArrowDown size={14} /></>;
-      } else {
-        return <>Oldest<ArrowUp size={14} /></>;
+  const getSortTextAndIcon = useCallback(
+    (sortType) => {
+      if (sortType === "date") {
+        if (sortBy === "date_listed_desc") {
+          return (
+            <>
+              Latest
+              <ArrowDown size={14} />
+            </>
+          );
+        } else {
+          return (
+            <>
+              Oldest
+              <ArrowUp size={14} />
+            </>
+          );
+        }
+      } else if (sortType === "price") {
+        if (sortBy === "price_desc") {
+          return (
+            <>
+              Highest Price
+              <ArrowDown size={14} />
+            </>
+          );
+        } else {
+          return (
+            <>
+              Lowest Price
+              <ArrowUp size={14} />
+            </>
+          );
+        }
       }
-    } else if (sortType === 'price') {
-      if (sortBy === 'price_desc') {
-        return <>Highest Price<ArrowDown size={14} /></>;
-      } else {
-        return <>Lowest Price<ArrowUp size={14} /></>;
-      }
-    }
-    return null;
-  }, [sortBy]);
+      return null;
+    },
+    [sortBy],
+  );
 
   // Handle clicks outside the entire filter component to close it
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (searchFilterRef.current && !searchFilterRef.current.contains(event.target)) {
+      if (
+        searchFilterRef.current &&
+        !searchFilterRef.current.contains(event.target)
+      ) {
         setShowAdvancedFilters(false);
         // showMoreAdvancedFilters will be handled by the new useEffect when showAdvancedFilters becomes false
       }
@@ -205,7 +278,12 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
   }, []);
 
   return (
-    <div ref={searchFilterRef} className="relative w-full max-w-sm sm:max-w-md md:max-w-xl lg:max-w-2xl mx-auto px-3"> {/* Adjusted max-width for responsiveness and added px-3 */}
+    <div
+      ref={searchFilterRef}
+      className="relative w-full max-w-sm sm:max-w-md md:max-w-xl lg:max-w-2xl mx-auto px-3"
+    >
+      {" "}
+      {/* Adjusted max-width for responsiveness and added px-3 */}
       {/* Search Bar - Always persistent */}
       <form onSubmit={handleSearch} className="relative w-full mb-4">
         <input
@@ -229,7 +307,6 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
           <Search size={18} />
         </button>
       </form>
-
       {/* Main Filter Dropdown - Conditionally rendered */}
       <AnimatePresence>
         {showAdvancedFilters && (
@@ -262,30 +339,34 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
 
             {/* Sort Listings Section */}
             <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Sort Listings:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        onClick={() => handleSortToggle("date")}
-                        className={getButtonClass(sortBy.startsWith("date_listed_"))}
-                    >
-                        {getSortTextAndIcon("date")}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleSortToggle("price")}
-                        className={getButtonClass(sortBy.startsWith("price_"))}
-                    >
-                        {getSortTextAndIcon("price")}
-                    </button>
-                </div>
+              <p
+                className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+              >
+                Sort Listings:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSortToggle("date")}
+                  className={getButtonClass(sortBy.startsWith("date_listed_"))}
+                >
+                  {getSortTextAndIcon("date")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSortToggle("price")}
+                  className={getButtonClass(sortBy.startsWith("price_"))}
+                >
+                  {getSortTextAndIcon("price")}
+                </button>
+              </div>
             </div>
 
             {/* Purchase Category Filter */}
             <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-              <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+              <p
+                className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
                 Purchase Category:
               </p>
               <div className="flex flex-wrap gap-2">
@@ -319,17 +400,20 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
               <AnimatePresence>
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
+                  animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.25, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <hr className={`my-2 ${darkMode ? "border-gray-700" : "border-gray-200"}`} />
-
+                  <hr
+                    className={`my-2 ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+                  />
 
                   {/* Property Type Filter */}
                   <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <p
+                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                    >
                       Property Type:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -340,7 +424,9 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
                           onClick={() => {
                             handleFilterChange("propertyType", type);
                           }}
-                          className={getButtonClass(filters.propertyType === type)}
+                          className={getButtonClass(
+                            filters.propertyType === type,
+                          )}
                         >
                           {type}
                         </button>
@@ -350,7 +436,9 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
 
                   {/* Bedrooms Filter */}
                   <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <p
+                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                    >
                       Bedrooms:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -369,7 +457,9 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
 
                   {/* Bathrooms Filter */}
                   <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <p
+                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                    >
                       Bathrooms:
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -378,7 +468,9 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
                           key={`bath-${count}`}
                           type="button"
                           onClick={() => handleFilterChange("bathrooms", count)}
-                          className={getButtonClass(filters.bathrooms === count)}
+                          className={getButtonClass(
+                            filters.bathrooms === count,
+                          )}
                         >
                           {count}
                         </button>
@@ -388,7 +480,9 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
 
                   {/* Price Range Slider */}
                   <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    <p
+                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                    >
                       Price Range:
                     </p>
                     <div className="flex-grow w-full sm:w-auto">
@@ -403,7 +497,10 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
                           className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
                             darkMode ? "bg-gray-700" : "bg-gray-300"
                           } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-green-500 [&::-moz-range-thumb]:shadow-md`}
-                          style={{ zIndex: minPriceValue > maxPriceValue - 100000 ? 3 : 2 }}
+                          style={{
+                            zIndex:
+                              minPriceValue > maxPriceValue - 100000 ? 3 : 2,
+                          }}
                         />
                         <input
                           type="range"
@@ -427,10 +524,14 @@ function HomeSearchFilters({ filters, setFilters, sortBy, setSortBy, searchTerm,
                         ></div>
                       </div>
                       <div className="flex justify-between mt-2 text-sm">
-                        <span className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                        <span
+                          className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                        >
                           Min: ₦{minPriceValue.toLocaleString()}
                         </span>
-                        <span className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                        <span
+                          className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                        >
                           Max: ₦{maxPriceValue.toLocaleString()}
                         </span>
                       </div>

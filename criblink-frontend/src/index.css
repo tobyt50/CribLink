@@ -22,35 +22,41 @@ html::-webkit-scrollbar {
 }
 
 html::-webkit-scrollbar-track {
-  background: theme('colors.gray.100'); /* Very light grey track for light mode */
+  background: theme(
+    "colors.gray.100"
+  ); /* Very light grey track for light mode */
   border-radius: 10px;
 }
 
 html::-webkit-scrollbar-thumb {
-  background-color: theme('colors.gray.300'); /* Light grey thumb for light mode */
+  background-color: theme(
+    "colors.gray.300"
+  ); /* Light grey thumb for light mode */
   border-radius: 10px;
-  border: 2px solid theme('colors.gray.100'); /* Thinner border matching track */
+  border: 2px solid theme("colors.gray.100"); /* Thinner border matching track */
 }
 
 /* Dark mode adjustments for Webkit */
 .dark html::-webkit-scrollbar-track {
-  background: theme('colors.gray.800'); /* Darker grey track for dark mode */
+  background: theme("colors.gray.800"); /* Darker grey track for dark mode */
 }
 
 .dark html::-webkit-scrollbar-thumb {
-  background-color: theme('colors.gray.600'); /* Subtle dark grey thumb for dark mode */
-  border-color: theme('colors.gray.800');
+  background-color: theme(
+    "colors.gray.600"
+  ); /* Subtle dark grey thumb for dark mode */
+  border-color: theme("colors.gray.800");
 }
 
 /* Direct CSS for Firefox for explicit thinness */
 html {
   scrollbar-width: thin; /* Explicitly thin for Firefox */
   /* Light mode: very light grey thumb, slightly darker light grey track */
-  scrollbar-color: theme('colors.gray.300') theme('colors.gray.100');
+  scrollbar-color: theme("colors.gray.300") theme("colors.gray.100");
 }
 .dark html {
   /* Dark mode: subtle dark grey thumb, darker grey track */
-  scrollbar-color: theme('colors.gray.600') theme('colors.gray.800');
+  scrollbar-color: theme("colors.gray.600") theme("colors.gray.800");
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -58,7 +64,6 @@ html {
 }
 
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
-

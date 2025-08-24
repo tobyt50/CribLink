@@ -24,8 +24,11 @@ const AppShell = ({ children }) => {
         effectiveDarkMode = true;
       } else if (themePreference === "light") {
         effectiveDarkMode = false;
-      } else { // themePreference === "system"
-        effectiveDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        // themePreference === "system"
+        effectiveDarkMode = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
       }
 
       // Update the darkMode state
@@ -46,23 +49,27 @@ const AppShell = ({ children }) => {
     applyTheme();
 
     // Listen for system theme changes if preference is 'system'
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => {
       if (themePreference === "system") {
         applyTheme(); // Re-apply theme if system preference changes
       }
     };
-    mediaQuery.addEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
 
     return () => {
-      mediaQuery.removeEventListener('change', handleChange);
+      mediaQuery.removeEventListener("change", handleChange);
     };
   }, [themePreference]); // Rerun effect when themePreference changes
 
   // Expose darkMode, themePreference, and setThemePreference to consumers
   return (
-    <ThemeContext.Provider value={{ darkMode, themePreference, setThemePreference }}>
-      <div className={`${darkMode ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"} min-h-screen`}>
+    <ThemeContext.Provider
+      value={{ darkMode, themePreference, setThemePreference }}
+    >
+      <div
+        className={`${darkMode ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"} min-h-screen`}
+      >
         {children}
       </div>
     </ThemeContext.Provider>

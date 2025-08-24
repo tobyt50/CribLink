@@ -4,9 +4,17 @@ import { Search } from "lucide-react"; // Import the Search icon from lucide-rea
 function SearchBar({ searchTerm, setSearchTerm, handleSearch }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <form onSubmit={handleSearch} className="flex w-full relative"> {/* Added relative for icon positioning */}
-        <div className="relative w-full"> {/* Wrapper for input and icon */}
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} /> {/* Search icon */}
+      <form onSubmit={handleSearch} className="flex w-full relative">
+        {" "}
+        {/* Added relative for icon positioning */}
+        <div className="relative w-full">
+          {" "}
+          {/* Wrapper for input and icon */}
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />{" "}
+          {/* Search icon */}
           <input
             type="text"
             value={searchTerm}

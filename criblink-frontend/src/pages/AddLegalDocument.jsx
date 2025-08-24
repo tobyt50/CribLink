@@ -1,17 +1,23 @@
 // src/pages/AddLegalDocument.js
-import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../api/axiosInstance';
-import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import API_BASE_URL from '../config';
-import { useTheme } from '../layouts/AppShell';
-import { ChevronDown } from 'lucide-react';
-import { useMessage } from '../context/MessageContext';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import React, { useState, useEffect, useRef } from "react";
+import axiosInstance from "../api/axiosInstance";
+import { useDropzone } from "react-dropzone";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import API_BASE_URL from "../config";
+import { useTheme } from "../layouts/AppShell";
+import { ChevronDown } from "lucide-react";
+import { useMessage } from "../context/MessageContext";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
 
 // Reusable Dropdown component (copied from AddListing.js for self-containment)
-const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => {
+const Dropdown = ({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { darkMode } = useTheme();
@@ -53,7 +59,12 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         staggerChildren: 0.02,
       },
     },
-    exit: { opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15, ease: "easeOut" } },
+    exit: {
+      opacity: 0,
+      y: -10,
+      scale: 0.95,
+      transition: { duration: 0.15, ease: "easeOut" },
+    },
   };
 
   const itemVariants = {
@@ -61,7 +72,8 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
     visible: { y: 0, opacity: 1 },
   };
 
-  const selectedOptionLabel = options.find(option => option.value === value)?.label || placeholder;
+  const selectedOptionLabel =
+    options.find((option) => option.value === value)?.label || placeholder;
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -69,9 +81,10 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-          ${darkMode
-            ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
-            : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
+          ${
+            darkMode
+              ? "bg-gray-700 border-gray-600 text-gray-300 hover:border-green-500 focus:ring-green-400"
+              : "bg-white border-gray-300 text-gray-700 hover:border-green-500 focus:ring-green-600"
           }`}
       >
         <span>{selectedOptionLabel}</span>
@@ -79,7 +92,9 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`} />
+          <ChevronDown
+            className={`w-5 h-5 ${darkMode ? "text-gray-300" : "text-gray-500"}`}
+          />
         </motion.div>
       </button>
 
@@ -115,7 +130,6 @@ const Dropdown = ({ options, value, onChange, placeholder, className = "" }) => 
   );
 };
 
-
 const AddLegalDocument = () => {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
@@ -123,12 +137,12 @@ const AddLegalDocument = () => {
   const { user } = useAuth(); // Get user from AuthContext
 
   // State variables for legal document fields
-  const [documentTitle, setDocumentTitle] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [propertyId, setPropertyId] = useState(''); // This should ideally be a dropdown/search for existing properties
-  const [documentType, setDocumentType] = useState('');
-  const [status, setStatus] = useState('Pending'); // Default status
-  const [completionDate, setCompletionDate] = useState('');
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [propertyId, setPropertyId] = useState(""); // This should ideally be a dropdown/search for existing properties
+  const [documentType, setDocumentType] = useState("");
+  const [status, setStatus] = useState("Pending"); // Default status
+  const [completionDate, setCompletionDate] = useState("");
   const [documentFile, setDocumentFile] = useState(null); // For the actual file object
 
   // Options for dropdowns
@@ -156,22 +170,23 @@ const AddLegalDocument = () => {
   const onDrop = (acceptedFiles) => {
     if (acceptedFiles.length > 0) {
       setDocumentFile(acceptedFiles[0]);
-      showMessage(`File selected: ${acceptedFiles[0].name}`, 'info');
+      showMessage(`File selected: ${acceptedFiles[0].name}`, "info");
     }
   };
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      "application/pdf": [".pdf"],
+      "application/msword": [".doc"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
     },
     multiple: false, // Only allow one document at a time
   });
 
   const capitalizeFirstLetter = (string) => {
-    if (!string) return '';
+    if (!string) return "";
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
@@ -184,7 +199,10 @@ const AddLegalDocument = () => {
 
     // Basic validation
     if (!documentTitle || !documentType || !documentFile || !status) {
-      showMessage('Please fill in all required fields and upload a document.', 'error');
+      showMessage(
+        "Please fill in all required fields and upload a document.",
+        "error",
+      );
       return;
     }
 
@@ -207,41 +225,45 @@ const AddLegalDocument = () => {
         // agent_id and agency_id will be added by the backend from req.user
       };
 
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        showMessage('Authentication token not found. Please sign in.', 'error');
-        navigate('/signin');
+        showMessage("Authentication token not found. Please sign in.", "error");
+        navigate("/signin");
         return;
       }
 
       try {
         await axiosInstance.post(`${API_BASE_URL}/docs/upload`, payload, {
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        showMessage('Legal document added successfully!', 'success', 3000);
+        showMessage("Legal document added successfully!", "success", 3000);
         // Clear form fields after successful submission
-        setDocumentTitle('');
-        setClientName('');
-        setPropertyId('');
-        setDocumentType('');
-        setStatus('Pending');
-        setCompletionDate('');
+        setDocumentTitle("");
+        setClientName("");
+        setPropertyId("");
+        setDocumentType("");
+        setStatus("Pending");
+        setCompletionDate("");
         setDocumentFile(null);
 
         // Redirect back to the LegalDocuments page after successful upload
-        navigate('/documents'); // Navigate to the shared documents page
+        navigate("/documents"); // Navigate to the shared documents page
       } catch (error) {
-        let errorMessage = 'Failed to add legal document. Please try again.';
-        if (error.response && error.response.data && error.response.data.message) {
+        let errorMessage = "Failed to add legal document. Please try again.";
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
           errorMessage = error.response.data.message;
         } else if (error.message) {
           errorMessage = error.message;
         }
-        showMessage(errorMessage, 'error');
+        showMessage(errorMessage, "error");
       }
     };
     reader.onerror = (error) => {
@@ -252,13 +274,16 @@ const AddLegalDocument = () => {
 
   // Styles for form elements, consistent with Home.js and AddListing.js
   const formElementStyles = `py-2 px-4 border rounded-xl shadow-sm focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200
-    ${darkMode
-      ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
-      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
+    ${
+      darkMode
+        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-green-400"
+        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-green-600"
     }`;
 
   return (
-    <div className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}>
+    <div
+      className={`flex items-center justify-center min-h-screen p-4 md:p-6 ${darkMode ? "bg-gray-900" : "bg-gray-50"} overflow-x-hidden`}
+    >
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 40 }}
@@ -292,11 +317,17 @@ const AddLegalDocument = () => {
         >
           {/* Document Title */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Document Title</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Document Title
+            </label>
             <input
               type="text"
               value={documentTitle}
-              onChange={(e) => setDocumentTitle(capitalizeFirstLetter(e.target.value))}
+              onChange={(e) =>
+                setDocumentTitle(capitalizeFirstLetter(e.target.value))
+              }
               className={`block w-full ${formElementStyles}`}
               required
             />
@@ -304,7 +335,11 @@ const AddLegalDocument = () => {
 
           {/* Document Type */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Document Type</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Document Type
+            </label>
             <Dropdown
               placeholder="Select Document Type"
               options={documentTypeOptions}
@@ -316,11 +351,17 @@ const AddLegalDocument = () => {
 
           {/* Client Name (Optional, as per schema) */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Client Name (Optional)</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Client Name (Optional)
+            </label>
             <input
               type="text"
               value={clientName}
-              onChange={(e) => setClientName(capitalizeFirstLetter(e.target.value))}
+              onChange={(e) =>
+                setClientName(capitalizeFirstLetter(e.target.value))
+              }
               className={`block w-full ${formElementStyles}`}
               placeholder="e.g., John Doe"
             />
@@ -328,7 +369,11 @@ const AddLegalDocument = () => {
 
           {/* Property ID (Optional, can be a number or null) */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Associated Property ID (Optional)</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Associated Property ID (Optional)
+            </label>
             <input
               type="number"
               value={propertyId}
@@ -340,7 +385,11 @@ const AddLegalDocument = () => {
 
           {/* Status */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Status</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Status
+            </label>
             <Dropdown
               placeholder="Select Status"
               options={statusOptions}
@@ -352,7 +401,11 @@ const AddLegalDocument = () => {
 
           {/* Completion Date (Optional) */}
           <div>
-            <label className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}>Completion Date (Optional)</label>
+            <label
+              className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+            >
+              Completion Date (Optional)
+            </label>
             <input
               type="date"
               value={completionDate}
@@ -362,21 +415,31 @@ const AddLegalDocument = () => {
           </div>
 
           {/* File Dropzone */}
-          <div {...getRootProps()} className={`p-6 border-dashed border-2 rounded-2xl cursor-pointer text-center transition-all duration-200 ${
-            darkMode
-              ? "border-gray-600 bg-gray-700 text-gray-300 hover:border-green-500 focus:ring-green-400"
-              : "border-gray-300 bg-gray-50 text-gray-600 hover:border-green-500 focus:ring-green-600"
-          }`}>
+          <div
+            {...getRootProps()}
+            className={`p-6 border-dashed border-2 rounded-2xl cursor-pointer text-center transition-all duration-200 ${
+              darkMode
+                ? "border-gray-600 bg-gray-700 text-gray-300 hover:border-green-500 focus:ring-green-400"
+                : "border-gray-300 bg-gray-50 text-gray-600 hover:border-green-500 focus:ring-green-600"
+            }`}
+          >
             <input {...getInputProps()} />
             {documentFile ? (
               <p className="font-medium text-lg">{documentFile.name}</p>
             ) : (
-              <p>Drag 'n' drop a legal document (PDF, DOC, DOCX) here, or click to select file</p>
+              <p>
+                Drag 'n' drop a legal document (PDF, DOC, DOCX) here, or click
+                to select file
+              </p>
             )}
             {documentFile && (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setDocumentFile(null); showMessage('File removed.', 'info'); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDocumentFile(null);
+                  showMessage("File removed.", "info");
+                }}
                 className="mt-2 text-red-600 bg-transparent hover:underline"
               >
                 Remove File
@@ -384,7 +447,10 @@ const AddLegalDocument = () => {
             )}
           </div>
 
-          <button type="submit" className="w-full bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-200">
+          <button
+            type="submit"
+            className="w-full bg-green-700 text-white py-3 px-6 rounded-2xl hover:bg-green-800 text-sm transition-all duration-200"
+          >
             Upload Document
           </button>
         </motion.div>

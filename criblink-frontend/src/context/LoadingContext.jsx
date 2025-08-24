@@ -1,5 +1,5 @@
 // src/context/LoadingContext
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
 // Create the Loading Context
 const LoadingContext = createContext();
@@ -16,7 +16,8 @@ export const LoadingProvider = ({ children }) => {
   const showLoading = () => {
     setLoadingCount((prevCount) => {
       const newCount = prevCount + 1;
-      if (newCount === 1) { // Only set loading to true when the first request starts
+      if (newCount === 1) {
+        // Only set loading to true when the first request starts
         setLoading(true);
       }
       return newCount;
@@ -27,7 +28,8 @@ export const LoadingProvider = ({ children }) => {
   const hideLoading = () => {
     setLoadingCount((prevCount) => {
       const newCount = Math.max(0, prevCount - 1); // Ensure count doesn't go below 0
-      if (newCount === 0) { // Only set loading to false when all requests have finished
+      if (newCount === 0) {
+        // Only set loading to false when all requests have finished
         setLoading(false);
       }
       return newCount;

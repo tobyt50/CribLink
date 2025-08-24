@@ -1,6 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import React, { useEffect } from 'react';
-import socket from './socket';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import React, { useEffect } from "react";
+import socket from "./socket";
 
 // Wrappers
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
@@ -15,24 +21,24 @@ import { MessageProvider } from "./context/MessageContext";
 import GlobalMessageToasts from "./components/GlobalMessageToasts";
 import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
 import ConfirmDialog from "./components/ConfirmDialog";
-import AxiosErrorInterceptor from './components/AxiosErrorInterceptor';
-import { AuthProvider } from './context/AuthContext';
+import AxiosErrorInterceptor from "./components/AxiosErrorInterceptor";
+import { AuthProvider } from "./context/AuthContext";
 
 // --- NEW UNIFIED SETTINGS COMPONENT ---
-import Settings from './pages/settings/Settings';
+import Settings from "./pages/settings/Settings";
 
 // Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminStaff from './pages/admin/Staff';
-import AdminUsers from './pages/admin/Users';
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminStaff from "./pages/admin/Staff";
+import AdminUsers from "./pages/admin/Users";
 import AdminAnalytics from "./pages/admin/Analytics";
 
 // Agent Pages
-import AgentDashboard from './pages/agent/Dashboard';
-import Clients from './pages/agent/Clients';
-import ClientProfile from './pages/agent/ClientProfile';
-import AgentInquiries from './pages/agent/AgentInquiries';
-import Archive from './pages/agent/Archive';
+import AgentDashboard from "./pages/agent/Dashboard";
+import Clients from "./pages/agent/Clients";
+import ClientProfile from "./pages/agent/ClientProfile";
+import AgentInquiries from "./pages/agent/AgentInquiries";
+import Archive from "./pages/agent/Archive";
 
 // Client Pages
 import ClientDashboard from "./pages/client/Dashboard";
@@ -62,20 +68,27 @@ import AddLegalDocument from "./pages/AddLegalDocument";
 import LegalDocuments from "./pages/LegalDocuments";
 
 // Agency Pages
-import AgencyDashboard from './pages/agency/AgencyDashboard';
-import AgencyMembers from './pages/agency/AgencyMembers';
-import AgencyAdminProfile from './pages/agency/AgencyAdminProfile';
-import AgentPerformance from './pages/agency/AgentPerformance';
-import AgencyInquiries from './pages/agency/AgencyInquiries';
-import AgencyAnalytics from './pages/agency/AgencyAnalytics';
+import AgencyDashboard from "./pages/agency/AgencyDashboard";
+import AgencyMembers from "./pages/agency/AgencyMembers";
+import AgencyAdminProfile from "./pages/agency/AgencyAdminProfile";
+import AgentPerformance from "./pages/agency/AgentPerformance";
+import AgencyInquiries from "./pages/agency/AgencyInquiries";
+import AgencyAnalytics from "./pages/agency/AgencyAnalytics";
 
 // CENTRALIZED LISTINGS PAGE
-import Listings from './pages/Listings';
+import Listings from "./pages/Listings";
 
 function AppContent() {
   const location = useLocation();
-  const smallerHeaderOffsetRoutes = ["/subscriptions", "/subscriptions/checkout"];
-  const headerPaddingClass = smallerHeaderOffsetRoutes.includes(location.pathname) ? "pt-[56px]" : "pt-[96px]";
+  const smallerHeaderOffsetRoutes = [
+    "/subscriptions",
+    "/subscriptions/checkout",
+  ];
+  const headerPaddingClass = smallerHeaderOffsetRoutes.includes(
+    location.pathname,
+  )
+    ? "pt-[56px]"
+    : "pt-[96px]";
 
   // Define routes for each role (settings removed from here)
   const listingRoutes = [
@@ -90,7 +103,7 @@ function AppContent() {
     { path: "users", element: <AdminUsers /> },
     { path: "analytics", element: <AdminAnalytics /> },
     { path: "agencies/:agencyId/members", element: <AgencyMembers /> },
-    ...listingRoutes
+    ...listingRoutes,
   ];
 
   const agentRoutes = [
@@ -100,7 +113,7 @@ function AppContent() {
     { path: "client-profile/:clientId", element: <ClientProfile /> },
     { path: "inquiries", element: <AgentInquiries /> },
     { path: "archive", element: <Archive /> },
-    ...listingRoutes
+    ...listingRoutes,
   ];
 
   const clientRoutes = [
@@ -119,7 +132,7 @@ function AppContent() {
     { path: "agent-performance", element: <AgentPerformance /> },
     { path: "inquiries", element: <AgencyInquiries /> },
     { path: "analytics", element: <AgencyAnalytics /> },
-    ...listingRoutes
+    ...listingRoutes,
   ];
 
   useEffect(() => {
@@ -137,7 +150,9 @@ function AppContent() {
   return (
     <>
       <Header />
-      <main className={`${headerPaddingClass} min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300`}>
+      <main
+        className={`${headerPaddingClass} min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300`}
+      >
         <Routes>
           {/* Public & shared pages */}
           <Route element={<MainLayout />}>
@@ -166,38 +181,78 @@ function AppContent() {
             <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="/subscriptions/checkout" element={<Checkout />} />
 
-            <Route path="/client-profile/:clientId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
+            <Route
+              path="/client-profile/:clientId"
+              element={
+                <RoleProtectedRoute
+                  allowedRole={["agency_admin", "agent", "admin"]}
+                />
+              }
+            >
               <Route index element={<ClientProfile />} />
             </Route>
-            <Route path="/agent-profile/:agentId" element={<RoleProtectedRoute allowedRole={["client", "agency_admin", "agent", "admin"]} />}>
+            <Route
+              path="/agent-profile/:agentId"
+              element={
+                <RoleProtectedRoute
+                  allowedRole={["client", "agency_admin", "agent", "admin"]}
+                />
+              }
+            >
               <Route index element={<AgentProfile />} />
             </Route>
-            <Route path="/agency-admin-profile/:adminId" element={<RoleProtectedRoute allowedRole={["agency_admin", "agent", "admin"]} />}>
+            <Route
+              path="/agency-admin-profile/:adminId"
+              element={
+                <RoleProtectedRoute
+                  allowedRole={["agency_admin", "agent", "admin"]}
+                />
+              }
+            >
               <Route index element={<AgencyAdminProfile />} />
             </Route>
-            <Route path="/documents" element={<RoleProtectedRoute allowedRole={["admin", "agency_admin"]} />}>
+            <Route
+              path="/documents"
+              element={
+                <RoleProtectedRoute allowedRole={["admin", "agency_admin"]} />
+              }
+            >
               <Route index element={<LegalDocuments />} />
               <Route path="add" element={<AddLegalDocument />} />
             </Route>
           </Route>
 
           {/* Role-protected routes */}
-          <Route path="/admin" element={<RoleProtectedRoute allowedRole="admin" />}>
+          <Route
+            path="/admin"
+            element={<RoleProtectedRoute allowedRole="admin" />}
+          >
             {adminRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-          <Route path="/agent" element={<RoleProtectedRoute allowedRole="agent" />}>
+          <Route
+            path="/agent"
+            element={<RoleProtectedRoute allowedRole="agent" />}
+          >
             {agentRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-          <Route path="/client" element={<RoleProtectedRoute allowedRole="client" />}>
+          <Route
+            path="/client"
+            element={<RoleProtectedRoute allowedRole="client" />}
+          >
             {clientRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
           </Route>
-          <Route path="/agency" element={<RoleProtectedRoute allowedRole={["agency_admin", "admin"]} />}>
+          <Route
+            path="/agency"
+            element={
+              <RoleProtectedRoute allowedRole={["agency_admin", "admin"]} />
+            }
+          >
             {agencyRoutes.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}

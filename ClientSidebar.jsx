@@ -6,11 +6,9 @@ import {
   MessageSquare,
   Users
 } from "lucide-react";
-import React, { useEffect } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../../layouts/AppShell";
-// Import the swipe hook
-import { useSwipeable } from "react-swipeable";
 
 const MENU_ITEMS = [
   {
@@ -54,43 +52,6 @@ const ClientSidebar = ({
 }) => {
   const { darkMode } = useTheme();
 
-  // --- Swipe Gesture Handlers ---
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => isMobile && setIsSidebarOpen(false),
-    preventScrollOnSwipe: true,
-    trackMouse: true
-  });
-  
-  // Effect to handle swipe-to-open from the edge of the screen
-  useEffect(() => {
-    if (!isMobile) return;
-
-    const handleTouchStart = (e) => {
-      if (!isSidebarOpen && e.touches[0].clientX < 20) {
-        document.addEventListener('touchmove', handleTouchMove);
-        document.addEventListener('touchend', handleTouchEnd);
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      if (e.changedTouches[0].clientX > 50) {
-        setIsSidebarOpen(true);
-        handleTouchEnd();
-      }
-    };
-
-    const handleTouchEnd = () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-
-    document.addEventListener('touchstart', handleTouchStart);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
-
   const sidebarWidthClass = isMobile ? "w-64" : collapsed ? "w-20" : "w-64";
 
   const sidebarClasses = `
@@ -104,7 +65,7 @@ const ClientSidebar = ({
 
   return (
     <>
-      <div className={sidebarClasses} {...swipeHandlers}>
+      <div className={sidebarClasses}>
         {isMobile && (
           <div className={`flex items-center justify-between w-full p-2 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
             <h2 className={`text-lg font-bold flex items-center gap-2 ${darkMode ? "text-green-300" : "text-green-800"}`}>

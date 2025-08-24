@@ -1,5 +1,5 @@
 // jobs/expireFeatured.js
-const { query } = require('../db'); // adjust path if needed
+const { query } = require("../db"); // adjust path if needed
 
 async function expireFeaturedListings() {
   await query(
@@ -7,7 +7,7 @@ async function expireFeaturedListings() {
      SET is_featured = false,
          featured_expires_at = NULL
      WHERE is_featured = true
-       AND featured_expires_at < NOW()`
+       AND featured_expires_at < NOW()`,
   );
 }
 

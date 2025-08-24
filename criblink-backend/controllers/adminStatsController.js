@@ -1,4 +1,4 @@
-const pool = require('../db');
+const pool = require("../db");
 
 // Get count of all users
 exports.getTotalUsersCount = async (req, res) => {
@@ -6,8 +6,8 @@ exports.getTotalUsersCount = async (req, res) => {
     const result = await pool.query(`SELECT COUNT(*) FROM users`);
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching total users count:', err);
-    res.status(500).json({ error: 'Failed to fetch total users count' });
+    console.error("Error fetching total users count:", err);
+    res.status(500).json({ error: "Failed to fetch total users count" });
   }
 };
 
@@ -17,8 +17,8 @@ exports.getAgenciesCount = async (req, res) => {
     const result = await pool.query(`SELECT COUNT(*) FROM agencies`);
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching agencies count:', err);
-    res.status(500).json({ error: 'Failed to fetch agencies count' });
+    console.error("Error fetching agencies count:", err);
+    res.status(500).json({ error: "Failed to fetch agencies count" });
   }
 };
 
@@ -26,34 +26,36 @@ exports.getAgenciesCount = async (req, res) => {
 exports.getAgentCount = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) FROM users WHERE role = 'agent'`
+      `SELECT COUNT(*) FROM users WHERE role = 'agent'`,
     );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching agent count:', err);
-    res.status(500).send('Server Error');
+    console.error("Error fetching agent count:", err);
+    res.status(500).send("Server Error");
   }
 };
 
 // Get count of clients
 exports.getClientsCount = async (req, res) => {
   try {
-    const result = await pool.query(`SELECT COUNT(*) FROM users WHERE role = 'client'`);
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM users WHERE role = 'client'`,
+    );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching clients count:', err);
-    res.status(500).json({ error: 'Failed to fetch clients count' });
+    console.error("Error fetching clients count:", err);
+    res.status(500).json({ error: "Failed to fetch clients count" });
   }
 };
 
 // Get count of all listings
 exports.getListingsCount = async (req, res) => {
   try {
-    const result = await pool.query('SELECT COUNT(*) FROM property_listings');
+    const result = await pool.query("SELECT COUNT(*) FROM property_listings");
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching listing count:', err);
-    res.status(500).json({ error: 'Internal server error fetching listing' });
+    console.error("Error fetching listing count:", err);
+    res.status(500).json({ error: "Internal server error fetching listing" });
   }
 };
 
@@ -61,12 +63,12 @@ exports.getListingsCount = async (req, res) => {
 exports.getAvailableListingsCount = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'available'`
+      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'available'`,
     );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching available listings count:', err);
-    res.status(500).json({ error: 'Failed to fetch available listings count' });
+    console.error("Error fetching available listings count:", err);
+    res.status(500).json({ error: "Failed to fetch available listings count" });
   }
 };
 
@@ -74,12 +76,12 @@ exports.getAvailableListingsCount = async (req, res) => {
 exports.getSoldListingsCount = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'sold'`
+      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'sold'`,
     );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching sold listings count:', err);
-    res.status(500).json({ error: 'Failed to fetch sold listings count' });
+    console.error("Error fetching sold listings count:", err);
+    res.status(500).json({ error: "Failed to fetch sold listings count" });
   }
 };
 
@@ -87,12 +89,12 @@ exports.getSoldListingsCount = async (req, res) => {
 exports.getPendingListingsCount = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'pending'`
+      `SELECT COUNT(*) FROM property_listings WHERE TRIM(LOWER(status)) = 'pending'`,
     );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching pending listings count:', err);
-    res.status(500).json({ error: 'Failed to fetch pending listings count' });
+    console.error("Error fetching pending listings count:", err);
+    res.status(500).json({ error: "Failed to fetch pending listings count" });
   }
 };
 
@@ -100,11 +102,13 @@ exports.getPendingListingsCount = async (req, res) => {
 exports.getAllInquiriesCount = async (req, res) => {
   try {
     // Count distinct conversation_ids
-    const result = await pool.query('SELECT COUNT(DISTINCT conversation_id) FROM inquiries');
+    const result = await pool.query(
+      "SELECT COUNT(DISTINCT conversation_id) FROM inquiries",
+    );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching all inquiries count:', err);
-    res.status(500).json({ error: 'Failed to fetch all inquiries count' });
+    console.error("Error fetching all inquiries count:", err);
+    res.status(500).json({ error: "Failed to fetch all inquiries count" });
   }
 };
 
@@ -112,12 +116,12 @@ exports.getAllInquiriesCount = async (req, res) => {
 exports.getAgentResponsesCount = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT COUNT(*) FROM inquiries WHERE message_type IN ('agent_reply', 'agency_admin_reply')`
+      `SELECT COUNT(*) FROM inquiries WHERE message_type IN ('agent_reply', 'agency_admin_reply')`,
     );
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching agent responses count:', err);
-    res.status(500).json({ error: 'Failed to fetch agent responses count' });
+    console.error("Error fetching agent responses count:", err);
+    res.status(500).json({ error: "Failed to fetch agent responses count" });
   }
 };
 
@@ -127,8 +131,8 @@ exports.getDocumentsCount = async (req, res) => {
     const result = await pool.query(`SELECT COUNT(*) FROM legal_documents`);
     res.json({ count: parseInt(result.rows[0].count, 10) });
   } catch (err) {
-    console.error('Error fetching documents count:', err);
-    res.status(500).json({ error: 'Failed to fetch documents count' });
+    console.error("Error fetching documents count:", err);
+    res.status(500).json({ error: "Failed to fetch documents count" });
   }
 };
 
@@ -171,26 +175,26 @@ exports.getPlatformActivity = async (req, res) => {
 
     // Combine all activities and sort by timestamp
     const allActivities = [
-      ...userSignups.rows.map(row => ({
+      ...userSignups.rows.map((row) => ({
         type: row.type,
         message: `New user signed up: ${row.message}`,
-        timestamp: row.timestamp
+        timestamp: row.timestamp,
       })),
-      ...agencyCreations.rows.map(row => ({
+      ...agencyCreations.rows.map((row) => ({
         type: row.type,
         message: `New agency created: ${row.message}`,
-        timestamp: row.timestamp
+        timestamp: row.timestamp,
       })),
-      ...newListingActivities.rows.map(row => ({
+      ...newListingActivities.rows.map((row) => ({
         type: row.type,
         message: `New listing added: "${row.message}"`,
-        timestamp: row.timestamp
+        timestamp: row.timestamp,
       })),
-      ...newInquiries.rows.map(row => ({
+      ...newInquiries.rows.map((row) => ({
         type: row.type,
         message: `New inquiry received: "${row.message}"`,
-        timestamp: row.timestamp
-      }))
+        timestamp: row.timestamp,
+      })),
     ];
 
     const sortedActivities = allActivities
@@ -199,7 +203,12 @@ exports.getPlatformActivity = async (req, res) => {
 
     res.status(200).json({ activities: sortedActivities });
   } catch (err) {
-    console.error('Error fetching platform recent activity:', err);
-    res.status(500).json({ message: 'Failed to fetch platform recent activity.', error: err.message });
+    console.error("Error fetching platform recent activity:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch platform recent activity.",
+        error: err.message,
+      });
   }
 };

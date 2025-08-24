@@ -1,6 +1,6 @@
 import React from "react";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
-import { useMessage } from '../context/MessageContext'; // Import useMessage hook
+import { useMessage } from "../context/MessageContext"; // Import useMessage hook
 import { ArrowUp } from "lucide-react";
 
 function Footer() {
@@ -17,51 +17,115 @@ function Footer() {
     const emailInput = e.target.elements[0]; // Get the email input element
     const email = emailInput.value;
 
-    if (email && email.includes('@') && email.includes('.')) {
-      showMessage('Thank you for subscribing to our newsletter!', 'success', 3000);
-      emailInput.value = ''; // Clear the input field
+    if (email && email.includes("@") && email.includes(".")) {
+      showMessage(
+        "Thank you for subscribing to our newsletter!",
+        "success",
+        3000,
+      );
+      emailInput.value = ""; // Clear the input field
     } else {
-      showMessage('Please enter a valid email address.', 'error', 3000);
+      showMessage("Please enter a valid email address.", "error", 3000);
     }
   };
 
-
   return (
-    <footer className={`mt-16 ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}>
+    <footer
+      className={`mt-16 ${darkMode ? "bg-gray-800 text-white" : "bg-[#2c332f] text-white"}`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid gap-10 md:grid-cols-5 text-sm">
           {/* Company Info */}
           <div className="md:col-span-1">
-            <h2 className={`text-xl font-bold mb-3 ${darkMode ? "text-green-400" : "text-green-500"}`}>CribLink</h2>
+            <h2
+              className={`text-xl font-bold mb-3 ${darkMode ? "text-green-400" : "text-green-500"}`}
+            >
+              CribLink
+            </h2>
             <p className={`${darkMode ? "text-gray-400" : "text-gray-400"}`}>
-              Your trusted partner in finding the perfect property to rent, buy, or sell across Nigeria.
+              Your trusted partner in finding the perfect property to rent, buy,
+              or sell across Nigeria.
             </p>
           </div>
 
           {/* Navigation */}
           <div>
-            <h3 className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}>Explore</h3>
+            <h3
+              className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}
+            >
+              Explore
+            </h3>
             <ul className="space-y-2">
-              <li><a href="/" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>Listings</a></li>
-              <li><a href="/contact" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>Contact Us</a></li>
-              <li><a href="/about" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>About</a></li>
+              <li>
+                <a
+                  href="/"
+                  className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+                >
+                  Listings
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/contact"
+                  className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+                >
+                  Contact Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/about"
+                  className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+                >
+                  About
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Legal */}
           <div>
-            <h3 className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}>Legal</h3>
+            <h3
+              className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}
+            >
+              Legal
+            </h3>
             <ul className="space-y-2">
-              <li><a href="/privacy" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>Privacy Policy</a></li>
-              <li><a href="/terms" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>Terms & Conditions</a></li>
+              <li>
+                <a
+                  href="/privacy"
+                  className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/terms"
+                  className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+                >
+                  Terms & Conditions
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Newsletter */}
           <div>
-            <h3 className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}>Newsletter</h3>
-            <p className={`${darkMode ? "text-gray-400" : "text-gray-400"} mb-2`}>Get updates about new listings and offers.</p>
-            <form onSubmit={handleNewsletterSubscribe} className="flex flex-col sm:flex-row gap-2">
+            <h3
+              className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}
+            >
+              Newsletter
+            </h3>
+            <p
+              className={`${darkMode ? "text-gray-400" : "text-gray-400"} mb-2`}
+            >
+              Get updates about new listings and offers.
+            </p>
+            <form
+              onSubmit={handleNewsletterSubscribe}
+              className="flex flex-col sm:flex-row gap-2"
+            >
               <input
                 type="email"
                 placeholder="Enter your email"
@@ -80,21 +144,45 @@ function Footer() {
 
           {/* Social & App Links */}
           <div>
-            <h3 className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}>Connect with us</h3>
+            <h3
+              className={`text-md font-semibold mb-3 ${darkMode ? "text-white" : "text-white"}`}
+            >
+              Connect with us
+            </h3>
             <div className="flex space-x-4 mb-4">
-              <a href="https://twitter.com" aria-label="Twitter" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>
+              <a
+                href="https://twitter.com"
+                aria-label="Twitter"
+                className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+              >
                 <i className="fab fa-twitter text-lg"></i>
               </a>
-              <a href="https://facebook.com" aria-label="Facebook" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>
+              <a
+                href="https://facebook.com"
+                aria-label="Facebook"
+                className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+              >
                 <i className="fab fa-facebook text-lg"></i>
               </a>
-              <a href="https://instagram.com" aria-label="Instagram" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>
+              <a
+                href="https://instagram.com"
+                aria-label="Instagram"
+                className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+              >
                 <i className="fab fa-instagram text-lg"></i>
               </a>
-              <a href="mailto:info@criblink.com" aria-label="Email" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>
+              <a
+                href="mailto:info@criblink.com"
+                aria-label="Email"
+                className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+              >
                 <i className="fas fa-envelope text-lg"></i>
               </a>
-              <a href="https://wa.me/2348123456789" aria-label="WhatsApp" className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}>
+              <a
+                href="https://wa.me/2348123456789"
+                aria-label="WhatsApp"
+                className={`${darkMode ? "text-gray-300 hover:text-green-400" : "hover:text-green-400"} transition`}
+              >
                 <i className="fab fa-whatsapp text-lg"></i>
               </a>
             </div>
@@ -115,8 +203,10 @@ function Footer() {
         </div>
 
         {/* Bottom Line */}
-        <div className={`mt-12 border-t pt-6 flex flex-col sm:flex-row justify-between items-center text-xs
-          ${darkMode ? "border-gray-700 text-gray-500" : "border-gray-700 text-gray-500"}`}>
+        <div
+          className={`mt-12 border-t pt-6 flex flex-col sm:flex-row justify-between items-center text-xs
+          ${darkMode ? "border-gray-700 text-gray-500" : "border-gray-700 text-gray-500"}`}
+        >
           <p>&copy; {currentYear} CribLink. All rights reserved.</p>
           <p>Made with 💚 in Nigeria</p>
         </div>
@@ -125,15 +215,16 @@ function Footer() {
           <button
             onClick={scrollToTop}
             className={`fixed bottom-6 right-6 z-50 p-1.5 rounded-full shadow-xl border-2 transition-all duration-300 group
-              ${darkMode 
-                ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-green-400" 
-                : "bg-black/10 border-black/20 text-black hover:bg-black/20 hover:text-green-600"}
+              ${
+                darkMode
+                  ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-green-400"
+                  : "bg-black/10 border-black/20 text-black hover:bg-black/20 hover:text-green-600"
+              }
               hover:scale-110`}
             title="Back to top"
           >
             <ArrowUp className="w-6 h-6 transition-all duration-300 group-hover:-translate-y-1" />
           </button>
-
         </div>
       </div>
     </footer>

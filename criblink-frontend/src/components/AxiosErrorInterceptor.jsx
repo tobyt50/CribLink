@@ -1,8 +1,8 @@
 // src/components/AxiosErrorInterceptor.js
-import { useEffect } from 'react';
-import axios from 'axios';
-import { useMessage } from '../context/MessageContext';
-import { useApiErrorHandler } from '../utils/handleApiError'; // Import the simplified handler
+import { useEffect } from "react";
+import axios from "axios";
+import { useMessage } from "../context/MessageContext";
+import { useApiErrorHandler } from "../utils/handleApiError"; // Import the simplified handler
 
 const AxiosErrorInterceptor = ({ children }) => {
   const { showMessage } = useMessage();
@@ -18,7 +18,7 @@ const AxiosErrorInterceptor = ({ children }) => {
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     // Response interceptor for error handling
@@ -38,7 +38,7 @@ const AxiosErrorInterceptor = ({ children }) => {
         // Or, if you want full global control, you might just return Promise.resolve()
         // with a generic response if you don't want components to handle errors anymore.
         return Promise.reject(error);
-      }
+      },
     );
 
     // Cleanup function: Eject interceptors when the component unmounts

@@ -1,5 +1,5 @@
 // criblink-frontend/src/api/axiosInstance.js
-import axios from 'axios';
+import axios from "axios";
 
 // We'll need a way to access the loading context from here.
 // This is a common pattern for Axios interceptors that need context.
@@ -21,7 +21,7 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,7 +37,7 @@ axiosInstance.interceptors.request.use(
       hideLoadingGlobal();
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
@@ -61,21 +61,26 @@ axiosInstance.interceptors.response.use(
 
       // Check for 403 Forbidden or 401 Unauthorized errors
       // and specifically for the 'SESSION_REVOKED' code from the backend
-      if ((status === 403 || status === 401) && data.code === 'SESSION_REVOKED') {
-        console.warn('Session revoked or inactive. Logging out...');
-        localStorage.removeItem('token'); // Clear the invalid token
+      if (
+        (status === 403 || status === 401) &&
+        data.code === "SESSION_REVOKED"
+      ) {
+        console.warn("Session revoked or inactive. Logging out...");
+        localStorage.removeItem("token"); // Clear the invalid token
         // Redirect to login page
         // You might use history.push('/signin') if using react-router-dom,
         // otherwise, a direct window.location.href change
-        window.location.href = '/signin';
+        window.location.href = "/signin";
         // Prevent further processing of this error by resolving the promise
-        return Promise.resolve({ data: { message: "Session revoked, logged out." } });
+        return Promise.resolve({
+          data: { message: "Session revoked, logged out." },
+        });
       }
     }
     // --- END NEW: Session Revocation Handling ---
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default axiosInstance;

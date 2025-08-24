@@ -1,47 +1,73 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-// motion and AnimatePresence are not directly used in the current component logic
-// but are kept as they were in the original file. If not used by visual animations
-// within the sidebar, they could be removed to reduce bundle size.
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Menu,
+  Archive,
+  BarChart2,
+  Bookmark,
   ChevronLeft,
   Home,
-  Users, // For Clients
-  LayoutGrid, // For Listings
-  Inbox, // For Inquiries
-  BarChart2, // For Analytics
-  FileText, // Added FileText for Legal Docs
-  Archive, // For Archive
-  Settings, // For Settings
-  X,
-  Bookmark
-} from 'lucide-react'; // Using lucide-react for icons
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
+  Inbox,
+  LayoutGrid,
+  Menu,
+  Users
+} from "lucide-react";
+import React, { useEffect } from "react";
+import { NavLink } from "react-router-dom";
+import { useTheme } from "../../layouts/AppShell";
+// Import the swipe hook
+import { useSwipeable } from "react-swipeable";
 
-// Define the navigation links with lucide-react icons
+// Define the navigation links with descriptions
 const MENU_ITEMS = [
-  { name: 'Dashboard', to: '/agent/dashboard', icon: <Home />, key: 'dashboard' },
-  { name: 'Clients', to: '/agent/clients', icon: <Users />, key: 'clients' },
-  { name: 'Listings', to: '/agent/listings', icon: <LayoutGrid />, key: 'listings' },
-  { name: 'Inquiries', to: '/agent/inquiries', icon: <Inbox />, key: 'inquiries' },
-  { name: 'Analytics', to: '/agent/analytics', icon: <BarChart2 />, key: 'analytics' },
-  { name: 'Favourites', to: '/favourites', icon: <Bookmark />, key: 'favourites' },
-  { name: 'Archive', to: '/agent/archive', icon: <Archive />, key: 'archive' },
+  {
+    name: "Dashboard",
+    to: "/agent/dashboard",
+    icon: <Home />,
+    key: "dashboard",
+    description: "View your personal stats."
+  },
+  {
+    name: "Clients",
+    to: "/agent/clients",
+    icon: <Users />,
+    key: "clients",
+    description: "Manage your client relationships."
+  },
+  {
+    name: "Listings",
+    to: "/agent/listings",
+    icon: <LayoutGrid />,
+    key: "listings",
+    description: "Create and manage your properties."
+  },
+  {
+    name: "Inquiries",
+    to: "/agent/inquiries",
+    icon: <Inbox />,
+    key: "inquiries",
+    description: "Respond to client messages."
+  },
+  {
+    name: "Analytics",
+    to: "/agent/analytics",
+    icon: <BarChart2 />,
+    key: "analytics",
+    description: "Track your listing performance."
+  },
+  {
+    name: "Favourites",
+    to: "/favourites",
+    icon: <Bookmark />,
+    key: "favourites",
+    description: "See listings, clients, and agencies you have saved."
+  },
+  {
+    name: "Archive",
+    to: "/agent/archive",
+    icon: <Archive />,
+    key: "archive",
+    description: "Access your archived items."
+  },
 ];
 
-/**
- * AgentSidebar Component
- * @param {object} props - The component props.
- * @param {boolean} props.collapsed - State indicating if the sidebar is collapsed (for desktop).
- * @param {function} props.setCollapsed - Function to toggle the collapsed state.
- * @param {string} props.activeSection - The currently active section key.
- * @param {function} props.setActiveSection - Function to set the active section.
- * @param {boolean} props.isMobile - State indicating if the current view is mobile.
- * @param {boolean} props.isSidebarOpen - State controlling the sidebar's visibility on mobile.
- * @param {function} props.setIsSidebarOpen - Function to toggle the sidebar's visibility on mobile.
- */
 const AgentSidebar = ({
   collapsed,
   setCollapsed,
@@ -51,26 +77,76 @@ const AgentSidebar = ({
   isSidebarOpen,
   setIsSidebarOpen,
 }) => {
-  const { darkMode } = useTheme(); // Use the dark mode context
+  const { darkMode } = useTheme();
 
-  // Determine sidebar width based on mobile view or collapsed state
-  const sidebarWidthClass = isMobile ? 'w-64' : collapsed ? 'w-20' : 'w-64';
+  // --- Swipe Gesture Handlers ---
+  // These handlers will be attached to the sidebar to close it on swipe left.
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => isMobile && setIsSidebarOpen(false),
+    // NOTE: To open the sidebar with a swipe right, you would apply a similar
+    // useSwipeable hook to your main content area or a dedicated handle.
+    // onSwipedRight: () => isMobile && setIsSidebarOpen(true),
+    preventScrollOnSwipe: true,
+    trackMouse: true
+  });
 
-  // Define dynamic CSS classes for the sidebar container
+  const sidebarWidthClass = isMobile ? "w-64" : collapsed ? "w-20" : "w-64";
+
   const sidebarClasses = `
     transition-all duration-300 shadow-2xl border-r
     flex flex-col items-start pb-10
-    h-screen fixed top-14 left-0 z-50
+    h-[calc(100vh-3.5rem)] fixed top-14 left-0 z-50
     ${sidebarWidthClass}
-    ${isMobile ? (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}
+    ${isMobile ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : ""}
     ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
   `;
 
+  // Effect to handle swipe-to-open from the edge of the screen
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleTouchStart = (e) => {
+      // Only trigger if sidebar is closed and swipe is from the left edge
+      if (!isSidebarOpen && e.touches[0].clientX < 20) {
+        document.addEventListener('touchmove', handleTouchMove);
+        document.addEventListener('touchend', handleTouchEnd);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      // If user swipes right, open the sidebar
+      if (e.changedTouches[0].clientX > 50) {
+        setIsSidebarOpen(true);
+        handleTouchEnd(); // Clean up listeners once action is taken
+      }
+    };
+
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
+
+
   return (
     <>
-      <div className={sidebarClasses}>
-
-        {/* Toggle Button - only desktop */}
+      {/* Attach swipe handlers to the sidebar container */}
+      <div className={sidebarClasses} {...swipeHandlers}>
+        {isMobile && (
+          <div className={`flex items-center justify-between w-full p-2 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${darkMode ? "text-green-300" : "text-green-800"}`}>
+            My Workspace
+            </h2>
+          </div>
+        )}
         {!isMobile && (
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -79,58 +155,79 @@ const AgentSidebar = ({
               ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200"}`}
           >
             {collapsed ? (
-              // Display Menu icon and 'Expand' text when collapsed
               <>
-                <Menu className={`${darkMode ? "text-gray-300" : "text-gray-700"}`} size={24} />
-                <span className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Expand</span>
+                <Menu
+                  className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                  size={24}
+                />
+                <span
+                  className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                >
+                  Expand
+                </span>
               </>
             ) : (
-              // Display ChevronLeft icon and 'Collapse' text when expanded
               <>
-                <ChevronLeft className={`${darkMode ? "text-gray-300" : "text-gray-700"}`} size={24} />
-                <span className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}>Collapse</span>
+                <ChevronLeft
+                  className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
+                  size={24}
+                />
+                <span
+                  className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                >
+                  Collapse
+                </span>
               </>
             )}
           </button>
         )}
 
-        {/* Navigation links */}
         <nav className="flex flex-col w-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400">
           {MENU_ITEMS.map((item, idx) => (
             <React.Fragment key={item.key}>
               <NavLink
                 to={item.to}
                 onClick={() => {
-                  // Set active section and close sidebar on mobile if applicable
-                  if (typeof setActiveSection === 'function') {
+                  if (typeof setActiveSection === "function") {
                     setActiveSection(item.key);
                   }
                   if (isMobile) setIsSidebarOpen(false);
                 }}
                 className={({ isActive }) =>
-                  // Apply dynamic styling based on active state and dark mode
                   `flex items-center gap-4 w-full px-6 py-3 transition-all ${
                     isActive || activeSection === item.key
-                      ? (darkMode ? 'bg-gray-900 text-green-200 font-semibold border-l-4 border-green-400' : 'bg-green-100 text-green-800 font-semibold border-l-4 border-green-600')
-                      : (darkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-gray-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')
+                      ? darkMode
+                        ? "bg-gray-900 text-green-200 font-semibold border-l-4 border-green-400"
+                        : "bg-green-100 text-green-800 font-semibold border-l-4 border-green-600"
+                      : darkMode
+                        ? "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
                   }`
                 }
               >
-                {/* Render the icon and name for the menu item */}
                 <span>{React.cloneElement(item.icon, { size: 24 })}</span>
-                {(isMobile || !collapsed) && <span>{item.name}</span>}
+                {(isMobile || !collapsed) && (
+                    <div className="flex flex-col">
+                        <span>{item.name}</span>
+                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {item.description}
+                        </span>
+                    </div>
+                )}
               </NavLink>
-              {/* Add a horizontal rule between menu items, except for the last one */}
-              {idx < MENU_ITEMS.length - 1 && <hr className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`} />}
+              {idx < MENU_ITEMS.length - 1 && (
+                <hr
+                  className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`}
+                />
+              )}
             </React.Fragment>
           ))}
         </nav>
       </div>
 
-      {/* Backdrop on mobile - visible when sidebar is open on mobile to close it on click outside */}
       {isMobile && isSidebarOpen && (
         <div
-          className={`fixed inset-0 z-40 md:hidden ${darkMode ? 'bg-gray-900 bg-opacity-70' : 'bg-black bg-opacity-20'}`}
+          className={`fixed inset-0 z-40 md:hidden ${darkMode ? "bg-gray-900 bg-opacity-70" : "bg-black bg-opacity-20"}`}
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

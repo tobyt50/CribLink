@@ -1,4 +1,4 @@
-const pool = require('../db');
+const pool = require("../db");
 
 // Get recent activity from inquiries, agents, and custom logs
 exports.getRecentActivity = async (req, res) => {
@@ -28,28 +28,28 @@ exports.getRecentActivity = async (req, res) => {
         FROM activity_logs
         ORDER BY timestamp DESC
         LIMIT 10
-      `)
+      `),
     ]);
 
     // Simplify inquiry activity messages
-    const inquiryActivities = inquiries.rows.map(row => ({
-      type: 'inquiry',
+    const inquiryActivities = inquiries.rows.map((row) => ({
+      type: "inquiry",
       message: `Inquiry from ${row.client_name}: "${row.message}" (Status: ${row.status})`, // More descriptive message
-      timestamp: row.created_at || new Date(0)
+      timestamp: row.created_at || new Date(0),
     }));
 
     // Simplify agent activity messages
-    const agentActivities = agents.rows.map(row => ({
-      type: 'agent',
+    const agentActivities = agents.rows.map((row) => ({
+      type: "agent",
       message: `New Agent: ${row.full_name}`,
-      timestamp: row.date_joined || new Date()
+      timestamp: row.date_joined || new Date(),
     }));
 
     // Use the message directly from activity_logs for custom activities
-    const customActivities = logs.rows.map(row => ({
+    const customActivities = logs.rows.map((row) => ({
       type: row.type,
       message: row.message,
-      timestamp: row.timestamp || new Date()
+      timestamp: row.timestamp || new Date(),
     }));
 
     const all = [...inquiryActivities, ...agentActivities, ...customActivities];
@@ -61,6 +61,11 @@ exports.getRecentActivity = async (req, res) => {
     res.json({ activities: sorted });
   } catch (err) {
     console.error("Error fetching recent activity on server:", err);
-    res.status(500).json({ error: 'Server error fetching recent activity', details: err.message });
+    res
+      .status(500)
+      .json({
+        error: "Server error fetching recent activity",
+        details: err.message,
+      });
   }
 };

@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
-import { isTokenValid, signOutUser } from '../utils/authUtils';
-import { useMessage } from '../context/MessageContext';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { isTokenValid, signOutUser } from "../utils/authUtils";
+import { useMessage } from "../context/MessageContext";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
 
 /**
  * ProtectedBaseRoute Component
@@ -20,7 +20,10 @@ const ProtectedBaseRoute = () => {
     // This effect will only run if the component is already rendered (i.e., not during initial loading phase)
     // and if isAuthenticated changes to false.
     if (!loading && !isAuthenticated) {
-      showMessage('Your session has expired or is invalid. Please sign in again.', 'error');
+      showMessage(
+        "Your session has expired or is invalid. Please sign in again.",
+        "error",
+      );
       signOutUser(navigate);
     }
   }, [isAuthenticated, loading, navigate, showMessage]);

@@ -1,13 +1,13 @@
-import React from 'react';
-import { useTheme } from '../../layouts/AppShell';
+import React from "react";
+import { useTheme } from "../../layouts/AppShell";
 import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
   UserPlusIcon,
   UserMinusIcon,
-} from '@heroicons/react/24/outline';
-import Card from '../ui/Card';
+} from "@heroicons/react/24/outline";
+import Card from "../ui/Card";
 
 const MemberCard = ({
   member,
@@ -20,46 +20,52 @@ const MemberCard = ({
   onToggleMemberStatus,
   isPendingRequestCard,
   darkMode,
-  user
+  user,
 }) => {
   const { darkMode: contextDarkMode } = useTheme();
   const currentDarkMode = darkMode !== undefined ? darkMode : contextDarkMode;
 
   const formatDate = (isoDate) => {
     const date = new Date(isoDate);
-    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? "Invalid Date" : date.toLocaleDateString();
   };
 
   const getInitial = (name) => {
-    const safeName = String(name || '');
-    return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : 'AG';
+    const safeName = String(name || "");
+    return safeName.length > 0 ? safeName.charAt(0).toUpperCase() : "AG";
   };
 
-  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
   const profilePicUrl = member.profile_picture_url;
   const nameForInitial = member.full_name;
 
   const isCurrentUser = user && user.user_id === member.user_id;
   // Reverted: isCurrentUserAdmin now only checks for 'agency_admin' role for the current user.
-  const isCurrentUserAdmin = user && user.role === 'agency_admin';
-  const isMemberAdmin = member.agency_role === 'agency_admin';
-  const isRemoveDisabled = isCurrentUser && isCurrentUserAdmin && member.total_admins === 1;
+  const isCurrentUserAdmin = user && user.role === "agency_admin";
+  const isMemberAdmin = member.agency_role === "agency_admin";
+  const isRemoveDisabled =
+    isCurrentUser && isCurrentUserAdmin && member.total_admins === 1;
   const isDemoteDisabled = isRemoveDisabled;
 
   const statusColorClass = isPendingRequestCard
-    ? (currentDarkMode ? 'text-blue-400' : 'text-blue-600')
-    : member.user_status === 'banned'
-      ? 'text-red-600'
-      : member.user_status === 'deactivated'
-        ? 'text-yellow-600'
-        : 'text-green-600';
+    ? currentDarkMode
+      ? "text-blue-400"
+      : "text-blue-600"
+    : member.user_status === "banned"
+      ? "text-red-600"
+      : member.user_status === "deactivated"
+        ? "text-yellow-600"
+        : "text-green-600";
 
   return (
     <Card
       className="px-4 pt-4 pb-2 flex flex-col justify-between min-h-[200px] w-full lg:max-w-md break-words overflow-x-hidden"
       // Conditionally call onViewProfile when the card is clicked, only if it's not a pending request card
-      onClick={() => { !isPendingRequestCard && onViewProfile(member.user_id, member.agency_role); }}
+      onClick={() => {
+        !isPendingRequestCard &&
+          onViewProfile(member.user_id, member.agency_role);
+      }}
     >
       {/* Top Section: Avatar + Info */}
       <div className="flex flex-row-reverse items-start gap-4 mb-4">
@@ -71,11 +77,13 @@ const MemberCard = ({
               className="w-28 h-28 rounded-full object-cover border-2 border-green-500"
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = `https://placehold.co/112x112/${currentDarkMode ? '374151' : 'E0F7FA'}/${currentDarkMode ? 'D1D5DB' : '004D40'}?text=${getInitial(nameForInitial)}`;
+                e.target.src = `https://placehold.co/112x112/${currentDarkMode ? "374151" : "E0F7FA"}/${currentDarkMode ? "D1D5DB" : "004D40"}?text=${getInitial(nameForInitial)}`;
               }}
             />
           ) : (
-            <div className={`w-28 h-28 rounded-full flex items-center justify-center text-3xl font-bold ${currentDarkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}>
+            <div
+              className={`w-28 h-28 rounded-full flex items-center justify-center text-3xl font-bold ${currentDarkMode ? "bg-gray-700 text-green-400" : "bg-green-100 text-green-700"}`}
+            >
               {getInitial(nameForInitial)}
             </div>
           )}
@@ -84,29 +92,36 @@ const MemberCard = ({
         <div className="flex-grow min-w-0 break-words">
           <div className="flex items-center gap-2 text-lg font-semibold mb-1">
             <span className="truncate">{member.full_name}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${member.member_status === 'vip' ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-              {capitalize(member.member_status || 'Regular')}
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${member.member_status === "vip" ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`}
+            >
+              {capitalize(member.member_status || "Regular")}
             </span>
           </div>
 
           <div className="flex flex-col items-start">
-  <div className="text-sm text-gray-600 dark:text-gray-300 break-words">{member.email}</div>
-  <div className="text-xs text-gray-500 dark:text-gray-400">
-    {isPendingRequestCard ? `Requested: ${formatDate(member.requested_at)}` : `Joined: ${formatDate(member.joined_at)}`}
-  </div>
-</div>
-
+            <div className="text-sm text-gray-600 dark:text-gray-300 break-words">
+              {member.email}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {isPendingRequestCard
+                ? `Requested: ${formatDate(member.requested_at)}`
+                : `Joined: ${formatDate(member.joined_at)}`}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Role & Status Row */}
       <div className="flex items-center justify-between w-full mb-2">
         <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
-          {isMemberAdmin ? 'Admin' : (member.agency_role || 'Agent')}
+          {isMemberAdmin ? "Admin" : member.agency_role || "Agent"}
         </div>
         <div className="w-28 text-center text-xs font-medium">
           <span className={statusColorClass}>
-            {isPendingRequestCard ? capitalize(member.request_status) : capitalize(member.user_status || 'active')}
+            {isPendingRequestCard
+              ? capitalize(member.request_status)
+              : capitalize(member.user_status || "active")}
           </span>
         </div>
       </div>
@@ -116,14 +131,20 @@ const MemberCard = ({
         {isPendingRequestCard ? (
           <>
             <button
-              onClick={(e) => { e.stopPropagation(); acceptAction(member.request_id, member.user_id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                acceptAction(member.request_id, member.user_id);
+              }}
               className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm flex-shrink-0 transition-colors
                 ${currentDarkMode ? "text-green-400 hover:bg-gray-700 hover:border hover:border-green-500" : "text-green-700 hover:bg-gray-100 hover:border hover:border-green-500"} border-transparent`}
             >
               <CheckCircleIcon className="h-5 w-5" /> Accept
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); rejectAction(member.request_id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                rejectAction(member.request_id);
+              }}
               className={`flex items-center gap-1 rounded-xl px-1 py-1 h-8 text-sm flex-shrink-0 transition-colors
                 ${currentDarkMode ? "text-red-400 hover:bg-gray-700 hover:border hover:border-red-500" : "text-red-700 hover:bg-gray-100 hover:border hover:border-red-500"} border-transparent`}
             >
@@ -134,7 +155,10 @@ const MemberCard = ({
           <>
             {/* Call onViewProfile when "View Profile" button is clicked */}
             <button
-              onClick={(e) => { e.stopPropagation(); onViewProfile(member.user_id, member.agency_role); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewProfile(member.user_id, member.agency_role);
+              }}
               className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                 ${currentDarkMode ? "text-blue-400 hover:bg-gray-700 hover:border hover:border-blue-500" : "text-blue-700 hover:bg-gray-100 hover:border hover:border-blue-500"} border-transparent`}
             >
@@ -143,9 +167,12 @@ const MemberCard = ({
 
             {isCurrentUserAdmin && !isCurrentUser && (
               <>
-                {member.agency_role === 'agent' && (
+                {member.agency_role === "agent" && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onPromoteMember(member.user_id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPromoteMember(member.user_id);
+                    }}
                     className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                       ${currentDarkMode ? "text-purple-400 hover:bg-gray-700 hover:border hover:border-purple-500" : "text-purple-700 hover:bg-gray-100 hover:border hover:border-purple-500"} border-transparent`}
                     title="Promote to Admin"
@@ -153,9 +180,12 @@ const MemberCard = ({
                     <UserPlusIcon className="h-4 w-4 mr-0.5" /> Promote
                   </button>
                 )}
-                {member.agency_role === 'agency_admin' && (
+                {member.agency_role === "agency_admin" && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDemoteMember(member.user_id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDemoteMember(member.user_id);
+                    }}
                     className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                       ${currentDarkMode ? "text-orange-400 hover:bg-gray-700 hover:border hover:border-orange-500" : "text-orange-700 hover:bg-gray-100 hover:border hover:border-orange-500"} border-transparent`}
                     title="Demote to Agent"
@@ -170,16 +200,24 @@ const MemberCard = ({
             {/* Toggle Member Status Button (only for admins, not self) */}
             {isCurrentUserAdmin && user?.user_id !== member.user_id && (
               <button
-                onClick={(e) => { e.stopPropagation(); onToggleMemberStatus(member.user_id, member.member_status); }}
-                title={member.member_status === 'vip' ? 'Make Regular' : 'Make VIP'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleMemberStatus(member.user_id, member.member_status);
+                }}
+                title={
+                  member.member_status === "vip" ? "Make Regular" : "Make VIP"
+                }
                 className={`text-xs rounded-xl px-1 py-1 h-8 flex items-center justify-center flex-shrink-0
                   ${currentDarkMode ? "text-yellow-400 hover:bg-gray-700 hover:border hover:border-yellow-500" : "text-yellow-700 hover:bg-gray-100 hover:border hover:border-yellow-500"} border-transparent`}
               >
-                {member.member_status === 'vip' ? 'Reg' : 'VIP'}
+                {member.member_status === "vip" ? "Reg" : "VIP"}
               </button>
             )}
 
-            {(user && user.user_id === member.user_id && user.role === 'agency_admin' && member.total_admins === 1) ? (
+            {user &&
+            user.user_id === member.user_id &&
+            user.role === "agency_admin" &&
+            member.total_admins === 1 ? (
               <button
                 disabled
                 className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 opacity-50 cursor-not-allowed border border-transparent`}
@@ -188,7 +226,14 @@ const MemberCard = ({
                 <TrashIcon className="h-4 w-4" />
               </button>
             ) : (
-              <button onClick={(e) => { e.stopPropagation(); onRemoveMember(member.user_id); }} title="Remove member" className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveMember(member.user_id);
+                }}
+                title="Remove member"
+                className={`rounded-xl p-1 h-8 w-8 flex items-center justify-center text-red-500 hover:border-red-600 border border-transparent`}
+              >
                 <TrashIcon className="h-4 w-4" />
               </button>
             )}

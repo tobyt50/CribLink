@@ -1,11 +1,20 @@
-import React from 'react'; 
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../../layouts/AppShell';
+import { motion } from "framer-motion";
 import {
-  User, Shield, KeyRound, SlidersHorizontal, Building, Settings as SettingsIcon,
-  Bell, Link as LinkIcon, ClipboardList, Server, Search, ArrowLeft
-} from 'lucide-react';
+  ArrowLeft,
+  Bell,
+  Building,
+  ClipboardList,
+  KeyRound,
+  Link as LinkIcon,
+  Search,
+  Server,
+  Settings as SettingsIcon,
+  Shield,
+  SlidersHorizontal,
+  User,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useTheme } from "../../../layouts/AppShell";
 
 const categoryIcons = {
   profile: User,
@@ -20,30 +29,58 @@ const categoryIcons = {
   systemMaintenance: Server,
 };
 
-const SettingsHub = ({ categories, onSelectCategory, searchTerm, setSearchTerm }) => {
+const SettingsHub = ({
+  categories,
+  onSelectCategory,
+  searchTerm,
+  setSearchTerm,
+}) => {
+  const location = useLocation();
   const { darkMode } = useTheme();
   const navigate = useNavigate();
 
+  const handleBack = () => {
+    const fromAuthPage =
+      location.key === "default" || // direct load (no history)
+      location.state?.fromAuth ||
+      ["/signin", "/signup"].includes(document.referrer.split("/").pop());
+
+    if (fromAuthPage) {
+      // if last page was sign in/up, go to home or dashboard instead
+      navigate("/");
+    } else {
+      navigate(-1);
+    }
+  };
+
+  // Animation variants updated to match Agencies.jsx
   const listVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 }, // Stagger effect
+    },
   };
 
   const rowVariants = {
-    hidden: { y: 12, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 110, damping: 14 } },
+    hidden: { y: 20, opacity: 0 }, // Item animation
+    visible: {
+      y: 0,
+      opacity: 1,
+    },
   };
 
   return (
-    <div className={`min-h-screen px-4 pt-4 ${darkMode ? "bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-800"}`}>
-      
+    <div
+      className={`min-h-screen px-4 pt-4 ${darkMode ? "bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-800"}`}
+    >
       {/* Header */}
       <header className="relative flex flex-col items-center text-center mb-4 max-w-5xl mx-auto">
-      <button
-          onClick={() => navigate(-1)}
+        <button
+          onClick={handleBack}
           aria-label="Go back"
           className={`absolute left-0 top-0 p-2 rounded-lg shadow-sm transition hover:scale-105
-            ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
+        ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}
         >
           <ArrowLeft size={20} />
         </button>
@@ -66,9 +103,10 @@ const SettingsHub = ({ categories, onSelectCategory, searchTerm, setSearchTerm }
           onChange={(e) => setSearchTerm(e.target.value)}
           className={`w-full h-11 pl-10 pr-4 rounded-2xl border shadow-sm transition
             focus:outline-none focus:ring-2 focus:ring-green-500
-            ${darkMode
-              ? "bg-gray-900 border-gray-800 text-gray-100 placeholder-gray-500"
-              : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
+            ${
+              darkMode
+                ? "bg-gray-900 border-gray-800 text-gray-100 placeholder-gray-500"
+                : "bg-white border-gray-200 text-gray-800 placeholder-gray-400"
             }`}
         />
       </div>
@@ -101,7 +139,9 @@ const SettingsHub = ({ categories, onSelectCategory, searchTerm, setSearchTerm }
                   <h2 className="text-lg font-semibold leading-snug group-hover:text-green-600 dark:group-hover:text-green-400">
                     {category.label}
                   </h2>
-                  <p className={`text-sm mt-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                  <p
+                    className={`text-sm mt-1 ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+                  >
                     {category.description}
                   </p>
                 </div>
@@ -111,8 +151,11 @@ const SettingsHub = ({ categories, onSelectCategory, searchTerm, setSearchTerm }
         </motion.ul>
       ) : (
         <div className="text-center mt-10">
-          <p className={`text-base ${darkMode ? "text-gray-500" : "text-gray-600"}`}>
-            No settings found for <span className="font-semibold">"{searchTerm}"</span>
+          <p
+            className={`text-base ${darkMode ? "text-gray-500" : "text-gray-600"}`}
+          >
+            No settings found for{" "}
+            <span className="font-semibold">"{searchTerm}"</span>
           </p>
         </div>
       )}

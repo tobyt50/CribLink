@@ -5,13 +5,24 @@ import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { AlertTriangle } from "lucide-react";
 
 export default function ConfirmDialog() {
-  const { open, closeConfirm, confirm, title, message, confirmLabel, cancelLabel } = useConfirmDialog();
+  const {
+    open,
+    closeConfirm,
+    confirm,
+    title,
+    message,
+    confirmLabel,
+    cancelLabel,
+  } = useConfirmDialog();
 
   return (
     <AnimatePresence>
       {open && (
         <Dialog open={open} onClose={closeConfirm} className="relative z-50">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            aria-hidden="true"
+          />
           <div className="fixed inset-0 flex items-center justify-center p-4">
             <Dialog.Panel
               as={motion.div}

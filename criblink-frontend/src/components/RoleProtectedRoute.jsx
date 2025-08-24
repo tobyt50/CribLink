@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
-import { getUserRoleFromToken, signOutUser } from '../utils/authUtils';
-import { useMessage } from '../context/MessageContext';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
-import ProtectedBaseRoute from './ProtectedBaseRoute'; // Keep this for nested routing if needed, but logic is now in parent
+import { getUserRoleFromToken, signOutUser } from "../utils/authUtils";
+import { useMessage } from "../context/MessageContext";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
+import ProtectedBaseRoute from "./ProtectedBaseRoute"; // Keep this for nested routing if needed, but logic is now in parent
 
 /**
  * RoleProtectedRoute
@@ -20,7 +20,9 @@ const RoleProtectedRoute = ({ allowedRole }) => {
   const currentUserRole = user?.role;
 
   // Convert allowedRole to an array if it's a single string for consistent checking
-  const allowedRolesArray = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
+  const allowedRolesArray = Array.isArray(allowedRole)
+    ? allowedRole
+    : [allowedRole];
 
   useEffect(() => {
     // This effect runs after authentication is loaded
@@ -28,11 +30,21 @@ const RoleProtectedRoute = ({ allowedRole }) => {
       // If not authenticated at all, ProtectedBaseRoute should handle the redirect.
       // This component focuses on role-specific access *after* base authentication.
       if (isAuthenticated && !allowedRolesArray.includes(currentUserRole)) {
-        showMessage(`Access denied: You do not have the required privileges.`, 'error');
+        showMessage(
+          `Access denied: You do not have the required privileges.`,
+          "error",
+        );
         signOutUser(navigate);
       }
     }
-  }, [currentUserRole, allowedRolesArray, navigate, showMessage, loading, isAuthenticated]);
+  }, [
+    currentUserRole,
+    allowedRolesArray,
+    navigate,
+    showMessage,
+    loading,
+    isAuthenticated,
+  ]);
 
   // If authentication status is still loading, return null to render nothing visually.
   // The component will still wait for 'loading' to become false before proceeding.

@@ -1,7 +1,7 @@
-import React from 'react';
-import { AnimatePresence } from 'framer-motion';
-import ShareModal from '../ShareModal'; // Assuming ShareModal is in the same directory or adjust path
-import ClientInquiryModal from '../ClientInquiryModal'; // Assuming ClientInquiryModal is in the same directory or adjust path
+import React from "react";
+import { AnimatePresence } from "framer-motion";
+import ShareModal from "../ShareModal"; // Assuming ShareModal is in the same directory or adjust path
+import ClientInquiryModal from "../ClientInquiryModal"; // Assuming ClientInquiryModal is in the same directory or adjust path
 
 const ModalsContainer = ({
   isShareModalOpen,
@@ -18,7 +18,7 @@ const ModalsContainer = ({
   setOpenedConversationId,
   handleViewProperty,
   handleDeleteInquiry,
-  handleSendMessageToConversation
+  handleSendMessageToConversation,
 }) => {
   return (
     <AnimatePresence>
@@ -46,7 +46,7 @@ const ModalsContainer = ({
           onViewProperty={handleViewProperty}
           onDelete={handleDeleteInquiry}
           onSendMessage={handleSendMessageToConversation}
-          isGuest={userRole === 'guest'}
+          isGuest={userRole === "guest"}
         />
       )}
     </AnimatePresence>

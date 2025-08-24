@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import API_BASE_URL from '../../config';
-import { useTheme } from '../../layouts/AppShell'; // Import useTheme hook
-import { useMessage } from '../../context/MessageContext'; // Import useMessage hook
+import React, { useState } from "react";
+import axios from "axios";
+import API_BASE_URL from "../../config";
+import { useTheme } from "../../layouts/AppShell"; // Import useTheme hook
+import { useMessage } from "../../context/MessageContext"; // Import useMessage hook
 
 const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const { darkMode } = useTheme(); // Use the dark mode context
   const { showMessage } = useMessage(); // Initialize useMessage
@@ -21,22 +21,22 @@ const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
         { subject, message },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
+        },
       );
-      showMessage('Email sent successfully!', 'success', 3000); // Display success toast
+      showMessage("Email sent successfully!", "success", 3000); // Display success toast
       onSent();
       onClose();
     } catch (err) {
-      console.error('Failed to send email:', err);
-      let errorMessage = 'Failed to send email. Please try again.';
+      console.error("Failed to send email:", err);
+      let errorMessage = "Failed to send email. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      showMessage(errorMessage, 'error'); // Display error toast
+      showMessage(errorMessage, "error"); // Display error toast
     } finally {
       setSending(false);
     }
@@ -44,14 +44,20 @@ const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className={`rounded-xl p-6 w-full max-w-lg shadow-lg relative ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}>
+      <div
+        className={`rounded-xl p-6 w-full max-w-lg shadow-lg relative ${darkMode ? "bg-gray-800 text-gray-200" : "bg-white"}`}
+      >
         <button
           className={`absolute top-3 right-3 hover:text-red-500 ${darkMode ? "text-gray-400" : "text-gray-500"}`}
           onClick={onClose}
         >
           ✕
         </button>
-        <h2 className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}>Send Email to {client.full_name}</h2>
+        <h2
+          className={`text-xl font-bold mb-4 ${darkMode ? "text-green-400" : "text-green-700"}`}
+        >
+          Send Email to {client.full_name}
+        </h2>
 
         <input
           type="text"
@@ -74,7 +80,7 @@ const SendEmailModal = ({ isOpen, onClose, agentId, client, onSent }) => {
           disabled={sending}
           className={`hover:bg-green-600 text-white py-2 px-4 rounded ${darkMode ? "bg-green-600 hover:bg-green-700" : "bg-green-500"}`}
         >
-          {sending ? 'Sending...' : 'Send'}
+          {sending ? "Sending..." : "Send"}
         </button>
       </div>
     </div>

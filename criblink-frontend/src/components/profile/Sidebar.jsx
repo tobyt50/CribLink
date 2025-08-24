@@ -1,21 +1,50 @@
-import React, { useEffect } from 'react'; // Added useEffect import
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, ChevronLeft, X, User, Shield, Lock, Settings } from 'lucide-react';
-import { useTheme } from '../../layouts/AppShell';
-import { useSidebarState } from '../../hooks/useSidebarState';
-import { Link, useLocation } from 'react-router-dom'; // Import Link and useLocation from react-router-dom
+import React, { useEffect } from "react"; // Added useEffect import
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Menu,
+  ChevronLeft,
+  X,
+  User,
+  Shield,
+  Lock,
+  Settings,
+} from "lucide-react";
+import { useTheme } from "../../layouts/AppShell";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { Link, useLocation } from "react-router-dom"; // Import Link and useLocation from react-router-dom
 
 // Define menu items for the sidebar
 // Add a 'path' property to each item
 const MENU_ITEMS = [
-  { name: 'General', icon: <User size={24} />, key: 'general', path: '/profile/general' },
-  { name: 'Security', icon: <Shield size={24} />, key: 'security', path: '/profile/security' },
-  { name: 'Privacy', icon: <Lock size={24} />, key: 'privacy', path: '/profile/privacy' },
+  {
+    name: "General",
+    icon: <User size={24} />,
+    key: "general",
+    path: "/profile/general",
+  },
+  {
+    name: "Security",
+    icon: <Shield size={24} />,
+    key: "security",
+    path: "/profile/security",
+  },
+  {
+    name: "Privacy",
+    icon: <Lock size={24} />,
+    key: "privacy",
+    path: "/profile/privacy",
+  },
 ];
 
 function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
   const { darkMode } = useTheme();
-  const { isMobile, isSidebarOpen, setIsSidebarOpen, isCollapsed, setIsCollapsed } = useSidebarState();
+  const {
+    isMobile,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isCollapsed,
+    setIsCollapsed,
+  } = useSidebarState();
   const location = useLocation(); // Get current location from react-router-dom
 
   // Helper function to get initials from full name
@@ -23,29 +52,34 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
     if (!name) return "";
     const names = name.trim().split(" ");
     if (names.length === 1) return names[0][0]?.toUpperCase() || "";
-    return ((names[0]?.[0] || "") + (names[names.length - 1]?.[0] || "")).toUpperCase();
+    return (
+      (names[0]?.[0] || "") + (names[names.length - 1]?.[0] || "")
+    ).toUpperCase();
   };
 
   // Determine active section based on current URL path
   // This ensures the sidebar highlights correctly when navigating directly to a sub-URL
   useEffect(() => {
     const currentPath = location.pathname;
-    const foundItem = MENU_ITEMS.find(item => item.path === currentPath);
+    const foundItem = MENU_ITEMS.find((item) => item.path === currentPath);
     if (foundItem && activeSection !== foundItem.key) {
       setActiveSection(foundItem.key);
-    } else if (!foundItem && currentPath.startsWith('/profile') && activeSection !== 'general') {
+    } else if (
+      !foundItem &&
+      currentPath.startsWith("/profile") &&
+      activeSection !== "general"
+    ) {
       // Default to 'general' if on '/profile' route without specific sub-path
-      setActiveSection('general');
+      setActiveSection("general");
     }
   }, [location.pathname, activeSection, setActiveSection]);
-
 
   return (
     <>
       {/* Mobile Sidebar Toggle Button (fixed on the main content area) */}
       {isMobile && (
         <motion.button
-          onClick={() => setIsSidebarOpen(prev => !prev)}
+          onClick={() => setIsSidebarOpen((prev) => !prev)}
           className={`fixed mt-5 left-4 z-50 p-2 rounded-xl shadow-md h-10 w-10 flex items-center justify-center ${darkMode ? "bg-gray-800" : "bg-white"}`}
           initial={false}
           animate={{ rotate: isSidebarOpen ? 180 : 0, opacity: 1 }}
@@ -53,7 +87,7 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={isSidebarOpen ? 'close' : 'menu'}
+              key={isSidebarOpen ? "close" : "menu"}
               initial={{ opacity: 0, rotate: -90 }}
               animate={{ opacity: 1, rotate: 0 }}
               exit={{ opacity: 0, rotate: 90 }}
@@ -69,13 +103,13 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
       <motion.div
         className={`transition-all duration-300 shadow-2xl border-r
           flex flex-col items-start pb-10 h-screen fixed left-0 z-40 overflow-y-auto
-          ${isMobile ? (isSidebarOpen ? 'translate-x-0 w-64 top-14' : '-translate-x-full w-64 top-14') : (isCollapsed ? 'w-20 top-14' : 'w-64 top-14')}
+          ${isMobile ? (isSidebarOpen ? "translate-x-0 w-64 top-14" : "-translate-x-full w-64 top-14") : isCollapsed ? "w-20 top-14" : "w-64 top-14"}
           ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
         `}
         initial={false}
         animate={{
           x: isMobile ? (isSidebarOpen ? 0 : -256) : 0, // 256px is w-64
-          width: isMobile ? 256 : (isCollapsed ? 80 : 256)
+          width: isMobile ? 256 : isCollapsed ? 80 : 256,
         }}
         transition={{ duration: 0.05 }}
       >
@@ -83,10 +117,13 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
         {!isMobile && (
           <button
             onClick={() => {
-              setIsCollapsed(prev => {
+              setIsCollapsed((prev) => {
                 const newCollapsedState = !prev;
                 // Persist sidebar state
-                localStorage.setItem('sidebarPermanentlyExpanded', JSON.stringify(!newCollapsedState));
+                localStorage.setItem(
+                  "sidebarPermanentlyExpanded",
+                  JSON.stringify(!newCollapsedState),
+                );
                 return newCollapsedState;
               });
             }}
@@ -95,13 +132,27 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
           >
             {isCollapsed ? (
               <>
-                <Menu className={`${darkMode ? "text-gray-200" : "text-gray-700"}`} size={24} />
-                <span className={`mt-1 text-xs font-semibold select-none ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Expand</span>
+                <Menu
+                  className={`${darkMode ? "text-gray-200" : "text-gray-700"}`}
+                  size={24}
+                />
+                <span
+                  className={`mt-1 text-xs font-semibold select-none ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  Expand
+                </span>
               </>
             ) : (
               <>
-                <ChevronLeft className={`${darkMode ? "text-gray-200" : "text-gray-700"}`} size={24} />
-                <span className={`mt-1 text-xs font-semibold select-none ${darkMode ? "text-gray-300" : "text-gray-600"}`}>Collapse</span>
+                <ChevronLeft
+                  className={`${darkMode ? "text-gray-200" : "text-gray-700"}`}
+                  size={24}
+                />
+                <span
+                  className={`mt-1 text-xs font-semibold select-none ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  Collapse
+                </span>
               </>
             )}
           </button>
@@ -117,18 +168,28 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
           {children}
 
           {/* Profile Details */}
-          {(isMobile || !isCollapsed) ? (
+          {isMobile || !isCollapsed ? (
             <>
-              <p className={`mt-4 font-semibold truncate max-w-full text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+              <p
+                className={`mt-4 font-semibold truncate max-w-full text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+              >
                 {userInfo.full_name}
               </p>
-              <p className={`text-sm truncate max-w-full ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+              <p
+                className={`text-sm truncate max-w-full ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
                 {userInfo.email}
               </p>
-              <p className={`text-xs uppercase mt-1 ${darkMode ? "text-green-400" : "text-green-600"}`}>{userInfo.role}</p>
+              <p
+                className={`text-xs uppercase mt-1 ${darkMode ? "text-green-400" : "text-green-600"}`}
+              >
+                {userInfo.role}
+              </p>
             </>
           ) : (
-            <p className={`mt-3 font-bold select-none text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}>
+            <p
+              className={`mt-3 font-bold select-none text-lg ${darkMode ? "text-gray-200" : "text-gray-800"}`}
+            >
               {getInitials(userInfo.full_name)}
             </p>
           )}
@@ -153,13 +214,18 @@ function Sidebar({ activeSection, setActiveSection, userInfo, children }) {
                   }`}
               >
                 <span>
-                  {React.cloneElement(item.icon, { size: 24, className: `${darkMode ? "text-green-400" : ""}` })}
+                  {React.cloneElement(item.icon, {
+                    size: 24,
+                    className: `${darkMode ? "text-green-400" : ""}`,
+                  })}
                 </span>
                 {(isMobile || !isCollapsed) && <span>{item.name}</span>}
               </Link>
               {/* Divider line */}
               {idx < MENU_ITEMS.length - 1 && (
-                <hr className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`} />
+                <hr
+                  className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`}
+                />
               )}
             </React.Fragment>
           ))}

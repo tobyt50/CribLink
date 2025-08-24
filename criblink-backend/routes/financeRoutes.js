@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getAllFinances } = require('../controllers/financeController');
+const { getAllFinances } = require("../controllers/financeController");
 
-router.get('/', getAllFinances);
+router.get("/", getAllFinances);
 
 module.exports = router;

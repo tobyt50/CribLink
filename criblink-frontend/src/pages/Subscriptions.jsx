@@ -1,23 +1,25 @@
 import { motion } from "framer-motion";
 import { Check, Star, Crown, Building2, Rocket, Zap } from "lucide-react";
-import { useTheme } from '../layouts/AppShell';
-import Footer from '../components/Footer';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useTheme } from "../layouts/AppShell";
+import Footer from "../components/Footer";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function SubscriptionPage() {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const currentUserPlan = user?.subscription_type || 'basic';
+  const currentUserPlan = user?.subscription_type || "basic";
 
   const plans = [
     {
       name: "Basic",
       price: "Free",
       tag: "Starter",
-      gradient: darkMode ? "from-neutral-800/60 to-neutral-900/60" : "from-white to-gray-100",
+      gradient: darkMode
+        ? "from-neutral-800/60 to-neutral-900/60"
+        : "from-white to-gray-100",
       features: [
         "5 active listings",
         "0 Featured priority",
@@ -25,13 +27,20 @@ export default function SubscriptionPage() {
         "No video tours",
         "Basic analytics",
       ],
-      icon: <Building2 size={32} className={darkMode ? "text-neutral-200" : "text-neutral-700"} />,
+      icon: (
+        <Building2
+          size={32}
+          className={darkMode ? "text-neutral-200" : "text-neutral-700"}
+        />
+      ),
     },
     {
       name: "Pro",
       price: "$29/mo",
       tag: "Most Popular",
-      gradient: darkMode ? "from-blue-800/40 to-indigo-800/40" : "from-blue-100 to-indigo-100",
+      gradient: darkMode
+        ? "from-blue-800/40 to-indigo-800/40"
+        : "from-blue-100 to-indigo-100",
       features: [
         "20 active listings",
         "Featured priority: 6",
@@ -41,13 +50,20 @@ export default function SubscriptionPage() {
         "Moderate analytics",
         "Instant lead alerts",
       ],
-      icon: <Rocket size={32} className={darkMode ? "text-blue-200" : "text-blue-500"} />,
+      icon: (
+        <Rocket
+          size={32}
+          className={darkMode ? "text-blue-200" : "text-blue-500"}
+        />
+      ),
     },
     {
       name: "Enterprise",
       price: "$79/mo",
       tag: "Elite",
-      gradient: darkMode ? "from-amber-800/40 to-orange-800/40" : "from-amber-100 to-orange-100",
+      gradient: darkMode
+        ? "from-amber-800/40 to-orange-800/40"
+        : "from-amber-100 to-orange-100",
       features: [
         "Unlimited listings",
         "Featured priority: 10",
@@ -57,7 +73,12 @@ export default function SubscriptionPage() {
         "Agency branding + CRM",
         "Priority support + boosts",
       ],
-      icon: <Zap size={32} className={darkMode ? "text-amber-200" : "text-amber-500"} />,
+      icon: (
+        <Zap
+          size={32}
+          className={darkMode ? "text-amber-200" : "text-amber-500"}
+        />
+      ),
     },
   ];
 
@@ -82,19 +103,22 @@ export default function SubscriptionPage() {
 
   const selectPlan = (plan) => {
     const { icon, ...planWithoutIcon } = plan;
-    navigate('/subscriptions/checkout', { 
-      state: { 
+    navigate("/subscriptions/checkout", {
+      state: {
         selectedPlan: planWithoutIcon,
-        currentUserPlan // pass the current user plan
-      } 
+        currentUserPlan, // pass the current user plan
+      },
     });
   };
-  
 
   return (
     <div
       className={`relative min-h-screen overflow-hidden font-sans ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"}`}
-      style={{ paddingTop: "var(--header-height, 56px)", fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+      style={{
+        paddingTop: "var(--header-height, 56px)",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}
     >
       <motion.div
         className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br opacity-5 ${darkMode ? "from-blue-500/10 to-indigo-500/10" : "from-blue-200/10 to-indigo-200/10"}`}
@@ -117,28 +141,29 @@ export default function SubscriptionPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          From new agents to market leaders — choose the plan that unlocks your full potential on CribLink.
+          From new agents to market leaders — choose the plan that unlocks your
+          full potential on CribLink.
         </motion.p>
       </section>
 
       <section className="relative z-10 px-6 md:px-12 grid md:grid-cols-3 gap-6 pb-10 max-w-7xl mx-auto">
         {plans.map((plan, i) => {
           const isCurrentPlan = plan.name.toLowerCase() === currentUserPlan;
-          const isBasicPlan = plan.name === 'Basic';
+          const isBasicPlan = plan.name === "Basic";
 
-          let buttonText = 'Upgrade';
+          let buttonText = "Upgrade";
           if (isCurrentPlan) {
-            buttonText = 'Current Plan';
+            buttonText = "Current Plan";
           } else if (isBasicPlan) {
-            buttonText = 'Default Plan';
-          } else if (currentUserPlan === 'enterprise' && plan.name === 'Pro') {
-            buttonText = 'Change Plan';
+            buttonText = "Default Plan";
+          } else if (currentUserPlan === "enterprise" && plan.name === "Pro") {
+            buttonText = "Change Plan";
           }
 
           return (
             <motion.div
               key={i}
-              className={`rounded-3xl bg-gradient-to-br ${plan.gradient} p-6 shadow-lg flex flex-col justify-between ${darkMode ? "shadow-black/50" : "shadow-gray-200"} backdrop-blur-sm ${!isBasicPlan && !isCurrentPlan ? 'cursor-pointer' : ''}`}
+              className={`rounded-3xl bg-gradient-to-br ${plan.gradient} p-6 shadow-lg flex flex-col justify-between ${darkMode ? "shadow-black/50" : "shadow-gray-200"} backdrop-blur-sm ${!isBasicPlan && !isCurrentPlan ? "cursor-pointer" : ""}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               whileHover={
@@ -151,32 +176,62 @@ export default function SubscriptionPage() {
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${darkMode ? "bg-neutral-800/50" : "bg-gray-100/50"}`}>{plan.icon}</div>
-                  {plan.name === "Pro" && <Star className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
-                  {plan.name === "Enterprise" && <Crown className={darkMode ? "text-amber-200" : "text-amber-500"} size={24} />}
+                  <div
+                    className={`p-3 rounded-2xl ${darkMode ? "bg-neutral-800/50" : "bg-gray-100/50"}`}
+                  >
+                    {plan.icon}
+                  </div>
+                  {plan.name === "Pro" && (
+                    <Star
+                      className={darkMode ? "text-amber-200" : "text-amber-500"}
+                      size={24}
+                    />
+                  )}
+                  {plan.name === "Enterprise" && (
+                    <Crown
+                      className={darkMode ? "text-amber-200" : "text-amber-500"}
+                      size={24}
+                    />
+                  )}
                 </div>
-                <h3 className={`text-2xl font-semibold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>{plan.name}</h3>
+                <h3
+                  className={`text-2xl font-semibold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
+                >
+                  {plan.name}
+                </h3>
 
                 <div className="flex items-center justify-between my-3">
-                  <p className={`text-4xl font-bold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>
+                  <p
+                    className={`text-4xl font-bold tracking-tight ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
+                  >
                     {plan.price}
                   </p>
                   <button
-                    onClick={() => !isCurrentPlan && !isBasicPlan && selectPlan(plan)}
+                    onClick={() =>
+                      !isCurrentPlan && !isBasicPlan && selectPlan(plan)
+                    }
                     disabled={isCurrentPlan || isBasicPlan}
                     className={`ml-4 font-semibold px-5 py-2 rounded-xl transition-all duration-300 ${
                       isCurrentPlan
-                        ? (darkMode ? "bg-green-500/30 text-green-300 cursor-default" : "bg-green-600 text-white cursor-default")
+                        ? darkMode
+                          ? "bg-green-500/30 text-green-300 cursor-default"
+                          : "bg-green-600 text-white cursor-default"
                         : isBasicPlan
-                        ? (darkMode ? "bg-neutral-700/50 text-neutral-400 cursor-default" : "bg-gray-200/50 text-neutral-500 cursor-default")
-                        : (darkMode ? "bg-white/10 text-white hover:bg-white/20" : "bg-black/5 text-black hover:bg-black/10")
+                          ? darkMode
+                            ? "bg-neutral-700/50 text-neutral-400 cursor-default"
+                            : "bg-gray-200/50 text-neutral-500 cursor-default"
+                          : darkMode
+                            ? "bg-white/10 text-white hover:bg-white/20"
+                            : "bg-black/5 text-black hover:bg-black/10"
                     }`}
                   >
                     {buttonText}
                   </button>
                 </div>
 
-                <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-4 ${darkMode ? "bg-neutral-700/50 text-neutral-300" : "bg-gray-200/50 text-neutral-700"}`}>
+                <span
+                  className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-4 ${darkMode ? "bg-neutral-700/50 text-neutral-300" : "bg-gray-200/50 text-neutral-700"}`}
+                >
                   {plan.tag}
                 </span>
 
@@ -193,17 +248,23 @@ export default function SubscriptionPage() {
                       className={`flex items-center gap-2 ${darkMode ? "text-neutral-300" : "text-neutral-700"} font-medium`}
                       variants={item}
                     >
-                      <Check className={darkMode ? "text-blue-400" : "text-blue-600"} size={16} /> {f}
+                      <Check
+                        className={darkMode ? "text-blue-400" : "text-blue-600"}
+                        size={16}
+                      />{" "}
+                      {f}
                     </motion.li>
                   ))}
                 </motion.ul>
               </div>
             </motion.div>
-          )
+          );
         })}
       </section>
 
-      <section className={`relative z-10 text-center py-10 ${darkMode ? "bg-gray-800/50" : "bg-white/50"} backdrop-blur-md`}>
+      <section
+        className={`relative z-10 text-center py-10 ${darkMode ? "bg-gray-800/50" : "bg-white/50"} backdrop-blur-md`}
+      >
         <motion.h2
           className={`text-3xl font-semibold tracking-tight mb-3 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
           initial={{ opacity: 0, scale: 0.95 }}
@@ -226,7 +287,9 @@ export default function SubscriptionPage() {
           onClick={() => selectPlan(plans[1])}
           className={`px-8 py-3 font-semibold rounded-2xl shadow-md transition-all duration-300 ${darkMode ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
         >
-          {currentUserPlan === 'enterprise' ? 'Change My Plan' : 'Upgrade My Plan'}
+          {currentUserPlan === "enterprise"
+            ? "Change My Plan"
+            : "Upgrade My Plan"}
         </button>
       </section>
 

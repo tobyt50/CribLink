@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getRecentActivity } = require('../../controllers/activityController');
+const { getRecentActivity } = require("../../controllers/activityController");
 
-router.get('/recent-activity', getRecentActivity);
+router.get("/recent-activity", getRecentActivity);
 
 module.exports = router;

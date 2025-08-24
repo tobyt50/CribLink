@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useTheme } from '../layouts/AppShell';
-import Footer from '../components/Footer';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import axiosInstance from '../api/axiosInstance';
+import { useTheme } from "../layouts/AppShell";
+import Footer from "../components/Footer";
+import { useLocation, useNavigate, Navigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import axiosInstance from "../api/axiosInstance";
 import CheckoutForm from "../components/CheckoutForm";
 
 // Initialize Stripe outside of the component to avoid re-creating it on every render
@@ -21,17 +21,20 @@ export default function CheckoutPage() {
   if (!location.state?.selectedPlan || !location.state?.currentUserPlan) {
     return <Navigate to="/subscriptions" replace />;
   }
-  
+
   const { selectedPlan, currentUserPlan } = location.state;
 
   // Safeguard to prevent checkout for the Basic plan.
-  if (selectedPlan.name === 'Basic') {
+  if (selectedPlan.name === "Basic") {
     return <Navigate to="/subscriptions" replace />;
   }
 
   // Determine the checkout context
-  const isDowngrade = currentUserPlan === 'enterprise' && selectedPlan.name === 'Pro';
-  const headerText = isDowngrade ? "Confirm Your Downgrade" : "Complete Your Upgrade";
+  const isDowngrade =
+    currentUserPlan === "enterprise" && selectedPlan.name === "Pro";
+  const headerText = isDowngrade
+    ? "Confirm Your Downgrade"
+    : "Complete Your Upgrade";
   const subText = isDowngrade
     ? "You're switching to a plan with fewer features. Please confirm your choice."
     : "You're one step away from unlocking premium features.";
@@ -42,26 +45,29 @@ export default function CheckoutPage() {
   // useEffect to create the Payment Intent as soon as the page loads
   useEffect(() => {
     if (selectedPlan) {
-      axiosInstance.post("/payments/create-payment-intent", { planName: selectedPlan.name.toLowerCase() })
+      axiosInstance
+        .post("/payments/create-payment-intent", {
+          planName: selectedPlan.name.toLowerCase(),
+        })
         .then((res) => {
           setClientSecret(res.data.clientSecret);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Failed to create payment intent:", err);
         });
     }
   }, [selectedPlan]);
-  
+
   const appearance = {
-    theme: darkMode ? 'night' : 'stripe',
+    theme: darkMode ? "night" : "stripe",
     variables: {
-        colorPrimary: '#10B981',
-        colorBackground: darkMode ? '#1F2937' : '#FFFFFF',
-        colorText: darkMode ? '#FFFFFF' : '#000000',
-        colorDanger: '#EF4444',
-        fontFamily: 'system-ui, sans-serif',
-        borderRadius: '0.75rem',
-    }
+      colorPrimary: "#10B981",
+      colorBackground: darkMode ? "#1F2937" : "#FFFFFF",
+      colorText: darkMode ? "#FFFFFF" : "#000000",
+      colorDanger: "#EF4444",
+      fontFamily: "system-ui, sans-serif",
+      borderRadius: "0.75rem",
+    },
   };
   const options = {
     clientSecret,
@@ -69,13 +75,17 @@ export default function CheckoutPage() {
   };
 
   const handleBack = () => {
-    navigate('/subscriptions');
+    navigate("/subscriptions");
   };
 
   return (
     <div
       className={`relative min-h-screen overflow-hidden font-sans ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"}`}
-      style={{ paddingTop: "var(--header-height, 56px)", fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+      style={{
+        paddingTop: "var(--header-height, 56px)",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      }}
     >
       <motion.div
         className={`absolute top-0 left-0 w-full h-full bg-gradient-to-br opacity-5 ${darkMode ? "from-blue-500/10 to-indigo-500/10" : "from-blue-200/10 to-indigo-200/10"}`}
@@ -114,21 +124,47 @@ export default function CheckoutPage() {
           <div className="flex flex-col md:flex-row md:items-start md:gap-8">
             {/* Left Side: Plan Name and Price */}
             <div className="flex-shrink-0 md:w-1/3 mb-6 md:mb-0 text-center md:text-left">
-              <p className={`text-sm font-medium mb-1 ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}>Selected Plan</p>
-              <h2 className={`text-3xl font-bold tracking-tight mb-2 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>{selectedPlan.name}</h2>
-              <p className={`text-5xl font-extrabold tracking-tighter bg-gradient-to-r ${darkMode ? "from-green-400 to-blue-400" : "from-green-600 to-blue-600"} bg-clip-text text-transparent`}>
-                {selectedPlan.price.split('/')[0]}
-                <span className={`text-lg font-semibold align-baseline ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}>/{selectedPlan.price.split('/')[1]}</span>
+              <p
+                className={`text-sm font-medium mb-1 ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}
+              >
+                Selected Plan
+              </p>
+              <h2
+                className={`text-3xl font-bold tracking-tight mb-2 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
+              >
+                {selectedPlan.name}
+              </h2>
+              <p
+                className={`text-5xl font-extrabold tracking-tighter bg-gradient-to-r ${darkMode ? "from-green-400 to-blue-400" : "from-green-600 to-blue-600"} bg-clip-text text-transparent`}
+              >
+                {selectedPlan.price.split("/")[0]}
+                <span
+                  className={`text-lg font-semibold align-baseline ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}
+                >
+                  /{selectedPlan.price.split("/")[1]}
+                </span>
               </p>
             </div>
 
             {/* Right Side: Features Grid */}
-            <div className={`flex-grow md:border-l md:pl-8 ${darkMode ? "md:border-neutral-700" : "md:border-neutral-200"}`}>
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? "text-neutral-200" : "text-neutral-800"}`}>Plan Benefits:</h3>
+            <div
+              className={`flex-grow md:border-l md:pl-8 ${darkMode ? "md:border-neutral-700" : "md:border-neutral-200"}`}
+            >
+              <h3
+                className={`text-lg font-semibold mb-4 ${darkMode ? "text-neutral-200" : "text-neutral-800"}`}
+              >
+                Plan Benefits:
+              </h3>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 {selectedPlan.features.map((feature, idx) => (
-                  <li key={idx} className={`flex items-start gap-3 ${darkMode ? "text-neutral-300" : "text-neutral-600"}`}>
-                    <Check className={`flex-shrink-0 mt-1 ${darkMode ? "text-blue-400" : "text-blue-600"}`} size={16} />
+                  <li
+                    key={idx}
+                    className={`flex items-start gap-3 ${darkMode ? "text-neutral-300" : "text-neutral-600"}`}
+                  >
+                    <Check
+                      className={`flex-shrink-0 mt-1 ${darkMode ? "text-blue-400" : "text-blue-600"}`}
+                      size={16}
+                    />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -145,11 +181,18 @@ export default function CheckoutPage() {
           transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
           viewport={{ once: true }}
         >
-          <h2 className={`text-2xl font-semibold tracking-tight mb-4 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}>Payment Details</h2>
-          
+          <h2
+            className={`text-2xl font-semibold tracking-tight mb-4 ${darkMode ? "text-neutral-100" : "text-neutral-900"}`}
+          >
+            Payment Details
+          </h2>
+
           {clientSecret ? (
             <Elements options={options} stripe={stripePromise}>
-              <CheckoutForm selectedPlan={selectedPlan} currentUserPlan={currentUserPlan} />
+              <CheckoutForm
+                selectedPlan={selectedPlan}
+                currentUserPlan={currentUserPlan}
+              />
             </Elements>
           ) : (
             <div className="text-center p-8">Loading payment form...</div>
@@ -168,7 +211,9 @@ export default function CheckoutPage() {
           </motion.button>
         </div>
 
-        <p className={`text-center mt-6 text-sm ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}>
+        <p
+          className={`text-center mt-6 text-sm ${darkMode ? "text-neutral-400" : "text-neutral-500"}`}
+        >
           Secure payment via Stripe. PCI compliant.
         </p>
       </section>

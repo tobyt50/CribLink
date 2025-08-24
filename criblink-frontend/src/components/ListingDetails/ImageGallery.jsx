@@ -1,9 +1,9 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
-} from '@heroicons/react/24/outline';
+} from "@heroicons/react/24/outline";
 
 const ImageGallery = ({
   images,
@@ -15,12 +15,13 @@ const ImageGallery = ({
   showPreview,
   closePreview,
   previewRef,
-  darkMode
+  darkMode,
 }) => {
   return (
     <>
-      
-      <div className={`relative w-full h-80 md:h-96 rounded-xl overflow-hidden mb-4 shadow-md ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+      <div
+        className={`relative w-full h-80 md:h-96 rounded-xl overflow-hidden mb-4 shadow-md ${darkMode ? "bg-gray-700" : "bg-gray-100"}`}
+      >
         <AnimatePresence initial={false} custom={direction}>
           <motion.img
             key={mainIndex}
@@ -69,8 +70,11 @@ const ImageGallery = ({
             key={i}
             src={img}
             alt={`Thumb ${i}`}
-            className={`h-16 w-full object-cover rounded-md cursor-pointer border-2 transition-all duration-200 ${i === mainIndex ? 'border-green-600 ring-2 ring-green-400' : 'border-transparent'
-              }`}
+            className={`h-16 w-full object-cover rounded-md cursor-pointer border-2 transition-all duration-200 ${
+              i === mainIndex
+                ? "border-green-600 ring-2 ring-green-400"
+                : "border-transparent"
+            }`}
             onClick={() => handleThumbClick(i)}
           />
         ))}

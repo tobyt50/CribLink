@@ -1,8 +1,8 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import ListingCard from '../ListingCard'; // Corrected path assuming it's in the same components folder
+import React, { useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import ListingCard from "../ListingCard"; // Corrected path assuming it's in the same components folder
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useTheme } from '../../layouts/AppShell';
+import { useTheme } from "../../layouts/AppShell";
 
 const SimilarListingsCarousel = ({
   similarListings,
@@ -39,7 +39,8 @@ const SimilarListingsCarousel = ({
     requestAnimationFrame(animate);
   };
 
-  const scrollSimilar = useCallback((direction) => {
+  const scrollSimilar = useCallback(
+    (direction) => {
       if (!isCarousel || !similarCarouselRef.current) return;
       const carousel = similarCarouselRef.current;
       const itemElement = carousel.querySelector(".similar-card-item");
@@ -48,11 +49,14 @@ const SimilarListingsCarousel = ({
       const itemStyle = window.getComputedStyle(itemElement);
       const itemMarginLeft = parseFloat(itemStyle.marginLeft);
       const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+      const itemWidthWithMargins =
+        itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
       const numOriginalItems = similarListings.length;
       const totalOriginalListWidth = numOriginalItems * itemWidthWithMargins;
 
-      let newScrollTarget = carousel.scrollLeft + (direction === "next" ? itemWidthWithMargins : -itemWidthWithMargins);
+      let newScrollTarget =
+        carousel.scrollLeft +
+        (direction === "next" ? itemWidthWithMargins : -itemWidthWithMargins);
 
       animateScroll(carousel, newScrollTarget, 800, () => {
         if (carousel.scrollLeft >= 2 * totalOriginalListWidth) {
@@ -62,7 +66,7 @@ const SimilarListingsCarousel = ({
         }
       });
     },
-    [similarListings.length, isCarousel]
+    [similarListings.length, isCarousel],
   );
 
   useEffect(() => {
@@ -74,7 +78,8 @@ const SimilarListingsCarousel = ({
       const itemStyle = window.getComputedStyle(itemElement);
       const itemMarginLeft = parseFloat(itemStyle.marginLeft);
       const itemMarginRight = parseFloat(itemStyle.marginRight);
-      const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+      const itemWidthWithMargins =
+        itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
       const numOriginalItems = similarListings.length;
       carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
     };
@@ -85,12 +90,13 @@ const SimilarListingsCarousel = ({
   useEffect(() => {
     if (isCarousel && similarCarouselRef.current && !initialScrollSet.current) {
       const carousel = similarCarouselRef.current;
-      const itemElement = carousel.querySelector('.similar-card-item');
+      const itemElement = carousel.querySelector(".similar-card-item");
       if (itemElement) {
         const itemStyle = window.getComputedStyle(itemElement);
         const itemMarginLeft = parseFloat(itemStyle.marginLeft);
         const itemMarginRight = parseFloat(itemStyle.marginRight);
-        const itemWidthWithMargins = itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
+        const itemWidthWithMargins =
+          itemElement.offsetWidth + itemMarginLeft + itemMarginRight;
         const numOriginalItems = similarListings.length;
         carousel.scrollLeft = numOriginalItems * itemWidthWithMargins;
         initialScrollSet.current = true;
@@ -99,24 +105,30 @@ const SimilarListingsCarousel = ({
   }, [similarListings.length, isCarousel]);
 
   useEffect(() => {
-    if (autoSwipeSimilarIntervalRef.current) clearInterval(autoSwipeSimilarIntervalRef.current);
+    if (autoSwipeSimilarIntervalRef.current)
+      clearInterval(autoSwipeSimilarIntervalRef.current);
     if (isCarousel) {
       autoSwipeSimilarIntervalRef.current = setInterval(() => {
-        scrollSimilar('next');
+        scrollSimilar("next");
       }, 2500);
     }
     return () => {
-      if (autoSwipeSimilarIntervalRef.current) clearInterval(autoSwipeSimilarIntervalRef.current);
+      if (autoSwipeSimilarIntervalRef.current)
+        clearInterval(autoSwipeSimilarIntervalRef.current);
     };
   }, [isCarousel, scrollSimilar]);
 
   const handleTouchStart = useCallback(() => {
-    if (autoSwipeSimilarIntervalRef.current) clearInterval(autoSwipeSimilarIntervalRef.current);
+    if (autoSwipeSimilarIntervalRef.current)
+      clearInterval(autoSwipeSimilarIntervalRef.current);
   }, []);
 
   const handleTouchEnd = useCallback(() => {
     if (isCarousel) {
-      autoSwipeSimilarIntervalRef.current = setInterval(() => scrollSimilar('next'), 2500);
+      autoSwipeSimilarIntervalRef.current = setInterval(
+        () => scrollSimilar("next"),
+        2500,
+      );
     }
   }, [isCarousel, scrollSimilar]);
 
@@ -133,25 +145,32 @@ const SimilarListingsCarousel = ({
       onTouchStart={isCarousel ? handleTouchStart : undefined}
       onTouchEnd={isCarousel ? handleTouchEnd : undefined}
     >
-      <h2 className={`text-xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
+      <h2
+        className={`text-xl md:text-2xl font-bold text-center mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}
+      >
         Similar Listings You Might Like
       </h2>
       <div className="relative">
         <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-        
+
         <div
           ref={similarCarouselRef}
-          className={`flex pb-4 -mb-4 ${isCarousel ? 'overflow-x-scroll no-scrollbar' : 'justify-center'}`}
+          className={`flex pb-4 -mb-4 ${isCarousel ? "overflow-x-scroll no-scrollbar" : "justify-center"}`}
         >
-          {(isCarousel ? [...similarListings, ...similarListings, ...similarListings] : similarListings).map((similarListing, index) => (
+          {(isCarousel
+            ? [...similarListings, ...similarListings, ...similarListings]
+            : similarListings
+          ).map((similarListing, index) => (
             <div
               key={`similar-${similarListing.property_id}-${index}`}
-              className={`flex-shrink-0 ${isCarousel ? 'snap-start w-[48%] px-1 md:px-2 md:w-1/3 lg:w-1/5 similar-card-item' : 'w-full max-w-sm px-2'}`}
+              className={`flex-shrink-0 ${isCarousel ? "snap-start w-[48%] px-1 md:px-2 md:w-1/3 lg:w-1/5 similar-card-item" : "w-full max-w-sm px-2"}`}
             >
               <ListingCard
                 listing={similarListing}
                 // CORRECTED: Perform the check here using the passed array
-                isFavorited={userFavourites.includes(similarListing.property_id)}
+                isFavorited={userFavourites.includes(
+                  similarListing.property_id,
+                )}
                 onFavoriteToggle={onFavoriteToggle}
                 userRole={userRole}
                 userId={userId}

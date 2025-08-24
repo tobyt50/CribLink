@@ -15,7 +15,10 @@ export default function GlobalMessageToasts() {
   // Ensure messages is an array before attempting to map over it.
   // This handles cases where 'messages' might be undefined or null initially.
   if (!Array.isArray(messages)) {
-    console.error("Messages context is not providing an array for 'messages'. Current value:", messages);
+    console.error(
+      "Messages context is not providing an array for 'messages'. Current value:",
+      messages,
+    );
     return null; // Or render a fallback UI if desired
   }
 
@@ -51,7 +54,10 @@ export default function GlobalMessageToasts() {
                 </div>
               )}
             </div>
-            <button onClick={() => dismissMessage(id)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+            <button
+              onClick={() => dismissMessage(id)}
+              className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
               <X className="w-4 h-4" />
             </button>
           </motion.div>

@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 const LocationMap = ({ listing, darkMode }) => {
   // Construct a robust location string for queries
-  const locationString = `${listing.location}, ${listing.city || ''}, ${listing.state || ''}, ${listing.country || ''}`;
+  const locationString = `${listing.location}, ${listing.city || ""}, ${listing.state || ""}, ${listing.country || ""}`;
 
   // Google Maps URL (for general viewing)
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`;
@@ -11,10 +11,18 @@ const LocationMap = ({ listing, darkMode }) => {
   const googleEarthUrl = `https://earth.google.com/web/search/${encodeURIComponent(locationString)}`;
 
   return (
-    <div className={`space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}>
-      <h2 className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}>Location Map</h2>
+    <div
+      className={`space-y-4 p-0 lg:rounded-2xl lg:shadow-xl lg:p-6 ${darkMode ? "lg:bg-gray-800" : "lg:bg-white"}`}
+    >
+      <h2
+        className={`text-xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}
+      >
+        Location Map
+      </h2>
 
-      <div className="flex flex-col sm:flex-row gap-4"> {/* Flex container for buttons */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {" "}
+        {/* Flex container for buttons */}
         {/* Google Maps Button */}
         <a
           href={googleMapsUrl}
@@ -28,10 +36,11 @@ const LocationMap = ({ listing, darkMode }) => {
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 opacity-70 group-hover:opacity-100"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 group-hover:bg-opacity-60 transition-opacity duration-300 rounded-xl">
-            <span className="text-white text-lg font-semibold z-10">View on Google Maps</span>
+            <span className="text-white text-lg font-semibold z-10">
+              View on Google Maps
+            </span>
           </div>
         </a>
-
         {/* Google Earth Button */}
         <a
           href={googleEarthUrl}
@@ -45,7 +54,9 @@ const LocationMap = ({ listing, darkMode }) => {
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 opacity-70 group-hover:opacity-100"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 group-hover:bg-opacity-60 transition-opacity duration-300 rounded-xl">
-            <span className="text-white text-lg font-semibold z-10">View on Google Earth</span>
+            <span className="text-white text-lg font-semibold z-10">
+              View on Google Earth
+            </span>
           </div>
         </a>
       </div>
