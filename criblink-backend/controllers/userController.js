@@ -323,7 +323,7 @@ exports.signinUser = async (req, res) => {
     if (user?.password_hash) {
       passwordMatch = await bcrypt.compare(password, user.password_hash);
     } else {
-      // Fake hash comparison to prevent user enumeration timing
+      // Fake hash comparison
       await bcrypt.compare(password, "$2b$10$1234567890123456789012");
     }
 
@@ -372,7 +372,7 @@ exports.signinUser = async (req, res) => {
       });
     }
 
-    // Optional: reverse geocode if location_info is lat/lon
+    // Reverse geocode if location_info is lat/lon
     let finalLocation = safeLocation;
     if (location_info?.startsWith("Lat:")) {
       const latLonMatch = location_info.match(/Lat: ([\d.-]+), Lon: ([\d.-]+)/);
@@ -399,12 +399,16 @@ exports.signinUser = async (req, res) => {
       [user.user_id, safeDevice, finalLocation, ip_address, loginStatus, "Successful login"]
     );
 
-    // Minimal JWT payload
+    // Rich JWT payload
     const token = jwt.sign(
       {
         user_id: user.user_id,
+        name: user.full_name,
+        email: user.email,
         role: user.role,
+        status: user.status,
         session_id: newSessionId,
+        agency_id: user.agency_id,
       },
       SECRET_KEY,
       { expiresIn: "7d" }
@@ -412,6 +416,7 @@ exports.signinUser = async (req, res) => {
 
     await logActivity(`Sign in by ${user.role}: ${user.full_name}`, user, "auth");
 
+    // Full user object in response
     res.json({
       token,
       user: {
@@ -421,62 +426,39 @@ exports.signinUser = async (req, res) => {
         email: user.email,
         role: user.role,
         status: user.status,
+        phone: user.phone,
         agency: user.agency,
         agency_id: user.agency_id,
+        bio: user.bio,
+        location: user.location,
+        profile_picture_url: user.profile_picture_url,
+        date_joined: user.date_joined,
+        is_2fa_enabled: user.is_2fa_enabled,
+        data_collection_opt_out: user.data_collection_opt_out,
+        personalized_ads: user.personalized_ads,
+        cookie_preferences: user.cookie_preferences,
+        communication_email_updates: user.communication_email_updates,
+        communication_marketing: user.communication_marketing,
+        communication_newsletter: user.communication_newsletter,
+        notifications_settings: user.notifications_settings,
+        timezone: user.timezone,
+        currency: user.currency,
+        default_landing_page: user.default_landing_page,
+        notification_email: user.notification_email,
+        preferred_communication_channel: user.preferred_communication_channel,
+        social_links: user.social_links,
+        share_favourites_with_agents: user.share_favourites_with_agents,
+        share_property_preferences_with_agents: user.share_property_preferences_with_agents,
         subscription_type: user.subscription_type,
         featured_priority: user.featured_priority,
       },
     });
   } catch (err) {
     console.error("Sign in error:", err);
-    res.status(500).json({ message: "Sign in failed unexpectedly." });
+    res.status(500).json({ message: "Sign in failed unexpectedly.", error: err.message });
   }
 };
-
-exports.getProfile = async (req, res) => {
-  try {
-    const userId = req.user.user_id;
-
-    // Query to get user details and their agency_request_status if associated with an agency
-    const result = await db.query(
-      `SELECT
-                u.user_id, u.full_name, u.username, u.email, u.role, u.date_joined, u.last_login, u.status,
-                u.profile_picture_url, u.bio, u.location, u.phone, u.social_links, u.agency, u.agency_id, u.default_landing_page,
-                u.is_2fa_enabled, u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
-                u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
-                u.notifications_settings, u.timezone, u.currency, u.notification_email,
-                u.preferred_communication_channel, u.share_favourites_with_agents,
-                u.share_property_preferences_with_agents,
-                am.request_status AS agency_request_status,
-                -- NEW: Subscription Logic
-                CASE 
-                    WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
-                    ELSE u.subscription_type 
-                END AS subscription_type,
-                CASE 
-                    WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
-                    ELSE u.featured_priority
-                END AS featured_priority
-             FROM users u
-             LEFT JOIN agencies a ON u.agency_id = a.agency_id
-             LEFT JOIN agency_members am ON u.user_id = am.agent_id AND u.agency_id = am.agency_id
-             WHERE u.user_id = $1`,
-      [userId],
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error("Error fetching profile:", err);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch profile.", error: err.message });
-  }
-};
-
+            
 exports.updateProfile = async (req, res) => {
   const userId = req.user.user_id;
   const {
