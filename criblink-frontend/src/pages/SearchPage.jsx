@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 import ListingCard from "../components/ListingCard";
-import SearchFilters from "../components/SearchFilters"; // Using the more advanced filter component
+import SearchFilters from "../components/SearchFilters";
 import { useAuth } from "../context/AuthContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { useMessage } from "../context/MessageContext";
@@ -75,6 +75,7 @@ function SearchPage() {
   });
   const [sortBy, setSortBy] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [categoryTitle, setCategoryTitle] = useState("");
   const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
 
   const currentUserRole = user?.role || "guest";
@@ -102,10 +103,8 @@ function SearchPage() {
     }
   }, [isAuthenticated]);
 
-  // NEW: Unified function to fetch results based on all current state
   const fetchResults = useCallback(async () => {
     setLoading(true);
-    // Use URLSearchParams to get the latest state from the URL
     const params = new URLSearchParams(location.search);
     params.set("page", currentPage.toString());
     params.set("limit", ITEMS_PER_PAGE.toString());
@@ -128,7 +127,6 @@ function SearchPage() {
     }
   }, [location.search, currentPage, showMessage]);
 
-  // This effect synchronizes the URL parameters to the component's state
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setSearchTerm(params.get("search") || "");
@@ -150,7 +148,31 @@ function SearchPage() {
     setCurrentPage(parseInt(params.get("page") || "1", 10));
   }, [location.search]);
 
-  // This effect triggers the data fetch whenever the URL or page changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const propertyType = params.get("property_type");
+    const purchaseCategory = params.get("purchase_category");
+    const state = params.get("state");
+
+    if (propertyType && purchaseCategory && state) {
+      const formatString = (str) =>
+        str
+          .replace(/[-_]/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+
+      const formattedType = formatString(propertyType);
+      const pluralType = formattedType.endsWith("s")
+        ? formattedType
+        : `${formattedType}s`;
+      const formattedCategory = `for ${formatString(purchaseCategory)}`;
+      const formattedState = `in ${formatString(state)}`;
+
+      setCategoryTitle(`${pluralType} ${formattedCategory} ${formattedState}`);
+    } else {
+      setCategoryTitle("");
+    }
+  }, [location.search]);
+
   useEffect(() => {
     if (!authLoading) {
       fetchResults();
@@ -283,7 +305,6 @@ function SearchPage() {
             transition={{ duration: 0.4, ease: "easeInOut" }}
             className="mb-4 max-w-4xl mx-auto"
           >
-            {/* The SearchFilters component now handles updating the URL via the handleSearchSubmit function */}
             <SearchFilters
               filters={filters}
               setFilters={setFilters}
@@ -293,19 +314,33 @@ function SearchPage() {
         )}
       </AnimatePresence>
 
-      {totalResults > 0 && !loading && (
-        <motion.div
-          className={`text-center mb-4 text-lg font-semibold ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Found {totalResults} matching properties
-        </motion.div>
-      )}
+      {totalResults > 0 &&
+        !loading &&
+        (categoryTitle ? (
+          <motion.div
+            className={`text-center mb-4 text-lg font-semibold flex items-center justify-center gap-2 ${darkMode ? "text-green-500" : "text-green-600"}`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <span>
+              {categoryTitle}:{" "}
+              <strong className="font-bold">{totalResults} found</strong>
+            </span>
+          </motion.div>
+        ) : (
+          <motion.div
+            className={`text-center mb-4 text-lg font-semibold ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Found {totalResults} matching properties
+          </motion.div>
+        ))}
 
       <motion.div
-        className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+        className="grid gap-2 md:gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
         initial="hidden"
         animate="visible"
         variants={{

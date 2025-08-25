@@ -1,27 +1,24 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { motion, AnimatePresence } from "framer-motion";
-import API_BASE_URL from "../../config";
-import { useTheme } from "../../layouts/AppShell";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import ListingCard from "../../components/ListingCard";
 import ClientInquiryModal from "../../components/ClientInquiryModal";
+import ListingCard from "../../components/ListingCard";
+import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
 import {
-  PhoneIcon,
-  EnvelopeIcon,
-  MapPinIcon,
-  BuildingOfficeIcon,
-  StarIcon,
-  UsersIcon,
-  ChatBubbleLeftRightIcon,
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
+  BuildingOfficeIcon,
+  ChatBubbleLeftRightIcon,
+  MapPinIcon,
+  StarIcon,
+  UsersIcon
 } from "@heroicons/react/24/outline";
-import { Menu, X } from "lucide-react";
 
 // Skeleton component for AgentProfile page
 const AgentProfileSkeleton = ({ darkMode }) => (
@@ -70,7 +67,7 @@ const AgentProfileSkeleton = ({ darkMode }) => (
           <div
             className={`h-8 w-1/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
           ></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2 md:gap-4">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
@@ -122,7 +119,7 @@ const AgentProfileSkeleton = ({ darkMode }) => (
           <div
             className={`h-8 w-2/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
           ></div>
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2 md:gap-4 mb-4">
             <div
               className={`w-16 h-16 rounded-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
             ></div>
@@ -148,7 +145,7 @@ const AgentProfileSkeleton = ({ darkMode }) => (
           <div
             className={`h-8 w-2/3 rounded mb-4 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
           ></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2 md:gap-4">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
@@ -1216,7 +1213,7 @@ const AgentProfile = () => {
                   </h2>
                   {agent.agency_info ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 md:gap-4">
                         {agent.agency_info.logo_url ? (
                           <img
                             src={agent.agency_info.logo_url}
@@ -1322,7 +1319,7 @@ const AgentProfile = () => {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -100 }}
                             transition={{ duration: 0.6, ease: "easeInOut" }}
-                            className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                            className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4 w-full"
                           >
                             {displayedRecommendedListings.map((listing) => (
                               <div key={listing.property_id} className="w-full">
@@ -1412,7 +1409,7 @@ const AgentProfile = () => {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -100 }}
                           transition={{ duration: 0.6, ease: "easeInOut" }}
-                          className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                          className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4 w-full"
                         >
                           {displayedAgentListings.map((listing) => (
                             <div key={listing.property_id} className="w-full">
@@ -1565,7 +1562,7 @@ const AgentProfile = () => {
                   </h2>
                   {agent.agency_info ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 md:gap-4">
                         {agent.agency_info.logo_url ? (
                           <img
                             src={agent.agency_info.logo_url}
@@ -1674,7 +1671,7 @@ const AgentProfile = () => {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -100 }}
                             transition={{ duration: 0.6, ease: "easeInOut" }}
-                            className="grid grid-cols-2 md:grid-cols-2 gap-4 w-full"
+                            className="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-4 w-full"
                           >
                             {displayedRecommendedListings.map((listing) => (
                               <div key={listing.property_id} className="w-full">

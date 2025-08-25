@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import API_BASE_URL from "../config";
 import { motion } from "framer-motion";
-import { Search, UserPlus, UserX, Hourglass, CheckCircle } from "lucide-react"; // Import Hourglass and CheckCircle
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
+import { Search } from "lucide-react"; // Import Hourglass and CheckCircle
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
-import { useAuth } from "../context/AuthContext";
 import AgencyCard from "../components/AgencyCard";
+import API_BASE_URL from "../config";
+import { useAuth } from "../context/AuthContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 function Agencies() {
   const [agencies, setAgencies] = useState([]);
@@ -447,9 +447,7 @@ function Agencies() {
           transition={{ duration: 0.6 }}
         >
           <h1
-            className={`font-script text-2xl md:text-3xl mb-4 ${
-              darkMode ? "text-green-400" : "text-green-700"
-            }`}
+            className={`font-script text-xl mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}
           >
             Explore Agencies
           </h1>

@@ -146,6 +146,15 @@ function ProfileMenu() {
                 >
                   {user.role}
                 </div>
+                <motion.div variants={itemVariants} whileHover={{ x: 5 }}>
+                  <Link
+                    to="/settings"
+                    className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200 ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
+                    onClick={() => setShowMenu(false)}
+                  >
+                    <Settings className="w-4 h-4" /> Account Settings
+                  </Link>
+                </motion.div>
                 <motion.button
                   variants={itemVariants}
                   whileHover={{ x: 5 }}
@@ -163,16 +172,6 @@ function ProfileMenu() {
                     <Star className="w-4 h-4" /> Subscriptions
                   </Link>
                 </motion.div>
-                <motion.div variants={itemVariants} whileHover={{ x: 5 }}>
-                  <Link
-                    to="/settings"
-                    className={`flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors duration-200 ${darkMode ? "text-gray-200 hover:bg-gray-700" : "text-gray-700 hover:bg-yellow-50 hover:text-yellow-700"}`}
-                    onClick={() => setShowMenu(false)}
-                  >
-                    <Settings className="w-4 h-4" /> Account & Settings
-                  </Link>
-                </motion.div>
-                
                 <motion.button
                   variants={itemVariants}
                   whileHover={{ x: 5 }}

@@ -1,21 +1,20 @@
 import {
-    Award,
-    BarChart2,
-    Bookmark,
-    ChevronLeft,
-    FileText,
-    Home,
-    LayoutGrid,
-    Menu,
-    MessageSquare,
-    Shield,
-    Users
+  Award,
+  BarChart2,
+  Bookmark,
+  ChevronLeft,
+  FileText,
+  Home,
+  LayoutGrid,
+  Menu,
+  MessageSquare,
+  Shield,
+  Users
 } from "lucide-react";
 import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { useTheme } from "../../layouts/AppShell";
-// Import the swipe hook
 import { useSwipeable } from "react-swipeable";
+import { useTheme } from "../../layouts/AppShell";
 
 // Define the menu items specifically for Agency Admin with descriptions
 const MENU_ITEMS = [
@@ -102,142 +101,116 @@ const AgencySidebar = ({
     trackMouse: true
   });
 
-  // Effect to handle swipe-to-open from the edge of the screen
+  // Edge swipe-to-open (same as AdminSidebar)
   useEffect(() => {
     if (!isMobile) return;
-
     const handleTouchStart = (e) => {
       if (!isSidebarOpen && e.touches[0].clientX < 20) {
-        document.addEventListener('touchmove', handleTouchMove);
-        document.addEventListener('touchend', handleTouchEnd);
+        document.addEventListener("touchmove", handleTouchMove);
+        document.addEventListener("touchend", handleTouchEnd);
       }
     };
-
     const handleTouchMove = (e) => {
       if (e.changedTouches[0].clientX > 50) {
         setIsSidebarOpen(true);
         handleTouchEnd();
       }
     };
-
     const handleTouchEnd = () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
     };
-
-    document.addEventListener('touchstart', handleTouchStart);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-    };
+    document.addEventListener("touchstart", handleTouchStart);
+    return () => document.removeEventListener("touchstart", handleTouchStart);
   }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
 
-  const sidebarWidthClass = isMobile ? "w-80" : collapsed ? "w-20" : "w-80";
+  const sidebarWidthClass = isMobile ? "w-80" : collapsed ? "w-20" : "w-64";
 
   const sidebarClasses = `
-    transition-all duration-300 shadow-2xl border-r
-    flex flex-col items-start pb-10
+    transition-all duration-300 ease-in-out shadow-xl border-r
+    flex flex-col items-start
     h-[calc(100vh-3.5rem)] fixed top-14 left-0 z-50
     ${sidebarWidthClass}
     ${isMobile ? (isSidebarOpen ? "translate-x-0" : "-translate-x-full") : ""}
-    ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
+    ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}
   `;
 
   return (
     <>
       <div className={sidebarClasses} {...swipeHandlers}>
-        {/* Mobile-Only Contextual Header */}
+        {/* Mobile header */}
         {isMobile && (
-          <div className={`flex items-center justify-between w-full p-2 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
-            <h2 className={`text-lg font-bold flex items-center gap-2 ${darkMode ? "text-green-300" : "text-green-800"}`}>
-                Agency Management
+          <div className={`flex items-center justify-between w-full p-4 border-b ${darkMode ? "border-gray-800" : "border-gray-100"}`}>
+            <h2 className={`text-lg font-semibold tracking-tight ${darkMode ? "text-green-300" : "text-green-700"}`}>
+              Agency Management
             </h2>
           </div>
         )}
-        {/* Toggle Button - only desktop */}
+
+        {/* Toggle Button (Desktop only) */}
         {!isMobile && (
           <button
             onClick={() => setCollapsed(!collapsed)}
             aria-label="Toggle sidebar"
-            className={`flex flex-col items-center py-3 mb-6 w-full border-b px-6 hover:bg-gray-100
-              ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200"}`}
+            className={`flex items-center justify-center py-3 w-full border-b transition-colors ${
+              darkMode ? "border-gray-800 hover:bg-gray-800" : "border-gray-100 hover:bg-gray-50"
+            }`}
           >
             {collapsed ? (
-              <>
-                <Menu
-                  className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
-                  size={24}
-                />
-                <span
-                  className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-                >
-                  Expand
-                </span>
-              </>
+              <Menu className={`${darkMode ? "text-gray-400" : "text-gray-600"}`} size={22} />
             ) : (
-              <>
-                <ChevronLeft
-                  className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
-                  size={24}
-                />
-                <span
-                  className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-                >
-                  Collapse
-                </span>
-              </>
+              <ChevronLeft className={`${darkMode ? "text-gray-400" : "text-gray-600"}`} size={22} />
             )}
           </button>
         )}
 
         {/* Navigation */}
-        <nav className="flex flex-col w-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400">
+        <nav className="flex flex-col w-full flex-grow overflow-y-auto py-3">
           {MENU_ITEMS.map((item, idx) => (
             <React.Fragment key={item.key}>
               <NavLink
                 to={item.to}
                 onClick={() => {
-                  if (typeof setActiveSection === "function") {
-                    setActiveSection(item.key);
-                  }
+                  if (typeof setActiveSection === "function") setActiveSection(item.key);
                   if (isMobile) setIsSidebarOpen(false);
                 }}
                 className={({ isActive }) =>
-                  `flex items-center gap-4 w-full px-6 py-3 transition-all ${
+                  `group flex items-start gap-4 w-full px-6 py-3 transition-all rounded-lg
+                  ${
                     isActive || activeSection === item.key
                       ? darkMode
-                        ? "bg-gray-900 text-green-200 font-semibold border-l-4 border-green-400"
-                        : "bg-green-100 text-green-800 font-semibold border-l-4 border-green-600"
+                        ? "bg-gray-800 text-green-300"
+                        : "bg-green-50 text-green-700"
                       : darkMode
-                        ? "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                        ? "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`
                 }
               >
-                <span>{React.cloneElement(item.icon, { size: 24 })}</span>
+                <span className="flex items-center justify-center mt-0.5">
+                  {React.cloneElement(item.icon, { size: 22, strokeWidth: 1.8 })}
+                </span>
                 {(isMobile || !collapsed) && (
-                  <div className="flex flex-col">
-                    <span>{item.name}</span>
-                    <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {item.description}
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-base font-medium">{item.name}</span>
+                    <span className={`text-sm ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                      {item.description}
                     </span>
                   </div>
                 )}
               </NavLink>
-              {idx < MENU_ITEMS.length - 1 && (
-                <hr
-                  className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`}
-                />
-              )}
+            
             </React.Fragment>
           ))}
         </nav>
       </div>
 
-      {/* Backdrop on mobile */}
+      {/* Mobile backdrop */}
       {isMobile && isSidebarOpen && (
         <div
-          className={`fixed inset-0 z-40 md:hidden ${darkMode ? "bg-gray-900 bg-opacity-70" : "bg-black bg-opacity-20"}`}
+          className={`fixed inset-0 z-40 md:hidden backdrop-blur-sm transition-colors ${
+            darkMode ? "bg-gray-900/70" : "bg-black/30"
+          }`}
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

@@ -672,7 +672,7 @@ function Home() {
               return (
                 <FeaturedCategoryRow
                   key={def.title}
-                  title={`${def.title} →`}
+                  title={`${def.title} ➜`}
                   listings={listings}
                   searchLink={searchLink}
                   userFavourites={userFavourites}
@@ -695,7 +695,7 @@ function Home() {
           Explore other listings
         </h2>
         <motion.div
-          className="grid gap-6 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
+          className="grid gap-2 md:gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
           initial="hidden"
           animate="visible"
           variants={{

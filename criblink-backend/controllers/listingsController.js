@@ -268,22 +268,30 @@ function normalizeStructuralKey(term) {
       const numExtract = extractNumbers(normalizedSearch);
 
       // Treat extracted numbers as STRICT filters (AND), using operator+value
-      if (numExtract && property_type?.toLowerCase() !== "land") {
-        for (const [rawKey, parsed] of Object.entries(numExtract)) {
-          const normalizedKey = normalizeStructuralKey(rawKey);
-          if (!normalizedKey) continue;
-      
-          if (normalizedKey === "bedrooms" && !bedrooms) {
-            pushNumericCondition("bedrooms", parsed);
-          } else if (normalizedKey === "bathrooms" && !bathrooms) {
-            pushNumericCondition("bathrooms", parsed);
-          } else if (normalizedKey === "living_rooms" && !living_rooms) {
-            pushNumericCondition("living_rooms", parsed);
-          } else if (normalizedKey === "kitchens" && !kitchens) {
-            pushNumericCondition("kitchens", parsed);
-          }
-        }
-      }      
+// NOTE: extractNumbers already returns canonical keys like "bedrooms","living_rooms".
+// The previous normalizeStructuralKey(rawKey) call was incorrect for those canonical keys,
+// so numeric filters were being dropped (esp. for word-numbers like "two").
+if (numExtract && property_type?.toLowerCase() !== "land") {
+  const canonicalKeys = ["bedrooms", "bathrooms", "living_rooms", "kitchens", "land_size"];
+  for (const [rawKey, parsed] of Object.entries(numExtract)) {
+    // Accept canonical keys directly; otherwise attempt to normalize as a fallback.
+    let normalizedKey = canonicalKeys.includes(rawKey) ? rawKey : normalizeStructuralKey(rawKey);
+    if (!normalizedKey) continue;
+
+    // Respect explicit query params (URL) — they should override smart search.
+    if (normalizedKey === "bedrooms" && !bedrooms) {
+      pushNumericCondition("bedrooms", parsed);
+    } else if (normalizedKey === "bathrooms" && !bathrooms) {
+      pushNumericCondition("bathrooms", parsed);
+    } else if (normalizedKey === "living_rooms" && !living_rooms) {
+      pushNumericCondition("living_rooms", parsed);
+    } else if (normalizedKey === "kitchens" && !kitchens) {
+      pushNumericCondition("kitchens", parsed);
+    }
+    // Note: do not apply land_size as an equality here — it's already handled below as min-size.
+  }
+}
+    
 
       // Land size from smart search (as minimum)
       if (!land_size && numExtract?.land_size) {
@@ -369,9 +377,12 @@ function normalizeStructuralKey(term) {
       // If the remaining tokens are ONLY numbers + structural terms (room/bed/bath/kitchen),
       // skip FTS so numeric filters (e.g., "2 room") don't get wiped out.
       const cleanList = (arr = []) =>
-        (arr || []).filter(
-          s => typeof s === "string" && s !== "_comment" && !/^A\s+list/i.test(s)
-        ).map(s => s.toLowerCase());
+        (arr || [])
+          .filter(
+            (s) => typeof s === "string" && s !== "_comment" && !/^A\s+list/i.test(s)
+          )
+          .flatMap((s) => s.toLowerCase().split(/[\s-]+/)) // Split multi-word terms
+          .filter(Boolean);
 
       const structuralTerms = new Set([
         ...cleanList(searchConfig.bedTerms),
@@ -381,49 +392,64 @@ function normalizeStructuralKey(term) {
       ]);
 
       const tokens = fullTextForSearch.split(/\s+/).filter(Boolean);
-      const onlyStructuralOrNumeric = tokens.length > 0 &&
-        tokens.every(t => /^\d+(?:\.\d+)?$/.test(t) || structuralTerms.has(t.toLowerCase()));
+      const onlyStructuralOrNumeric =
+        tokens.length > 0 &&
+        tokens.every(
+          (t) =>
+            /^\d+(?:\.\d+)?$/.test(t) || // It's a digit
+            structuralTerms.has(t.toLowerCase()) || // It's a structural term (e.g., "living", "room", "bedrooms")
+            numberWords.hasOwnProperty(t.toLowerCase()) // It's a number-word (e.g., "two")
+        );
 
       // Build FTS/similarity only if there's meaningful text beyond structural tokens
-      if (!onlyStructuralOrNumeric) {
-        const tsQueryString = fullTextForSearch
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean)
-          .join(" | ");
+      // If the query is ONLY numeric + structural tokens (like "2 living room" or "two living room"),
+// enforce strict numeric filters and skip any FTS/similarity or soft OR conditions
+// (amenities/geo/soft matches) that would otherwise dilute the strict match.
+if (onlyStructuralOrNumeric) {
+  // wipe any soft search conditions (amenities/geo) so only the numeric AND filters remain
+  searchConditions = [];
+  // do not build ts_query / similarity (rankSelect remains empty)
+} else {
+  // Build FTS/similarity only if there's meaningful text beyond structural tokens
+  const tsQueryString = fullTextForSearch
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(" | ");
 
-        if (tsQueryString) {
-          const tsQueryParamIndex = valueIndex++;
-          values.push(tsQueryString);
+  if (tsQueryString) {
+    const tsQueryParamIndex = valueIndex++;
+    values.push(tsQueryString);
 
-          const simLiteral = normalizedSearch;
-          const simIdx1 = valueIndex++;
-          const simIdx2 = valueIndex++;
-          const simIdx3 = valueIndex++;
-          const simIdx4 = valueIndex++;
-          values.push(simLiteral, simLiteral, simLiteral, simLiteral);
+    const simLiteral = normalizedSearch;
+    const simIdx1 = valueIndex++;
+    const simIdx2 = valueIndex++;
+    const simIdx3 = valueIndex++;
+    const simIdx4 = valueIndex++;
+    values.push(simLiteral, simLiteral, simLiteral, simLiteral);
 
-          searchConditions.push(`(
-            pl.search_vector @@ to_tsquery('english', $${tsQueryParamIndex})
-            OR similarity(pl.title, $${simIdx1}) > 0.25
-            OR similarity(pl.location, $${simIdx2}) > 0.25
-            OR similarity(pl.state, $${simIdx3}) > 0.25
-            OR similarity(pd.description, $${simIdx4}) > 0.25
-          )`);
+    searchConditions.push(`(
+      pl.search_vector @@ to_tsquery('english', $${tsQueryParamIndex})
+      OR similarity(pl.title, $${simIdx1}) > 0.25
+      OR similarity(pl.location, $${simIdx2}) > 0.25
+      OR similarity(pl.state, $${simIdx3}) > 0.25
+      OR similarity(pd.description, $${simIdx4}) > 0.25
+    )`);
 
-          rankSelect = `,
-            ts_rank(pl.search_vector, to_tsquery('english', $${tsQueryParamIndex}), 1)
-              + GREATEST(
-                  similarity(pl.title, $${simIdx1}),
-                  similarity(pl.location, $${simIdx2}),
-                  similarity(pl.state, $${simIdx3}),
-                  similarity(pd.description, $${simIdx4})
-                )
-              ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity.replace(/'/g, "''")}%' THEN 2 ELSE 0 END)` : ""}
-            AS rank
-          `;
-        }
-      }
+    rankSelect = `,
+      ts_rank(pl.search_vector, to_tsquery('english', $${tsQueryParamIndex}), 1)
+        + GREATEST(
+            similarity(pl.title, $${simIdx1}),
+            similarity(pl.location, $${simIdx2}),
+            similarity(pl.state, $${simIdx3}),
+            similarity(pd.description, $${simIdx4})
+          )
+        ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity.replace(/'/g, "''")}%' THEN 2 ELSE 0 END)` : ""}
+      AS rank
+    `;
+  }
+}
+
 
       // If we have any conditions from the search string, join them with OR
       // and add them as a single, parenthesized condition to the main query.

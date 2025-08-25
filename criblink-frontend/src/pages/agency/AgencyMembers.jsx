@@ -1,41 +1,29 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate, useLocation, useParams } from "react-router-dom"; // Import useParams
 import {
-  Squares2X2Icon,
-  TableCellsIcon,
-  ArrowUpIcon,
   ArrowDownIcon,
-  TrashIcon,
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon,
+  ArrowUpIcon,
   CheckCircleIcon,
-  XCircleIcon,
-  ChatBubbleLeftRightIcon,
   ChevronDownIcon,
+  Squares2X2Icon,
+  TrashIcon,
+  XCircleIcon
 } from "@heroicons/react/24/outline";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  ArrowLeft,
+  FileText,
+  LayoutList,
+  SlidersHorizontal
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom"; // Import useParams
 import AgencyAdminSidebar from "../../components/agency/Sidebar";
 import API_BASE_URL from "../../config";
-import {
-  Menu,
-  X,
-  Search,
-  SlidersHorizontal,
-  FileText,
-  LayoutGrid,
-  LayoutList,
-  Plus,
-  UserPlus,
-  UserMinus,
-  ArrowLeft,
-} from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 
 // Import the refactored MemberCard component
 import MemberCard from "../../components/agency/MemberCard"; // Adjust path as needed based on your file structure
@@ -962,10 +950,7 @@ const AgencyMembers = () => {
     <div
       className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
     >
-      {/* Conditionally render sidebar for agency_admin role */}
-      {user?.role === "agency_admin" && (
-        <>
-          <button
+      <button
             onClick={handleBack}
             aria-label="Go back"
             className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105
@@ -973,7 +958,9 @@ const AgencyMembers = () => {
           >
             <ArrowLeft size={20} />
           </button>
-
+      {/* Conditionally render sidebar for agency_admin role */}
+      {user?.role === "agency_admin" && (
+        <>
           <AgencyAdminSidebar
             collapsed={isMobile ? false : isCollapsed}
             setCollapsed={isMobile ? () => {} : setIsCollapsed}
@@ -1013,7 +1000,7 @@ const AgencyMembers = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className={`${isMobile ? "" : "rounded-3xl p-6 shadow"} space-y-4 max-w-full ${isMobile ? "" : darkMode ? "bg-gray-800" : "bg-white"}`}
+          className={`space-y-4 max-w-full md:rounded-3xl md:p-6 md:shadow ${darkMode ? "md:bg-gray-800" : "md:bg-white"}`}
         >
           {/* Desktop View: Search, Tabs, View Mode on one line */}
           <div className="hidden md:grid grid-cols-3 items-center gap-4 mb-6 max-w-[1344px] mx-auto">

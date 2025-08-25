@@ -1,36 +1,32 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
+import { AnimatePresence, motion } from "framer-motion";
+import {
   useCallback,
-  useMemo,
+  useEffect,
+  useState
 } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { motion, AnimatePresence } from "framer-motion";
+import AgentInquiryModal from "../../components/AgentInquiryModal";
+import ListingCard from "../../components/ListingCard";
 import API_BASE_URL from "../../config";
-import { useTheme } from "../../layouts/AppShell";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState";
-import AgentInquiryModal from "../../components/AgentInquiryModal";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
-import ListingCard from "../../components/ListingCard";
 
 import {
   ChatBubbleLeftRightIcon,
-  PencilIcon,
   CheckIcon,
+  PencilIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"; // Added PencilIcon, CheckIcon, XMarkIcon
 import {
-  Menu,
-  X,
-  BookmarkIcon, // Using BookmarkIcon from lucide-react
+  ArrowLeft, // Using BookmarkIcon from lucide-react
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
-  StarIcon,
-  ArrowLeft,
+  BookmarkIcon,
+  StarIcon
 } from "lucide-react";
 import AgentSidebar from "../../components/agent/Sidebar";
 
@@ -152,7 +148,7 @@ const ListingsSectionSkeleton = ({ darkMode }) => (
     <div
       className={`h-6 w-1/2 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-4`}
     ></div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4">
       {[...Array(2)].map(
         (
           _,
@@ -1586,7 +1582,7 @@ const ClientProfile = () => {
               {showFavourites ? (
                 favouriteListings.length > 0 ? (
                   <div className="flex flex-col items-center w-full">
-                    <div className="grid grid-cols-2 gap-4 p-2 -mx-2">
+                    <div className="grid grid-cols-2 gap-2 md:gap-4 p-2 -mx-2">
                       {" "}
                       {/* Changed to grid-cols-2 for mobile and desktop */}
                       {displayedFavouriteListings.map((listing) => (
@@ -1694,7 +1690,7 @@ const ClientProfile = () => {
               Array.isArray(recommendedListings) &&
               recommendedListings.length > 0 ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="grid grid-cols-2 gap-4 p-2 -mx-2">
+                  <div className="grid grid-cols-2 gap-2 md:gap-4 p-2 -mx-2">
                     {" "}
                     {/* Changed to grid-cols-2 for mobile and desktop */}
                     {displayedRecommendedListings.map((listing) => (

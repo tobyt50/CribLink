@@ -1,9 +1,4 @@
-import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeftCircleIcon,
-  ArrowRightCircleIcon,
-} from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
 
 const ImageGallery = ({
   images,
@@ -46,17 +41,28 @@ const ImageGallery = ({
         </AnimatePresence>
         {images.length > 1 && (
           <>
+            {/* Left arrow */}
             <button
-              onClick={() => paginateImage(-1)}
-              className="absolute top-1/2 left-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
+              type="button"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                paginateImage(-1);
+              }}
             >
-              <span className="sr-only">Previous image</span>←
+              <span className="text-8xl leading-none select-none">‹</span>
             </button>
+
+            {/* Right arrow */}
             <button
-              onClick={() => paginateImage(1)}
-              className="absolute top-1/2 right-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400"
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-white opacity-70 hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                paginateImage(1);
+              }}
             >
-              <span className="sr-only">Next image</span>→
+              <span className="text-8xl leading-none select-none">›</span>
             </button>
           </>
         )}
@@ -98,17 +104,32 @@ const ImageGallery = ({
               />
               {images.length > 1 && (
                 <>
+                  {/* Left arrow */}
                   <button
-                    onClick={() => paginateImage(-1)}
-                    className="absolute left-0 top-0 bottom-0 flex items-center w-12 text-white text-5xl bg-transparent hover:bg-black hover:bg-opacity-30 transition-all duration-200 rounded-lg"
+                    type="button"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      paginateImage(-1);
+                    }}
                   >
-                    ←
+                    <span className="text-[8rem] leading-none select-none">
+                      ‹
+                    </span>
                   </button>
+
+                  {/* Right arrow */}
                   <button
-                    onClick={() => paginateImage(1)}
-                    className="absolute right-0 top-0 bottom-0 flex items-center w-12 text-white text-5xl bg-transparent hover:bg-black hover:bg-opacity-30 transition-all duration-200 rounded-lg"
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-white opacity-40 hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      paginateImage(1);
+                    }}
                   >
-                    →
+                    <span className="text-[8rem] leading-none select-none">
+                      ›
+                    </span>
                   </button>
                 </>
               )}

@@ -62,6 +62,8 @@
     "beds",
     "bedroom",
     "bedrooms",
+    "bed room",
+    "bed rooms",
     "bhk",
     "br",
     "room",
@@ -94,14 +96,20 @@
     "A list of terms that typically follow a number to indicate living rooms / lounges / parlors.",
     "living",
     "livingroom",
+    "livingrooms",
     "living room",
+    "living rooms",
     "lounge",
     "lounges",
     "sitting",
     "sittingroom",
+    "sittingrooms",
     "sitting room",
+    "sitting rooms",
     "parlor",
-    "parlour"
+    "parlors",
+    "parlour",
+    "parlours"
   ],
 
   "kitchenTerms": [
@@ -110,6 +118,7 @@
     "kitchen",
     "kitchens",
     "kitchenette",
+    "kitchenettes",
     "cookroom",
     "cooking area"
   ]
