@@ -65,10 +65,7 @@
     "bhk",
     "br",
     "room",
-    "sitting room",
-    "living room",
-    "parlor",
-    "parlour"
+    "rooms"
   ],
 
   "bathTerms": [
@@ -90,5 +87,30 @@
     "toilets",
     "water closet",
     "wc"
+  ],
+
+  "livingRoomTerms": [
+    "_comment",
+    "A list of terms that typically follow a number to indicate living rooms / lounges / parlors.",
+    "living",
+    "livingroom",
+    "living room",
+    "lounge",
+    "lounges",
+    "sitting",
+    "sittingroom",
+    "sitting room",
+    "parlor",
+    "parlour"
+  ],
+
+  "kitchenTerms": [
+    "_comment",
+    "A list of terms that typically follow a number to indicate kitchens.",
+    "kitchen",
+    "kitchens",
+    "kitchenette",
+    "cookroom",
+    "cooking area"
   ]
 }

@@ -1,11 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMessage } from "../context/MessageContext";
 import { useTheme } from "../layouts/AppShell";
-// Import the swipe hook
-import { useSwipeable } from "react-swipeable";
 
 import {
   Building,
@@ -29,44 +27,6 @@ const MobileSidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
 
   const [isSupportOpen, setIsSupportOpen] = useState(false);
-
-  // --- Swipe Gesture Handlers for the sidebar panel ---
-  const swipeHandlers = useSwipeable({
-    // This sidebar comes from the right, so a swipe right closes it.
-    onSwipedRight: () => setIsOpen(false),
-    preventScrollOnSwipe: true,
-    trackMouse: true,
-  });
-
-  // Effect to handle swipe-to-open from the right edge of the screen
-  useEffect(() => {
-    const handleTouchStart = (e) => {
-      // Check if swipe starts from the right edge of the screen
-      if (!isOpen && e.touches[0].clientX > window.innerWidth - 20) {
-        document.addEventListener('touchmove', handleTouchMove);
-        document.addEventListener('touchend', handleTouchEnd);
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      // If user swipes left, open the sidebar
-      if (e.changedTouches[0].clientX < window.innerWidth - 50) {
-        setIsOpen(true);
-        handleTouchEnd(); // Clean up listeners
-      }
-    };
-
-    const handleTouchEnd = () => {
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-
-    document.addEventListener('touchstart', handleTouchStart);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [isOpen, setIsOpen]);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -362,9 +322,7 @@ const MobileSidebar = ({ isOpen, setIsOpen }) => {
             transition={{ duration: 0.1 }}
             className="fixed inset-0 bg-black/60 z-[199] md:hidden"
           />
-          {/* Attach swipe handlers to the main motion.div */}
           <motion.div
-            {...swipeHandlers}
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}

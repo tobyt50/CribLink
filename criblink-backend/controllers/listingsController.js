@@ -22,18 +22,6 @@ const attachGalleryImagesToList = async (listings) => {
   return await Promise.all(listings.map(attachGalleryImages));
 };
 
-// controllers/listingsController.js (excerpt)
-// Make sure you have created the search_vector column + trigger + indexes we discussed.
-
-const {
-  normalizeQuery,
-  extractPriceRange,
-  extractAmenities,
-  extractNumbers,
-  extractQualifiers,
-  noiseWords,
-} = require("../utils/searchParser");
-
 exports.getAllListings = async (req, res) => {
   try {
     const {
@@ -51,6 +39,8 @@ exports.getAllListings = async (req, res) => {
       property_type,
       bedrooms,
       bathrooms,
+      living_rooms,
+      kitchens,
       land_size,
       zoning_type,
       title_type,
@@ -63,41 +53,46 @@ exports.getAllListings = async (req, res) => {
 
     const searchConfig = require("../config/searchSynonyms.json");
     const nigeriaLocations = require("../config/nigeriaLocations.json");
+    const {
+      normalizeQuery,
+      extractAmenities,
+      extractNumbers,
+      extractQualifiers,
+      noiseWords,
+      detectPropertyType
+    } = require("../utils/searchParser");
 
     // --- Helper: convert words to numbers ---
     const numberWords = {
-      one: 1,
-      two: 2,
-      three: 3,
-      four: 4,
-      five: 5,
-      six: 6,
-      seven: 7,
-      eight: 8,
-      nine: 9,
-      ten: 10,
+      one: 1, two: 2, three: 3, four: 4, five: 5,
+      six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
     };
 
-    // --- Helper: parse numeric input (words, digits, '>5') ---
+    // --- Helper: parse numeric input (words, digits, '>=2', '< 3', 'at least 2', etc.) ---
     function parseNumberInput(input) {
       if (!input) return null;
-      input = input.toString().trim().toLowerCase();
+      let str = input.toString().trim().toLowerCase();
 
-      let greaterMatch = input.match(/^>\s*(\d+)$/);
-      if (greaterMatch)
-        return { operator: ">", value: parseInt(greaterMatch[1]) };
+      // Phrase operators -> symbolic operators
+      if (/^(at\s*least|minimum)\s+/.test(str)) {
+        str = str.replace(/^(at\s*least|minimum)\s+/, ">= ");
+      } else if (/^(at\s*most|maximum)\s+/.test(str)) {
+        str = str.replace(/^(at\s*most|maximum)\s+/, "<= ");
+      } else if (/^(more\s+than|over|above|greater\s+than)\s+/.test(str)) {
+        str = str.replace(/^(more\s+than|over|above|greater\s+than)\s+/, "> ");
+      } else if (/^(less\s+than|under|below)\s+/.test(str)) {
+        str = str.replace(/^(less\s+than|under|below)\s+/, "< ");
+      }
 
-      greaterMatch = input.match(/^>\s*(\w+)$/);
-      if (greaterMatch && numberWords[greaterMatch[1]])
-        return { operator: ">", value: numberWords[greaterMatch[1]] };
+      const m = str.match(/^(>=|<=|>|<|=)?\s*(\d+|\w+)$/);
+      if (!m) return null;
 
-      if (numberWords[input])
-        return { operator: "=", value: numberWords[input] };
+      const op = m[1] || "=";
+      const raw = m[2];
+      const val = numberWords[raw] ?? parseInt(raw, 10);
+      if (!Number.isInteger(val)) return null;
 
-      if (!isNaN(parseInt(input)))
-        return { operator: "=", value: parseInt(input) };
-
-      return null;
+      return { operator: op, value: val };
     }
 
     // --- If land size extracted from search as text, normalize to numeric sqm where possible
@@ -127,15 +122,9 @@ exports.getAllListings = async (req, res) => {
 
     // --- Status handling ---
     const normalizedStatus = status?.toLowerCase();
-    if (
-      status &&
-      normalizedStatus !== "all" &&
-      normalizedStatus !== "all statuses"
-    ) {
+    if (status && normalizedStatus !== "all" && normalizedStatus !== "all statuses") {
       if (normalizedStatus === "featured") {
-        conditions.push(
-          `pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`,
-        );
+        conditions.push(`pl.is_featured = TRUE AND pl.featured_expires_at > NOW()`);
       } else {
         conditions.push(`pl.status ILIKE $${valueIndex++}`);
         values.push(status);
@@ -145,26 +134,18 @@ exports.getAllListings = async (req, res) => {
         conditions.push(`pl.status ILIKE $${valueIndex++}`);
         values.push("available");
       } else if (userRole === "agent") {
-        conditions.push(
-          `(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`,
-        );
+        conditions.push(`(pl.status ILIKE ANY($${valueIndex++}) OR pl.agent_id = $${valueIndex++})`);
         values.push(["available", "sold", "under offer"], userId);
       } else if (userRole === "agency_admin" && userAgencyId) {
         conditions.push(
-          `((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`,
+          `((pl.agency_id = $${valueIndex++}) OR (pl.agency_id != $${valueIndex++} AND pl.status ILIKE ANY($${valueIndex++})))`
         );
-        values.push(userAgencyId, userAgencyId, [
-          "available",
-          "sold",
-          "under offer",
-        ]);
+        values.push(userAgencyId, userAgencyId, ["available", "sold", "under offer"]);
       }
     }
 
     if (req.query.context === "home" && !status && !search) {
-      conditions.push(
-        `NOT (pl.is_featured = TRUE AND pl.featured_expires_at > NOW())`,
-      );
+      conditions.push(`NOT (pl.is_featured = TRUE AND pl.featured_expires_at > NOW())`);
     }
 
     if (userRole !== "agency_admin" && queryAgencyId) {
@@ -215,33 +196,27 @@ exports.getAllListings = async (req, res) => {
       values.push(`%${property_type}%`);
     }
 
-    // --- Bedrooms smart filter from explicit query ---
-    if (
-      bedrooms &&
-      (!property_type || property_type.toLowerCase() !== "land")
-    ) {
-      const parsedBeds = parseNumberInput(bedrooms);
-      if (parsedBeds) {
-        if (parsedBeds.operator === ">") {
-          conditions.push(`pl.bedrooms > $${valueIndex++}`);
-        } else {
-          conditions.push(`pl.bedrooms = $${valueIndex++}`);
-        }
-        values.push(parsedBeds.value);
-      }
+    // Helper to push a numeric WHERE clause given a column + parsed {operator, value}
+    function pushNumericCondition(column, parsed) {
+      if (!parsed) return;
+      let op = parsed.operator || "=";
+      if (!["=", ">", "<", ">=", "<="].includes(op)) op = "=";
+      conditions.push(`pl.${column} ${op} $${valueIndex++}`);
+      values.push(parsed.value);
     }
 
-    // --- Bathrooms smart filter from explicit query ---
+    // --- Bedrooms / Bathrooms / Living rooms / Kitchens from explicit query ---
+    if (bedrooms && (!property_type || property_type.toLowerCase() !== "land")) {
+      pushNumericCondition("bedrooms", parseNumberInput(bedrooms));
+    }
     if (bathrooms && property_type?.toLowerCase() !== "land") {
-      const parsedBaths = parseNumberInput(bathrooms);
-      if (parsedBaths) {
-        if (parsedBaths.operator === ">") {
-          conditions.push(`pl.bathrooms > $${valueIndex++}`);
-        } else {
-          conditions.push(`pl.bathrooms = $${valueIndex++}`);
-        }
-        values.push(parsedBaths.value);
-      }
+      pushNumericCondition("bathrooms", parseNumberInput(bathrooms));
+    }
+    if (living_rooms && property_type?.toLowerCase() !== "land") {
+      pushNumericCondition("living_rooms", parseNumberInput(living_rooms));
+    }
+    if (kitchens && property_type?.toLowerCase() !== "land") {
+      pushNumericCondition("kitchens", parseNumberInput(kitchens));
     }
 
     // --- Other explicit filters ---
@@ -259,59 +234,81 @@ exports.getAllListings = async (req, res) => {
     }
 
     // --- 🔎 Smart Search (helper-powered) ---
-    // --- 🔎 Smart Search (helper-powered) ---
     let rankSelect = "";
     let normalizedSearch = search ? normalizeQuery(search.trim()) : "";
     let inferredSortFromQualifiers = null;
-    
-    if (normalizedSearch) {
-        let searchConditions = [];
-        let fullTextForSearch = normalizedSearch;
-    
-        const qualifiers = extractQualifiers(normalizedSearch);
-        // ... (qualifiers and price range logic remains the same) ...
-    
-        const numExtract = extractNumbers(normalizedSearch);
-    
-        // ==================== EDIT START ====================
-        // Treat extracted numbers as STRICT filters (AND), not optional search terms (OR).
-        // We now push these conditions directly to the main 'conditions' array.
-        if (!bedrooms && numExtract?.bedrooms && property_type?.toLowerCase() !== "land") {
-            conditions.push(`pl.bedrooms = $${valueIndex++}`); // Pushed to 'conditions'
-            values.push(numExtract.bedrooms);
-        }
-        if (!bathrooms && numExtract?.bathrooms && property_type?.toLowerCase() !== "land") {
-            conditions.push(`pl.bathrooms = $${valueIndex++}`); // Pushed to 'conditions'
-            values.push(numExtract.bathrooms);
-        }
 
-    // The logic for land_size can remain a strict filter if you prefer
-    if (!land_size && numExtract?.land_size) {
+    if (normalizedSearch) {
+      let searchConditions = [];
+      let fullTextForSearch = normalizedSearch;
+
+      const qualifiers = extractQualifiers(normalizedSearch);
+      // (Optional: set inferredSortFromQualifiers from `qualifiers`)
+
+      // --- Canonical column mapping for structural synonyms ---
+const columnSynonyms = {
+  bedrooms: ["bedroom", "bedrooms", "room", "rooms", "bed", "br", "bhk"],
+  bathrooms: ["bathroom", "bathrooms", "bath", "toilet", "toilets", "wc"],
+  living_rooms: ["living room", "living rooms", "parlour", "parlor", "sitting room", "lounge"],
+  kitchens: ["kitchen", "kitchens", "cookroom", "kitchenette"]
+};
+
+// Normalize detected keys so "rooms" => bedrooms, etc.
+function normalizeStructuralKey(term) {
+  const lower = term.toLowerCase();
+  for (const [col, syns] of Object.entries(columnSynonyms)) {
+    if (syns.some(s => lower.includes(s))) {
+      return col;
+    }
+  }
+  return null;
+}
+
+
+      const numExtract = extractNumbers(normalizedSearch);
+
+      // Treat extracted numbers as STRICT filters (AND), using operator+value
+      if (numExtract && property_type?.toLowerCase() !== "land") {
+        for (const [rawKey, parsed] of Object.entries(numExtract)) {
+          const normalizedKey = normalizeStructuralKey(rawKey);
+          if (!normalizedKey) continue;
+      
+          if (normalizedKey === "bedrooms" && !bedrooms) {
+            pushNumericCondition("bedrooms", parsed);
+          } else if (normalizedKey === "bathrooms" && !bathrooms) {
+            pushNumericCondition("bathrooms", parsed);
+          } else if (normalizedKey === "living_rooms" && !living_rooms) {
+            pushNumericCondition("living_rooms", parsed);
+          } else if (normalizedKey === "kitchens" && !kitchens) {
+            pushNumericCondition("kitchens", parsed);
+          }
+        }
+      }      
+
+      // Land size from smart search (as minimum)
+      if (!land_size && numExtract?.land_size) {
         const sqm = parseLandSizeToSqm(numExtract.land_size);
         if (sqm) {
-            conditions.push(`COALESCE(pd.land_size,0) >= $${valueIndex++}`);
-            values.push(sqm);
+          conditions.push(`COALESCE(pd.land_size,0) >= $${valueIndex++}`);
+          values.push(sqm);
         }
-    }
+      }
 
-    // ... (rest of the search logic for amenities, location, etc., remains the same) ...
-
+      // Amenities (can be OR'able or strict; keep as OR to remain soft)
       const amenList = extractAmenities(normalizedSearch);
       if (amenList.length) {
         for (const am of amenList) {
-          // Amenities can be part of the broader OR search
           searchConditions.push(`COALESCE(pd.amenities,'') ILIKE $${valueIndex++}`);
           values.push(`%${am}%`);
         }
       }
 
+      // Geo detection
       const lowerSearch = normalizedSearch.toLowerCase();
       let detectedState = null;
       let detectedCity = null;
 
-      for (const [city, mappedState] of Object.entries(
-        nigeriaLocations.cityToState || {},
-      )) {
+      for (const [city, mappedState] of Object.entries(nigeriaLocations.cityToState || {})) {
         if (lowerSearch.includes(city.toLowerCase())) {
           detectedCity = city;
           detectedState = mappedState;
@@ -336,12 +333,13 @@ exports.getAllListings = async (req, res) => {
         values.push(`%${detectedState}%`);
       }
 
+      // Purchase detection (soft)
+      let detectedPurchase = null;
       if (!purchase_category) {
         const purchaseRegex = /\b(for\s+)?((to\s+)?let|lease|rent(al)?|sale|buy)\b/gi;
         const match = purchaseRegex.exec(normalizedSearch);
         if (match) {
           const term = match[2].toLowerCase().replace(/\s+/g, " ");
-          let detectedPurchase = null;
           if (term.includes("let") || term.includes("rent") || term.includes("lease")) detectedPurchase = "Rent";
           else if (term.includes("sale") || term.includes("buy")) detectedPurchase = "Sale";
 
@@ -352,19 +350,14 @@ exports.getAllListings = async (req, res) => {
         }
       }
 
-      let detectedType = null;
-      for (let synonym in searchConfig.propertySynonyms || {}) {
-        const regex = new RegExp(`\\b${synonym}\\b`, "gi");
-        if (regex.test(normalizedSearch)) {
-          detectedType = searchConfig.propertySynonyms[synonym];
-          break;
-        }
-      }
+      // Property-type synonyms -> make this a STRICT filter (AND), not part of OR
+      const detectedType = detectPropertyType(normalizedSearch, searchConfig.propertySynonyms);
       if (detectedType && !property_type) {
-        searchConditions.push(`pl.property_type ILIKE $${valueIndex++}`);
-        values.push(`%${detectedType}%`);
+        conditions.push(`LOWER(pl.property_type) = LOWER($${valueIndex++})`);
+        values.push(detectedType);
       }
 
+      // Remove noise words from the text used for FTS/similarity
       if (noiseWords?.length) {
         for (const w of noiseWords) {
           fullTextForSearch = fullTextForSearch.replace(new RegExp(`\\b${w}\\b`, "gi"), " ");
@@ -372,53 +365,75 @@ exports.getAllListings = async (req, res) => {
         fullTextForSearch = fullTextForSearch.replace(/\s{2,}/g, " ").trim();
       }
 
-      const tsQueryString = fullTextForSearch.trim().split(/\s+/).filter(Boolean).join(' | ');
+      // --- Decide if we should ADD the FTS OR block ---
+      // If the remaining tokens are ONLY numbers + structural terms (room/bed/bath/kitchen),
+      // skip FTS so numeric filters (e.g., "2 room") don't get wiped out.
+      const cleanList = (arr = []) =>
+        (arr || []).filter(
+          s => typeof s === "string" && s !== "_comment" && !/^A\s+list/i.test(s)
+        ).map(s => s.toLowerCase());
 
-      if (tsQueryString) {
-        const tsQueryParamIndex = valueIndex++;
-        values.push(tsQueryString);
+      const structuralTerms = new Set([
+        ...cleanList(searchConfig.bedTerms),
+        ...cleanList(searchConfig.bathTerms),
+        ...cleanList(searchConfig.livingRoomTerms),
+        ...cleanList(searchConfig.kitchenTerms),
+      ]);
 
-        const simLiteral = normalizedSearch;
-        const simIdx1 = valueIndex++;
-        const simIdx2 = valueIndex++;
-        const simIdx3 = valueIndex++;
-        const simIdx4 = valueIndex++;
-        values.push(simLiteral, simLiteral, simLiteral, simLiteral);
+      const tokens = fullTextForSearch.split(/\s+/).filter(Boolean);
+      const onlyStructuralOrNumeric = tokens.length > 0 &&
+        tokens.every(t => /^\d+(?:\.\d+)?$/.test(t) || structuralTerms.has(t.toLowerCase()));
 
-        // The main FTS and similarity condition is also part of the OR group
-        searchConditions.push(`(
-          pl.search_vector @@ to_tsquery('english', $${tsQueryParamIndex})
-          OR similarity(pl.title, $${simIdx1}) > 0.25
-          OR similarity(pl.location, $${simIdx2}) > 0.25
-          OR similarity(pl.state, $${simIdx3}) > 0.25
-          OR similarity(pd.description, $${simIdx4}) > 0.25
-        )`);
+      // Build FTS/similarity only if there's meaningful text beyond structural tokens
+      if (!onlyStructuralOrNumeric) {
+        const tsQueryString = fullTextForSearch
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .join(" | ");
 
-        rankSelect = `,
-          ts_rank(pl.search_vector, to_tsquery('english', $${tsQueryParamIndex}), 1)
-            + GREATEST(
-                similarity(pl.title, $${simIdx1}),
-                similarity(pl.location, $${simIdx2}),
-                similarity(pl.state, $${simIdx3}),
-                similarity(pd.description, $${simIdx4})
-              )
-            ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity.replace(/'/g, "''")}%' THEN 2 ELSE 0 END)` : ""}
-          AS rank
-        `;
+        if (tsQueryString) {
+          const tsQueryParamIndex = valueIndex++;
+          values.push(tsQueryString);
+
+          const simLiteral = normalizedSearch;
+          const simIdx1 = valueIndex++;
+          const simIdx2 = valueIndex++;
+          const simIdx3 = valueIndex++;
+          const simIdx4 = valueIndex++;
+          values.push(simLiteral, simLiteral, simLiteral, simLiteral);
+
+          searchConditions.push(`(
+            pl.search_vector @@ to_tsquery('english', $${tsQueryParamIndex})
+            OR similarity(pl.title, $${simIdx1}) > 0.25
+            OR similarity(pl.location, $${simIdx2}) > 0.25
+            OR similarity(pl.state, $${simIdx3}) > 0.25
+            OR similarity(pd.description, $${simIdx4}) > 0.25
+          )`);
+
+          rankSelect = `,
+            ts_rank(pl.search_vector, to_tsquery('english', $${tsQueryParamIndex}), 1)
+              + GREATEST(
+                  similarity(pl.title, $${simIdx1}),
+                  similarity(pl.location, $${simIdx2}),
+                  similarity(pl.state, $${simIdx3}),
+                  similarity(pd.description, $${simIdx4})
+                )
+              ${detectedCity ? `+ (CASE WHEN pl.location ILIKE '%${detectedCity.replace(/'/g, "''")}%' THEN 2 ELSE 0 END)` : ""}
+            AS rank
+          `;
+        }
       }
 
-      // ################## MODIFICATION START ##################
       // If we have any conditions from the search string, join them with OR
       // and add them as a single, parenthesized condition to the main query.
       if (searchConditions.length > 0) {
         conditions.push(`(${searchConditions.join(" OR ")})`);
       }
-      // ################## MODIFICATION END ##################
     }
 
     // --- Where clause ---
-    const whereClause =
-      conditions.length > 0 ? " WHERE " + conditions.join(" AND ") : "";
+    const whereClause = conditions.length > 0 ? " WHERE " + conditions.join(" AND ") : "";
 
     // --- Pagination ---
     const pageNum = parseInt(page) || 1;
@@ -489,9 +504,7 @@ exports.getAllListings = async (req, res) => {
     ]);
 
     const totalListings = parseInt(countResult.rows[0].count, 10);
-    const listingsWithGallery = await attachGalleryImagesToList(
-      listingsResult.rows,
-    );
+    const listingsWithGallery = await attachGalleryImagesToList(listingsResult.rows);
 
     res.status(200).json({
       listings: listingsWithGallery,
@@ -501,14 +514,14 @@ exports.getAllListings = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching listings:", err);
-    res
-      .status(500)
-      .json({
-        error: "Internal server error fetching listings",
-        details: err.message,
-      });
+    res.status(500).json({
+      error: "Internal server error fetching listings",
+      details: err.message,
+    });
   }
 };
+
+
 
 exports.getFeaturedListings = async (req, res) => {
   // NEW: Read the optional 'limit' query parameter
@@ -580,6 +593,8 @@ exports.createListing = async (req, res) => {
     property_type,
     bedrooms,
     bathrooms,
+    living_rooms,
+    kitchens,
     purchase_category,
     description,
     square_footage,
@@ -722,8 +737,8 @@ exports.createListing = async (req, res) => {
 
     // --- LISTING INSERT ---
     const listingResult = await pool.query(
-      `INSERT INTO property_listings (title, location, state, price, status, agent_id, agency_id, date_listed, property_type, bedrooms, bathrooms, purchase_category, image_url, image_public_id, is_featured, featured_expires_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11, $12, $13, $14, $15) RETURNING property_id`,
+      `INSERT INTO property_listings (title, location, state, price, status, agent_id, agency_id, date_listed, property_type, bedrooms, bathrooms, living_rooms, kitchens, purchase_category, image_url, image_public_id, is_featured, featured_expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING property_id`,
       [
         title,
         location,
@@ -735,6 +750,8 @@ exports.createListing = async (req, res) => {
         property_type,
         property_type?.toLowerCase() === "land" ? null : bedrooms,
         property_type?.toLowerCase() === "land" ? null : bathrooms,
+        property_type?.toLowerCase() === "land" ? null : living_rooms,
+        property_type?.toLowerCase() === "land" ? null : kitchens,
         purchase_category,
         mainImageUrlToSave,
         mainImagePublicIdToSave,
@@ -841,7 +858,7 @@ exports.getListingById = async (req, res) => {
   const { id } = req.params;
   try {
     const listingResult = await pool.query(
-      `SELECT pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id, pl.is_featured, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type, u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id LEFT JOIN users u ON pl.agent_id = u.user_id WHERE pl.property_id = $1`,
+      `SELECT pl.property_id, pl.title, pl.location, pl.state, pl.price, pl.status, pl.agent_id, pl.date_listed, pl.property_type, pl.bedrooms, pl.bathrooms, pl.living_rooms, pl.kitchens, pl.purchase_category, pl.image_url, pl.image_public_id, pl.agency_id, pl.is_featured, pd.description, pd.square_footage, pd.lot_size, pd.year_built, pd.heating_type, pd.cooling_type, pd.parking, pd.amenities, pd.land_size, pd.zoning_type, pd.title_type, u.full_name AS agent_name, u.email AS agent_email, u.phone AS agent_phone FROM property_listings pl LEFT JOIN property_details pd ON pl.property_id = pd.property_id LEFT JOIN users u ON pl.agent_id = u.user_id WHERE pl.property_id = $1`,
       [id],
     );
     if (listingResult.rows.length === 0) {
@@ -1064,8 +1081,19 @@ exports.updateListing = async (req, res) => {
       property_type: updateData.property_type,
       bedrooms: updateData.bedrooms,
       bathrooms: updateData.bathrooms,
+      living_rooms: updateData.living_rooms,
+      kitchens: updateData.kitchens, 
       purchase_category: updateData.purchase_category,
     };
+    // Coerce room fields to null when property_type is "land"
+const nextType = (updateData.property_type ?? undefined)?.toLowerCase();
+if (nextType === "land") {
+  listingFields.bedrooms = null;
+  listingFields.bathrooms = null;
+  listingFields.living_rooms = null;
+  listingFields.kitchens = null;
+}
+
     for (const [key, value] of Object.entries(listingFields)) {
       if (value !== undefined) {
         updates.push(`${key} = $${valueIndex++}`);

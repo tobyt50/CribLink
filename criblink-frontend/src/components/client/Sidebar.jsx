@@ -1,10 +1,10 @@
 import {
-  Bookmark,
-  ChevronLeft,
-  Home,
-  Menu,
-  MessageSquare,
-  Users
+    Bookmark,
+    ChevronLeft,
+    Home,
+    Menu,
+    MessageSquare,
+    Users
 } from "lucide-react";
 import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
@@ -91,7 +91,7 @@ const ClientSidebar = ({
     };
   }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
 
-  const sidebarWidthClass = isMobile ? "w-64" : collapsed ? "w-20" : "w-64";
+  const sidebarWidthClass = isMobile ? "w-80" : collapsed ? "w-20" : "w-80";
 
   const sidebarClasses = `
     transition-all duration-300 shadow-2xl border-r

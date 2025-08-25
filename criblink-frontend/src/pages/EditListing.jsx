@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import axiosInstance from "../api/axiosInstance";
-import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useTheme } from "../layouts/AppShell";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   X as CloseIcon,
   Lock,
   StarIcon as StarIconSolid,
 } from "lucide-react";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import axiosInstance from "../api/axiosInstance";
 import { SUBSCRIPTION_TIERS } from "../config/subscriptionConfig";
+import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 // Dropdown component remains exactly the same.
 const Dropdown = ({
@@ -183,6 +183,8 @@ const EditListing = () => {
           propertyType: data.property_type || "",
           bedrooms: String(data.bedrooms || ""),
           bathrooms: String(data.bathrooms || ""),
+          livingRooms: String(data.living_rooms || ""),
+          kitchens: String(data.kitchens || ""),
           price: String(data.price || ""),
           description: data.description || "",
           squareFootage: String(data.square_footage || ""),
@@ -414,6 +416,8 @@ const EditListing = () => {
       property_type: tempState.propertyType,
       bedrooms: isLandProperty ? null : tempState.bedrooms,
       bathrooms: isLandProperty ? null : tempState.bathrooms,
+      living_rooms: isLandProperty ? null : tempState.livingRooms,
+      kitchens: isLandProperty ? null : tempState.kitchens,
       price: tempState.price,
       description: tempState.description,
       square_footage: isLandProperty ? null : tempState.squareFootage,
@@ -568,17 +572,31 @@ const EditListing = () => {
     { value: "Land", label: "Land" },
   ];
   const bedroomOptions = [
-    { value: "", label: "Any Bedrooms" },
+    { value: "", label: "None" },
     ...[1, 2, 3, 4, 5].map((num) => ({
       value: String(num),
       label: `${num} Bedroom(s)`,
     })),
   ];
   const bathroomOptions = [
-    { value: "", label: "Any Bathrooms" },
+    { value: "", label: "None" },
     ...[1, 2, 3, 4, 5].map((num) => ({
       value: String(num),
       label: `${num} Bathroom(s)`,
+    })),
+  ];
+  const livingRoomOptions = [
+    { value: "", label: "None" },
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Living Room(s)`,
+    })),
+  ];
+  const kitchenOptions = [
+    { value: "", label: "None" },
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Kitchen(s)`,
     })),
   ];
   const statusOptions =
@@ -729,8 +747,8 @@ const EditListing = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+          <div className="md:col-span-2">
               <label htmlFor="propertyType" className={labelClass}>
                 Property Type <span className="text-red-500">*</span>
               </label>
@@ -762,6 +780,28 @@ const EditListing = () => {
                     options={bathroomOptions}
                     value={tempState.bathrooms}
                     onChange={(v) => handleTempStateChange("bathrooms", v)}
+                    placeholder="Any"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="livingRooms" className={labelClass}>
+                    Living Rooms <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    options={livingRoomOptions}
+                    value={tempState.livingRooms}
+                    onChange={(v) => handleTempStateChange("livingRooms", v)}
+                    placeholder="Any"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="kitchens" className={labelClass}>
+                    Kitchens <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    options={kitchenOptions}
+                    value={tempState.kitchens}
+                    onChange={(v) => handleTempStateChange("kitchens", v)}
                     placeholder="Any"
                   />
                 </div>
@@ -888,7 +928,7 @@ const EditListing = () => {
 
                       {/* Remove button */}
                       <div
-                        className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer transition-colors hover:bg-red-700"
                         onClick={() =>
                           handleRemoveImage(item.identifier, item.type)
                         }

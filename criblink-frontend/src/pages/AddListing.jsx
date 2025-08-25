@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import axiosInstance from "../api/axiosInstance";
-import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
-import { useTheme } from "../layouts/AppShell";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertTriangle,
   ChevronDown,
   X as CloseIcon,
-  AlertTriangle,
   Lock,
   StarIcon as StarIconSolid,
 } from "lucide-react";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Link, useNavigate } from "react-router-dom";
+import axiosInstance from "../api/axiosInstance";
 import { SUBSCRIPTION_TIERS } from "../config/subscriptionConfig";
+import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 // The Dropdown component remains the same.
 const Dropdown = ({
@@ -146,6 +146,8 @@ const AddListing = () => {
   const [propertyType, setPropertyType] = useState("");
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
+  const [livingRooms, setLivingRooms] = useState("");
+  const [kitchens, setKitchens] = useState("");
   const [price, setPrice] = useState("");
   const [newImages, setNewImages] = useState([]);
   const [newImageURLs, setNewImageURLs] = useState([]);
@@ -343,6 +345,8 @@ const AddListing = () => {
       property_type: propertyType,
       bedrooms: isLandProperty ? null : bedrooms,
       bathrooms: isLandProperty ? null : bathrooms,
+      living_rooms: isLandProperty ? null : livingRooms,
+      kitchens: isLandProperty ? null : kitchens,
       price,
       description,
       square_footage: isLandProperty ? null : squareFootage,
@@ -501,19 +505,35 @@ const AddListing = () => {
     { value: "Land", label: "Land" },
   ];
   const bedroomOptions = [
-    { value: "", label: "Any Bedrooms" },
+    { value: "", label: "None" },
     ...[1, 2, 3, 4, 5].map((num) => ({
       value: String(num),
       label: `${num} Bedroom(s)`,
     })),
   ];
   const bathroomOptions = [
-    { value: "", label: "Any Bathrooms" },
+    { value: "", label: "None" },
     ...[1, 2, 3, 4, 5].map((num) => ({
       value: String(num),
       label: `${num} Bathroom(s)`,
     })),
   ];
+  const livingRoomOptions = [
+    { value: "", label: "None" },
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Living Room(s)`,
+    })),
+  ];
+  
+  const kitchenOptions = [
+    { value: "", label: "None" },
+    ...[1, 2, 3, 4, 5].map((num) => ({
+      value: String(num),
+      label: `${num} Kitchen(s)`,
+    })),
+  ];
+  
   const zoningTypeOptions = [
     { value: "", label: "Select Zoning Type" },
     { value: "Residential", label: "Residential" },
@@ -650,88 +670,121 @@ const AddListing = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label htmlFor="propertyType" className={labelClass}>
-                  Property Type <span className="text-red-500">*</span>
-                </label>
-                <Dropdown
-                  options={propertyTypeOptions}
-                  value={propertyType}
-                  onChange={setPropertyType}
-                  placeholder="Select property type"
-                />
-              </div>
-              {!isLandProperty && (
-                <>
-                  <div>
-                    <label htmlFor="bedrooms" className={labelClass}>
-                      Bedrooms <span className="text-red-500">*</span>
-                    </label>
-                    <Dropdown
-                      options={bedroomOptions}
-                      value={bedrooms}
-                      onChange={setBedrooms}
-                      placeholder="Any"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="bathrooms" className={labelClass}>
-                      Bathrooms <span className="text-red-500">*</span>
-                    </label>
-                    <Dropdown
-                      options={bathroomOptions}
-                      value={bathrooms}
-                      onChange={setBathrooms}
-                      placeholder="Any"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="location" className={labelClass}>
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., Lekki Phase 1, Lagos"
-                  className={uniformInputClass()}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="stateValue" className={labelClass}>
-                  State <span className="text-red-500">*</span>
-                </label>
-                <Dropdown
-                  options={stateOptions}
-                  value={stateValue}
-                  onChange={setStateValue}
-                  placeholder="Select a state"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="price" className={labelClass}>
-                  Price (NGN) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="price"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="e.g., 50000000"
-                  className={uniformInputClass()}
-                  required
-                />
-              </div>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+  {/* Property type spans 2/6 = 1/3 */}
+  <div className="md:col-span-2">
+    <label htmlFor="propertyType" className={labelClass}>
+      Property Type
+    </label>
+    <Dropdown
+      options={propertyTypeOptions}
+      value={propertyType}
+      onChange={setPropertyType}
+      placeholder="None"
+    />
+  </div>
+
+  {/* Bedrooms, Bathrooms, Living Rooms, Kitchens share 4/6 = 2/3 */}
+  {!isLandProperty && (
+    <>
+      <div className="md:col-span-1">
+        <label htmlFor="bedrooms" className={labelClass}>
+          Bedrooms
+        </label>
+        <Dropdown
+          options={bedroomOptions}
+          value={bedrooms}
+          onChange={setBedrooms}
+          placeholder="None"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <label htmlFor="bathrooms" className={labelClass}>
+          Bathrooms
+        </label>
+        <Dropdown
+          options={bathroomOptions}
+          value={bathrooms}
+          onChange={setBathrooms}
+          placeholder="None"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <label htmlFor="livingRooms" className={labelClass}>
+          Living Rooms
+        </label>
+        <Dropdown
+          options={livingRoomOptions}
+          value={livingRooms}
+          onChange={setLivingRooms}
+          placeholder="None"
+        />
+      </div>
+
+      <div className="md:col-span-1">
+        <label htmlFor="kitchens" className={labelClass}>
+          Kitchens
+        </label>
+        <Dropdown
+          options={kitchenOptions}
+          value={kitchens}
+          onChange={setKitchens}
+          placeholder="None"
+        />
+      </div>
+    </>
+  )}
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  {/* Price */}
+  <div>
+    <label htmlFor="price" className={labelClass}>
+      Price (NGN) <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="number"
+      id="price"
+      value={price}
+      onChange={(e) => setPrice(e.target.value)}
+      placeholder="e.g., 50000000"
+      className={uniformInputClass()}
+      required
+    />
+  </div>
+
+  {/* Location */}
+  <div>
+    <label htmlFor="location" className={labelClass}>
+      Location <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="text"
+      id="location"
+      value={location}
+      onChange={(e) => setLocation(e.target.value)}
+      placeholder="e.g., Lekki Phase 1, Lagos"
+      className={uniformInputClass()}
+      required
+    />
+  </div>
+
+  {/* State */}
+  <div>
+    <label htmlFor="stateValue" className={labelClass}>
+      State <span className="text-red-500">*</span>
+    </label>
+    <Dropdown
+      options={stateOptions}
+      value={stateValue}
+      onChange={setStateValue}
+      placeholder="None"
+    />
+  </div>
+</div>
+
           </motion.div>
 
           <motion.div
@@ -793,7 +846,7 @@ const AddListing = () => {
 
                       {/* Remove button */}
                       <div
-                        className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-red-600 rounded-full p-1 cursor-pointer transition-colors hover:bg-red-700"
                         onClick={() =>
                           handleRemoveImage(item.identifier, item.type)
                         }

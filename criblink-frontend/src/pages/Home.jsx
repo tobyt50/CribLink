@@ -1,30 +1,29 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { useNavigate, Link } from "react-router-dom";
-import ListingCard from "../components/ListingCard";
 import { motion } from "framer-motion";
 import {
+  Bed,
+  Building,
+  Building2,
   ChevronLeft,
   ChevronRight,
-  Star,
-  Bed,
-  Hotel,
-  Building2,
-  LandPlot,
   Home as HomeIcon,
-  Building,
+  Hotel,
+  LandPlot
 } from "lucide-react";
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 import HomeSearchFilters from "../components/HomeSearchFilters";
+import ListingCard from "../components/ListingCard";
 import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 const ITEMS_PER_PAGE = 20;
 const MIN_LISTINGS_FOR_CATEGORY = 3;
@@ -263,6 +262,8 @@ function Home() {
     subtype: "",
     bedrooms: "",
     bathrooms: "",
+    livingRooms: "",
+    kitchens: "",
     minPrice: "",
     maxPrice: "",
     purchaseCategory: "",
@@ -424,6 +425,10 @@ function Home() {
         params.append("bedrooms", advancedFilters.bedrooms);
       if (advancedFilters.bathrooms)
         params.append("bathrooms", advancedFilters.bathrooms);
+      if (advancedFilters.livingRooms)
+        params.append("living_rooms", advancedFilters.livingRooms);
+      if (advancedFilters.kitchens)
+        params.append("kitchens", advancedFilters.kitchens);
 
       // Price range: allow 0..N; only send if explicitly set
       if (
@@ -485,6 +490,12 @@ function Home() {
       }
       if (advancedFilters.bathrooms) {
         queryParams.append("bathrooms", advancedFilters.bathrooms);
+      }
+      if (advancedFilters.livingRooms) {
+        queryParams.append("living_rooms", advancedFilters.livingRooms);
+      }
+      if (advancedFilters.kitchens) {
+        queryParams.append("kitchens", advancedFilters.kitchens);
       }
       if (advancedFilters.minPrice) {
         queryParams.append("min_price", advancedFilters.minPrice);

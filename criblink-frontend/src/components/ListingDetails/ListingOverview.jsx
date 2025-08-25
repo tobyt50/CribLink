@@ -1,6 +1,4 @@
-import React from "react";
 import { Bookmark, Share2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 const ListingOverview = ({
   listing,
@@ -18,8 +16,6 @@ const ListingOverview = ({
 }) => {
   const isLandProperty = listing?.property_type?.toLowerCase() === "land";
 
-  // Determine the status to display. Show "Featured" if is_featured is true,
-  // unless the status is "Sold", "Pending", or "Rejected".
   const excludedStatuses = ["Sold", "Pending", "Rejected"];
   const displayStatus =
     listing.is_featured &&
@@ -79,6 +75,7 @@ const ListingOverview = ({
           <Share2 size={20} />
         </button>
       </div>
+
       <p
         className={`text-xl md:text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}
       >
@@ -94,6 +91,7 @@ const ListingOverview = ({
         <p>
           <strong>🏡 Property Type:</strong> {listing.property_type}
         </p>
+
         {!isLandProperty && listing.bedrooms != null && (
           <p>
             <strong>🛏️ Bedrooms:</strong> {listing.bedrooms}
@@ -104,6 +102,17 @@ const ListingOverview = ({
             <strong>🛁 Bathrooms:</strong> {listing.bathrooms}
           </p>
         )}
+        {!isLandProperty && listing.living_rooms != null && (
+          <p>
+            <strong>🛋️ Living Rooms:</strong> {listing.living_rooms}
+          </p>
+        )}
+        {!isLandProperty && listing.kitchens != null && (
+          <p>
+            <strong>👩‍🍳 Kitchens:</strong> {listing.kitchens}
+          </p>
+        )}
+
         <p>
           <strong>📅 Listed:</strong>{" "}
           {new Date(listing.date_listed).toLocaleDateString()}

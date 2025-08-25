@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowDown, ArrowUp, Search, SlidersHorizontal } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "../layouts/AppShell";
-import { ArrowDown, ArrowUp, SlidersHorizontal, Search } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 const PROPERTY_TYPES = [
   "Self-Contain",
@@ -16,7 +16,7 @@ const PROPERTY_TYPES = [
   "Commercial",
   "Other",
 ];
-const BED_BATH_COUNTS = ["1", "2", "3", "4", "5+"];
+const BED_BATH_COUNTS = [1, 2, 3, 4, "5+"]; 
 const PURCHASE_CATEGORIES = ["Rent", "Sale", "Lease", "Short let", "Long let"];
 
 function HomeSearchFilters({
@@ -51,6 +51,8 @@ function HomeSearchFilters({
       (filters.propertyType !== "" && filters.propertyType !== undefined) ||
       (filters.bedrooms !== "" && filters.bedrooms !== undefined) ||
       (filters.bathrooms !== "" && filters.bathrooms !== undefined) ||
+      (filters.living_rooms !== "" && filters.living_rooms !== undefined) ||
+      (filters.kitchens !== "" && filters.kitchens !== undefined) ||
       (filters.minPrice !== 0 &&
         filters.minPrice !== "" &&
         filters.minPrice !== undefined) ||
@@ -83,6 +85,8 @@ function HomeSearchFilters({
     filters.propertyType,
     filters.bedrooms,
     filters.bathrooms,
+    filters.living_rooms,
+    filters.kitchens,
     filters.purchaseCategory,
   ]);
 
@@ -98,6 +102,8 @@ function HomeSearchFilters({
           (filters.propertyType !== "" && filters.propertyType !== undefined) ||
           (filters.bedrooms !== "" && filters.bedrooms !== undefined) ||
           (filters.bathrooms !== "" && filters.bathrooms !== undefined) ||
+          (filters.living_rooms !== "" && filters.living_rooms !== undefined) ||
+          (filters.kitchens !== "" && filters.kitchens !== undefined) ||
           (filters.minPrice !== 0 &&
             filters.minPrice !== "" &&
             filters.minPrice !== undefined) ||
@@ -113,7 +119,19 @@ function HomeSearchFilters({
       // When the main dropdown closes, reset hasEditedFilters
       setHasEditedFilters(false);
     }
-  }, [showAdvancedFilters, hasEditedFilters, filters]);
+  }, [
+    showAdvancedFilters,
+    hasEditedFilters,
+    filters.bedrooms,
+    filters.bathrooms,
+    filters.living_rooms,
+    filters.kitchens,
+    filters.propertyType,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.purchaseCategory,
+  ]);
+  
 
   // Effect to handle responsive placeholder text
   useEffect(() => {
@@ -194,6 +212,8 @@ function HomeSearchFilters({
       subtype: "",
       bedrooms: "",
       bathrooms: "",
+      living_rooms: "",
+      kitchens: "",
       minPrice: "",
       maxPrice: "",
       purchaseCategory: "",
@@ -286,18 +306,18 @@ function HomeSearchFilters({
       {/* Adjusted max-width for responsiveness and added px-3 */}
       {/* Search Bar - Always persistent */}
       <form onSubmit={handleSearch} className="relative w-full mb-4">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={placeholderText} // Using dynamic placeholder text
-          className={`w-full py-2.5 px-3 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
-            darkMode
-              ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
-              : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"
-          }`}
-          onClick={() => setShowAdvancedFilters(true)}
-        />
+      <input
+  type="text"
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  placeholder={placeholderText} // Using dynamic placeholder text
+  className={`w-full py-2.5 pl-3 pr-14 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+    darkMode
+      ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+      : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"
+  }`}
+  onClick={() => setShowAdvancedFilters(true)}
+/>
         <button
           type="submit"
           className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-2xl p-2 shadow-lg
@@ -434,49 +454,87 @@ function HomeSearchFilters({
                     </div>
                   </div>
 
-                  {/* Bedrooms Filter */}
-                  <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p
-                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-                    >
-                      Bedrooms:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {BED_BATH_COUNTS.map((count) => (
-                        <button
-                          key={`bed-${count}`}
-                          type="button"
-                          onClick={() => handleFilterChange("bedrooms", count)}
-                          className={getButtonClass(filters.bedrooms === count)}
-                        >
-                          {count}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Bed, Bath, Living, Kitchen Filters in one row */}
+<div className="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+  {/* Bedrooms */}
+  <div>
+    <p className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+      Bedrooms:
+    </p>
+    <div className="flex flex-row flex-wrap gap-2">
+      {BED_BATH_COUNTS.map((count) => (
+        <button
+          key={`bed-${count}`}
+          type="button"
+          onClick={() => handleFilterChange("bedrooms", count)}
+          className={getButtonClass(filters.bedrooms === count)}
+        >
+          {count}
+        </button>
+      ))}
+    </div>
+  </div>
 
-                  {/* Bathrooms Filter */}
-                  <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">
-                    <p
-                      className={`text-sm font-medium mb-2 sm:mb-0 sm:mr-4 flex-shrink-0 ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-                    >
-                      Bathrooms:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {BED_BATH_COUNTS.map((count) => (
-                        <button
-                          key={`bath-${count}`}
-                          type="button"
-                          onClick={() => handleFilterChange("bathrooms", count)}
-                          className={getButtonClass(
-                            filters.bathrooms === count,
-                          )}
-                        >
-                          {count}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+  {/* Bathrooms */}
+  <div>
+    <p className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+      Bathrooms:
+    </p>
+    <div className="flex flex-row flex-wrap gap-2">
+      {BED_BATH_COUNTS.map((count) => (
+        <button
+          key={`bath-${count}`}
+          type="button"
+          onClick={() => handleFilterChange("bathrooms", count)}
+          className={getButtonClass(filters.bathrooms === count)}
+        >
+          {count}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Living Rooms */}
+  <div>
+    <p className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+      Living Rooms:
+    </p>
+    <div className="flex flex-row flex-wrap gap-2">
+      {BED_BATH_COUNTS.map((count) => (
+        <button
+          key={`living-${count}`}
+          type="button"
+          onClick={() => handleFilterChange("livingRooms", count)}
+          className={getButtonClass(filters.livingRooms === count)}
+        >
+          {count}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* Kitchens */}
+  <div>
+    <p className={`text-sm font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+      Kitchens:
+    </p>
+    <div className="flex flex-row flex-wrap gap-2">
+      {BED_BATH_COUNTS.map((count) => (
+        <button
+          key={`kitchen-${count}`}
+          type="button"
+          onClick={() => handleFilterChange("kitchens", count)}
+          className={getButtonClass(filters.kitchens === count)}
+        >
+          {count}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
+                    
+                    
 
                   {/* Price Range Slider */}
                   <div className="mb-3 flex flex-col sm:flex-row sm:items-baseline items-start w-full">

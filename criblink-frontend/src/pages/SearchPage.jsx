@@ -1,20 +1,20 @@
 // src/pages/SearchPage.js
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import ListingCard from "../components/ListingCard";
-import SearchFilters from "../components/SearchFilters"; // Using the more advanced filter component
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  SlidersHorizontal,
-  Search,
   ChevronLeft,
   ChevronRight,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
-import { useTheme } from "../layouts/AppShell";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
-import { useMessage } from "../context/MessageContext";
+import ListingCard from "../components/ListingCard";
+import SearchFilters from "../components/SearchFilters"; // Using the more advanced filter component
 import { useAuth } from "../context/AuthContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -67,6 +67,8 @@ function SearchPage() {
     subtype: "",
     bedrooms: "",
     bathrooms: "",
+    livingRooms: "",
+    kitchens: "",
     minPrice: "",
     maxPrice: "",
     purchaseCategory: "",
@@ -137,6 +139,8 @@ function SearchPage() {
       subtype: params.get("subtype") || "",
       bedrooms: params.get("bedrooms") || "",
       bathrooms: params.get("bathrooms") || "",
+      livingRooms: params.get("living_rooms") || "",
+      kitchens: params.get("kitchens") || "",
       minPrice: params.get("min_price") || "",
       maxPrice: params.get("max_price") || "",
       purchaseCategory: params.get("purchase_category") || "",
@@ -165,6 +169,8 @@ function SearchPage() {
     if (filters.propertyType) params.set("property_type", filters.propertyType);
     if (filters.bedrooms) params.set("bedrooms", filters.bedrooms);
     if (filters.bathrooms) params.set("bathrooms", filters.bathrooms);
+    if (filters.livingRooms) params.set("living_rooms", filters.livingRooms);
+    if (filters.kitchens) params.set("kitchens", filters.kitchens);
     if (filters.minPrice) params.set("min_price", filters.minPrice);
     if (filters.maxPrice) params.set("max_price", filters.maxPrice);
     if (sortBy) params.set("sortBy", sortBy);
@@ -244,7 +250,11 @@ function SearchPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by title, location, state..."
-            className={`w-full py-2.5 px-4 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400" : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"}`}
+            className={`w-full py-2.5 pl-3 pr-14 rounded-2xl shadow-lg focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 transition-all duration-200 ${
+              darkMode
+                ? "bg-gray-700 text-white placeholder-gray-400 focus:ring-green-400"
+                : "bg-white text-gray-900 placeholder-gray-500 focus:ring-green-600"
+            }`}
           />
           <button
             type="submit"
