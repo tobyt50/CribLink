@@ -1,6 +1,6 @@
 const db = require("../db"); // This should be your PostgreSQL connection pool
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const jwt =require("jsonwebtoken");
 const logActivity = require("../utils/logActivity");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -529,9 +529,29 @@ exports.updateProfile = async (req, res) => {
     // Password change fields
     password,
     current_password_check,
+    // Profile picture fields
+    profile_picture_base64,
+    profile_picture_originalname,
   } = req.body;
 
   try {
+    // Handle profile picture upload separately if base64 data is provided
+    if (profile_picture_base64 && profile_picture_originalname) {
+        const userResult = await db.query("SELECT profile_picture_public_id FROM users WHERE user_id = $1", [userId]);
+        const oldPublicId = userResult.rows[0]?.profile_picture_public_id;
+
+        const uploadRes = await uploadToCloudinary(profile_picture_base64, profile_picture_originalname, "criblink/profile_pictures");
+
+        if (oldPublicId) {
+            await deleteFromCloudinary(oldPublicId);
+        }
+
+        await db.query(
+            "UPDATE users SET profile_picture_url = $1, profile_picture_public_id = $2 WHERE user_id = $3",
+            [uploadRes.url, uploadRes.publicId, userId]
+        );
+    }
+
     const fieldsToUpdate = [];
     const values = [];
     let paramIndex = 1;
@@ -652,17 +672,16 @@ exports.updateProfile = async (req, res) => {
       values.push(hashedPassword);
     }
 
-    if (fieldsToUpdate.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No fields provided for update." });
+    if (fieldsToUpdate.length > 0) {
+        values.push(userId); // Add user_id for the WHERE clause
+        const queryText = `UPDATE users SET ${fieldsToUpdate.join(", ")}, updated_at = NOW() WHERE user_id = $${paramIndex} RETURNING user_id, full_name, username, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, notification_email, preferred_communication_channel, share_favourites_with_agents, share_property_preferences_with_agents`;
+        await db.query(queryText, values);
     }
 
-    values.push(userId); // Add user_id for the WHERE clause
-
-    const queryText = `UPDATE users SET ${fieldsToUpdate.join(", ")}, updated_at = NOW() WHERE user_id = $${paramIndex} RETURNING user_id, full_name, username, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, notification_email, preferred_communication_channel, share_favourites_with_agents, share_property_preferences_with_agents`; // Ensure all fields are returned, including agency_id
-
-    const result = await db.query(queryText, values);
+    const result = await db.query(
+        `SELECT user_id, full_name, username, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, notification_email, preferred_communication_channel, share_favourites_with_agents, share_property_preferences_with_agents FROM users WHERE user_id = $1`,
+        [userId]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found." });
@@ -1375,5 +1394,135 @@ exports.getListingStats = async (req, res) => {
         message: "Failed to fetch listing statistics.",
         error: error.message,
       });
+  }
+};
+
+// NEW: Endpoint for a client to change their role to an agent
+exports.changeRoleToAgent = async (req, res) => {
+  const userId = req.user.user_id;
+  const userRole = req.user.role;
+
+  if (userRole !== 'client') {
+      return res.status(403).json({ message: "Forbidden: Only clients can change their role to an agent." });
+  }
+
+  try {
+      // FIX: Also set default_landing_page to NULL to prevent redirection conflicts.
+      const result = await db.query(
+          `UPDATE users SET role = 'agent', default_landing_page = NULL, updated_at = NOW() WHERE user_id = $1 RETURNING *`,
+          [userId]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      const updatedUser = result.rows[0];
+
+      // Log the activity
+      await logActivity(
+          `User ${updatedUser.full_name} changed their role from client to agent`,
+          updatedUser.user_id,
+          "user_role_change"
+      );
+
+      // Generate a new JWT token with the updated role
+      const token = jwt.sign(
+          {
+              user_id: updatedUser.user_id,
+              name: updatedUser.full_name,
+              email: updatedUser.email,
+              role: 'agent', // New role
+              agency_id: updatedUser.agency_id,
+              status: updatedUser.status,
+              session_id: req.user.session_id, // Preserve current session ID
+          },
+          SECRET_KEY,
+          { expiresIn: "7d" }
+      );
+
+      res.status(200).json({
+          message: "Role successfully updated to agent.",
+          user: updatedUser,
+          token,
+      });
+
+  } catch (err) {
+      console.error("Error changing role to agent:", err);
+      res.status(500).json({ message: "Failed to update role.", error: err.message });
+  }
+};
+
+// NEW: Endpoint for an agent to revert their role to a client
+exports.revertToClient = async (req, res) => {
+  const userId = req.user.user_id;
+  const userRole = req.user.role;
+
+  if (!['agent', 'agency_admin'].includes(userRole)) {
+      return res.status(403).json({ message: "Forbidden: Only agents or agency admins can revert to a client role." });
+  }
+
+  let client;
+  try {
+      client = await db.pool.connect();
+      await client.query('BEGIN');
+
+      // Disconnect from any agency
+      await client.query(`DELETE FROM agency_members WHERE agent_id = $1`, [userId]);
+
+      // Update user's role, clear agency details, and RESET the default landing page.
+      const result = await client.query(
+          `UPDATE users 
+           SET role = 'client', 
+               agency_id = NULL, 
+               agency = NULL, 
+               default_landing_page = NULL, -- FIX: Prevent redirection conflicts
+               updated_at = NOW() 
+           WHERE user_id = $1 RETURNING *`,
+          [userId]
+      );
+
+      await client.query('COMMIT');
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      const updatedUser = result.rows[0];
+
+      // Log the activity
+      await logActivity(
+          `User ${updatedUser.full_name} reverted their role from ${userRole} to client`,
+          updatedUser.user_id,
+          "user_role_change"
+      );
+
+      // Generate a new JWT token
+      const token = jwt.sign(
+          {
+              user_id: updatedUser.user_id,
+              name: updatedUser.full_name,
+              email: updatedUser.email,
+              role: 'client',
+              agency_id: null,
+              status: updatedUser.status,
+              session_id: req.user.session_id,
+          },
+          SECRET_KEY,
+          { expiresIn: "7d" }
+      );
+
+      res.status(200).json({
+          message: "Role successfully reverted to client.",
+          user: updatedUser,
+          token,
+      });
+
+  } catch (err) {
+      if (client) await client.query('ROLLBACK');
+      console.error("Error reverting role to client:", err);
+      res.status(500).json({ message: "Failed to update role.", error: err.message });
+  } finally {
+      if (client) client.release();
   }
 };

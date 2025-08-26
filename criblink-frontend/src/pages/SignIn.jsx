@@ -1,13 +1,13 @@
 // src/pages/SignIn.js
-import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
-import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 
 export default function SignIn() {
   // --- STATE MANAGEMENT ---
@@ -22,8 +22,8 @@ export default function SignIn() {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
   const { showMessage } = useMessage();
-  const { showConfirm } = useConfirmDialog();
-  const { isAuthenticated, user, loading } = useAuth();
+  const { showConfirm } = useConfirmDialog(); 
+  const { isAuthenticated, user, loading, login } = useAuth();
 
   // --- REDIRECTION LOGIC ---
   const getRedirectPath = (userData) => {
@@ -178,9 +178,11 @@ export default function SignIn() {
         localStorage.clear();
         return;
       }
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("authChange"));
+      login(data.user, data.token);
+      const redirectPath = getRedirectPath(data.user);
+
+      // FINALLY, navigate. This is now guaranteed to be correct.
+      navigate(redirectPath, { replace: true });
       showMessage("Sign-in successful!", "success", 3000);
     } catch (error) {
       const errorMessage =

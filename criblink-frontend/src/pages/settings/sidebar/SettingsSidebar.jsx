@@ -1,18 +1,18 @@
-import React from "react";
 import {
-  Menu,
-  ChevronLeft,
-  User,
-  Shield,
-  KeyRound,
-  SlidersHorizontal,
-  Building,
-  Settings as SettingsIcon,
   Bell,
-  Link as LinkIcon,
+  Building,
+  ChevronLeft,
   ClipboardList,
+  KeyRound,
+  Link as LinkIcon,
+  Menu,
   Server,
+  Settings as SettingsIcon,
+  Shield,
+  SlidersHorizontal,
+  User,
 } from "lucide-react";
+import React from "react";
 import { useTheme } from "../../../layouts/AppShell";
 
 const categoryIcons = {
@@ -36,17 +36,16 @@ const SettingsSidebar = ({
   setCollapsed,
 }) => {
   const { darkMode } = useTheme();
-  const sidebarWidthClass = collapsed ? "w-20" : "w-64";
+  const sidebarWidthClass = collapsed ? "w-20" : "w-64"; // Matched width
 
-  // THE FIX IS HERE: Replaced h-screen with a calculated height
   const sidebarClasses = `
-        transition-all duration-300 shadow-2xl border-r
-        flex flex-col items-start
-        fixed top-14 left-0 z-40 
-        h-[calc(100vh-3.5rem)] 
-        ${sidebarWidthClass}
-        ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
-    `;
+    transition-all duration-300 ease-in-out shadow-xl border-r
+    flex flex-col items-start
+    fixed top-14 left-0 z-40
+    h-[calc(100vh-3.5rem)]
+    ${sidebarWidthClass}
+    ${darkMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-100"}
+  `;
 
   return (
     <aside className={sidebarClasses}>
@@ -54,39 +53,28 @@ const SettingsSidebar = ({
       <button
         onClick={() => setCollapsed(!collapsed)}
         aria-label="Toggle sidebar"
-        className={`flex flex-col items-center py-3 mb-2 w-full border-b px-6 transition-colors
-                ${darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-100"}`}
+        className={`flex items-center justify-center py-3 w-full border-b transition-colors ${
+          darkMode
+            ? "border-gray-800 hover:bg-gray-800"
+            : "border-gray-100 hover:bg-gray-50"
+        }`}
       >
         {collapsed ? (
-          <>
-            <Menu
-              className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
-              size={24}
-            />
-            <span
-              className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-            >
-              Expand
-            </span>
-          </>
+          <Menu
+            className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            size={22}
+          />
         ) : (
-          <>
-            <ChevronLeft
-              className={`${darkMode ? "text-gray-300" : "text-gray-700"}`}
-              size={24}
-            />
-            <span
-              className={`mt-1 text-xs font-semibold ${darkMode ? "text-gray-400" : "text-gray-600"}`}
-            >
-              Collapse
-            </span>
-          </>
+          <ChevronLeft
+            className={`${darkMode ? "text-gray-400" : "text-gray-600"}`}
+            size={22}
+          />
         )}
       </button>
 
-      {/* Navigation (This will now scroll correctly within the visible area) */}
-      <nav className="flex-1 flex flex-col w-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 pb-4">
-        {categories.map((category, idx) => {
+      {/* Navigation */}
+      <nav className="flex flex-col w-full flex-grow overflow-y-auto py-3">
+        {categories.map((category) => {
           const Icon = categoryIcons[category.id] || SettingsIcon;
           const isActive = activeCategory === category.id;
 
@@ -94,24 +82,27 @@ const SettingsSidebar = ({
             <React.Fragment key={category.id}>
               <button
                 onClick={() => setActiveCategory(category.id)}
-                className={`flex items-center gap-4 w-full px-6 py-3 transition-all ${
-                  isActive
-                    ? darkMode
-                      ? "bg-gray-900 text-green-200 font-semibold border-l-4 border-green-400"
-                      : "bg-green-100 text-green-800 font-semibold border-l-4 border-green-600"
-                    : darkMode
-                      ? "text-gray-300 hover:bg-gray-700 hover:text-gray-100"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-                }`}
+                className={`group flex items-center gap-4 w-full px-6 py-3 transition-all rounded-lg
+                  ${
+                    isActive
+                      ? darkMode
+                        ? "bg-gray-800 text-green-300"
+                        : "bg-green-50 text-green-700"
+                      : darkMode
+                        ? "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
               >
-                <span>{React.cloneElement(<Icon />, { size: 24 })}</span>
-                {!collapsed && <span>{category.label}</span>}
+                <span className="flex items-center justify-center">
+                  {React.cloneElement(<Icon />, {
+                    size: 22,
+                    strokeWidth: 1.8,
+                  })}
+                </span>
+                {!collapsed && (
+                  <span className="text-base font-medium">{category.label}</span>
+                )}
               </button>
-              {idx < categories.length - 1 && (
-                <hr
-                  className={`${darkMode ? "border-gray-700" : "border-gray-100"} mx-6`}
-                />
-              )}
             </React.Fragment>
           );
         })}

@@ -47,10 +47,13 @@ export const getUserRoleFromToken = (token) => {
  */
 export const signOutUser = (navigate) => {
   console.log(
-    "Signing out user due to invalid/expired token or manual logout.",
+    "Signing out user due to invalid/expired token or manual logout."
   );
+
+  // Clear all auth-related data
   localStorage.removeItem("token");
-  // Dispatch a custom event to notify other parts of the app about auth change
   window.dispatchEvent(new Event("authChange"));
-  navigate("/signin"); // Adjust this path to your actual sign-in page
+
+  navigate("/signin"); // redirect to sign-in page
 };
+

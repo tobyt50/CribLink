@@ -88,4 +88,23 @@ router.get(
  */
 router.get("/listing-stats", authenticateToken, userController.getListingStats);
 
+/**
+ * @route PUT /api/users/change-to-agent
+ * @desc Changes the current user's role from 'client' to 'agent'.
+ * @access Private (Clients only)
+ */
+router.put(
+    "/change-to-agent",
+    authenticateToken,
+    authorizeRoles(["client"]),
+    userController.changeRoleToAgent
+);
+
+router.put(
+  "/revert-to-client",
+  authenticateToken,
+  authorizeRoles(["agent"]),
+  userController.revertToClient
+);
+
 module.exports = router;

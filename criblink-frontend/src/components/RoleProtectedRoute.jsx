@@ -1,9 +1,8 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
-import { getUserRoleFromToken, signOutUser } from "../utils/authUtils";
-import { useMessage } from "../context/MessageContext";
 import { useAuth } from "../context/AuthContext"; // Import useAuth
-import ProtectedBaseRoute from "./ProtectedBaseRoute"; // Keep this for nested routing if needed, but logic is now in parent
+import { useMessage } from "../context/MessageContext";
+import { signOutUser } from "../utils/authUtils";
 
 /**
  * RoleProtectedRoute
