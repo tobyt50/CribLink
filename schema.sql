@@ -17,17 +17,17 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-DROP DATABASE IF EXISTS criblink_db;
+DROP DATABASE IF EXISTS hava_db;
 --
--- Name: criblink_db; Type: DATABASE; Schema: -; Owner: postgres
+-- Name: hava_db; Type: DATABASE; Schema: -; Owner: postgres
 --
 
-CREATE DATABASE criblink_db WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en-US';
+CREATE DATABASE hava_db WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVIDER = libc LOCALE = 'en-US';
 
 
-ALTER DATABASE criblink_db OWNER TO postgres;
+ALTER DATABASE hava_db OWNER TO postgres;
 
-\connect criblink_db
+\connect hava_db
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;

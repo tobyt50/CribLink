@@ -1,0 +1,1528 @@
+const db = require("../db"); // This should be your PostgreSQL connection pool
+const bcrypt = require("bcryptjs");
+const jwt =require("jsonwebtoken");
+const logActivity = require("../utils/logActivity");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+const {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+  getCloudinaryPublicId,
+} = require("../utils/cloudinary");
+const axios = require("axios");
+const SUBSCRIPTION_TIERS = require("../config/subscriptionConfig"); // NEW: Import subscription config
+
+const SECRET_KEY = process.env.JWT_KEY || "lionel_messi_10_is_the_goat!";
+const GEOCODING_API_KEY = process.env.OPENCAGE_GEOCODING_API_KEY;
+
+// Configure Nodemailer (replace with your actual email service details)
+const transporter = nodemailer.createTransport({
+  service: "gmail", // e.g., 'gmail', 'outlook'
+  auth: {
+    user: process.env.EMAIL_USER, // Your email address
+    pass: process.env.EMAIL_PASS, // Your email password or app-specific password
+  },
+});
+
+// Helper function to perform reverse geocoding using OpenCage
+async function reverseGeocode(latitude, longitude) {
+  if (!GEOCODING_API_KEY) {
+    console.warn(
+      "Geocoding API Key is not set. Location will be raw coordinates.",
+    );
+    return null;
+  }
+
+  try {
+    // OpenCage Geocoding API endpoint
+    const response = await axios.get(
+      `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${GEOCODING_API_KEY}`,
+    );
+
+    if (response.data.status.code === 200 && response.data.results.length > 0) {
+      const components = response.data.results[0].components;
+      let city = components.city || components.town || components.village || "";
+      let state = components.state || components.county || "";
+      let country = components.country || "";
+
+      if (city && state) {
+        return `${city}, ${state}`;
+      } else if (city) {
+        return city;
+      } else if (state) {
+        return state;
+      } else if (country) {
+        return country;
+      } else {
+        return response.data.results[0].formatted; // Fallback to full formatted address
+      }
+    }
+    console.warn(
+      "Reverse geocoding failed or no results found from OpenCage:",
+      response.data.status.message || response.data.status.code,
+    );
+    return null;
+  } catch (error) {
+    console.error(
+      "Error during OpenCage reverse geocoding API call:",
+      error.message,
+    );
+    return null;
+  }
+}
+
+/**
+ * Updates a user's subscription tier.
+ * This is an admin-only action.
+ */
+exports.updateSubscription = async (req, res) => {
+  const { id: userId } = req.params; // The user whose subscription is being updated
+  const { subscription_type } = req.body; // e.g., 'pro', 'enterprise'
+  const performingUser = req.user; // The admin performing the action
+
+  // Validate the new tier against the config file
+  if (!SUBSCRIPTION_TIERS[subscription_type]) {
+    return res
+      .status(400)
+      .json({ message: "Invalid subscription tier provided." });
+  }
+
+  const newTierConfig = SUBSCRIPTION_TIERS[subscription_type];
+
+  try {
+    // Update the user's subscription type and featured priority in the database.
+    // This targets the user's individual subscription. Agency subscriptions are handled separately.
+    const result = await db.query(
+      `UPDATE users SET 
+                subscription_type = $1, 
+                featured_priority = $2, 
+                updated_at = NOW() 
+             WHERE user_id = $3
+             RETURNING user_id, full_name, email, role, subscription_type, featured_priority`,
+      [subscription_type, newTierConfig.featuredPriority, userId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const updatedUser = result.rows[0];
+
+    // Log the administrative activity
+    await logActivity(
+      `Admin ${performingUser.name} updated subscription for user ${updatedUser.full_name} to '${subscription_type}'`,
+      performingUser.user_id,
+      "subscription_change",
+    );
+
+    res.status(200).json({
+      message: `User subscription successfully updated to ${subscription_type}.`,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Error updating subscription:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to update user subscription.",
+        error: err.message,
+      });
+  }
+};
+
+exports.signupUser = async (req, res) => {
+  // Destructure all fields that can be sent from SignUp.js, including optional ones
+  const {
+    full_name,
+    username,
+    email,
+    password,
+    role,
+    phone_number,
+    agency_name,
+    bio,
+    location,
+  } = req.body;
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const validRoles = ["client", "agent", "agency_admin"]; // NEW: Added 'agency_admin'
+    const safeRole = validRoles.includes(role) ? role : "client";
+
+    let queryText = `INSERT INTO users (full_name, username, email, password_hash, role`;
+    let queryValues = [full_name, username, email, hashedPassword, safeRole];
+    let valuePlaceholders = [`$1`, `$2`, `$3`, `$4`, `$5`];
+    let paramIndex = 6;
+
+    if (phone_number !== undefined) {
+      queryText += `, phone`;
+      valuePlaceholders.push(`$${paramIndex++}`);
+      queryValues.push(phone_number);
+    }
+    if (agency_name !== undefined) {
+      queryText += `, agency`;
+      valuePlaceholders.push(`$${paramIndex++}`);
+      queryValues.push(agency_name);
+    }
+    if (bio !== undefined) {
+      queryText += `, bio`;
+      valuePlaceholders.push(`$${paramIndex++}`);
+      queryValues.push(bio);
+    }
+    if (location !== undefined) {
+      queryText += `, location`;
+      valuePlaceholders.push(`$${paramIndex++}`);
+      queryValues.push(location);
+    }
+    // NEW: Handle agency_id if provided during signup (e.g., for direct assignment by admin)
+    // This part needs to be carefully managed. If an agency_id is provided at signup,
+    // it implies the user is being directly assigned, not requesting to join or creating.
+    // For self-signup, agency_id should typically be null initially for agents.
+    // Leaving it as is for now based on previous context, but flagging for review if issues arise.
+    if (req.body.agency_id !== undefined && req.body.agency_id !== null) {
+      queryText += `, agency_id`;
+      valuePlaceholders.push(`$${paramIndex++}`);
+      queryValues.push(req.body.agency_id);
+    }
+
+    // Add default values for new user settings
+    queryText += `, share_favourites_with_agents, share_property_preferences_with_agents`;
+    valuePlaceholders.push(`$${paramIndex++}`, `$${paramIndex++}`);
+    queryValues.push(false, false);
+
+    // UPDATE: Add subscription fields to the RETURNING clause
+    queryText += `) VALUES (${valuePlaceholders.join(", ")}) RETURNING user_id, full_name, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, agency, agency_id, username, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, default_landing_page, notification_email, preferred_communication_channel, social_links, share_favourites_with_agents, share_property_preferences_with_agents, subscription_type, featured_priority`;
+
+    const result = await db.query(queryText, queryValues);
+    const newUser = result.rows[0];
+
+    // Log the activity
+    await logActivity(
+      `User ${newUser.full_name} signed up as ${newUser.role}`,
+      newUser.user_id,
+      "user_signup",
+    );
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        user_id: newUser.user_id,
+        name: newUser.full_name,
+        email: newUser.email,
+        role: newUser.role,
+        agency_id: newUser.agency_id, // Include agency_id in token
+        status: newUser.status,
+      },
+      SECRET_KEY,
+      { expiresIn: "7d" },
+    );
+
+    res.status(201).json({
+      message: "User registered successfully!",
+      token,
+      user: {
+        user_id: newUser.user_id,
+        full_name: newUser.full_name,
+        email: newUser.email,
+        role: newUser.role,
+        date_joined: newUser.date_joined,
+        last_login: newUser.last_login,
+        status: newUser.status,
+        profile_picture_url: newUser.profile_picture_url,
+        bio: newUser.bio,
+        location: newUser.location,
+        phone: newUser.phone,
+        agency: newUser.agency,
+        agency_id: newUser.agency_id, // Include agency_id in response
+        username: newUser.username,
+        is_2fa_enabled: newUser.is_2fa_enabled,
+        data_collection_opt_out: newUser.data_collection_opt_out,
+        personalized_ads: newUser.personalized_ads,
+        cookie_preferences: newUser.cookie_preferences,
+        communication_email_updates: newUser.communication_email_updates,
+        communication_marketing: newUser.communication_marketing,
+        communication_newsletter: newUser.communication_newsletter,
+        notifications_settings: newUser.notifications_settings,
+        timezone: newUser.timezone,
+        currency: newUser.currency,
+        default_landing_page: newUser.default_landing_page,
+        notification_email: newUser.notification_email,
+        preferred_communication_channel:
+          newUser.preferred_communication_channel,
+        social_links: newUser.social_links,
+        share_favourites_with_agents: newUser.share_favourites_with_agents,
+        share_property_preferences_with_agents:
+          newUser.share_property_preferences_with_agents,
+        subscription_type: newUser.subscription_type, // Will be 'basic' by default
+        featured_priority: newUser.featured_priority, // Will be 0 by default
+      },
+    });
+  } catch (err) {
+    console.error("Error during signup:", err);
+    if (err.code === "23505") {
+      // Duplicate email or username
+      if (err.constraint === "users_email_key") {
+        return res
+          .status(409)
+          .json({ message: "This email is already registered." });
+      }
+      if (err.constraint === "users_username_key") {
+        return res
+          .status(409)
+          .json({ message: "This username is already taken." });
+      }
+    }
+    res
+      .status(500)
+      .json({ message: "Failed to register user.", error: err.message });
+  }
+};
+
+exports.signinUser = async (req, res) => {
+  const { identifier, password, device_info, location_info } = req.body || {};
+  const ip_address = req.ip || req.connection?.remoteAddress || "Unknown IP";
+
+  if (!identifier || !password) {
+    return res.status(400).json({ message: "Identifier and password are required." });
+  }
+
+  let user = null;
+  let loginStatus = "Failed";
+  let safeDevice = (device_info || "Unknown").toString().slice(0, 255);
+  let safeLocation = (location_info || "Unknown").toString().slice(0, 255);
+
+  try {
+    // Fetch user safely
+    const result = await db.query(
+      `SELECT 
+        u.user_id, u.full_name, u.username, u.email, u.password_hash, u.role, u.status, u.agency_id,
+        u.date_joined, u.phone, u.agency, u.bio, u.location, u.profile_picture_url, u.is_2fa_enabled,
+        u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+        u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+        u.notifications_settings, u.timezone, u.currency, u.default_landing_page, u.notification_email,
+        u.preferred_communication_channel, u.social_links, u.share_favourites_with_agents,
+        u.share_property_preferences_with_agents,
+        CASE 
+          WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+          ELSE u.subscription_type 
+        END AS subscription_type,
+        CASE 
+          WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+          ELSE u.featured_priority
+        END AS featured_priority
+      FROM users u
+      LEFT JOIN agencies a ON u.agency_id = a.agency_id
+      WHERE u.email = $1 OR u.username = $1`,
+      [identifier]
+    );
+
+    user = result.rows[0];
+
+    // Constant-time password check to avoid timing attacks
+    let passwordMatch = false;
+    if (user?.password_hash) {
+      passwordMatch = await bcrypt.compare(password, user.password_hash);
+    } else {
+      // Fake hash comparison
+      await bcrypt.compare(password, "$2b$10$1234567890123456789012");
+    }
+
+    if (!user || !passwordMatch) {
+      // Log failed login generically
+      await db.query(
+        user
+          ? `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
+             VALUES ($1, $2, $3, $4, $5, $6)`
+          : `INSERT INTO user_login_history (device, location, ip_address, status, message)
+             VALUES ($1, $2, $3, $4, $5)`,
+        user
+          ? [user.user_id, safeDevice, safeLocation, ip_address, loginStatus, "Invalid credentials"]
+          : [safeDevice, safeLocation, ip_address, loginStatus, "Invalid credentials"]
+      );
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check account status
+    if (["banned", "deactivated"].includes(user.status)) {
+      loginStatus = "Failed";
+      await logActivity(
+        `Sign-in attempt by ${user.status} user: ${user.full_name} (${user.email})`,
+        user,
+        `auth_${user.status}`
+      );
+
+      await db.query(
+        `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          user.user_id,
+          safeDevice,
+          safeLocation,
+          ip_address,
+          loginStatus,
+          `Account ${user.status}`
+        ]
+      );
+
+      return res.status(403).json({
+        message:
+          user.status === "banned"
+            ? "Your account has been banned."
+            : "Your account is deactivated. Please reactivate to sign in."
+      });
+    }
+
+    // Reverse geocode if location_info is lat/lon
+    let finalLocation = safeLocation;
+    if (location_info?.startsWith("Lat:")) {
+      const latLonMatch = location_info.match(/Lat: ([\d.-]+), Lon: ([\d.-]+)/);
+      if (latLonMatch) {
+        const latitude = parseFloat(latLonMatch[1]);
+        const longitude = parseFloat(latLonMatch[2]);
+        const geocoded = await reverseGeocode(latitude, longitude);
+        if (geocoded) finalLocation = geocoded.slice(0, 255);
+      }
+    }
+
+    // Create a new session
+    const sessionResult = await db.query(
+      `INSERT INTO user_sessions (user_id, device, location, ip_address, is_current, status)
+       VALUES ($1, $2, $3, $4, TRUE, 'active') RETURNING session_id`,
+      [user.user_id, safeDevice, finalLocation, ip_address]
+    );
+    const newSessionId = sessionResult.rows[0].session_id;
+
+    loginStatus = "Success";
+    await db.query(
+      `INSERT INTO user_login_history (user_id, device, location, ip_address, status, message)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.user_id, safeDevice, finalLocation, ip_address, loginStatus, "Successful login"]
+    );
+
+    // Rich JWT payload
+    const token = jwt.sign(
+      {
+        user_id: user.user_id,
+        name: user.full_name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        session_id: newSessionId,
+        agency_id: user.agency_id,
+      },
+      SECRET_KEY,
+      { expiresIn: "7d" }
+    );
+
+    await logActivity(`Sign in by ${user.role}: ${user.full_name}`, user, "auth");
+
+    // Full user object in response
+    res.json({
+      token,
+      user: {
+        user_id: user.user_id,
+        full_name: user.full_name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        phone: user.phone,
+        agency: user.agency,
+        agency_id: user.agency_id,
+        bio: user.bio,
+        location: user.location,
+        profile_picture_url: user.profile_picture_url,
+        date_joined: user.date_joined,
+        is_2fa_enabled: user.is_2fa_enabled,
+        data_collection_opt_out: user.data_collection_opt_out,
+        personalized_ads: user.personalized_ads,
+        cookie_preferences: user.cookie_preferences,
+        communication_email_updates: user.communication_email_updates,
+        communication_marketing: user.communication_marketing,
+        communication_newsletter: user.communication_newsletter,
+        notifications_settings: user.notifications_settings,
+        timezone: user.timezone,
+        currency: user.currency,
+        default_landing_page: user.default_landing_page,
+        notification_email: user.notification_email,
+        preferred_communication_channel: user.preferred_communication_channel,
+        social_links: user.social_links,
+        share_favourites_with_agents: user.share_favourites_with_agents,
+        share_property_preferences_with_agents: user.share_property_preferences_with_agents,
+        subscription_type: user.subscription_type,
+        featured_priority: user.featured_priority,
+      },
+    });
+  } catch (err) {
+    console.error("Sign in error:", err);
+    res.status(500).json({ message: "Sign in failed unexpectedly.", error: err.message });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+
+        // Query to get user details and their agency_request_status if associated with an agency
+        const result = await db.query(
+            `SELECT
+                u.user_id, u.full_name, u.username, u.email, u.role, u.date_joined, u.last_login, u.status,
+                u.profile_picture_url, u.bio, u.location, u.phone, u.social_links, u.agency, u.agency_id, u.default_landing_page,
+                u.is_2fa_enabled, u.data_collection_opt_out, u.personalized_ads, u.cookie_preferences,
+                u.communication_email_updates, u.communication_marketing, u.communication_newsletter,
+                u.notifications_settings, u.timezone, u.currency, u.notification_email,
+                u.preferred_communication_channel, u.share_favourites_with_agents,
+                u.share_property_preferences_with_agents,
+                am.request_status AS agency_request_status,
+                -- NEW: Subscription Logic
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.subscription_type IS NOT NULL THEN a.subscription_type
+                    ELSE u.subscription_type 
+                END AS subscription_type,
+                CASE 
+                    WHEN u.role = 'agency_admin' AND a.featured_priority IS NOT NULL THEN a.featured_priority
+                    ELSE u.featured_priority
+                END AS featured_priority
+             FROM users u
+             LEFT JOIN agencies a ON u.agency_id = a.agency_id
+             LEFT JOIN agency_members am ON u.user_id = am.agent_id AND u.agency_id = am.agency_id
+             WHERE u.user_id = $1`,
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error fetching profile:', err);
+        res.status(500).json({ message: 'Failed to fetch profile.', error: err.message });
+    }
+};
+            
+exports.updateProfile = async (req, res) => {
+  const userId = req.user.user_id;
+  const {
+    full_name,
+    username,
+    bio,
+    location,
+    phone,
+    social_links,
+    default_landing_page,
+    // Existing settings fields
+    is_2fa_enabled,
+    data_collection_opt_out,
+    personalized_ads,
+    cookie_preferences,
+    communication_email_updates,
+    communication_marketing,
+    communication_newsletter,
+    notifications_settings,
+    timezone,
+    currency,
+    notification_email,
+    preferred_communication_channel,
+    share_favourites_with_agents,
+    share_property_preferences_with_agents,
+    // Password change fields
+    password,
+    current_password_check,
+    // Profile picture fields
+    profile_picture_base64,
+    profile_picture_originalname,
+  } = req.body;
+
+  try {
+    // Handle profile picture upload separately if base64 data is provided
+    if (profile_picture_base64 && profile_picture_originalname) {
+        const userResult = await db.query("SELECT profile_picture_public_id FROM users WHERE user_id = $1", [userId]);
+        const oldPublicId = userResult.rows[0]?.profile_picture_public_id;
+
+        const uploadRes = await uploadToCloudinary(profile_picture_base64, profile_picture_originalname, "hava/profile_pictures");
+
+        if (oldPublicId) {
+            await deleteFromCloudinary(oldPublicId);
+        }
+
+        await db.query(
+            "UPDATE users SET profile_picture_url = $1, profile_picture_public_id = $2 WHERE user_id = $3",
+            [uploadRes.url, uploadRes.publicId, userId]
+        );
+    }
+
+    const fieldsToUpdate = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (full_name !== undefined) {
+      fieldsToUpdate.push(`full_name = $${paramIndex++}`);
+      values.push(full_name);
+    }
+    if (username !== undefined) {
+      fieldsToUpdate.push(`username = $${paramIndex++}`);
+      values.push(username);
+    }
+    if (bio !== undefined) {
+      fieldsToUpdate.push(`bio = $${paramIndex++}`);
+      values.push(bio);
+    }
+    if (location !== undefined) {
+      fieldsToUpdate.push(`location = $${paramIndex++}`);
+      values.push(location);
+    }
+    if (phone !== undefined) {
+      fieldsToUpdate.push(`phone = $${paramIndex++}`);
+      values.push(phone);
+    }
+    if (social_links !== undefined) {
+      fieldsToUpdate.push(`social_links = $${paramIndex++}`);
+      values.push(JSON.stringify(social_links)); // Store as JSON string
+    }
+    if (default_landing_page !== undefined) {
+      fieldsToUpdate.push(`default_landing_page = $${paramIndex++}`);
+      values.push(default_landing_page);
+    }
+    // Existing settings fields
+    if (is_2fa_enabled !== undefined) {
+      fieldsToUpdate.push(`is_2fa_enabled = $${paramIndex++}`);
+      values.push(is_2fa_enabled);
+    }
+    if (data_collection_opt_out !== undefined) {
+      fieldsToUpdate.push(`data_collection_opt_out = $${paramIndex++}`);
+      values.push(data_collection_opt_out);
+    }
+    if (personalized_ads !== undefined) {
+      fieldsToUpdate.push(`personalized_ads = $${paramIndex++}`);
+      values.push(personalized_ads);
+    }
+    if (cookie_preferences !== undefined) {
+      fieldsToUpdate.push(`cookie_preferences = $${paramIndex++}`);
+      values.push(JSON.stringify(cookie_preferences));
+    }
+    if (communication_email_updates !== undefined) {
+      fieldsToUpdate.push(`communication_email_updates = $${paramIndex++}`);
+      values.push(communication_email_updates);
+    }
+    if (communication_marketing !== undefined) {
+      fieldsToUpdate.push(`communication_marketing = $${paramIndex++}`);
+      values.push(communication_marketing);
+    }
+    if (communication_newsletter !== undefined) {
+      fieldsToUpdate.push(`communication_newsletter = $${paramIndex++}`);
+      values.push(communication_newsletter);
+    }
+    if (notifications_settings !== undefined) {
+      fieldsToUpdate.push(`notifications_settings = $${paramIndex++}`);
+      values.push(JSON.stringify(notifications_settings));
+    }
+    if (timezone !== undefined) {
+      fieldsToUpdate.push(`timezone = $${paramIndex++}`);
+      values.push(timezone);
+    }
+    if (currency !== undefined) {
+      fieldsToUpdate.push(`currency = $${paramIndex++}`);
+      values.push(currency);
+    }
+    if (notification_email !== undefined) {
+      fieldsToUpdate.push(`notification_email = $${paramIndex++}`);
+      values.push(notification_email);
+    }
+    if (preferred_communication_channel !== undefined) {
+      fieldsToUpdate.push(`preferred_communication_channel = $${paramIndex++}`);
+      values.push(preferred_communication_channel);
+    }
+    if (share_favourites_with_agents !== undefined) {
+      fieldsToUpdate.push(`share_favourites_with_agents = $${paramIndex++}`);
+      values.push(share_favourites_with_agents);
+    }
+    if (share_property_preferences_with_agents !== undefined) {
+      fieldsToUpdate.push(
+        `share_property_preferences_with_agents = $${paramIndex++}`,
+      );
+      values.push(share_property_preferences_with_agents);
+    }
+
+    // Password change logic
+    if (password) {
+      if (!current_password_check) {
+        return res
+          .status(400)
+          .json({
+            message: "Current password is required to change password.",
+          });
+      }
+
+      const userResult = await db.query(
+        "SELECT password_hash FROM users WHERE user_id = $1",
+        [userId],
+      );
+      const user = userResult.rows[0];
+
+      if (
+        !user ||
+        !(await bcrypt.compare(current_password_check, user.password_hash))
+      ) {
+        return res.status(401).json({ message: "Incorrect current password." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      fieldsToUpdate.push(`password_hash = $${paramIndex++}`);
+      values.push(hashedPassword);
+    }
+
+    if (fieldsToUpdate.length > 0) {
+        values.push(userId); // Add user_id for the WHERE clause
+        const queryText = `UPDATE users SET ${fieldsToUpdate.join(", ")}, updated_at = NOW() WHERE user_id = $${paramIndex} RETURNING user_id, full_name, username, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, notification_email, preferred_communication_channel, share_favourites_with_agents, share_property_preferences_with_agents`;
+        await db.query(queryText, values);
+    }
+
+    const result = await db.query(
+        `SELECT user_id, full_name, username, email, role, date_joined, last_login, status, profile_picture_url, bio, location, phone, social_links, agency, agency_id, default_landing_page, is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences, communication_email_updates, communication_marketing, communication_newsletter, notifications_settings, timezone, currency, notification_email, preferred_communication_channel, share_favourites_with_agents, share_property_preferences_with_agents FROM users WHERE user_id = $1`,
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const updatedUser = result.rows[0];
+
+    // Log the activity
+    await logActivity(
+      `User ${updatedUser.full_name} updated their profile`,
+      updatedUser.user_id,
+      "profile_update",
+    );
+
+    // Generate a new JWT token with updated user information
+    const token = jwt.sign(
+      {
+        user_id: updatedUser.user_id,
+        name: updatedUser.full_name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        agency_id: updatedUser.agency_id, // Ensure agency_id is in the new token
+        status: updatedUser.status,
+        session_id: req.user.session_id, // Preserve current session ID
+      },
+      SECRET_KEY,
+      { expiresIn: "7d" },
+    );
+
+    res.status(200).json({
+      message: "Profile updated successfully!",
+      user: {
+        user_id: updatedUser.user_id,
+        full_name: updatedUser.full_name,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        date_joined: updatedUser.date_joined,
+        last_login: updatedUser.last_login,
+        status: updatedUser.status,
+        profile_picture_url: updatedUser.profile_picture_url,
+        bio: updatedUser.bio,
+        location: updatedUser.location,
+        phone: updatedUser.phone,
+        social_links: updatedUser.social_links,
+        agency: updatedUser.agency,
+        agency_id: updatedUser.agency_id, // Include agency_id in response
+        default_landing_page: updatedUser.default_landing_page,
+        is_2fa_enabled: updatedUser.is_2fa_enabled,
+        data_collection_opt_out: updatedUser.data_collection_opt_out,
+        personalized_ads: updatedUser.personalized_ads,
+        cookie_preferences: updatedUser.cookie_preferences,
+        communication_email_updates: updatedUser.communication_email_updates,
+        communication_marketing: updatedUser.communication_marketing,
+        communication_newsletter: updatedUser.communication_newsletter,
+        notifications_settings: updatedUser.notifications_settings,
+        timezone: updatedUser.timezone,
+        currency: updatedUser.currency,
+        notification_email: updatedUser.notification_email,
+        preferred_communication_channel:
+          updatedUser.preferred_communication_channel,
+        social_links: updatedUser.social_links,
+        share_favourites_with_agents: updatedUser.share_favourites_with_agents,
+        share_property_preferences_with_agents:
+          updatedUser.share_property_preferences_with_agents,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    if (err.code === "23505") {
+      return res.status(409).json({ message: "Username already exists." });
+    }
+    res
+      .status(500)
+      .json({ message: "Failed to update profile.", error: err.message });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await db.query(
+      "SELECT user_id, email FROM users WHERE email = $1",
+      [email],
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User with that email does not exist." });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const passwordResetExpires = Date.now() + 3600000; // 1 hour
+
+    await db.query(
+      "UPDATE users SET password_reset_token = $1, password_reset_expires = TO_TIMESTAMP($2 / 1000) WHERE user_id = $3",
+      [resetToken, passwordResetExpires, user.user_id],
+    );
+
+    const resetUrl = `${req.protocol}://${req.get("host")}/reset-password?token=${resetToken}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Password Reset Request",
+      html: `
+                <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
+                <p>Please click on the following link, or paste this into your browser to complete the process:</p>
+                <p><a href="${resetUrl}">${resetUrl}</a></p>
+                <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
+            `,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        return res
+          .status(500)
+          .json({ message: "Failed to send password reset email." });
+      }
+      res
+        .status(200)
+        .json({ message: "Password reset link sent to your email." });
+    });
+  } catch (err) {
+    console.error("Error in forgot password:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to process password reset request.",
+        error: err.message,
+      });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const result = await db.query(
+      "SELECT user_id FROM users WHERE password_reset_token = $1 AND password_reset_expires > NOW()",
+      [token],
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Password reset token is invalid or has expired." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.query(
+      "UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL WHERE user_id = $2",
+      [hashedPassword, user.user_id],
+    );
+
+    res.status(200).json({ message: "Password has been reset successfully." });
+  } catch (err) {
+    console.error("Error in reset password:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to reset password.", error: err.message });
+  }
+};
+
+exports.uploadProfilePicture = async (req, res) => {
+  const userId = req.user.user_id;
+  const { profile_picture_base64, profile_picture_originalname } = req.body;
+
+  if (!profile_picture_base64) {
+    return res.status(400).json({ message: "No image data provided." });
+  }
+
+  try {
+    // Fetch current user to get existing public_id if any
+    const userResult = await db.query(
+      "SELECT profile_picture_public_id FROM users WHERE user_id = $1",
+      [userId],
+    );
+    const oldPublicId = userResult.rows[0]?.profile_picture_public_id;
+
+    // Upload new image
+    // The uploadToCloudinary utility now handles the base64 string directly
+    const uploadRes = await uploadToCloudinary(
+      profile_picture_base64,
+      profile_picture_originalname,
+      "hava/profile_pictures",
+    );
+
+    // Delete old image if it exists
+    if (oldPublicId) {
+      await deleteFromCloudinary(oldPublicId);
+    }
+
+    // Update user record with new image URL and public ID
+    const result = await db.query(
+      "UPDATE users SET profile_picture_url = $1, profile_picture_public_id = $2 WHERE user_id = $3 RETURNING profile_picture_url",
+      [uploadRes.url, uploadRes.publicId, userId], // Changed from secure_url and public_id to url and publicId
+    );
+
+    await logActivity(
+      `User ${req.user.full_name} updated their profile picture`,
+      userId,
+      "profile_picture_update",
+    );
+
+    res.status(200).json({
+      message: "Profile picture uploaded successfully!",
+      profile_picture_url: result.rows[0].profile_picture_url,
+    });
+  } catch (err) {
+    console.error("Error uploading profile picture:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to upload profile picture.",
+        error: err.message,
+      });
+  }
+};
+
+exports.deleteProfilePicture = async (req, res) => {
+  const userId = req.user.user_id;
+
+  try {
+    // Fetch current user to get existing public_id
+    const userResult = await db.query(
+      "SELECT profile_picture_public_id FROM users WHERE user_id = $1",
+      [userId],
+    );
+    const publicId = userResult.rows[0]?.profile_picture_public_id;
+
+    if (!publicId) {
+      return res
+        .status(404)
+        .json({ message: "No profile picture found to delete." });
+    }
+
+    // Delete from Cloudinary
+    await deleteFromCloudinary(publicId);
+
+    // Update user record to clear picture URL and public ID
+    await db.query(
+      "UPDATE users SET profile_picture_url = NULL, profile_picture_public_id = NULL WHERE user_id = $1",
+      [userId],
+    );
+
+    await logActivity(
+      `User ${req.user.full_name} deleted their profile picture`,
+      userId,
+      "profile_picture_delete",
+    );
+
+    res.status(200).json({ message: "Profile picture deleted successfully." });
+  } catch (err) {
+    console.error("Error deleting profile picture:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to delete profile picture.",
+        error: err.message,
+      });
+  }
+};
+
+exports.updateProfilePictureUrl = async (req, res) => {
+  const userId = req.user.user_id;
+  const { url } = req.body;
+
+  try {
+    // If there was an old Cloudinary image, delete it first
+    const userResult = await db.query(
+      "SELECT profile_picture_public_id FROM users WHERE user_id = $1",
+      [userId],
+    );
+    const oldPublicId = userResult.rows[0]?.profile_picture_public_id;
+    if (oldPublicId) {
+      await deleteFromCloudinary(oldPublicId);
+    }
+
+    // Update the URL in the database. Public ID will be null if setting an external URL.
+    await db.query(
+      "UPDATE users SET profile_picture_url = $1, profile_picture_public_id = NULL WHERE user_id = $2",
+      [url, userId],
+    );
+
+    await logActivity(
+      `User ${req.user.full_name} updated their profile picture URL`,
+      userId,
+      "profile_picture_update",
+    );
+
+    res
+      .status(200)
+      .json({ message: "Profile picture URL updated successfully." });
+  } catch (err) {
+    console.error("Error updating profile picture URL:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to update profile picture URL.",
+        error: err.message,
+      });
+  }
+};
+
+// --- Session Management ---
+
+exports.getActiveSessions = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const result = await db.query(
+      // Ensure these column names (login_time, status) exist in your user_sessions table
+      `SELECT session_id, device, location, ip_address, login_time, status
+             FROM user_sessions WHERE user_id = $1 AND status = 'active' ORDER BY login_time DESC`,
+      [userId],
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching active sessions:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch active sessions.",
+        error: err.message,
+      });
+  }
+};
+
+exports.revokeSession = async (req, res) => {
+  const { sessionId } = req.params;
+  const userId = req.user.user_id;
+  const currentSessionId = req.user.session_id;
+
+  if (sessionId === currentSessionId) {
+    return res
+      .status(400)
+      .json({
+        message:
+          "Cannot revoke current session through this endpoint. Please log out instead.",
+      });
+  }
+
+  try {
+    // Changed from DELETE to UPDATE to set status to 'inactive'
+    const result = await db.query(
+      `UPDATE user_sessions SET status = 'inactive' WHERE session_id = $1 AND user_id = $2 RETURNING session_id`,
+      [sessionId, userId],
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Session not found or not authorized to revoke." });
+    }
+
+    await logActivity(
+      `${req.user.name} revoked a session (ID: ${sessionId})`,
+      req.user,
+      "security_session",
+    );
+    res.status(200).json({ message: "Session revoked successfully." });
+  } catch (err) {
+    console.error("Error revoking session:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to revoke session.", error: err.message });
+  }
+};
+
+// NEW: Sign out from all other devices
+exports.signOutAllOtherDevices = async (req, res) => {
+  const userId = req.user.user_id;
+  const currentSessionId = req.user.session_id;
+
+  try {
+    // Update all sessions for the user to 'inactive' except the current one
+    const result = await db.query(
+      `UPDATE user_sessions SET status = 'inactive' WHERE user_id = $1 AND session_id != $2 RETURNING session_id`,
+      [userId, currentSessionId],
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(200)
+        .json({ message: "No other active sessions to sign out from." });
+    }
+
+    await logActivity(
+      `${req.user.name} signed out from all other devices`,
+      req.user,
+      "security_signout_all",
+    );
+    res
+      .status(200)
+      .json({
+        message: `Successfully signed out from ${result.rows.length} other devices.`,
+      });
+  } catch (err) {
+    console.error("Error signing out all other devices:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to sign out from all other devices.",
+        error: err.message,
+      });
+  }
+};
+
+// --- User Login History ---
+
+exports.getLoginHistory = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const result = await db.query(
+      `SELECT history_id, device, location, ip_address, login_time, status, message
+             FROM user_login_history WHERE user_id = $1 ORDER BY login_time DESC LIMIT 50`,
+      [userId],
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error fetching login history:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch login history.", error: err.message });
+  }
+};
+
+// --- NEW: Revert Agency Admin to Agent ---
+exports.revertToAgent = async (req, res) => {
+  const userId = req.user.user_id;
+  const userRole = req.user.role;
+
+  let client;
+  try {
+    client = await db.pool.connect();
+    await client.query("BEGIN");
+
+    // 1. Verify user is an agency_admin
+    if (userRole !== "agency_admin") {
+      await client.query("ROLLBACK");
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You are not an agency admin." });
+    }
+
+    // 2. Get the agency_id they are currently admin of
+    const userAgencyResult = await client.query(
+      "SELECT agency_id FROM users WHERE user_id = $1",
+      [userId],
+    );
+    const agencyId = userAgencyResult.rows[0]?.agency_id;
+
+    if (!agencyId) {
+      await client.query("ROLLBACK");
+      return res
+        .status(400)
+        .json({
+          message:
+            "You are not currently associated with an agency as an admin.",
+        });
+    }
+
+    // 3. Check if the user is the designated agency_admin_id for their agency AND if there are no other admins in agency_members.
+    // This prevents an agency from being left without an admin if the primary admin steps down.
+    const agencyAdminCheck = await client.query(
+      "SELECT agency_admin_id FROM agencies WHERE agency_id = $1",
+      [agencyId],
+    );
+    const agencyInfo = agencyAdminCheck.rows[0];
+
+    if (agencyInfo && agencyInfo.agency_admin_id === userId) {
+      const otherAdmins = await client.query(
+        `SELECT COUNT(*) FROM agency_members WHERE agency_id = $1 AND role = 'admin' AND agent_id != $2 AND request_status = 'accepted'`,
+        [agencyId, userId],
+      );
+
+      if (parseInt(otherAdmins.rows[0].count) === 0) {
+        // Corrected variable name from otherAdadmins to otherAdmins
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          message:
+            "You are the sole agency administrator. Please transfer agency ownership to another agent before stepping down, or delete the agency if it is no longer needed.",
+        });
+      }
+    }
+
+    // 4. Update user's role and remove agency affiliation in 'users' table
+    const updatedUserResult = await client.query(
+      `UPDATE users SET role = 'agent', agency_id = NULL, agency = NULL, updated_at = NOW() WHERE user_id = $1 RETURNING *`,
+      [userId],
+    );
+    const updatedUser = updatedUserResult.rows[0];
+
+    // 5. Remove the user's entry from 'agency_members' (completely disconnect them from the agency)
+    await client.query(
+      `DELETE FROM agency_members WHERE agent_id = $1 AND agency_id = $2`,
+      [userId, agencyId],
+    );
+
+    await client.query("COMMIT");
+
+    // Generate a new token with the updated role
+    const newToken = jwt.sign(
+      {
+        user_id: userId,
+        name: req.user.name, // Keep existing name
+        email: req.user.email, // Keep existing email
+        role: "agent", // New role
+        agency_id: null, // No longer affiliated
+        status: req.user.status,
+        session_id: req.user.session_id,
+      },
+      SECRET_KEY,
+      { expiresIn: "7d" },
+    );
+
+    await logActivity(
+      `${req.user.name} reverted from agency admin to agent`,
+      req.user,
+      "user_role_change",
+    );
+
+    res.status(200).json({
+      message: "Successfully reverted to agent role.",
+      user: {
+        ...req.user, // Spread existing user info
+        role: "agent",
+        agency_id: null,
+        agency: null,
+      },
+      token: newToken,
+    });
+  } catch (err) {
+    if (client) {
+      await client.query("ROLLBACK");
+    }
+    console.error("Error reverting agency admin to agent:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to revert role.", error: err.message });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+};
+
+// NEW: Endpoint to get a user's agency membership status
+exports.getUserAgencyStatus = async (req, res) => {
+  const { userId } = req.params;
+  const performingUserId = req.user.user_id;
+
+  // Authorization: A user can only check their own status
+  if (parseInt(userId) !== performingUserId) {
+    return res
+      .status(403)
+      .json({
+        message: "Forbidden: You can only view your own agency status.",
+      });
+  }
+
+  try {
+    // First, check the user's primary agency_id from the users table
+    const userResult = await db.query(
+      "SELECT agency_id, role FROM users WHERE user_id = $1",
+      [userId],
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const { agency_id: userAgencyId, role: userRole } = userResult.rows[0];
+
+    if (userRole === "agency_admin" && userAgencyId) {
+      // Agency admin is always 'connected' to their agency
+      return res
+        .status(200)
+        .json({ status: "connected", agency_id: userAgencyId });
+    }
+
+    if (userAgencyId) {
+      // If user has an agency_id, check their status in agency_members
+      const memberStatusResult = await db.query(
+        `SELECT request_status, agency_id FROM agency_members WHERE agent_id = $1 AND agency_id = $2`,
+        [userId, userAgencyId],
+      );
+
+      if (memberStatusResult.rows.length > 0) {
+        return res
+          .status(200)
+          .json({
+            status: memberStatusResult.rows[0].request_status,
+            agency_id: memberStatusResult.rows[0].agency_id,
+          });
+      } else {
+        // This case ideally shouldn't happen if data is consistent:
+        // user has agency_id but no corresponding entry in agency_members.
+        // Treat as 'none' or 'disconnected'
+        return res.status(200).json({ status: "none", agency_id: null });
+      }
+    } else {
+      // If user has no agency_id in their profile, check for any pending requests
+      const pendingRequestResult = await db.query(
+        `SELECT request_status, agency_id FROM agency_members WHERE agent_id = $1 AND request_status = 'pending'`,
+        [userId],
+      );
+      if (pendingRequestResult.rows.length > 0) {
+        return res
+          .status(200)
+          .json({
+            status: "pending",
+            agency_id: pendingRequestResult.rows[0].agency_id,
+          });
+      } else {
+        return res.status(200).json({ status: "none", agency_id: null });
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching user agency status:", err);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch user agency status.",
+        error: err.message,
+      });
+  }
+};
+
+exports.getCurrentUser = async (req, res) => {
+  const userId = req.user.user_id;
+
+  try {
+    const result = await db.query(
+      `SELECT user_id, full_name, email, role, date_joined, phone, agency, bio, location, profile_picture_url, status, agency_id,
+                    is_2fa_enabled, data_collection_opt_out, personalized_ads, cookie_preferences,
+                    communication_email_updates, communication_marketing, communication_newsletter,
+                    notifications_settings, timezone, currency, default_landing_page, notification_email,
+                    preferred_communication_channel, social_links, share_favourites_with_agents,
+                    share_property_preferences_with_agents
+             FROM users WHERE user_id = $1`,
+      [userId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({ user: result.rows[0] });
+  } catch (err) {
+    console.error("Error fetching current user:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch current user.", error: err.message });
+  }
+};
+
+/**
+ * @desc Get the current count of a user's active and featured listings.
+ * @route GET /api/users/listing-stats
+ * @access Private
+ */
+exports.getListingStats = async (req, res) => {
+  const { user_id, role, agency_id } = req.user;
+
+  try {
+    // Determine the scope for the query: either the agent's own ID or their agency's ID.
+    const scopeField = role === "agency_admin" ? "agency_id" : "agent_id";
+    const scopeId = role === "agency_admin" ? agency_id : user_id;
+
+    if (role === "agency_admin" && !agency_id) {
+      // Edge case: an agency_admin who is somehow not linked to an agency.
+      return res.status(200).json({ activeListings: 0, activeFeatured: 0 });
+    }
+
+    // Query to count active listings (not sold, rented, or pending review by platform admin)
+    const activeQuery = db.query(
+      `SELECT COUNT(*) FROM property_listings WHERE ${scopeField} = $1 AND status NOT IN ('sold', 'pending', 'rented')`,
+      [scopeId],
+    );
+
+    // Query to count currently active featured listings
+    const featuredQuery = db.query(
+      `SELECT COUNT(*) FROM property_listings WHERE ${scopeField} = $1 AND is_featured = TRUE AND featured_expires_at > NOW()`,
+      [scopeId],
+    );
+
+    // Run both queries in parallel for efficiency
+    const [activeResult, featuredResult] = await Promise.all([
+      activeQuery,
+      featuredQuery,
+    ]);
+
+    const activeListings = parseInt(activeResult.rows[0].count, 10);
+    const activeFeatured = parseInt(featuredResult.rows[0].count, 10);
+
+    res.status(200).json({
+      activeListings,
+      activeFeatured,
+    });
+  } catch (error) {
+    console.error("Error fetching user listing stats:", error);
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch listing statistics.",
+        error: error.message,
+      });
+  }
+};
+
+// NEW: Endpoint for a client to change their role to an agent
+exports.changeRoleToAgent = async (req, res) => {
+  const userId = req.user.user_id;
+  const userRole = req.user.role;
+
+  if (userRole !== 'client') {
+      return res.status(403).json({ message: "Forbidden: Only clients can change their role to an agent." });
+  }
+
+  try {
+      // FIX: Also set default_landing_page to NULL to prevent redirection conflicts.
+      const result = await db.query(
+          `UPDATE users SET role = 'agent', default_landing_page = NULL, updated_at = NOW() WHERE user_id = $1 RETURNING *`,
+          [userId]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      const updatedUser = result.rows[0];
+
+      // Log the activity
+      await logActivity(
+          `User ${updatedUser.full_name} changed their role from client to agent`,
+          updatedUser.user_id,
+          "user_role_change"
+      );
+
+      // Generate a new JWT token with the updated role
+      const token = jwt.sign(
+          {
+              user_id: updatedUser.user_id,
+              name: updatedUser.full_name,
+              email: updatedUser.email,
+              role: 'agent', // New role
+              agency_id: updatedUser.agency_id,
+              status: updatedUser.status,
+              session_id: req.user.session_id, // Preserve current session ID
+          },
+          SECRET_KEY,
+          { expiresIn: "7d" }
+      );
+
+      res.status(200).json({
+          message: "Role successfully updated to agent.",
+          user: updatedUser,
+          token,
+      });
+
+  } catch (err) {
+      console.error("Error changing role to agent:", err);
+      res.status(500).json({ message: "Failed to update role.", error: err.message });
+  }
+};
+
+// NEW: Endpoint for an agent to revert their role to a client
+exports.revertToClient = async (req, res) => {
+  const userId = req.user.user_id;
+  const userRole = req.user.role;
+
+  if (!['agent', 'agency_admin'].includes(userRole)) {
+      return res.status(403).json({ message: "Forbidden: Only agents or agency admins can revert to a client role." });
+  }
+
+  let client;
+  try {
+      client = await db.pool.connect();
+      await client.query('BEGIN');
+
+      // Disconnect from any agency
+      await client.query(`DELETE FROM agency_members WHERE agent_id = $1`, [userId]);
+
+      // Update user's role, clear agency details, and RESET the default landing page.
+      const result = await client.query(
+          `UPDATE users 
+           SET role = 'client', 
+               agency_id = NULL, 
+               agency = NULL, 
+               default_landing_page = NULL, -- FIX: Prevent redirection conflicts
+               updated_at = NOW() 
+           WHERE user_id = $1 RETURNING *`,
+          [userId]
+      );
+
+      await client.query('COMMIT');
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: "User not found." });
+      }
+
+      const updatedUser = result.rows[0];
+
+      // Log the activity
+      await logActivity(
+          `User ${updatedUser.full_name} reverted their role from ${userRole} to client`,
+          updatedUser.user_id,
+          "user_role_change"
+      );
+
+      // Generate a new JWT token
+      const token = jwt.sign(
+          {
+              user_id: updatedUser.user_id,
+              name: updatedUser.full_name,
+              email: updatedUser.email,
+              role: 'client',
+              agency_id: null,
+              status: updatedUser.status,
+              session_id: req.user.session_id,
+          },
+          SECRET_KEY,
+          { expiresIn: "7d" }
+      );
+
+      res.status(200).json({
+          message: "Role successfully reverted to client.",
+          user: updatedUser,
+          token,
+      });
+
+  } catch (err) {
+      if (client) await client.query('ROLLBACK');
+      console.error("Error reverting role to client:", err);
+      res.status(500).json({ message: "Failed to update role.", error: err.message });
+  } finally {
+      if (client) client.release();
+  }
+};
