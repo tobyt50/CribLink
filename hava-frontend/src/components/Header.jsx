@@ -91,7 +91,7 @@ const [isSupportMenuLocked, setIsSupportMenuLocked] = useState(false);
 
             <div className="flex justify-center">
               <Link to="/" onClick={handleLogoClick}>
-                <img src={newLogo} alt="Havo Logo" className="h-12 w-auto" />
+                <img src={newLogo} alt="Hava Logo" className="h-12 w-auto" />
               </Link>
             </div>
 
@@ -126,7 +126,7 @@ const [isSupportMenuLocked, setIsSupportMenuLocked] = useState(false);
             {/* Left Side: Logo */}
             <div className="flex justify-start">
               <Link to="/" onClick={handleLogoClick} className="flex items-center space-x-2">
-                <img src={newLogo} alt="Havo Logo" className="h-12 w-auto" />
+                <img src={newLogo} alt="Hava Logo" className="h-12 w-auto" />
               </Link>
             </div>
 

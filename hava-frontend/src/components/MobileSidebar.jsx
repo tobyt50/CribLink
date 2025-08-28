@@ -115,6 +115,12 @@ const MobileSidebar = ({ isOpen, setIsOpen }) => {
         </button>
       </div>
       <nav className="flex flex-col w-full flex-grow overflow-y-auto p-3">
+        
+        <NavLink to="/agencies" onClick={handleLinkClick} className={({ isActive }) => menuLinkClasses(isActive)}>
+          <Building {...iconProps} />
+          <span className="text-base font-medium">Agencies</span>
+        </NavLink>
+        <SupportMenu />
         <NavLink to="/signin" onClick={handleLinkClick} className={({ isActive }) => menuLinkClasses(isActive)}>
           <LogIn {...iconProps} />
           <span className="text-base font-medium">Login</span>
@@ -123,11 +129,6 @@ const MobileSidebar = ({ isOpen, setIsOpen }) => {
           <UserPlus {...iconProps} />
           <span className="text-base font-medium">Create Account</span>
         </NavLink>
-        <NavLink to="/agencies" onClick={handleLinkClick} className={({ isActive }) => menuLinkClasses(isActive)}>
-          <Building {...iconProps} />
-          <span className="text-base font-medium">Agencies</span>
-        </NavLink>
-        <SupportMenu />
         <div className={`border-t my-3 ${darkMode ? "border-gray-800" : "border-gray-100"}`} />
         <button onClick={handleToggleTheme} className={menuLinkClasses(false)}>
           {darkMode ? <Sun {...iconProps} /> : <Moon {...iconProps} />}

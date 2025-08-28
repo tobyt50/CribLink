@@ -1,6 +1,6 @@
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/ui/Card"; // adjust if your path differs
-import { motion } from "framer-motion";
 import { useTheme } from "../layouts/AppShell"; // Import useTheme hook
 
 export default function SelectRole() {
@@ -33,7 +33,7 @@ export default function SelectRole() {
         <h1
           className={`text-3xl font-bold text-center mb-2 ${darkMode ? "text-green-400" : "text-green-700"}`}
         >
-          Create Your Havo Account
+          Create Your Hava Account
         </h1>
         <p
           className={`text-center mb-10 ${darkMode ? "text-gray-300" : "text-gray-600"}`}
