@@ -11,13 +11,13 @@ import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
 import {
-  ArrowLeftCircleIcon,
-  ArrowRightCircleIcon,
-  BuildingOfficeIcon,
-  ChatBubbleLeftRightIcon,
-  MapPinIcon,
-  StarIcon,
-  UsersIcon
+    ArrowLeftCircleIcon,
+    ArrowRightCircleIcon,
+    BuildingOfficeIcon,
+    ChatBubbleLeftRightIcon,
+    MapPinIcon,
+    StarIcon,
+    UsersIcon
 } from "@heroicons/react/24/outline";
 
 // Skeleton component for AgentProfile page
@@ -209,8 +209,8 @@ const AgentProfile = () => {
   const recommendedCarouselRef = useRef(null);
   const autoSwipeRecommendedIntervalRef = useRef(null);
 
-  // New state for the current user's (client's) favorite properties
-  const [clientFavoriteProperties, setClientFavoriteProperties] = useState([]);
+  // New state for the current user's (client's) favourite properties
+  const [clientFavouriteProperties, setClientFavouriteProperties] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -318,7 +318,7 @@ const AgentProfile = () => {
         agentRes,
         agentListingsRes,
         recommendedListingsRes,
-        clientFavoritesRes,
+        clientFavouritesRes,
       ] = await Promise.all([
         axiosInstance.get(`${API_BASE_URL}/agents/profile/${agentId}`, {
           headers: headers,
@@ -342,8 +342,8 @@ const AgentProfile = () => {
       setAgent(agentRes.data);
       setAgentListings(agentListingsRes.data.listings || []);
       setRecommendedListings(recommendedListingsRes.data.recommendations || []);
-      setClientFavoriteProperties(
-        clientFavoritesRes.data.favourites?.map((fav) => fav.property_id) || [],
+      setClientFavouriteProperties(
+        clientFavouritesRes.data.favourites?.map((fav) => fav.property_id) || [],
       );
     } catch (error) {
       console.error("Error fetching agent profile or related data:", error);
@@ -358,13 +358,13 @@ const AgentProfile = () => {
       setAgent(null);
       setAgentListings([]);
       setRecommendedListings([]);
-      setClientFavoriteProperties([]);
+      setClientFavouriteProperties([]);
     } finally {
       setIsLoading(false); // Set loading to false after all data is fetched or an error occurs
     }
   }, [agentId, userRole, currentUserId, showMessage]);
 
-  // Removed individual fetch functions for recommended listings, agent listings, and client favorites
+  // Removed individual fetch functions for recommended listings, agent listings, and client favourites
   // as they are now part of fetchAgentData.
 
   const fetchConversationForAgent = useCallback(async () => {
@@ -567,17 +567,17 @@ const AgentProfile = () => {
     [conversationForModal, showMessage],
   );
 
-  // New: Function to toggle client's favorite status for a property
-  const handleToggleClientFavoriteProperty = async (
+  // New: Function to toggle client's favourite status for a property
+  const handleToggleClientFavouriteProperty = async (
     propertyId,
-    isCurrentlyFavorited,
+    isCurrentlyFavourited,
   ) => {
     console.log(
-      `Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`,
+      `Attempting to toggle favourite for propertyId: ${propertyId}, current status: ${isCurrentlyFavourited}`,
     ); // Debug log
     if (userRole !== "client" || !currentUserId) {
       showMessage(
-        "You must be logged in as a client to favorite properties.",
+        "You must be logged in as a client to favourite properties.",
         "info",
       );
       console.log("User is not a client or currentUserId is missing."); // Debug log
@@ -591,7 +591,7 @@ const AgentProfile = () => {
     }
 
     try {
-      if (isCurrentlyFavorited) {
+      if (isCurrentlyFavourited) {
         console.log(`Sending DELETE request for propertyId: ${propertyId}`); // Debug log
         await axiosInstance.delete(
           `${API_BASE_URL}/favourites/properties/${propertyId}`,
@@ -599,10 +599,10 @@ const AgentProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setClientFavoriteProperties((prev) =>
+        setClientFavouriteProperties((prev) =>
           prev.filter((id) => id !== propertyId),
         );
-        showMessage("Removed listing from your favorites!", "info");
+        showMessage("Removed listing from your favourites!", "info");
       } else {
         console.log(`Sending POST request for propertyId: ${propertyId}`, {
           property_id: propertyId,
@@ -614,20 +614,20 @@ const AgentProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setClientFavoriteProperties((prev) => [...prev, propertyId]);
-        showMessage("Added listing to your favorites!", "success");
+        setClientFavouriteProperties((prev) => [...prev, propertyId]);
+        showMessage("Added listing to your favourites!", "success");
       }
       console.log(
-        "Client favorite properties after toggle:",
-        clientFavoriteProperties,
+        "Client favourite properties after toggle:",
+        clientFavouriteProperties,
       ); // Debug log
     } catch (err) {
       console.error(
-        "Error toggling property favorite status:",
+        "Error toggling property favourite status:",
         err.response?.data || err.message,
       );
       let errorMessage =
-        "Failed to update property favorite status. Please try again.";
+        "Failed to update property favourite status. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -947,7 +947,7 @@ const AgentProfile = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <motion.div
         key={isMobile ? "mobile" : "desktop"}
@@ -1325,16 +1325,16 @@ const AgentProfile = () => {
                               <div key={listing.property_id} className="w-full">
                                 <ListingCard
                                   listing={listing}
-                                  isFavorited={clientFavoriteProperties.includes(
+                                  isFavourited={clientFavouriteProperties.includes(
                                     listing.property_id,
                                   )}
-                                  onFavoriteToggle={(
+                                  onFavouriteToggle={(
                                     propertyId,
-                                    isCurrentlyFavorited,
+                                    isCurrentlyFavourited,
                                   ) =>
-                                    handleToggleClientFavoriteProperty(
+                                    handleToggleClientFavouriteProperty(
                                       propertyId,
-                                      isCurrentlyFavorited,
+                                      isCurrentlyFavourited,
                                     )
                                   }
                                   userRole={userRole} // Pass user role
@@ -1418,16 +1418,16 @@ const AgentProfile = () => {
                                 darkMode={darkMode}
                                 onViewProperty={handleViewProperty}
                                 showAgentName={false}
-                                isFavorited={clientFavoriteProperties.includes(
+                                isFavourited={clientFavouriteProperties.includes(
                                   listing.property_id,
                                 )}
-                                onFavoriteToggle={(
+                                onFavouriteToggle={(
                                   propertyId,
-                                  isCurrentlyFavorited,
+                                  isCurrentlyFavourited,
                                 ) =>
-                                  handleToggleClientFavoriteProperty(
+                                  handleToggleClientFavouriteProperty(
                                     propertyId,
-                                    isCurrentlyFavorited,
+                                    isCurrentlyFavourited,
                                   )
                                 }
                                 userRole={userRole} // Pass user role
@@ -1677,16 +1677,16 @@ const AgentProfile = () => {
                               <div key={listing.property_id} className="w-full">
                                 <ListingCard
                                   listing={listing}
-                                  isFavorited={clientFavoriteProperties.includes(
+                                  isFavourited={clientFavouriteProperties.includes(
                                     listing.property_id,
                                   )}
-                                  onFavoriteToggle={(
+                                  onFavouriteToggle={(
                                     propertyId,
-                                    isCurrentlyFavorited,
+                                    isCurrentlyFavourited,
                                   ) =>
-                                    handleToggleClientFavoriteProperty(
+                                    handleToggleClientFavouriteProperty(
                                       propertyId,
-                                      isCurrentlyFavorited,
+                                      isCurrentlyFavourited,
                                     )
                                   }
                                   userRole={userRole} // Pass user role

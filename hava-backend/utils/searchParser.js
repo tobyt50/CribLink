@@ -30,48 +30,105 @@ function detectPropertyType(search, synonymsMap) {
 // --- Price Parsing (500k, 20m, 1.5b, etc.) ---
 function parsePrice(str) {
   if (!str) return null;
-  str = str.toLowerCase().replace(/\s+/g, "");
+  str = str.toLowerCase()
+    .replace(/,/g, "")
+    .replace(/naira|₦|n/gi, "")
+    .trim();
 
   const multipliers = { k: 1_000, m: 1_000_000, b: 1_000_000_000 };
-  const match = str.match(/([\d,.]+)(k|m|b)?/i);
+  const match = str.match(/([\d.]+)(k|m|b)?/i);
   if (!match) return null;
 
-  let value = parseFloat(match[1].replace(/,/g, ""));
+  let value = parseFloat(match[1]);
   if (isNaN(value)) return null;
 
   if (match[2] && multipliers[match[2]]) {
     value *= multipliers[match[2]];
   }
+
   return Math.round(value);
 }
 
+
 // --- Extract Price Range ---
+// --- Extract Price Range (with slang, ₦, commas, etc.) ---
 function extractPriceRange(search) {
   if (!search) return null;
   const lower = search.toLowerCase();
 
-  let between = lower.match(/between\s+([\d.kmb]+)\s+(and|to)\s+([\d.kmb]+)/);
+  // Normalize ₦ and commas
+  const clean = lower.replace(/₦/g, "n").replace(/,/g, "");
+
+  // --- Period Detection (Smarter) ---
+  const periodSynonyms = {
+    yearly: ['yearly', 'annually', 'a year', 'per annum', 'year'],
+    monthly: ['monthly', 'a month', 'month'],
+    weekly: ['weekly', 'a week', 'week'],
+    nightly: ['daily', 'a day', 'a night', 'night', 'day']
+  };
+
+  let period = null;
+  let periodRegex;
+
+  // Search for any of the period synonyms, using word boundaries (\b) to avoid partial matches
+  for (const [canonical, synonyms] of Object.entries(periodSynonyms)) {
+    // Create a regex like: /\b(yearly|annually|a year|per annum|year)\b/
+    periodRegex = new RegExp(`\\b(${synonyms.join('|')})\\b`);
+    if (periodRegex.test(clean)) {
+      period = canonical;
+      break; // Stop once we find the first match
+    }
+  }
+
+  // --- BETWEEN ---
+  let between = clean.match(/between\s+([\dn.kmb]+)\s+(and|to)\s+([\dn.kmb]+)/);
   if (between) {
-    return { min: parsePrice(between[1]), max: parsePrice(between[3]) };
+    return { min: parsePrice(between[1]), max: parsePrice(between[3]), period };
   }
 
-  let under = lower.match(/(under|below|less than)\s+([\d.kmb]+)/);
+  // --- AT LEAST / MINIMUM ---
+  let minMatch = clean.match(/(at\s*least|minimum)\s*n?([\dn.kmb]+)/);
+  if (minMatch) {
+    return { min: parsePrice(minMatch[2]), period };
+  }
+
+  // --- AT MOST / MAXIMUM ---
+  let maxMatch = clean.match(/(at\s*most|maximum)\s*n?([\dn.kmb]+)/);
+  if (maxMatch) {
+    return { max: parsePrice(maxMatch[2]), period };
+  }
+
+  // --- LESS THAN / UNDER / CHEAPER THAN ---
+  let under = clean.match(/(less\s*than|under|below|cheaper\s*than)\s*n?([\dn.kmb]+)/);
   if (under) {
-    return { max: parsePrice(under[2]) };
+    return { max: parsePrice(under[2]), period };
   }
 
-  let over = lower.match(/(above|over|greater than|more than)\s+([\d.kmb]+)/);
+  // --- MORE THAN / OVER / GREATER THAN / EXPENSIVE THAN ---
+  let over = clean.match(/(more\s*than|over|greater\s*than|above|expensive\s*than)\s*n?([\dn.kmb]+)/);
   if (over) {
-    return { min: parsePrice(over[2]) };
+    return { min: parsePrice(over[2]), period };
   }
 
-  let num = lower.match(/([\d.kmb]+)/);
-  if (num) {
-    return { value: parsePrice(num[1]) };
+  // --- SINGLE VALUE ---
+  // Improved regex to avoid accidentally matching numbers meant for bedrooms, etc.
+  // It looks for a number that is either alone, near a currency symbol, or near a period word.
+  const singleRegex = new RegExp(`(n?([\\d.kmb]+))(\\s*(${Object.values(periodSynonyms).flat().join('|')}))?`, 'i');
+  let single = clean.match(singleRegex);
+  
+  // To avoid grabbing the "2" from "2 bedrooms", we check if the match is not too simple
+  // and has some price context, or if no period was found yet.
+  if (single && single[2]) {
+     const isSimpleNumber = !/[kmb]/.test(single[2]) && !/n/.test(single[1]) && !single[3];
+     if (!isSimpleNumber || search.split(' ').length < 4) {
+         return { value: parsePrice(single[2]), period };
+     }
   }
 
   return null;
 }
+
+
 
 // --- Normalize Nigerian Slang & Abbreviations ---
 function normalizeQuery(input) {

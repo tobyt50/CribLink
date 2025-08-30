@@ -150,27 +150,6 @@ const Dropdown = ({
 // Skeleton component for Members page
 const MembersSkeleton = ({ darkMode, viewMode }) => (
   <div className={`animate-pulse space-y-4`}>
-    {/* Controls Skeleton */}
-    <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
-      <div
-        className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-      ></div>
-      <div
-        className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-      ></div>
-      <div className="flex gap-2">
-        <div
-          className={`h-10 w-24 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-        ></div>
-        <div
-          className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-        ></div>
-        <div
-          className={`h-10 w-10 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-        ></div>
-      </div>
-    </div>
-
     {/* Content Skeleton */}
     {viewMode === "graphical" ? (
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -948,7 +927,7 @@ const AgencyMembers = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
             onClick={handleBack}

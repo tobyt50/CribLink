@@ -1,26 +1,24 @@
-import React, { useState } from "react";
-import { useTheme } from "../../layouts/AppShell";
 import {
-  User,
-  Phone,
-  Mail,
-  Landmark,
-  Star,
-  Users,
-  Hourglass,
-  UserRoundCheck,
-  CheckCircle,
-  UserPlus,
-  XCircle,
-  X as XIcon,
-  Flag,
-} from "lucide-react"; // Import Flag icon, renamed X to XIcon to avoid conflict
-import {
-  TrashIcon,
-  ChatBubbleLeftRightIcon,
+    ChatBubbleLeftRightIcon,
+    TrashIcon,
 } from "@heroicons/react/24/outline"; // Import TrashIcon for disconnect, ChatBubbleLeftRightIcon for chat
-import Card from "../ui/Card";
+import {
+    CheckCircle,
+    Flag,
+    Hourglass,
+    Landmark,
+    Mail,
+    Phone,
+    Star,
+    UserPlus,
+    UserRoundCheck,
+    Users,
+    XCircle
+} from "lucide-react"; // Import Flag icon, renamed X to XIcon to avoid conflict
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "../../layouts/AppShell";
+import Card from "../ui/Card";
 
 // Separator component for buttons
 const Separator = ({ darkMode }) => (
@@ -39,12 +37,12 @@ const AgentCard = ({
   onDisconnectAgent,
   onReportAgent, // New prop for reporting
   onChatAgent, // New prop for chat
-  onFavoriteToggle, // New prop
-  isFavorited = false, // New prop
+  onFavouriteToggle, // New prop
+  isFavourited = false, // New prop
 }) => {
   const { darkMode } = useTheme();
   const navigate = useNavigate();
-  const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
+  const [isHovered, setIsHovered] = useState(false); // State for favourite button hover
 
   const getInitial = (name) => {
     const safeName = String(name || "");
@@ -67,10 +65,10 @@ const AgentCard = ({
     }
   };
 
-  const handleFavoriteClick = (e) => {
+  const handleFavouriteClick = (e) => {
     e.stopPropagation(); // Prevent card click from triggering
-    if (onFavoriteToggle) {
-      onFavoriteToggle(agent.user_id, isFavorited);
+    if (onFavouriteToggle) {
+      onFavouriteToggle(agent.user_id, isFavourited);
     }
   };
 
@@ -160,7 +158,6 @@ const AgentCard = ({
                 title="Disconnect from Agent"
               >
                 <TrashIcon className="h-4 w-4 mr-1" />
-                Disconnect
               </button>
             </div>
           );
@@ -318,29 +315,29 @@ const AgentCard = ({
         {renderActionButton()}
         {/* Bookmark icon - always present at the bottom */}
         <button
-          onClick={handleFavoriteClick}
+          onClick={handleFavouriteClick}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           className={`p-1 rounded-full transition-colors`}
-          title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+          title={isFavourited ? "Remove from Favourites" : "Add to Favourites"}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5 transition-all duration-200"
             viewBox="0 0 20 20"
             fill={
-              isFavorited || isHovered // If favorited OR hovered, it's blue
+              isFavourited || isHovered // If favourited OR hovered, it's blue
                 ? darkMode
                   ? "rgb(96, 165, 250)"
                   : "rgb(59, 130, 246)" // Tailwind blue-400/500
-                : "none" // Transparent fill when not favorited and not hovered
+                : "none" // Transparent fill when not favourited and not hovered
             }
             stroke={
-              isFavorited || isHovered // If favorited OR hovered, no stroke
+              isFavourited || isHovered // If favourited OR hovered, no stroke
                 ? "none"
-                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favourited and not hovered
             }
-            strokeWidth={isFavorited || isHovered ? "0" : "1"}
+            strokeWidth={isFavourited || isHovered ? "0" : "1"}
           >
             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
           </svg>

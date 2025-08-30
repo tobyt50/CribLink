@@ -1,27 +1,25 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import AdminSidebar from "../../components/admin/Sidebar";
 import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronDownIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  FileText,
-  LayoutGrid,
-  LayoutList,
-  ArrowLeft,
+    ArrowLeft,
+    FileText,
+    LayoutGrid,
+    LayoutList
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
+import AdminSidebar from "../../components/admin/Sidebar";
 import StaffCard from "../../components/admin/StaffCard"; // Import the new StaffCard component
 import API_BASE_URL from "../../config"; // Assuming API_BASE_URL is defined here or imported
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 
 // Reusable Dropdown Component (embedded directly in Staff.js)
 const Dropdown = ({
@@ -169,7 +167,7 @@ const StaffSkeleton = ({ darkMode, viewMode }) => (
         )}
       </div>
     ) : (
-      <div className="overflow-x-auto" style={{ overflow: "visible" }}>
+      <div className="overflow-x-auto">
         <table className={`w-full mt-4 text-sm  table-auto`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -617,7 +615,7 @@ const Staff = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}
@@ -826,7 +824,7 @@ const Staff = () => {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto" style={{ overflow: "visible" }}>
+            <div className="overflow-x-auto">
               <table
                 className={`w-full mt-4 text-sm  table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}
               >

@@ -1,28 +1,28 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Squares2X2Icon,
-  ArrowUpIcon,
-  ArrowDownIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    Squares2X2Icon,
 } from "@heroicons/react/24/outline";
-import AgentSidebar from "../components/agent/Sidebar";
-import AgencyAdminSidebar from "../components/agency/Sidebar";
-import ClientSidebar from "../components/client/Sidebar";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, FileText, LayoutList } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AdminSidebar from "../components/admin/Sidebar"; // Import AdminSidebar
-import API_BASE_URL from "../config";
-import { Menu, X, FileText, LayoutList, ArrowLeft } from "lucide-react";
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
-import { useSidebarState } from "../hooks/useSidebarState";
+import AgencyAdminSidebar from "../components/agency/Sidebar";
+import AgentSidebar from "../components/agent/Sidebar";
+import ClientSidebar from "../components/client/Sidebar";
 import ListingCard from "../components/ListingCard"; // Import the actual ListingCard
+import API_BASE_URL from "../config";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useSidebarState } from "../hooks/useSidebarState";
+import { useTheme } from "../layouts/AppShell";
 
 // Import the actual AgentCard, ClientCard, and AgencyCard components
-import AgentCard from "../components/client/AgentCard"; // Correct path for AgentCard
-import ClientCard from "../components/agent/ClientCard"; // Correct path for ClientCard
 import AgencyCard from "../components/AgencyCard"; // Correct path for AgencyCard
+import ClientCard from "../components/agent/ClientCard"; // Correct path for ClientCard
+import AgentCard from "../components/client/AgentCard"; // Correct path for AgentCard
 
 // Reusable Dropdown Component (embedded directly in Favourites.js)
 const Dropdown = ({
@@ -804,10 +804,10 @@ const Favourites = () => {
               <ListingCard
                 key={item.property_id}
                 listing={item}
-                onFavoriteToggle={() =>
+                onFavouriteToggle={() =>
                   handleRemoveFavourite("listings", item.property_id)
                 }
-                isFavorited={true} // Always true as they are in favorites
+                isFavourited={true} // Always true as they are in favourites
                 darkMode={darkMode}
                 userRole={userRole} // Pass user role
                 userId={currentUserId} // Pass current user ID
@@ -824,10 +824,10 @@ const Favourites = () => {
                 key={item.user_id}
                 agent={item}
                 onViewProfile={handleViewProfile}
-                onFavoriteToggle={() =>
+                onFavouriteToggle={() =>
                   handleRemoveFavourite("agents", item.user_id)
                 }
-                isFavorited={true}
+                isFavourited={true}
                 darkMode={darkMode}
                 // Pass other necessary props for AgentCard if needed, e.g., connectionStatus
               />
@@ -838,10 +838,10 @@ const Favourites = () => {
                 key={item.user_id}
                 client={item}
                 onViewProfile={handleViewProfile}
-                onFavoriteToggle={() =>
+                onFavouriteToggle={() =>
                   handleRemoveFavourite("clients", item.user_id)
                 }
-                isFavorited={true}
+                isFavourited={true}
                 darkMode={darkMode}
                 userRole={userRole} // Pass userRole to ClientCard
                 // Pass other necessary props for ClientCard if needed, e.g., editingNoteId, etc.
@@ -853,10 +853,10 @@ const Favourites = () => {
                 key={item.agency_id}
                 agency={item}
                 onClick={handleViewProfile} // AgencyCard uses onClick for view profile
-                onFavoriteToggle={() =>
+                onFavouriteToggle={() =>
                   handleRemoveFavourite("agencies", item.agency_id)
                 }
-                isFavorited={true}
+                isFavourited={true}
                 // Pass other necessary props for AgencyCard if needed, e.g., isCurrentUserAgent
               />
             ))}
@@ -1006,7 +1006,7 @@ const Favourites = () => {
                             handleRemoveFavourite("listings", item.property_id)
                           }
                           className={`p-2 rounded-full ${darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-600 hover:bg-gray-100"}`}
-                          title="Remove from Favorites"
+                          title="Remove from Favourites"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1047,7 +1047,7 @@ const Favourites = () => {
                             handleRemoveFavourite(activeTab, item.user_id)
                           }
                           className={`p-2 rounded-full ${darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-600 hover:bg-gray-100"}`}
-                          title="Remove from Favorites"
+                          title="Remove from Favourites"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1088,7 +1088,7 @@ const Favourites = () => {
                             handleRemoveFavourite("agencies", item.agency_id)
                           }
                           className={`p-2 rounded-full ${darkMode ? "text-red-400 hover:bg-gray-700" : "text-red-600 hover:bg-gray-100"}`}
-                          title="Remove from Favorites"
+                          title="Remove from Favourites"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1117,7 +1117,7 @@ const Favourites = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

@@ -1,37 +1,32 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
-import ClientSidebar from "../../components/client/Sidebar";
 import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    TrashIcon,
 } from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Users,
-  RefreshCw,
-  MessageSquare,
-  Clock,
-  Building,
-  User,
-  Tag,
-  ArrowLeft,
+    ArrowLeft,
+    Building,
+    Clock,
+    MessageSquare,
+    RefreshCw
 } from "lucide-react"; // Added icons for mobile view
-import { useTheme } from "../../layouts/AppShell";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import ClientSidebar from "../../components/client/Sidebar";
 import ClientInquiryModal from "../../components/ClientInquiryModal";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
-import socket from "../../socket";
 import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
+import socket from "../../socket";
 
 // Skeleton component for ClientInquiries page
 const ClientInquiriesSkeleton = ({ darkMode }) => (
@@ -517,7 +512,7 @@ const ClientInquiries = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

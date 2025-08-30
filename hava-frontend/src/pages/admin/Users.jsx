@@ -1,30 +1,26 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
-import AdminSidebar from "../../components/admin/Sidebar";
 import {
-  ArrowUpIcon,
   ArrowDownIcon,
+  ArrowUpIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Search,
+  ArrowLeft,
   FileText,
   LayoutGrid,
   LayoutList,
-  SlidersHorizontal,
-  Plus,
-  ArrowLeft,
+  SlidersHorizontal
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
+import AdminSidebar from "../../components/admin/Sidebar";
 import UserCard from "../../components/admin/UserCard";
 import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 
 // Reusable Dropdown Component
 const Dropdown = ({
@@ -136,7 +132,7 @@ const UsersSkeleton = ({ darkMode, viewMode }) => (
         ))}
       </div>
     ) : (
-      <div className="overflow-x-auto" style={{ overflow: "visible" }}>
+      <div className="overflow-x-auto">
         <table className={`w-full mt-4 text-sm  table-auto`}>
           <thead>
             <tr className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}>
@@ -588,7 +584,7 @@ const Users = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}
@@ -929,7 +925,7 @@ const Users = () => {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto" style={{ overflow: "visible" }}>
+            <div className="overflow-x-auto">
               <table
                 className={`w-full mt-4 text-left text-sm table-auto ${darkMode ? "text-gray-300" : "text-gray-700"}`}
               >

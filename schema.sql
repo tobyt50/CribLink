@@ -42,6 +42,34 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: btree_gin; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS btree_gin WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION btree_gin; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION btree_gin IS 'support for indexing common datatypes in GIN';
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+--
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -53,6 +81,20 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+--
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
 
 
 --
@@ -81,6 +123,26 @@ CREATE TYPE public.request_status AS ENUM (
 
 
 ALTER TYPE public.request_status OWNER TO postgres;
+
+--
+-- Name: property_listings_search_vector_update(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.property_listings_search_vector_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$  
+BEGIN
+  NEW.search_vector :=
+    setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(NEW.location, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(NEW.state, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(NEW.property_type, '')), 'B');
+  RETURN NEW;
+END
+$$;
+
+
+ALTER FUNCTION public.property_listings_search_vector_update() OWNER TO postgres;
 
 --
 -- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -692,7 +754,7 @@ ALTER SEQUENCE public.property_images_image_id_seq OWNED BY public.property_imag
 CREATE TABLE public.property_listings (
     property_id integer NOT NULL,
     purchase_category character varying(50),
-    title character varying(100),
+    title character varying(255),
     location character varying(100),
     state character varying(100),
     price bigint,
@@ -706,7 +768,11 @@ CREATE TABLE public.property_listings (
     image_public_id character varying(255),
     agency_id integer,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    is_featured boolean DEFAULT false
+    is_featured boolean DEFAULT false,
+    featured_expires_at timestamp with time zone,
+    living_rooms integer DEFAULT 0,
+    kitchens integer DEFAULT 0,
+    search_vector tsvector
 );
 
 
@@ -1394,6 +1460,13 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: details_land_size_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX details_land_size_idx ON public.property_details USING btree (land_size);
+
+
+--
 -- Name: idx_acr_receiver_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1447,6 +1520,104 @@ CREATE INDEX idx_inquiries_sender_id ON public.inquiries USING btree (sender_id)
 --
 
 CREATE INDEX idx_inquiries_status ON public.inquiries USING btree (status);
+
+
+--
+-- Name: idx_property_details_description_vector; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_property_details_description_vector ON public.property_details USING gin (setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'C'::"char"));
+
+
+--
+-- Name: idx_property_listings_search_vector; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_property_listings_search_vector ON public.property_listings USING gin (((((setweight(to_tsvector('english'::regconfig, (COALESCE(title, ''::character varying))::text), 'A'::"char") || setweight(to_tsvector('english'::regconfig, (COALESCE(location, ''::character varying))::text), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, (COALESCE(state, ''::character varying))::text), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, (COALESCE(property_type, ''::character varying))::text), 'B'::"char"))));
+
+
+--
+-- Name: listings_bathrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_bathrooms_idx ON public.property_listings USING btree (bathrooms);
+
+
+--
+-- Name: listings_bedrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_bedrooms_idx ON public.property_listings USING btree (bedrooms);
+
+
+--
+-- Name: listings_date_listed_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_date_listed_idx ON public.property_listings USING btree (date_listed DESC);
+
+
+--
+-- Name: listings_location_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_location_trgm_idx ON public.property_listings USING gin (location public.gin_trgm_ops);
+
+
+--
+-- Name: listings_price_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_price_idx ON public.property_listings USING btree (price);
+
+
+--
+-- Name: listings_price_location_bedrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_price_location_bedrooms_idx ON public.property_listings USING btree (location, price, bedrooms);
+
+
+--
+-- Name: listings_search_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_search_idx ON public.property_listings USING gin (search_vector);
+
+
+--
+-- Name: listings_title_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_title_trgm_idx ON public.property_listings USING gin (title public.gin_trgm_ops);
+
+
+--
+-- Name: property_details_amenities_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX property_details_amenities_trgm_idx ON public.property_details USING gin (amenities public.gin_trgm_ops);
+
+
+--
+-- Name: property_details_desc_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX property_details_desc_trgm_idx ON public.property_details USING gin (description public.gin_trgm_ops);
+
+
+--
+-- Name: property_details_text_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX property_details_text_idx ON public.property_details USING gin (to_tsvector('english'::regconfig, ((COALESCE(description, ''::text) || ' '::text) || COALESCE(amenities, ''::text))));
+
+
+--
+-- Name: property_listings property_listings_search_vector_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER property_listings_search_vector_trigger BEFORE INSERT OR UPDATE ON public.property_listings FOR EACH ROW EXECUTE FUNCTION public.property_listings_search_vector_update();
 
 
 --

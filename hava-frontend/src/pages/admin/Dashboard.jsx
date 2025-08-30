@@ -1,30 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import AdminSidebar from "../../components/admin/Sidebar";
 import { formatDistanceToNow } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Menu,
-  User,
-  Home,
-  MessageSquare,
-  X,
-  Briefcase,
-  DollarSign,
-  BarChart2,
-  Users,
-  Settings,
-  FileText,
-  Building,
-  CheckCircle,
-  ArrowLeft,
+    ArrowLeft,
+    BarChart2,
+    Briefcase,
+    Building,
+    CheckCircle,
+    DollarSign,
+    FileText,
+    Home,
+    MessageSquare,
+    Settings,
+    User,
+    Users
 } from "lucide-react"; // Added Building and FileText icons
-import { useTheme } from "../../layouts/AppShell";
-import Card from "../../components/ui/Card";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import AdminSidebar from "../../components/admin/Sidebar";
 import StatCard from "../../components/StatCard";
+import Card from "../../components/ui/Card";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState";
-import axiosInstance from "../../api/axiosInstance";
+import { useTheme } from "../../layouts/AppShell";
 
 // Skeleton component for the Dashboard
 const DashboardSkeleton = ({ darkMode }) => (
@@ -381,7 +379,7 @@ const AdminDashboard = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

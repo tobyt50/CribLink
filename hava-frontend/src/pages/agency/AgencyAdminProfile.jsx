@@ -1,24 +1,18 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-import { motion, AnimatePresence } from "framer-motion";
 import API_BASE_URL from "../../config";
-import { useTheme } from "../../layouts/AppShell";
 import { useMessage } from "../../context/MessageContext";
+import { useTheme } from "../../layouts/AppShell";
 
 import {
-  BuildingOfficeIcon,
-  UsersIcon,
-  Cog6ToothIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  MapPinIcon,
-  CalendarDaysIcon,
-  ListBulletIcon,
-  ArrowPathIcon,
-  StarIcon,
-  CheckCircleIcon,
-  XCircleIcon,
+    BuildingOfficeIcon,
+    EnvelopeIcon,
+    ListBulletIcon,
+    MapPinIcon,
+    PhoneIcon,
+    UsersIcon
 } from "@heroicons/react/24/outline";
 
 // Skeleton component for Agency Admin Profile page
@@ -288,7 +282,7 @@ const AgencyAdminProfile = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <motion.div
         key="agency-admin-profile-content"

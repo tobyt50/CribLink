@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import AgentSidebar from "../../components/agent/Sidebar";
-import axiosInstance from "../../api/axiosInstance";
+import { motion } from "framer-motion";
 import {
-  User,
-  Home,
-  MessageSquare,
-  Menu,
-  X,
-  Briefcase,
-  DollarSign,
+  ArrowLeft,
   BarChart2,
-  Users,
-  Settings,
-  ListChecks,
+  Briefcase,
   CheckCircle,
   Clock,
+  DollarSign,
+  Home,
+  ListChecks,
+  MessageSquare,
+  Settings,
+  Shield,
   Star,
   TrendingUp,
-  Shield,
-  ArrowLeft,
+  User,
+  Users
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
-import Card from "../../components/ui/Card";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import AgentSidebar from "../../components/agent/Sidebar";
 import StatCard from "../../components/StatCard";
-import { useSidebarState } from "../../hooks/useSidebarState";
-import { useMessage } from "../../context/MessageContext";
-import { useAuth } from "../../context/AuthContext";
+import Card from "../../components/ui/Card";
 import { SUBSCRIPTION_TIERS } from "../../config/subscriptionConfig";
+import { useAuth } from "../../context/AuthContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 
 // --- UPDATED SKELETON TO MATCH NEW LAYOUT ---
 const AgentDashboardSkeleton = ({ darkMode }) => (
@@ -275,7 +273,7 @@ const AgentDashboard = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

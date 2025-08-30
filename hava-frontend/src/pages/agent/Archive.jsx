@@ -1,38 +1,33 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import AgentSidebar from "../../components/agent/Sidebar";
-import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
-import API_BASE_URL from "../../config";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon,
-  ArchiveBoxIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    TrashIcon
 } from "@heroicons/react/24/outline"; // Added ArchiveBoxIcon
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Users,
-  MessageSquare,
-  RefreshCw,
-  Building,
-  Tag,
-  Clock,
-  User,
-  ArrowLeft,
+    ArrowLeft,
+    Building,
+    Clock,
+    MessageSquare,
+    Tag,
+    User
 } from "lucide-react"; // Added Clock, User for consistency
-import { useTheme } from "../../layouts/AppShell";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import AgentSidebar from "../../components/agent/Sidebar";
 import AgentInquiryModal from "../../components/AgentInquiryModal"; // Import AgentInquiryModal
+import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 
 // Skeleton loader for a single client row
 const ClientTableRowSkeleton = ({ darkMode }) => (
@@ -667,7 +662,7 @@ const Archive = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       {/* Mobile Sidebar Toggle Button */}
       <button

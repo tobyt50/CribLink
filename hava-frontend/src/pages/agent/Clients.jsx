@@ -1,48 +1,35 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Squares2X2Icon,
-  TableCellsIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon,
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ChatBubbleLeftRightIcon,
-  ChevronDownIcon, // Import ChevronDownIcon for the Dropdown component
-  PhoneIcon, // Import PhoneIcon for call action
-  EnvelopeIcon, // Import EnvelopeIcon for email button
+    ArrowDownIcon,
+    ArrowUpIcon,
+    ChatBubbleLeftRightIcon,
+    CheckCircleIcon,
+    ChevronDownIcon, // Import PhoneIcon for call action
+    EnvelopeIcon, // Import ChevronDownIcon for the Dropdown component
+    PhoneIcon,
+    Squares2X2Icon,
+    TrashIcon,
+    XCircleIcon
 } from "@heroicons/react/24/outline";
-import AgentSidebar from "../../components/agent/Sidebar";
-import AgencyAdminSidebar from "../../components/agency/Sidebar"; // Import AgencyAdminSidebar
-import API_BASE_URL from "../../config";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Search,
-  SlidersHorizontal,
-  FileText,
-  LayoutGrid,
-  LayoutList,
-  Plus,
-  UserPlus,
-  UserMinus,
-  ArrowLeft,
+    ArrowLeft,
+    FileText,
+    LayoutList
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import AgencyAdminSidebar from "../../components/agency/Sidebar"; // Import AgencyAdminSidebar
 import ClientCard from "../../components/agent/ClientCard";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
+import AgentSidebar from "../../components/agent/Sidebar";
 import AgentInquiryModal from "../../components/AgentInquiryModal";
+import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
-import { v4 as uuidv4 } from "uuid";
 
 // Reusable Dropdown Component (embedded directly in Clients.js)
 // This component is copied from Listings.js to provide consistent dropdown functionality.
@@ -303,8 +290,8 @@ const Clients = () => {
   const [conversationForModal, setConversationForModal] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null);
 
-  // New state for favorite clients
-  const [favoriteClientsStatus, setFavoriteClientsStatus] = useState(new Set());
+  // New state for favourite clients
+  const [favouriteClientsStatus, setFavouriteClientsStatus] = useState(new Set());
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -432,13 +419,13 @@ const Clients = () => {
     }
   }, [currentUserId, userRole, agencyId, showMessage]);
 
-  // Fetch favorite clients
-  const fetchFavoriteClients = useCallback(async () => {
+  // Fetch favourite clients
+  const fetchFavouriteClients = useCallback(async () => {
     if (
       !currentUserId ||
       (userRole !== "agent" && userRole !== "agency_admin")
     ) {
-      setFavoriteClientsStatus(new Set());
+      setFavouriteClientsStatus(new Set());
       return;
     }
     try {
@@ -446,17 +433,17 @@ const Clients = () => {
       const response = await axios.get(`${API_BASE_URL}/favourites/clients`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const favoritedIds = new Set(
+      const favouritedIds = new Set(
         response.data.favourites.map((fav) => fav.user_id),
       );
-      setFavoriteClientsStatus(favoritedIds);
+      setFavouriteClientsStatus(favouritedIds);
     } catch (error) {
       console.error(
-        "Error fetching favorite clients:",
+        "Error fetching favourite clients:",
         error.response?.data || error.message,
       );
-      // showMessage("Failed to load favorite clients.", "error"); // Suppress for cleaner UX
-      setFavoriteClientsStatus(new Set());
+      // showMessage("Failed to load favourite clients.", "error"); // Suppress for cleaner UX
+      setFavouriteClientsStatus(new Set());
     }
   }, [currentUserId, userRole]);
 
@@ -465,8 +452,8 @@ const Clients = () => {
   }, [fetchClientsAndRequests, activeTab, userRole]); // Added userRole to dependencies
 
   useEffect(() => {
-    fetchFavoriteClients();
-  }, [fetchFavoriteClients, currentUserId, userRole]);
+    fetchFavouriteClients();
+  }, [fetchFavouriteClients, currentUserId, userRole]);
 
   // New: Fetch conversation for a specific client
   const fetchConversationForClient = useCallback(
@@ -1055,15 +1042,15 @@ const Clients = () => {
     }
   };
 
-  // Handle adding/removing client from favorites
-  const handleFavoriteToggle = useCallback(
-    async (clientId, isCurrentlyFavorited) => {
+  // Handle adding/removing client from favourites
+  const handleFavouriteToggle = useCallback(
+    async (clientId, isCurrentlyFavourited) => {
       if (
         !currentUserId ||
         (userRole !== "agent" && userRole !== "agency_admin")
       ) {
         showMessage(
-          "Only agents and agency administrators can add clients to favorites.",
+          "Only agents and agency administrators can add clients to favourites.",
           "info",
         );
         return;
@@ -1071,16 +1058,16 @@ const Clients = () => {
 
       const token = localStorage.getItem("token");
       try {
-        if (isCurrentlyFavorited) {
+        if (isCurrentlyFavourited) {
           await axios.delete(`${API_BASE_URL}/favourites/clients/${clientId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setFavoriteClientsStatus((prev) => {
+          setFavouriteClientsStatus((prev) => {
             const newState = new Set(prev);
             newState.delete(clientId);
             return newState;
           });
-          showMessage("Client removed from favorites!", "success");
+          showMessage("Client removed from favourites!", "success");
         } else {
           await axios.post(
             `${API_BASE_URL}/favourites/clients`,
@@ -1089,22 +1076,22 @@ const Clients = () => {
               headers: { Authorization: `Bearer ${token}` },
             },
           );
-          setFavoriteClientsStatus((prev) => new Set(prev).add(clientId));
-          showMessage("Client added to favorites!", "success");
+          setFavouriteClientsStatus((prev) => new Set(prev).add(clientId));
+          showMessage("Client added to favourites!", "success");
         }
       } catch (error) {
         console.error(
-          "Error toggling favorite client status:",
+          "Error toggling favourite client status:",
           error.response?.data || error.message,
         );
         showMessage(
-          `Failed to update favorite status: ${error.response?.data?.message || "Please try again."}`,
+          `Failed to update favourite status: ${error.response?.data?.message || "Please try again."}`,
           "error",
         );
-        fetchFavoriteClients(); // Re-fetch to ensure UI consistency on error
+        fetchFavouriteClients(); // Re-fetch to ensure UI consistency on error
       }
     },
-    [currentUserId, userRole, showMessage, fetchFavoriteClients],
+    [currentUserId, userRole, showMessage, fetchFavouriteClients],
   );
 
   const handleSortClick = (key) => {
@@ -1413,7 +1400,7 @@ const Clients = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}
@@ -1641,14 +1628,14 @@ const Clients = () => {
               <div className="flex justify-center">
                 <button
                   onClick={() => handleTabClick("your_clients")}
-                  className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200 flex-1
+                  className={`px-6 py-2 rounded-l-xl text-sm font-semibold transition-colors duration-200 flex-1
                             ${activeTab === "your_clients" ? "bg-green-700 text-white shadow-lg" : darkMode ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                 >
                   Your Clients ({clients.length})
                 </button>
                 <button
                   onClick={() => handleTabClick("pending_requests")}
-                  className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200 flex-1
+                  className={`px-6 py-2 rounded-r-xl text-sm font-semibold transition-colors duration-200 flex-1
                             ${activeTab === "pending_requests" ? "bg-green-700 text-white shadow-lg" : darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"}`}
                 >
                   Pending ({pendingRequests.length})
@@ -1794,8 +1781,8 @@ const Clients = () => {
                     rejectAction={() => handleRejectRequest(request.request_id)}
                     isPendingRequestCard={true}
                     userRole={userRole}
-                    onFavoriteToggle={handleFavoriteToggle} // Pass the handler
-                    isFavorited={favoriteClientsStatus.has(request.client_id)} // Pass favorite status
+                    onFavouriteToggle={handleFavouriteToggle} // Pass the handler
+                    isFavourited={favouriteClientsStatus.has(request.client_id)} // Pass favourite status
                   />
                 ))}
               </div>
@@ -1952,8 +1939,8 @@ const Clients = () => {
                   onSaveNote={handleSaveNote}
                   onCancelEdit={handleCancelEdit}
                   userRole={userRole}
-                  onFavoriteToggle={handleFavoriteToggle} // Pass the handler
-                  isFavorited={favoriteClientsStatus.has(client.user_id)} // Pass favorite status
+                  onFavouriteToggle={handleFavouriteToggle} // Pass the handler
+                  isFavourited={favouriteClientsStatus.has(client.user_id)} // Pass favourite status
                 />
               ))}
             </div>

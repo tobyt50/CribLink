@@ -12,7 +12,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useMessage } from "../context/MessageContext";
@@ -26,6 +26,42 @@ const MobileSidebar = ({ isOpen, setIsOpen }) => {
   const location = useLocation();
 
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+
+  // Close on ESC key
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape" && isOpen) {
+      setIsOpen(false);
+    }
+  };
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [isOpen, setIsOpen]);
+
+// Close on browser back button
+useEffect(() => {
+  if (!isOpen) return;
+
+  // Push temporary state into history so Back closes the sidebar
+  window.history.pushState({ sidebar: true }, "");
+
+  const handlePopState = (e) => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  };
+
+  window.addEventListener("popstate", handlePopState);
+  return () => {
+    window.removeEventListener("popstate", handlePopState);
+
+    // Remove the extra history entry if sidebar closed normally
+    if (window.history.state?.sidebar) {
+      window.history.back();
+    }
+  };
+}, [isOpen, setIsOpen]);
+
 
   const handleLogout = useCallback(() => {
     logout();

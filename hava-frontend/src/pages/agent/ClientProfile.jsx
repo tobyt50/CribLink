@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  useCallback,
-  useEffect,
-  useState
+    useCallback,
+    useEffect,
+    useState
 } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
@@ -16,17 +16,17 @@ import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
 import {
-  ChatBubbleLeftRightIcon,
-  CheckIcon,
-  PencilIcon,
-  XMarkIcon,
+    ChatBubbleLeftRightIcon,
+    CheckIcon,
+    PencilIcon,
+    XMarkIcon,
 } from "@heroicons/react/24/outline"; // Added PencilIcon, CheckIcon, XMarkIcon
 import {
-  ArrowLeft, // Using BookmarkIcon from lucide-react
-  ArrowLeftCircleIcon,
-  ArrowRightCircleIcon,
-  BookmarkIcon,
-  StarIcon
+    ArrowLeft, // Using BookmarkIcon from lucide-react
+    ArrowLeftCircleIcon,
+    ArrowRightCircleIcon,
+    BookmarkIcon,
+    StarIcon
 } from "lucide-react";
 import AgentSidebar from "../../components/agent/Sidebar";
 
@@ -223,11 +223,11 @@ const ClientProfile = () => {
     useState(0);
   const recommendedListingsPerPage = 4; // Changed to 4 for 2x2 layout
 
-  // State for client favorite status (for agents to favorite clients)
-  const [isClientFavorited, setIsClientFavorited] = useState(false);
+  // State for client favourite status (for agents to favourite clients)
+  const [isClientFavourited, setIsClientFavourited] = useState(false);
 
-  // New state for the current agent's favorite properties
-  const [agentFavoriteProperties, setAgentFavoriteProperties] = useState([]);
+  // New state for the current agent's favourite properties
+  const [agentFavouriteProperties, setAgentFavouriteProperties] = useState([]);
 
   // State for notes editing
   const [editingNote, setEditingNote] = useState(false);
@@ -710,12 +710,12 @@ const ClientProfile = () => {
     [conversationForModal, fetchConversationForClient],
   );
 
-  // Function to check if client is favorited by the current agent
-  const checkFavoriteClientStatus = useCallback(async () => {
+  // Function to check if client is favourited by the current agent
+  const checkFavouriteClientStatus = useCallback(async () => {
     if (agentId && clientId && userRole === "agent") {
       const token = localStorage.getItem("token");
       if (!token) {
-        setIsClientFavorited(false);
+        setIsClientFavourited(false);
         return;
       }
       try {
@@ -725,22 +725,22 @@ const ClientProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setIsClientFavorited(response.data.isFavorited);
+        setIsClientFavourited(response.data.isFavourited);
       } catch (error) {
-        console.error("Error checking favorite client status:", error);
-        showMessage("Failed to check client favorite status.", "error");
-        setIsClientFavorited(false);
+        console.error("Error checking favourite client status:", error);
+        showMessage("Failed to check client favourite status.", "error");
+        setIsClientFavourited(false);
       }
     } else {
-      setIsClientFavorited(false);
+      setIsClientFavourited(false);
     }
   }, [agentId, clientId, userRole, showMessage]);
 
-  // Function to toggle client favorite status by the current agent
-  const handleToggleFavoriteClient = async () => {
+  // Function to toggle client favourite status by the current agent
+  const handleToggleFavouriteClient = async () => {
     if (!agentId || !clientId || userRole !== "agent") {
       showMessage(
-        "Please log in as an agent to add clients to favorites.",
+        "Please log in as an agent to add clients to favourites.",
         "info",
       );
       return;
@@ -753,15 +753,15 @@ const ClientProfile = () => {
     }
 
     try {
-      if (isClientFavorited) {
+      if (isClientFavourited) {
         await axiosInstance.delete(
           `${API_BASE_URL}/favourites/clients/${clientId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setIsClientFavorited(false);
-        showMessage("Removed client from favorites!", "info");
+        setIsClientFavourited(false);
+        showMessage("Removed client from favourites!", "info");
       } else {
         await axiosInstance.post(
           `${API_BASE_URL}/favourites/clients`,
@@ -770,16 +770,16 @@ const ClientProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setIsClientFavorited(true);
-        showMessage("Added client to favorites!", "success");
+        setIsClientFavourited(true);
+        showMessage("Added client to favourites!", "success");
       }
     } catch (err) {
       console.error(
-        "Error toggling client favorite status:",
+        "Error toggling client favourite status:",
         err.response?.data || err.message,
       );
       let errorMessage =
-        "Failed to update client favorite status. Please try again.";
+        "Failed to update client favourite status. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -789,8 +789,8 @@ const ClientProfile = () => {
     }
   };
 
-  // New: Function to fetch agent's own favorite properties
-  const fetchAgentFavoriteProperties = useCallback(async () => {
+  // New: Function to fetch agent's own favourite properties
+  const fetchAgentFavouriteProperties = useCallback(async () => {
     if (userRole === "agent" && agentId) {
       try {
         const token = localStorage.getItem("token");
@@ -800,31 +800,31 @@ const ClientProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        // Assuming the response data is an array of favorite property objects
-        setAgentFavoriteProperties(
+        // Assuming the response data is an array of favourite property objects
+        setAgentFavouriteProperties(
           response.data.favourites.map((fav) => fav.property_id) || [],
         );
       } catch (error) {
-        console.error("Error fetching agent's favorite properties:", error);
-        showMessage("Failed to load your favorite properties.", "error");
-        setAgentFavoriteProperties([]);
+        console.error("Error fetching agent's favourite properties:", error);
+        showMessage("Failed to load your favourite properties.", "error");
+        setAgentFavouriteProperties([]);
       }
     } else {
-      setAgentFavoriteProperties([]);
+      setAgentFavouriteProperties([]);
     }
   }, [userRole, agentId, showMessage]);
 
-  // New: Function to toggle agent's favorite status for a property
-  const handleToggleAgentFavoriteProperty = async (
+  // New: Function to toggle agent's favourite status for a property
+  const handleToggleAgentFavouriteProperty = async (
     propertyId,
-    isCurrentlyFavorited,
+    isCurrentlyFavourited,
   ) => {
     console.log(
-      `Attempting to toggle favorite for propertyId: ${propertyId}, current status: ${isCurrentlyFavorited}`,
+      `Attempting to toggle favourite for propertyId: ${propertyId}, current status: ${isCurrentlyFavourited}`,
     ); // Debug log
     if (userRole !== "agent" || !agentId) {
       showMessage(
-        "You must be logged in as an agent to favorite properties.",
+        "You must be logged in as an agent to favourite properties.",
         "info",
       );
       console.log("User is not an agent or agentId is missing."); // Debug log
@@ -838,7 +838,7 @@ const ClientProfile = () => {
     }
 
     try {
-      if (isCurrentlyFavorited) {
+      if (isCurrentlyFavourited) {
         console.log(`Sending DELETE request for propertyId: ${propertyId}`); // Debug log
         await axiosInstance.delete(
           `${API_BASE_URL}/favourites/properties/${propertyId}`,
@@ -846,10 +846,10 @@ const ClientProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setAgentFavoriteProperties((prev) =>
+        setAgentFavouriteProperties((prev) =>
           prev.filter((id) => id !== propertyId),
         );
-        showMessage("Removed listing from your favorites!", "info");
+        showMessage("Removed listing from your favourites!", "info");
       } else {
         console.log(
           `Sending POST request for propertyId: ${propertyId}`,
@@ -858,20 +858,20 @@ const ClientProfile = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setAgentFavoriteProperties((prev) => [...prev, propertyId]);
-        showMessage("Added listing to your favorites!", "success");
+        setAgentFavouriteProperties((prev) => [...prev, propertyId]);
+        showMessage("Added listing to your favourites!", "success");
       }
       console.log(
-        "Agent favorite properties after toggle:",
-        agentFavoriteProperties,
+        "Agent favourite properties after toggle:",
+        agentFavouriteProperties,
       ); // Debug log
     } catch (err) {
       console.error(
-        "Error toggling property favorite status:",
+        "Error toggling property favourite status:",
         err.response?.data || err.message,
       );
       let errorMessage =
-        "Failed to update property favorite status. Please try again.";
+        "Failed to update property favourite status. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -881,7 +881,7 @@ const ClientProfile = () => {
     }
   };
 
-  // Function to handle deleting a listing from either favorite or recommended lists
+  // Function to handle deleting a listing from either favourite or recommended lists
   const handleDeleteListing = async (listingId) => {
     showConfirm({
       title: "Delete Listing",
@@ -1008,18 +1008,18 @@ const ClientProfile = () => {
 
   useEffect(() => {
     if (userRole === "agent" && agentId && clientId) {
-      checkFavoriteClientStatus(); // Check client favorite status when component mounts or dependencies change
-      fetchAgentFavoriteProperties(); // Fetch agent's favorite properties
+      checkFavouriteClientStatus(); // Check client favourite status when component mounts or dependencies change
+      fetchAgentFavouriteProperties(); // Fetch agent's favourite properties
     } else {
-      setIsClientFavorited(false); // Reset favorite status if not an agent or no user/client ID
-      setAgentFavoriteProperties([]); // Clear agent's favorite properties
+      setIsClientFavourited(false); // Reset favourite status if not an agent or no user/client ID
+      setAgentFavouriteProperties([]); // Clear agent's favourite properties
     }
   }, [
     userRole,
     agentId,
     clientId,
-    checkFavoriteClientStatus,
-    fetchAgentFavoriteProperties,
+    checkFavouriteClientStatus,
+    fetchAgentFavouriteProperties,
   ]);
 
   const handleViewProperty = (propertyId) => {
@@ -1218,7 +1218,7 @@ const ClientProfile = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       {/* Conditionally render the mobile menu button for the sidebar */}
       <button
@@ -1299,23 +1299,23 @@ const ClientProfile = () => {
                 {userRole === "agent" &&
                   agentId && ( // Only show if logged in as agent
                     <button
-                      onClick={handleToggleFavoriteClient}
+                      onClick={handleToggleFavouriteClient}
                       className={`p-2 rounded-full shadow-md transition-all duration-200 ${
-                        isClientFavorited
+                        isClientFavourited
                           ? "bg-blue-500 text-white hover:bg-blue-600"
                           : darkMode
                             ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                       }`}
                       title={
-                        isClientFavorited
+                        isClientFavourited
                           ? "Remove from Saved Clients"
                           : "Save Client to Favourites"
                       }
                     >
                       <BookmarkIcon
                         size={20}
-                        fill={isClientFavorited ? "currentColor" : "none"}
+                        fill={isClientFavourited ? "currentColor" : "none"}
                       />
                     </button>
                   )}
@@ -1594,8 +1594,8 @@ const ClientProfile = () => {
                             userId={agentId}
                             userAgencyId={null}
                             getRoleBasePath={getRoleBasePath}
-                            onFavoriteToggle={handleToggleAgentFavoriteProperty}
-                            isFavorited={agentFavoriteProperties.includes(
+                            onFavouriteToggle={handleToggleAgentFavouriteProperty}
+                            isFavourited={agentFavouriteProperties.includes(
                               listing.property_id,
                             )}
                             onDeleteListing={handleDeleteListing}
@@ -1702,8 +1702,8 @@ const ClientProfile = () => {
                           userId={agentId}
                           userAgencyId={null}
                           getRoleBasePath={getRoleBasePath}
-                          onFavoriteToggle={handleToggleAgentFavoriteProperty}
-                          isFavorited={agentFavoriteProperties.includes(
+                          onFavouriteToggle={handleToggleAgentFavouriteProperty}
+                          isFavourited={agentFavouriteProperties.includes(
                             listing.property_id,
                           )}
                           onDeleteListing={handleDeleteListing}

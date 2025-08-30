@@ -1,56 +1,35 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
-import AgencyAdminSidebar from "../../components/agency/Sidebar"; // Assuming a new sidebar for agency admin
-import { ArrowUpIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Users,
-  RefreshCw,
-  MessageSquare,
-  Clock,
-  Building,
-  User,
-  Tag,
   ArrowLeft,
+  Building,
+  Clock,
+  MessageSquare,
+  RefreshCw,
+  Tag,
+  Users
 } from "lucide-react"; // Added icons for mobile view
-import { useTheme } from "../../layouts/AppShell";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AgentInquiryModal from "../../components/AgentInquiryModal"; // Reusing AgentInquiryModal for display
 import ReassignAgentModal from "../../components/agency/ReassignAgentModal"; // New component for reassigning
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
+import AgencyAdminSidebar from "../../components/agency/Sidebar"; // Assuming a new sidebar for agency admin
 import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
 // Skeleton component for AgencyInquiries page
 const AgencyInquiriesSkeleton = ({ darkMode }) => (
   <div className={`animate-pulse space-y-4`}>
-    {/* Controls Skeleton */}
-    <div className="flex flex-col md:flex-row gap-4 items-center mb-6">
-      <div
-        className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-      ></div>
-      <div
-        className={`h-10 w-full md:w-1/3 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-      ></div>
-      <div className="flex gap-2 w-full md:w-auto">
-        <div
-          className={`h-10 w-1/2 md:w-28 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-        ></div>
-        <div
-          className={`h-10 w-1/2 md:w-28 rounded-xl ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}
-        ></div>
-      </div>
-    </div>
-
     {/* Content Skeleton (mimicking graphical view for simplicity) */}
     <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-1">
       {[...Array(5)].map(
@@ -546,7 +525,7 @@ const AgencyInquiries = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

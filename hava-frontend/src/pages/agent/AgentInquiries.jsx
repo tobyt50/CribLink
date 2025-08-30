@@ -1,37 +1,34 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
+import {
+    ArchiveBoxIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    TrashIcon,
+} from "@heroicons/react/24/outline"; // Added ArchiveBoxIcon, TrashIcon
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowLeft,
+    Building,
+    Clock,
+    MessageSquare,
+    RefreshCw,
+    Tag,
+    Users
+} from "lucide-react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import AgentSidebar from "../../components/agent/Sidebar";
-import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ArchiveBoxIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline"; // Added ArchiveBoxIcon, TrashIcon
-import {
-  Menu,
-  X,
-  Users,
-  RefreshCw,
-  MessageSquare,
-  Clock,
-  Building,
-  User,
-  Tag,
-  ArrowLeft,
-} from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
 import AgentInquiryModal from "../../components/AgentInquiryModal";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
 import API_BASE_URL from "../../config";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket";
 
 // Skeleton loader for a single inquiry card (mobile view)
@@ -582,7 +579,7 @@ const AgentInquiries = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

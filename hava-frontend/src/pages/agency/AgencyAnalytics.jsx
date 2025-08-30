@@ -1,51 +1,47 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import {
-  BarChart3,
-  TrendingUp,
-  Users,
-  Home,
-  MessageSquare,
-  BriefcaseBusiness,
-  AlertCircle,
-  Menu,
-  X,
-  ChevronDownIcon,
-  Lock,
-  Download,
-  ArrowLeft,
+    AlertCircle,
+    ArrowLeft,
+    BriefcaseBusiness,
+    ChevronDownIcon,
+    Download,
+    Home,
+    Lock,
+    MessageSquare,
+    TrendingUp,
+    Users
 } from "lucide-react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
+import axiosInstance from "../../api/axiosInstance";
 import AgencyAdminSidebar from "../../components/agency/Sidebar"; // Using agency-specific sidebar
-import { useTheme } from "../../layouts/AppShell";
 import Card from "../../components/ui/Card";
+import { useAuth } from "../../context/AuthContext";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState";
-import { useAuth } from "../../context/AuthContext";
-import axiosInstance from "../../api/axiosInstance";
-import { SUBSCRIPTION_TIERS } from "../../config/subscriptionConfig"; // For frontend tier info
+import { useTheme } from "../../layouts/AppShell";
 
 // Dropdown component remains the same for UI consistency
 const Dropdown = ({
@@ -306,7 +302,7 @@ const AgencyAnalytics = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

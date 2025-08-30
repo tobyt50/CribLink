@@ -186,24 +186,19 @@ function HomeSearchFilters({
       setSortBy((prevSortBy) => {
         let newSortBy = prevSortBy;
         if (type === "date") {
-          if (prevSortBy === "date_listed_desc") {
-            newSortBy = "date_listed_asc";
-          } else {
-            newSortBy = "date_listed_desc";
-          }
+          newSortBy = prevSortBy === "date_listed_desc" ? "date_listed_asc" : "date_listed_desc";
         } else if (type === "price") {
-          if (prevSortBy === "price_desc") {
-            newSortBy = "price_asc";
-          } else {
-            newSortBy = "price_desc";
-          }
+          newSortBy = prevSortBy === "price_desc" ? "price_asc" : "price_desc";
+        } else if (type === "views") {
+          newSortBy = "view_count_desc"; // always descending for views
         }
-        setHasEditedFilters(true); // Mark as edited
+        setHasEditedFilters(true);
         return newSortBy;
       });
     },
     [setSortBy],
   );
+  
 
   const handleReset = () => {
     setFilters({
@@ -243,42 +238,21 @@ function HomeSearchFilters({
   const getSortTextAndIcon = useCallback(
     (sortType) => {
       if (sortType === "date") {
-        if (sortBy === "date_listed_desc") {
-          return (
-            <>
-              Latest
-              <ArrowDown size={14} />
-            </>
-          );
-        } else {
-          return (
-            <>
-              Oldest
-              <ArrowUp size={14} />
-            </>
-          );
-        }
+        return sortBy === "date_listed_desc"
+          ? <>Latest <ArrowDown size={14} /></>
+          : <>Oldest <ArrowUp size={14} /></>;
       } else if (sortType === "price") {
-        if (sortBy === "price_desc") {
-          return (
-            <>
-              Highest Price
-              <ArrowDown size={14} />
-            </>
-          );
-        } else {
-          return (
-            <>
-              Lowest Price
-              <ArrowUp size={14} />
-            </>
-          );
-        }
+        return sortBy === "price_desc"
+          ? <>Highest Price <ArrowDown size={14} /></>
+          : <>Lowest Price <ArrowUp size={14} /></>;
+      } else if (sortType === "views") {
+        return <>Most Viewed <ArrowDown size={14} /></>; // always descending
       }
       return null;
     },
     [sortBy],
   );
+  
 
   // Handle clicks outside the entire filter component to close it
   useEffect(() => {
@@ -379,6 +353,13 @@ function HomeSearchFilters({
                 >
                   {getSortTextAndIcon("price")}
                 </button>
+                <button
+    type="button"
+    onClick={() => handleSortToggle("views")}
+    className={getButtonClass(sortBy === "view_count_desc")}
+  >
+    {getSortTextAndIcon("views")}
+  </button>
               </div>
             </div>
 

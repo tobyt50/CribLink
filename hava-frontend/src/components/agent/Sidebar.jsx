@@ -78,6 +78,35 @@ const AgentSidebar = ({
 }) => {
   const { darkMode } = useTheme();
 
+  useEffect(() => {
+    if (!isMobile) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
+
+  // ✅ Back button support
+  useEffect(() => {
+    if (!isMobile) return;
+    if (isSidebarOpen) {
+      window.history.pushState({ sidebar: true }, ""); // push temporary state
+    }
+
+    const handlePopState = (e) => {
+      if (isSidebarOpen) {
+        setIsSidebarOpen(false); // close sidebar instead of navigating
+        window.history.pushState(null, ""); // reset state so next back works normally
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isMobile, isSidebarOpen, setIsSidebarOpen]);
+
   // --- Swipe Gesture Handlers ---
   const swipeHandlers = useSwipeable({
     onSwipedLeft: () => isMobile && setIsSidebarOpen(false),

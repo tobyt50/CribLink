@@ -121,5 +121,16 @@
     "kitchenettes",
     "cookroom",
     "cooking area"
+  ],
+
+  "noisePropertyTypes": [
+    "_comment",
+    "These canonical property types are too generic to filter on. If detected, they should be treated as noise words and skipped.",
+    "House",
+    "Home",
+    "Property",
+    "Building",
+    "Residence",
+    "Flat"
   ]
 }

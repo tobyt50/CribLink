@@ -131,6 +131,15 @@ const Dropdown = ({
   );
 };
 
+const PRICE_PERIOD_OPTIONS = [
+  { value: "nightly", label: "Per Night" },
+  { value: "weekly", label: "Per Week" },
+  { value: "monthly", label: "Per Month" },
+  { value: "yearly", label: "Per Year" },
+  { value: "one-time", label: "One-Time" },
+];
+
+
 const AddListing = () => {
   const navigate = useNavigate();
   const { showConfirm } = useConfirmDialog();
@@ -149,6 +158,7 @@ const AddListing = () => {
   const [livingRooms, setLivingRooms] = useState("");
   const [kitchens, setKitchens] = useState("");
   const [price, setPrice] = useState("");
+  const [pricePeriod, setPricePeriod] = useState("");
   const [newImages, setNewImages] = useState([]);
   const [newImageURLs, setNewImageURLs] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
@@ -253,6 +263,16 @@ const AddListing = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showPreview, allImagesForDisplay.length]);
 
+  useEffect(() => {
+    if (purchaseCategory === "Sale" || purchaseCategory === "Lease") {
+      setPricePeriod("one-time");
+    } else if (purchaseCategory === "Rent") {
+      setPricePeriod("yearly"); // Or "monthly" as your default
+    } else if (purchaseCategory === "Short Let" || purchaseCategory === "Long Let") {
+      setPricePeriod("monthly");
+    }
+  }, [purchaseCategory]);
+
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: (acceptedFiles) => {
       const currentImageCount = allImagesForDisplay.length;
@@ -337,6 +357,11 @@ const AddListing = () => {
       return;
     }
 
+    if (!pricePeriod) {
+      showMessage("Please select a price period.", "error");
+      return;
+    }
+
     const payload = {
       purchase_category: purchaseCategory,
       title,
@@ -348,6 +373,7 @@ const AddListing = () => {
       living_rooms: isLandProperty ? null : livingRooms,
       kitchens: isLandProperty ? null : kitchens,
       price,
+      price_period: pricePeriod,
       description,
       square_footage: isLandProperty ? null : squareFootage,
       lot_size: lotSize,
@@ -738,7 +764,7 @@ const AddListing = () => {
   )}
 </div>
 
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
   {/* Price */}
   <div>
     <label htmlFor="price" className={labelClass}>
@@ -754,6 +780,20 @@ const AddListing = () => {
       required
     />
   </div>
+
+              {/* Price Period */}
+<div>
+  <label htmlFor="pricePeriod" className={labelClass}>
+    Price Period <span className="text-red-500">*</span>
+  </label>
+  <Dropdown
+    options={PRICE_PERIOD_OPTIONS}
+    value={pricePeriod}
+    onChange={setPricePeriod}
+    placeholder="Select period"
+  />
+</div>
+
 
   {/* Location */}
   <div>

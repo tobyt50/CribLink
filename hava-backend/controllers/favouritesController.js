@@ -210,7 +210,7 @@ exports.getFavouritePropertyStatus = async (req, res) => {
   const user_id = req.user ? req.user.user_id : null;
 
   if (!user_id) {
-    return res.status(200).json({ isFavorited: false });
+    return res.status(200).json({ isFavourited: false });
   }
 
   try {
@@ -218,7 +218,7 @@ exports.getFavouritePropertyStatus = async (req, res) => {
       "SELECT 1 FROM user_favourites_properties WHERE user_id = $1 AND property_id = $2",
       [user_id, property_id],
     );
-    res.status(200).json({ isFavorited: result.rows.length > 0 });
+    res.status(200).json({ isFavourited: result.rows.length > 0 });
   } catch (err) {
     console.error("Error checking favourite property status:", err);
     res
@@ -383,7 +383,7 @@ exports.getFavouriteAgentStatus = async (req, res) => {
   const user_id = req.user ? req.user.user_id : null;
 
   if (!user_id) {
-    return res.status(200).json({ isFavorited: false });
+    return res.status(200).json({ isFavourited: false });
   }
 
   try {
@@ -391,7 +391,7 @@ exports.getFavouriteAgentStatus = async (req, res) => {
       "SELECT 1 FROM user_favourites_agents WHERE user_id = $1 AND agent_id = $2",
       [user_id, agent_id],
     );
-    res.status(200).json({ isFavorited: result.rows.length > 0 });
+    res.status(200).json({ isFavourited: result.rows.length > 0 });
   } catch (err) {
     console.error("Error checking favourite agent status:", err);
     res
@@ -402,7 +402,7 @@ exports.getFavouriteAgentStatus = async (req, res) => {
   }
 };
 
-// --- Client Favourites (primarily for agents/agency_admins to favorite clients) ---
+// --- Client Favourites (primarily for agents/agency_admins to favourite clients) ---
 
 exports.addFavouriteClient = async (req, res) => {
   const { client_id } = req.body;
@@ -430,7 +430,7 @@ exports.addFavouriteClient = async (req, res) => {
     }
 
     // Ensure the agent/agency_admin has a relationship with this client (if applicable)
-    // This is a business logic decision. For now, allowing to favorite any client.
+    // This is a business logic decision. For now, allowing to favourite any client.
     // If strict, add a check like:
     // const relationship = await pool.query('SELECT 1 FROM agent_clients WHERE agent_id = $1 AND client_id = $2 AND request_status = \'accepted\'', [user_id, client_id]);
     // if (relationship.rows.length === 0) { return res.status(403).json({ message: 'You can only favourite clients you are connected with.' }); }
@@ -554,7 +554,7 @@ exports.getFavouriteClientStatus = async (req, res) => {
   const user_role = req.user ? req.user.role : null;
 
   if (!user_id || (user_role !== "agent" && user_role !== "agency_admin")) {
-    return res.status(200).json({ isFavorited: false }); // Not authorized to favourite clients, so status is always false
+    return res.status(200).json({ isFavourited: false }); // Not authorized to favourite clients, so status is always false
   }
 
   try {
@@ -562,7 +562,7 @@ exports.getFavouriteClientStatus = async (req, res) => {
       "SELECT 1 FROM user_favourites_clients WHERE user_id = $1 AND client_id = $2",
       [user_id, client_id],
     );
-    res.status(200).json({ isFavorited: result.rows.length > 0 });
+    res.status(200).json({ isFavourited: result.rows.length > 0 });
   } catch (err) {
     console.error("Error checking favourite client status:", err);
     res
@@ -724,7 +724,7 @@ exports.getFavouriteAgencyStatus = async (req, res) => {
   const user_id = req.user ? req.user.user_id : null;
 
   if (!user_id) {
-    return res.status(200).json({ isFavorited: false });
+    return res.status(200).json({ isFavourited: false });
   }
 
   try {
@@ -732,7 +732,7 @@ exports.getFavouriteAgencyStatus = async (req, res) => {
       "SELECT 1 FROM user_favourites_agencies WHERE user_id = $1 AND agency_id = $2",
       [user_id, agency_id],
     );
-    res.status(200).json({ isFavorited: result.rows.length > 0 });
+    res.status(200).json({ isFavourited: result.rows.length > 0 });
   } catch (err) {
     console.error("Error checking favourite agency status:", err);
     res

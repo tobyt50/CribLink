@@ -1,13 +1,12 @@
-import React, { useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import ListingCard from "../ListingCard"; // Corrected path assuming it's in the same components folder
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTheme } from "../../layouts/AppShell";
+import ListingCard from "../ListingCard"; // Corrected path assuming it's in the same components folder
 
 const SimilarListingsCarousel = ({
   similarListings,
-  userFavourites = [], // CORRECTED: Expect an array of favorite IDs, default to empty array
-  onFavoriteToggle,
+  userFavourites = [], // CORRECTED: Expect an array of favourite IDs, default to empty array
+  onFavouriteToggle,
   userRole,
   userId,
   userAgencyId,
@@ -168,10 +167,10 @@ const SimilarListingsCarousel = ({
               <ListingCard
                 listing={similarListing}
                 // CORRECTED: Perform the check here using the passed array
-                isFavorited={userFavourites.includes(
+                isFavourited={userFavourites.includes(
                   similarListing.property_id,
                 )}
-                onFavoriteToggle={onFavoriteToggle}
+                onFavouriteToggle={onFavouriteToggle}
                 userRole={userRole}
                 userId={userId}
                 userAgencyId={userAgencyId}

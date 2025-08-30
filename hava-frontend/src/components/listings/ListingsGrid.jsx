@@ -1,11 +1,12 @@
 // src/components/listings/ListingsGrid.jsx
 import { motion } from "framer-motion";
+import { memo } from "react";
 import ListingCard from "../ListingCard"; // Assuming this path is correct
 
 const ListingsGrid = ({
   listings,
   userFavourites,
-  handleFavoriteToggle,
+  handleFavouriteToggle,
   userRole,
   userId,
   userAgencyId,
@@ -22,8 +23,8 @@ const ListingsGrid = ({
         <div key={listing.property_id}>
           <ListingCard
             listing={listing}
-            isFavorited={userFavourites.includes(listing.property_id)}
-            onFavoriteToggle={handleFavoriteToggle}
+            isFavourited={userFavourites.includes(listing.property_id)}
+            onFavouriteToggle={handleFavouriteToggle}
             userRole={userRole}
             userId={userId}
             userAgencyId={userAgencyId}
@@ -37,4 +38,4 @@ const ListingsGrid = ({
   );
 };
 
-export default ListingsGrid;
+export default memo(ListingsGrid);

@@ -253,6 +253,7 @@ function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [pageInput, setPageInput] = useState("");
   const [sortBy, setSortBy] = useState("date_listed_desc");
   const [loading, setLoading] = useState(true);
   const [userFavourites, setUserFavourites] = useState([]);
@@ -290,6 +291,12 @@ function Home() {
 
   const categoryDefinitions = useMemo(
     () => [
+      {
+        title: "Trending Now",
+        property_type: null, // fetch all types
+        purchase_category: null, // optional
+        sort_by: "view_count_desc",
+      },
       {
         title: "Self-Contain for Rent Near You",
         property_type: "Self-Contain",
@@ -354,37 +361,39 @@ function Home() {
       for (const def of categoryDefinitions) {
         let fetchedListings = [];
         const st = effectiveUserState;
+      
         const params = new URLSearchParams({
           limit: 20,
           ...(def.property_type ? { property_type: def.property_type } : {}),
-          ...(def.purchase_category
-            ? { purchase_category: def.purchase_category }
-            : {}),
-          state: st,
+          ...(def.purchase_category ? { purchase_category: def.purchase_category } : {}),
+          ...(def.sort_by ? { sortBy: def.sort_by } : {}),
         });
-
+        
+        // IMPORTANT: Only add state for categories that are NOT "Trending Now"
+        if (def.title !== "Trending Now") {
+          params.append("state", st);
+        }
+      
         try {
           const res = await axiosInstance.get(`/listings?${params.toString()}`);
           const filtered = (res.data.listings || []).filter(
             (l) => l.status === "available" || l.status === "under offer",
           );
+      
+          // Only include if enough listings
           if (filtered.length >= MIN_LISTINGS_FOR_CATEGORY) {
             fetchedListings = filtered;
           }
         } catch (err) {
-          console.warn(
-            "Error fetching category with state",
-            st,
-            def.title,
-            err.message,
-          );
+          console.warn("Error fetching category", def.title, err.message);
         }
-
+      
         setCategoryListings((prev) => ({
           ...prev,
           [def.title]: fetchedListings,
         }));
       }
+      
     };
 
     fetchCategoryListings();
@@ -592,6 +601,22 @@ function Home() {
     setCurrentPage(1);
   }, [advancedFilters, sortBy]);
 
+  const handleSkipToPage = (e) => {
+    e.preventDefault(); // Prevent form from causing a page reload
+    const pageNum = parseInt(pageInput, 10);
+  
+    // Validate the input
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      handlePageChange(pageNum);
+    } else {
+      // Use your existing message context to show an error
+      showMessage(`Please enter a valid page number between 1 and ${totalPages}.`, "error");
+    }
+  
+    setPageInput(""); // Clear the input field after submission
+  };
+  
+
   const hasActiveFilters = Object.values(advancedFilters).some((v) => !!v);
 
   return (
@@ -640,34 +665,46 @@ function Home() {
                 ...(def.purchase_category
                   ? { purchase_category: def.purchase_category }
                   : {}),
-                state: effectiveUserState,
+                ...(def.sort_by ? { sortBy: def.sort_by } : {}),
               });
-
+              
+              // Conditionally add state for non-trending categories
+              if (def.title !== "Trending Now") {
+                params.append("state", effectiveUserState);
+              }
+              
               const searchLink = `/search?${params.toString()}`;
 
               let Icon = null;
-              switch (def.property_type) {
-                case "Self-Contain":
-                  Icon = Bed;
-                  break;
-                case "Short-Let":
-                  Icon = Hotel;
-                  break;
-                case "Apartment":
-                  Icon = Building2;
-                  break;
-                case "Land":
-                  Icon = LandPlot;
-                  break;
-                case "Bungalow":
-                  Icon = HomeIcon;
-                  break;
-                case "Duplex":
-                  Icon = Building;
-                  break;
-                default:
-                  break;
-              }
+switch (def.title) {
+  case "Trending Now":
+    Icon = Building2; // or a star/fire icon if you add one
+    break;
+  default:
+    switch (def.property_type) {
+      case "Self-Contain":
+        Icon = Bed;
+        break;
+      case "Short-Let":
+        Icon = Hotel;
+        break;
+      case "Apartment":
+        Icon = Building2;
+        break;
+      case "Land":
+        Icon = LandPlot;
+        break;
+      case "Bungalow":
+        Icon = HomeIcon;
+        break;
+      case "Duplex":
+        Icon = Building;
+        break;
+      default:
+        break;
+    }
+}
+
 
               return (
                 <FeaturedCategoryRow
@@ -683,6 +720,7 @@ function Home() {
                   getRoleBasePath={getRoleBasePath}
                   onDeleteListing={handleDeleteListing}
                   icon={Icon}
+                  isTrendingNow={def.title === "Trending Now"}
                 />
               );
             })}
@@ -749,29 +787,74 @@ function Home() {
           )}
         </motion.div>
 
-        {totalPages > 1 && !loading && (
-          <div className="flex justify-center items-center gap-4 mt-10 pb-8">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
-            >
-              <ChevronLeft size={18} /> Prev
-            </button>
-            <span
-              className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 focus:outline-none focus:border-transparent focus:ring-1 focus:ring-offset-0 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 focus:ring-green-400" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-green-600"}`}
-            >
-              Next <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
+        {
+  totalPages > 1 && !loading && (
+    <div className="flex flex-wrap justify-center items-center gap-4 mt-10 pb-8">
+      {/* PREV BUTTON */}
+      <button
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`flex items-center gap-2 text-sm transition-transform duration-150 disabled:opacity-40 ${
+          darkMode
+            ? "text-gray-300 hover:text-white hover:scale-105"
+            : "text-gray-700 hover:text-black hover:scale-105"
+        }`}
+      >
+        <ChevronLeft size={18} /> Prev
+      </button>
+
+      {/* PAGE INFO & SKIP TO PAGE FORM */}
+      <form onSubmit={handleSkipToPage} className="flex items-center gap-2">
+  <span className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+    Page
+  </span>
+
+  <div
+    className={`flex items-center border rounded-full px-1 ${
+      darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
+    }`}
+  >
+    <input
+      type="number"
+      value={pageInput}
+      onChange={(e) => setPageInput(e.target.value)}
+      placeholder={currentPage}
+      min="1"
+      max={totalPages}
+      className={`w-8 text-center bg-transparent py-1 focus:outline-none appearance-none ${
+        darkMode ? "text-gray-200" : "text-gray-800"
+      }`}
+    />
+    <button
+      type="submit"
+      className={`ml-1 px-1.5 py-0.5 text-sm transition-transform duration-70 ${
+        darkMode
+          ? "text-gray-300 hover:text-white hover:scale-105"
+          : "text-gray-700 hover:text-black hover:scale-105"
+      }`}
+    >
+      Go
+    </button>
+  </div>
+</form>
+
+
+      {/* NEXT BUTTON */}
+      <button
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`flex items-center gap-2 text-sm transition-transform duration-150 disabled:opacity-40 ${
+          darkMode
+            ? "text-gray-300 hover:text-white hover:scale-105"
+            : "text-gray-700 hover:text-black hover:scale-105"
+        }`}
+      >
+        Next <ChevronRight size={18} />
+      </button>
+    </div>
+  )
+}
+
       </div>
     </>
   );

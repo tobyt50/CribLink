@@ -1,29 +1,28 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import AgencyAdminSidebar from "../../components/agency/Sidebar";
-import axiosInstance from "../../api/axiosInstance";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon,
-  PencilIcon,
+    ArrowDownIcon,
+    ArrowUpIcon,
+    ChevronDownIcon,
+    PencilIcon,
+    TrashIcon,
 } from "@heroicons/react/24/outline";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import API_BASE_URL from "../../config";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Search,
-  SlidersHorizontal,
-  Plus,
-  FileText,
-  ArrowLeft,
+    ArrowLeft,
+    FileText,
+    Plus,
+    Search,
+    SlidersHorizontal,
+    X
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
-import { useMessage } from "../../context/MessageContext";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import AgencyAdminSidebar from "../../components/agency/Sidebar";
+import API_BASE_URL from "../../config";
 import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState"; // Import the hook
+import { useTheme } from "../../layouts/AppShell";
 
 // Reusable Dropdown component from Listings.js
 const Dropdown = ({
@@ -533,7 +532,7 @@ const AgentPerformance = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

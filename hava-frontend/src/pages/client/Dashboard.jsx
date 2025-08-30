@@ -1,45 +1,29 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import ClientSidebar from "../../components/client/Sidebar";
-import axiosInstance from "../../api/axiosInstance";
 import { formatDistanceToNow } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Menu,
-  User,
+  ArrowLeft,
+  Heart,
   Home,
   MessageSquare,
-  X,
-  Heart,
   Search,
-  Phone,
-  Mail,
-  Star,
   Settings,
-  UserPlus,
-  Landmark,
-  Hourglass,
-  UserRoundCheck,
-  CheckCircle,
-  UserX,
-  EllipsisVertical,
-  ArrowLeft,
+  Star,
+  User
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import FindAgentModal from "../../components/client/FindAgentModal";
+import ClientSidebar from "../../components/client/Sidebar";
 import Card from "../../components/ui/Card";
-import StatCard from "../../components/StatCard";
+import { useAuth } from "../../context/AuthContext";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState";
-import { useAuth } from "../../context/AuthContext";
-import FindAgentModal from "../../components/client/FindAgentModal";
+import { useTheme } from "../../layouts/AppShell";
 
 // Skeleton component for the Client Dashboard
 const ClientDashboardSkeleton = ({ darkMode }) => (
   <div className={`animate-pulse space-y-6`}>
-    {/* Welcome Message Skeleton */}
-    <div
-      className={`h-10 w-3/4 rounded ${darkMode ? "bg-gray-700" : "bg-gray-200"} mb-6`}
-    ></div>
 
     {/* Stat Cards Skeleton */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
@@ -318,7 +302,7 @@ const ClientDashboard = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       {/* Mobile Sidebar Toggle Button */}
       <button
@@ -374,17 +358,6 @@ const ClientDashboard = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            {/* Welcome Message - No Card Container */}
-            <h2
-              className={`text-xl font-semibold mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}
-            >
-              Welcome, {clientFirstName}!{" "}
-              <span
-                className={`${darkMode ? "text-gray-300" : "text-gray-700"} text-base font-normal`}
-              >
-                Here's a quick overview of your activity and connections.
-              </span>
-            </h2>
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../layouts/AppShell";
-import { Pencil, Trash2 } from "lucide-react";
 
 function ListingCard({
   listing: initialListing,
-  onFavoriteToggle,
-  isFavorited = false,
+  onFavouriteToggle,
+  isFavourited = false,
   userRole = "guest",
   userId = null,
   userAgencyId = null,
   getRoleBasePath,
   onDeleteListing,
+  isTrendingNow = false,
 }) {
   const navigate = useNavigate();
   const { darkMode } = useTheme();
@@ -70,7 +71,7 @@ function ListingCard({
     };
   }, [showDropdown]); // Dependency array includes showDropdown to re-run effect when its state changes
 
-  const listing = { ...initialListing, rating: initialListing.rating || 4.27 };
+  const listing = initialListing;
 
   // Determine the status to display. Show "Featured" if is_featured is true,
   // unless the status is "Sold", "Pending", or "Rejected".
@@ -92,14 +93,6 @@ function ListingCard({
       : [];
 
   const [mainIndex, setMainIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-
-  const paginate = (newDirection) => {
-    setDirection(newDirection);
-    setMainIndex(
-      (prev) => (prev + newDirection + allImages.length) % allImages.length,
-    );
-  };
 
   const getCategoryIcon = (category) => {
     switch (category) {
@@ -165,35 +158,53 @@ function ListingCard({
     return price?.toString();
   };
 
-  const formatPrice = (price, category) => {
+  const formatPrice = (price, period) => {
     if (price == null) return "price not available";
-
+  
     const abbrev = `₦${formatAbbreviatedPrice(price)}`;
     const full = new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
     }).format(price);
-
+  
     if (isNarrow) {
-      const shortSuffix = { Rent: "/yr", "Short Let": "/n", "Long Let": "/mo" };
-      return abbrev + (shortSuffix[category] || "");
+      const shortSuffix = {
+        yearly: "/yr",
+        monthly: "/mo",
+        weekly: "/wk",
+        nightly: "/n",
+      };
+      return abbrev + (shortSuffix[period] || "");
     } else {
       const longSuffix = {
-        Rent: "/year",
-        "Short Let": "/night",
-        "Long Let": "/month",
+        yearly: "/year",
+        monthly: "/month",
+        weekly: "/week",
+        nightly: "/night",
       };
-      return full + (longSuffix[category] || "");
+      return full + (longSuffix[period] || "");
     }
   };
 
+  const formatViews = (count) => {
+    if (count >= 1_000_000) {
+      const val = count / 1_000_000;
+      return val % 1 === 0 ? val + "M" : val.toFixed(1) + "M";
+    }
+    if (count >= 1_000) {
+      const val = count / 1_000;
+      return val % 1 === 0 ? val + "K" : val.toFixed(1) + "K";
+    }
+    return count;
+  };  
+
   const handleClick = () => navigate(`/listings/${listing.property_id}`);
 
-  const handleFavoriteClick = (e) => {
+  const handleFavouriteClick = (e) => {
     e.stopPropagation();
-    if (onFavoriteToggle) {
-      onFavoriteToggle(listing.property_id, isFavorited);
+    if (onFavouriteToggle) {
+      onFavouriteToggle(listing.property_id, isFavourited);
     }
   };
 
@@ -283,27 +294,14 @@ function ListingCard({
       <div
         className={`relative w-full ${compactMode ? "aspect-[3/2.4]" : "aspect-[3/2]"} overflow-hidden`}
       >
-        <AnimatePresence initial={false} custom={direction}>
-          <motion.img
-            key={mainIndex}
-            src={allImages[mainIndex]}
-            alt={`Main ${mainIndex}`}
-            className="absolute w-full h-full object-cover select-none"
-            custom={direction}
-            initial={{ x: direction > 0 ? 300 : -300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: direction < 0 ? 300 : -300, opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            onDragEnd={(e, info) => {
-              if (info.offset.x < -50) paginate(1);
-              else if (info.offset.x > 50) paginate(-1);
-            }}
-            style={{ touchAction: "pan-y" }}
-            draggable={false}
-          />
-        </AnimatePresence>
+        <img
+  src={allImages[mainIndex]}
+          alt={listing.title}
+          loading="lazy"
+  className="absolute w-full h-full object-cover select-none"
+  draggable={false}
+/>
+
 
         {/* Tags */}
         {listing.purchase_category && (
@@ -327,7 +325,7 @@ function ListingCard({
       </div>
 
       {!isNarrow && allImages.length > 1 && (
-        <div className="flex overflow-x-auto px-2 pt-2 pb-1 gap-2 no-scrollbar">
+        <div className="flex overflow-x-auto px-2 pt-1 -mb-1 gap-2 no-scrollbar">
           {allImages.map((img, idx) => (
             <div
               key={idx}
@@ -341,6 +339,7 @@ function ListingCard({
             >
               <img
                 src={img}
+                loading="lazy"
                 alt={`Thumb ${idx}`}
                 className="h-full w-full object-cover"
                 draggable={false}
@@ -404,45 +403,62 @@ function ListingCard({
         </div>
 
         <div className="flex justify-between items-center pt-1">
-          <p
-            className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`}
-            title={formatPrice(listing.price, listing.purchase_category)}
-          >
-            {formatPrice(listing.price, listing.purchase_category)}
+  <p
+    className={`font-bold truncate ${darkMode ? "text-green-400" : "text-green-700"}`}
+    title={formatPrice(listing.price, listing.price_period)}
+  >
+    {formatPrice(listing.price, listing.price_period)}
           </p>
           <div className="flex items-center gap-[4px] ml-auto">
-            {listing.rating && (
-              <span
-                className={`flex items-center text-[0.6rem] gap-[1px] ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}
-              >
-                <span className="text-[0.6rem] relative top-[0.5px]">⭐</span>
-                <span className="relative top-[0.5px]">
-                  {listing.rating.toFixed(1)}
-                </span>
-              </span>
-            )}
+            {/* View Count Display */}
+            {listing.view_count > 0 && (
+  <span
+    className={`flex items-center gap-1 text-[0.6rem] sm:text-[0.75rem]`}
+    title={`${listing.view_count} views`}
+  >
+    <Eye
+      className="w-3 h-3 sm:w-4 sm:h-4"
+      style={{
+        color: isTrendingNow
+          ? "#FFD700" // gold for Top Picks
+          : darkMode
+          ? "#9CA3AF"
+          : "#6B7280",
+      }}
+    />
+    <span
+      style={{
+        color: isTrendingNow ? "#FFD700" : darkMode ? "#9CA3AF" : "#6B7280",
+      }}
+    >
+      {formatViews(listing.view_count)}
+    </span>
+  </span>
+)}
+
+
             <button
-              onClick={handleFavoriteClick}
+              onClick={handleFavouriteClick}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              className="transition-colors p-2 -m-2"
-              title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+              className="transition-colors p-2 -m-3 md:-m-2"
+              title={isFavourited ? "Remove from Favourites" : "Add to Favourites"}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-4 w-4 transition-all duration-200"
                 viewBox="0 0 20 20"
                 fill={
-                  isFavorited || isHovered
+                  isFavourited || isHovered
                     ? darkMode
                       ? "rgb(96, 165, 250)"
                       : "rgb(59, 130, 246)"
                     : "none"
                 }
                 stroke={
-                  isFavorited || isHovered ? "none" : "rgb(156, 163, 175)"
+                  isFavourited || isHovered ? "none" : "rgb(156, 163, 175)"
                 }
-                strokeWidth={isFavorited || isHovered ? "0" : "1"}
+                strokeWidth={isFavourited || isHovered ? "0" : "1"}
               >
                 <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
               </svg>
@@ -499,4 +515,4 @@ function ListingCard({
   );
 }
 
-export default ListingCard;
+export default memo(ListingCard);

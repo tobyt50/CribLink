@@ -26,8 +26,8 @@ function Agencies() {
   // New state for last admin safeguard
   const [isLastAdminOfOwnAgency, setIsLastAdminOfOwnAgency] = useState(false);
   const [loadingAdminCount, setLoadingAdminCount] = useState(false);
-  // New state for favorite agencies
-  const [favoriteAgenciesStatus, setFavoriteAgenciesStatus] = useState(
+  // New state for favourite agencies
+  const [favouriteAgenciesStatus, setFavouriteAgenciesStatus] = useState(
     new Set(),
   );
 
@@ -125,10 +125,10 @@ function Agencies() {
     }
   }, [user?.role, user?.agency_id, showMessage]);
 
-  // Fetch favorite agencies
-  const fetchFavoriteAgencies = useCallback(async () => {
+  // Fetch favourite agencies
+  const fetchFavouriteAgencies = useCallback(async () => {
     if (!user?.user_id) {
-      setFavoriteAgenciesStatus(new Set());
+      setFavouriteAgenciesStatus(new Set());
       return;
     }
     try {
@@ -139,17 +139,17 @@ function Agencies() {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      const favoritedIds = new Set(
+      const favouritedIds = new Set(
         response.data.favourites.map((fav) => fav.agency_id),
       );
-      setFavoriteAgenciesStatus(favoritedIds);
+      setFavouriteAgenciesStatus(favouritedIds);
     } catch (error) {
       console.error(
-        "Error fetching favorite agencies:",
+        "Error fetching favourite agencies:",
         error.response?.data || error.message,
       );
-      // showMessage("Failed to load favorite agencies.", "error"); // Suppress for cleaner UX
-      setFavoriteAgenciesStatus(new Set());
+      // showMessage("Failed to load favourite agencies.", "error"); // Suppress for cleaner UX
+      setFavouriteAgenciesStatus(new Set());
     }
   }, [user?.user_id]);
 
@@ -166,8 +166,8 @@ function Agencies() {
   }, [fetchAgencyAdminCount, user?.role, user?.agency_id]); // Re-run if user role or agency changes
 
   useEffect(() => {
-    fetchFavoriteAgencies();
-  }, [fetchFavoriteAgencies, user?.user_id]); // Re-fetch favorites when user changes
+    fetchFavouriteAgencies();
+  }, [fetchFavouriteAgencies, user?.user_id]); // Re-fetch favourites when user changes
 
   const handleSearch = useCallback(
     (e) => {
@@ -386,29 +386,29 @@ function Agencies() {
     });
   };
 
-  // Handle adding/removing agency from favorites
-  const handleFavoriteToggle = useCallback(
-    async (agencyId, isCurrentlyFavorited) => {
+  // Handle adding/removing agency from favourites
+  const handleFavouriteToggle = useCallback(
+    async (agencyId, isCurrentlyFavourited) => {
       if (!user?.user_id) {
-        showMessage("Please log in to add agencies to favorites.", "info");
+        showMessage("Please log in to add agencies to favourites.", "info");
         return;
       }
 
       const token = localStorage.getItem("token");
       try {
-        if (isCurrentlyFavorited) {
+        if (isCurrentlyFavourited) {
           await axiosInstance.delete(
             `${API_BASE_URL}/favourites/agencies/${agencyId}`,
             {
               headers: { Authorization: `Bearer ${token}` },
             },
           );
-          setFavoriteAgenciesStatus((prev) => {
+          setFavouriteAgenciesStatus((prev) => {
             const newState = new Set(prev);
             newState.delete(agencyId);
             return newState;
           });
-          showMessage("Agency removed from favorites!", "success");
+          showMessage("Agency removed from favourites!", "success");
         } else {
           await axiosInstance.post(
             `${API_BASE_URL}/favourites/agencies`,
@@ -417,22 +417,22 @@ function Agencies() {
               headers: { Authorization: `Bearer ${token}` },
             },
           );
-          setFavoriteAgenciesStatus((prev) => new Set(prev).add(agencyId));
-          showMessage("Agency added to favorites!", "success");
+          setFavouriteAgenciesStatus((prev) => new Set(prev).add(agencyId));
+          showMessage("Agency added to favourites!", "success");
         }
       } catch (error) {
         console.error(
-          "Error toggling favorite agency status:",
+          "Error toggling favourite agency status:",
           error.response?.data || error.message,
         );
         showMessage(
-          `Failed to update favorite status: ${error.response?.data?.message || "Please try again."}`,
+          `Failed to update favourite status: ${error.response?.data?.message || "Please try again."}`,
           "error",
         );
-        fetchFavoriteAgencies(); // Re-fetch to ensure UI consistency on error
+        fetchFavouriteAgencies(); // Re-fetch to ensure UI consistency on error
       }
     },
-    [user?.user_id, showMessage, fetchFavoriteAgencies],
+    [user?.user_id, showMessage, fetchFavouriteAgencies],
   );
 
   return (
@@ -511,8 +511,8 @@ function Agencies() {
                 onConnectClick={handleConnectToAgency}
                 onDisconnectClick={handleDisconnectFromAgency}
                 onCancelRequestClick={handleCancelPendingRequest} // Pass the new handler
-                onFavoriteToggle={handleFavoriteToggle} // Pass the new handler
-                isFavorited={favoriteAgenciesStatus.has(agency.agency_id)} // Pass favorite status
+                onFavouriteToggle={handleFavouriteToggle} // Pass the new handler
+                isFavourited={favouriteAgenciesStatus.has(agency.agency_id)} // Pass favourite status
               />
             ))
           ) : (

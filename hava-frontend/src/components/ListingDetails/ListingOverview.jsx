@@ -1,4 +1,4 @@
-import { Bookmark, Share2 } from "lucide-react";
+import { Bookmark, Eye, Share2 } from "lucide-react";
 
 const ListingOverview = ({
   listing,
@@ -7,8 +7,8 @@ const ListingOverview = ({
   getStatusLabel,
   getStatusColor,
   getCategoryLabel,
-  isFavorited,
-  handleToggleFavorite,
+  isFavourited,
+  handleToggleFavourite,
   userRole,
   userId,
   setIsShareModalOpen,
@@ -50,17 +50,17 @@ const ListingOverview = ({
         </span>
         {userRole !== "guest" && (
           <button
-            onClick={handleToggleFavorite}
+            onClick={handleToggleFavourite}
             className={`p-2 rounded-full shadow-md transition-all duration-200 ml-2 ${
-              isFavorited
+              isFavourited
                 ? "bg-blue-500 text-white hover:bg-blue-600"
                 : darkMode
                   ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
-            title={isFavorited ? "Remove from Saved" : "Save to Favourites"}
+            title={isFavourited ? "Remove from Saved" : "Save to Favourites"}
           >
-            <Bookmark size={20} fill={isFavorited ? "currentColor" : "none"} />
+            <Bookmark size={20} fill={isFavourited ? "currentColor" : "none"} />
           </button>
         )}
         <button
@@ -77,10 +77,10 @@ const ListingOverview = ({
       </div>
 
       <p
-        className={`text-xl md:text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}
-      >
-        {formatPrice(listing.price, listing.purchase_category)}
-      </p>
+  className={`text-xl md:text-2xl font-bold ${darkMode ? "text-green-400" : "text-green-700"}`}
+>
+  {formatPrice(listing.price, listing.price_period)}
+</p>
 
       <div
         className={`grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-base ${darkMode ? "text-gray-300" : "text-gray-700"}`}
@@ -117,6 +117,15 @@ const ListingOverview = ({
           <strong>📅 Listed:</strong>{" "}
           {new Date(listing.date_listed).toLocaleDateString()}
         </p>
+        {/* --- START: ADD VIEW COUNT DISPLAY --- */}
+        {listing.view_count != null && (
+          <p className="flex items-center gap-1.5">
+            <Eye size={16} className="text-gray-500" /> 
+            <strong>Views:</strong> {listing.view_count}
+          </p>
+        )}
+        {/* --- END: ADD VIEW COUNT DISPLAY --- */}
+
       </div>
 
       {(userRole === "admin" ||

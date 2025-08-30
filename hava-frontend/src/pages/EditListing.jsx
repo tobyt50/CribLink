@@ -199,6 +199,7 @@ const EditListing = () => {
           titleType: data.title_type || "",
           isFeatured: data.is_featured || false,
           statusValue: data.status || "",
+          pricePeriod: String(data.price_period || ""),
         };
 
         setTempState(fetchedState);
@@ -431,7 +432,8 @@ const EditListing = () => {
       zoning_type: isLandProperty ? tempState.zoningType : null,
       title_type: tempState.titleType,
       status: tempState.statusValue,
-      is_featured: tempState.isFeatured, // Pass the latest featured status
+      is_featured: tempState.isFeatured,
+      price_period: tempState.pricePeriod,
       mainImageIdentifier: thumbnailIdentifier,
       existingImageUrlsToKeep: existingImages.map((img) => img.url),
       newImageUrls: newImageURLs,
@@ -599,6 +601,13 @@ const EditListing = () => {
       label: `${num} Kitchen(s)`,
     })),
   ];
+  const PRICE_PERIOD_OPTIONS = [
+  { value: "nightly", label: "Per Night" },
+  { value: "weekly", label: "Per Week" },
+  { value: "monthly", label: "Per Month" },
+  { value: "yearly", label: "Per Year" },
+  { value: "one-time", label: "One-Time" },
+];
   const statusOptions =
     user?.role === "admin"
       ? [
@@ -837,7 +846,7 @@ const EditListing = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label htmlFor="price" className={labelClass}>
                 Price (NGN) <span className="text-red-500">*</span>
@@ -852,6 +861,19 @@ const EditListing = () => {
                 required
               />
             </div>
+<div>
+  <label htmlFor="pricePeriod" className={labelClass}>
+    Price Period <span className="text-red-500">*</span>
+  </label>
+  <Dropdown
+    options={PRICE_PERIOD_OPTIONS} // Pass the array of objects directly
+    value={tempState.pricePeriod}  // Pass the value directly
+    onChange={(selectedValue) => {   // The handler now receives the value directly
+      handleTempStateChange("pricePeriod", selectedValue);
+    }}
+    placeholder="Select period"
+  />
+</div>
             {user && (
               <div>
                 <label htmlFor="statusValue" className={labelClass}>

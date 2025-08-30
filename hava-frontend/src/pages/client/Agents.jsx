@@ -1,43 +1,39 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Squares2X2Icon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon, // For disconnect button
-  PhoneIcon, // For call action
-  EnvelopeIcon, // For email button
-  ChatBubbleLeftRightIcon, // For chat button
-  CheckCircleIcon, // For accept request
-  XCircleIcon, // For reject request
+    ArrowDownIcon,
+    ArrowUpIcon, // For email button
+    ChatBubbleLeftRightIcon, // For chat button
+    CheckCircleIcon, // For call action
+    EnvelopeIcon, // For disconnect button
+    PhoneIcon,
+    Squares2X2Icon,
+    TrashIcon, // For accept request
+    XCircleIcon, // For reject request
 } from "@heroicons/react/24/outline";
-import ClientSidebar from "../../components/client/Sidebar";
-import API_BASE_URL from "../../config";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Menu,
-  X,
-  Search,
-  LayoutGrid,
-  LayoutList,
-  Plus,
-  X as XMarkIcon,
-  ArrowLeft,
+    ArrowLeft,
+    LayoutList,
+    Plus,
+    X as XMarkIcon
 } from "lucide-react"; // Added Plus and XMarkIcon
-import { useTheme } from "../../layouts/AppShell";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AgentCard from "../../components/client/AgentCard";
-import { useMessage } from "../../context/MessageContext";
-import { useConfirmDialog } from "../../context/ConfirmDialogContext";
-import { useSidebarState } from "../../hooks/useSidebarState";
-import { useAuth } from "../../context/AuthContext";
+import ClientSidebar from "../../components/client/Sidebar";
 import ClientInquiryModal from "../../components/ClientInquiryModal"; // Added this import
+import API_BASE_URL from "../../config";
+import { useAuth } from "../../context/AuthContext";
+import { useConfirmDialog } from "../../context/ConfirmDialogContext";
+import { useMessage } from "../../context/MessageContext";
+import { useSidebarState } from "../../hooks/useSidebarState";
+import { useTheme } from "../../layouts/AppShell";
 import socket from "../../socket"; // Import socket
 
 // Skeleton component for Agents page
@@ -362,8 +358,8 @@ const Agents = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [openedConversationId, setOpenedConversationId] = useState(null); // Track the ID of the conversation currently open in the modal
 
-  // New state for favorite agents
-  const [favoriteAgentsStatus, setFavoriteAgentsStatus] = useState(new Set());
+  // New state for favourite agents
+  const [favouriteAgentsStatus, setFavouriteAgentsStatus] = useState(new Set());
 
   // --- Data Fetching Callbacks ---
 
@@ -449,10 +445,10 @@ const Agents = () => {
     [token, showMessage],
   );
 
-  // Fetch favorite agents
-  const fetchFavoriteAgents = useCallback(async () => {
+  // Fetch favourite agents
+  const fetchFavouriteAgents = useCallback(async () => {
     if (!user?.user_id) {
-      setFavoriteAgentsStatus(new Set());
+      setFavouriteAgentsStatus(new Set());
       return;
     }
     try {
@@ -460,17 +456,17 @@ const Agents = () => {
       const response = await axios.get(`${API_BASE_URL}/favourites/agents`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const favoritedIds = new Set(
+      const favouritedIds = new Set(
         response.data.favourites.map((fav) => fav.user_id),
       );
-      setFavoriteAgentsStatus(favoritedIds);
+      setFavouriteAgentsStatus(favouritedIds);
     } catch (error) {
       console.error(
-        "Error fetching favorite agents:",
+        "Error fetching favourite agents:",
         error.response?.data || error.message,
       );
-      // showMessage("Failed to load favorite agents.", "error"); // Suppress for cleaner UX
-      setFavoriteAgentsStatus(new Set());
+      // showMessage("Failed to load favourite agents.", "error"); // Suppress for cleaner UX
+      setFavouriteAgentsStatus(new Set());
     }
   }, [user?.user_id]);
 
@@ -483,8 +479,8 @@ const Agents = () => {
   }, [fetchConnectedAgents, fetchPendingRequests, fetchAllAgents]);
 
   useEffect(() => {
-    fetchFavoriteAgents();
-  }, [fetchFavoriteAgents, user?.user_id]);
+    fetchFavouriteAgents();
+  }, [fetchFavouriteAgents, user?.user_id]);
 
   // --- Helper to determine agent connection status ---
   const getAgentConnectionStatus = useCallback(
@@ -1277,26 +1273,26 @@ const Agents = () => {
     });
   };
 
-  // Handle adding/removing agent from favorites
-  const handleFavoriteToggle = useCallback(
-    async (agentId, isCurrentlyFavorited) => {
+  // Handle adding/removing agent from favourites
+  const handleFavouriteToggle = useCallback(
+    async (agentId, isCurrentlyFavourited) => {
       if (!user?.user_id) {
-        showMessage("Please log in to add agents to favorites.", "info");
+        showMessage("Please log in to add agents to favourites.", "info");
         return;
       }
 
       const token = localStorage.getItem("token");
       try {
-        if (isCurrentlyFavorited) {
+        if (isCurrentlyFavourited) {
           await axios.delete(`${API_BASE_URL}/favourites/agents/${agentId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          setFavoriteAgentsStatus((prev) => {
+          setFavouriteAgentsStatus((prev) => {
             const newState = new Set(prev);
             newState.delete(agentId);
             return newState;
           });
-          showMessage("Agent removed from favorites!", "success");
+          showMessage("Agent removed from favourites!", "success");
         } else {
           await axios.post(
             `${API_BASE_URL}/favourites/agents`,
@@ -1305,22 +1301,22 @@ const Agents = () => {
               headers: { Authorization: `Bearer ${token}` },
             },
           );
-          setFavoriteAgentsStatus((prev) => new Set(prev).add(agentId));
-          showMessage("Agent added to favorites!", "success");
+          setFavouriteAgentsStatus((prev) => new Set(prev).add(agentId));
+          showMessage("Agent added to favourites!", "success");
         }
       } catch (error) {
         console.error(
-          "Error toggling favorite agent status:",
+          "Error toggling favourite agent status:",
           error.response?.data || error.message,
         );
         showMessage(
-          `Failed to update favorite status: ${error.response?.data?.message || "Please try again."}`,
+          `Failed to update favourite status: ${error.response?.data?.message || "Please try again."}`,
           "error",
         );
-        fetchFavoriteAgents(); // Re-fetch to ensure UI consistency on error
+        fetchFavouriteAgents(); // Re-fetch to ensure UI consistency on error
       }
     },
-    [user?.user_id, showMessage, fetchFavoriteAgents],
+    [user?.user_id, showMessage, fetchFavouriteAgents],
   );
 
   // Modified handleScroll to listen to window scroll
@@ -1350,7 +1346,7 @@ const Agents = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}
@@ -1492,14 +1488,14 @@ const Agents = () => {
             <div className="flex justify-center">
               <button
                 onClick={() => handleTabClick("connected")}
-                className={`px-6 py-2 rounded-l-xl text-lg font-semibold transition-colors duration-200 flex-1
+                className={`px-6 py-2 rounded-l-xl text-sm font-semibold transition-colors duration-200 flex-1
                           ${activeTab === "connected" && !searchTerm ? "bg-green-700 text-white shadow-lg" : darkMode ? "bg-gray-700 text-gray-300 hover:bg-gray-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
               >
                 Connected ({totalConnectedAgents})
               </button>
               <button
                 onClick={() => handleTabClick("pending")}
-                className={`px-6 py-2 rounded-r-xl text-lg font-semibold transition-colors duration-200 flex-1
+                className={`px-6 py-2 rounded-r-xl text-sm font-semibold transition-colors duration-200 flex-1
                           ${activeTab === "pending" && !searchTerm ? "bg-green-700 text-white shadow-lg" : darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-200 text-gray-700"}`}
               >
                 Pending ({totalPendingRequests})
@@ -1539,8 +1535,8 @@ const Agents = () => {
                       onChatAgent={handleChatAgent} // Added this prop
                       // Pass request_id if it's a pending request
                       requestId={agent.requestId}
-                      onFavoriteToggle={handleFavoriteToggle} // Pass the new handler
-                      isFavorited={favoriteAgentsStatus.has(agent.user_id)} // Pass favorite status
+                      onFavouriteToggle={handleFavouriteToggle} // Pass the new handler
+                      isFavourited={favouriteAgentsStatus.has(agent.user_id)} // Pass favourite status
                     />
                   ))}
                 </div>

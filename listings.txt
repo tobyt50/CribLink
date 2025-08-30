@@ -1,0 +1,196 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.4
+-- Dumped by pg_dump version 17.4
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: property_listings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.property_listings (
+    property_id integer NOT NULL,
+    purchase_category character varying(50),
+    title character varying(255),
+    location character varying(100),
+    state character varying(100),
+    price bigint,
+    status character varying(50),
+    agent_id integer,
+    date_listed date,
+    property_type character varying(50),
+    bedrooms integer,
+    bathrooms integer,
+    image_url text,
+    image_public_id character varying(255),
+    agency_id integer,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    is_featured boolean DEFAULT false,
+    featured_expires_at timestamp with time zone,
+    living_rooms integer DEFAULT 0,
+    kitchens integer DEFAULT 0,
+    price_period character varying(20),
+    search_vector tsvector
+);
+
+
+ALTER TABLE public.property_listings OWNER TO postgres;
+
+--
+-- Name: property_listings_property_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.property_listings_property_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.property_listings_property_id_seq OWNER TO postgres;
+
+--
+-- Name: property_listings_property_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.property_listings_property_id_seq OWNED BY public.property_listings.property_id;
+
+
+--
+-- Name: property_listings property_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.property_listings ALTER COLUMN property_id SET DEFAULT nextval('public.property_listings_property_id_seq'::regclass);
+
+
+--
+-- Name: property_listings property_listings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.property_listings
+    ADD CONSTRAINT property_listings_pkey PRIMARY KEY (property_id);
+
+
+--
+-- Name: idx_property_listings_search_vector; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_property_listings_search_vector ON public.property_listings USING gin (((((setweight(to_tsvector('english'::regconfig, (COALESCE(title, ''::character varying))::text), 'A'::"char") || setweight(to_tsvector('english'::regconfig, (COALESCE(location, ''::character varying))::text), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, (COALESCE(state, ''::character varying))::text), 'B'::"char")) || setweight(to_tsvector('english'::regconfig, (COALESCE(property_type, ''::character varying))::text), 'B'::"char"))));
+
+
+--
+-- Name: listings_bathrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_bathrooms_idx ON public.property_listings USING btree (bathrooms);
+
+
+--
+-- Name: listings_bedrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_bedrooms_idx ON public.property_listings USING btree (bedrooms);
+
+
+--
+-- Name: listings_date_listed_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_date_listed_idx ON public.property_listings USING btree (date_listed DESC);
+
+
+--
+-- Name: listings_location_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_location_trgm_idx ON public.property_listings USING gin (location public.gin_trgm_ops);
+
+
+--
+-- Name: listings_price_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_price_idx ON public.property_listings USING btree (price);
+
+
+--
+-- Name: listings_price_location_bedrooms_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_price_location_bedrooms_idx ON public.property_listings USING btree (location, price, bedrooms);
+
+
+--
+-- Name: listings_price_period_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_price_period_idx ON public.property_listings USING btree (price_period);
+
+
+--
+-- Name: listings_search_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_search_idx ON public.property_listings USING gin (search_vector);
+
+
+--
+-- Name: listings_title_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX listings_title_trgm_idx ON public.property_listings USING gin (title public.gin_trgm_ops);
+
+
+--
+-- Name: property_listings property_listings_search_vector_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER property_listings_search_vector_trigger BEFORE INSERT OR UPDATE ON public.property_listings FOR EACH ROW EXECUTE FUNCTION public.property_listings_search_vector_update();
+
+
+--
+-- Name: property_listings update_property_listings_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_property_listings_updated_at BEFORE UPDATE ON public.property_listings FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: property_listings fk_property_listings_agency; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.property_listings
+    ADD CONSTRAINT fk_property_listings_agency FOREIGN KEY (agency_id) REFERENCES public.agencies(agency_id) ON DELETE SET NULL;
+
+
+--
+-- Name: property_listings property_listings_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.property_listings
+    ADD CONSTRAINT property_listings_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.users(user_id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+

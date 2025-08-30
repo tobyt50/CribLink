@@ -1,42 +1,38 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  CalendarDays,
-  BarChart3,
-  TrendingUp,
-  Users,
-  Home,
-  MessageSquare,
-  BriefcaseBusiness,
-  AlertCircle,
-  Menu,
-  X,
-  ChevronDownIcon,
-  ArrowLeft,
+    AlertCircle,
+    ArrowLeft,
+    BriefcaseBusiness,
+    ChevronDownIcon,
+    Home,
+    MessageSquare,
+    TrendingUp,
+    Users
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
 import AdminSidebar from "../../components/admin/Sidebar";
-import { useTheme } from "../../layouts/AppShell";
 import Card from "../../components/ui/Card";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState"; // Import the hook
+import { useTheme } from "../../layouts/AppShell";
 
 const API_BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/admin/analytics`;
 
@@ -511,7 +507,7 @@ const AdminAnalytics = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       {/* Mobile Sidebar Toggle */}
       <button

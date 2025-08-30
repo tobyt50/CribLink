@@ -1,26 +1,22 @@
 // src/pages/Listings.jsx (Refactored)
-import { motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
-// Import all sidebar components
 import axios from "axios";
-import { useLocation, useNavigate, useParams } from "react-router-dom"; // Import useParams
+import { motion } from "framer-motion";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import AdminSidebar from "../components/admin/Sidebar";
 import AgencyAdminSidebar from "../components/agency/Sidebar";
 import AgentSidebar from "../components/agent/Sidebar";
-// Import necessary icons from @heroicons/react/24/outline
-import API_BASE_URL from "../config";
-// Import the newly created modular components
 import ListingCardSkeleton from "../components/listings/ListingCardSkeleton";
 import ListingTableRowSkeleton from "../components/listings/ListingTableRowSkeleton";
 import ListingsGrid from "../components/listings/ListingsGrid";
 import ListingsHeader from "../components/listings/ListingsHeader";
 import ListingsTable from "../components/listings/ListingsTable";
-// Corrected import statement for lucide-react icons
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
-import { useAuth } from "../context/AuthContext"; // Import useAuth hook to get user role
+import API_BASE_URL from "../config";
+import { useAuth } from "../context/AuthContext";
 import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { useMessage } from "../context/MessageContext";
-import { useSidebarState } from "../hooks/useSidebarState"; // Import the useSidebarState hook
+import { useSidebarState } from "../hooks/useSidebarState";
 import { useTheme } from "../layouts/AppShell";
 
 const Listings = () => {
@@ -36,12 +32,13 @@ const Listings = () => {
   const [minPriceFilter, setMinPriceFilter] = useState("");
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState(page);
   const [totalListings, setTotalListings] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [userFavourites, setUserFavourites] = useState([]);
   const [agencyName, setAgencyName] = useState("");
-  const limit = 30; // Items per page
+  const limit = 20; // Items per page
 
   // --- HOOKS ---
   const navigate = useNavigate();
@@ -212,26 +209,30 @@ const Listings = () => {
     applySorting();
   }, [listings, sortKey, sortDirection, applySorting]);
 
+  useEffect(() => {
+    setPageInput(page);
+  }, [page]);  
+
   // --- ACTION HANDLERS ---
-  const handleFavoriteToggle = useCallback(
-    async (propertyId, isCurrentlyFavorited) => {
+  const handleFavouriteToggle = useCallback(
+    async (propertyId, isCurrentlyFavourited) => {
       const token = localStorage.getItem("token");
       if (!token) {
-        showMessage("Please log in to manage your favorites.", "error");
+        showMessage("Please log in to manage your favourites.", "error");
         navigate("/signin");
         return;
       }
       try {
-        if (isCurrentlyFavorited) {
+        if (isCurrentlyFavourited) {
           await axios.delete(`${API_BASE_URL}/favourites/properties/${propertyId}`, { headers: { Authorization: `Bearer ${token}` } });
-          showMessage("Removed from favorites!", "success");
+          showMessage("Removed from favourites!", "success");
         } else {
           await axios.post(`${API_BASE_URL}/favourites/properties`, { property_id: propertyId }, { headers: { Authorization: `Bearer ${token}` } });
-          showMessage("Added to favorites!", "success");
+          showMessage("Added to favourites!", "success");
         }
         fetchUserFavourites();
       } catch (error) {
-        const errorMessage = error.response?.data?.message || "Failed to update favorites.";
+        const errorMessage = error.response?.data?.message || "Failed to update favourites.";
         showMessage(errorMessage, "error");
       }
     },
@@ -349,7 +350,12 @@ const Listings = () => {
   const handlePurchaseCategoryChange = (value) => { setPurchaseCategoryFilter(value); setPage(1); };
   const handleMinPriceChange = (e) => { setMinPriceFilter(e.target.value); setPage(1); };
   const handleMaxPriceChange = (e) => { setMaxPriceFilter(e.target.value); setPage(1); };
-  const handlePageChange = useCallback((newPage) => { if (newPage >= 1 && newPage <= totalPages) setPage(newPage); }, [totalPages]);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
+  
   const handleCardClick = (listingId) => navigate(`/listings/${listingId}`);
 
   const handleSortClick = (key) => {
@@ -409,19 +415,19 @@ const Listings = () => {
   };
   
   return (
-    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}>
+    <div className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}>
       <button onClick={handleBack} aria-label="Go back" className={`absolute left-4 mt-5 p-2 rounded-lg shadow-sm transition hover:scale-105 ${darkMode ? "bg-gray-800 text-gray-300" : "bg-white text-gray-700"}`}>
         <ArrowLeft size={20} />
       </button>
       {renderSidebar()}
       <motion.div
-        key={isMobile ? "mobile" : "desktop"}
-        animate={{ marginLeft: contentShift }}
-        transition={{ duration: 0.3 }}
-        initial={false}
-        className={`pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0 ${!hasSidebar ? "max-w-7xl mx-auto" : ""}`}
-        style={{ minWidth: `calc(100% - ${contentShift}px)` }}
-      >
+  key={isMobile ? "mobile" : "desktop"}
+  animate={{ marginLeft: contentShift }}
+  transition={{ duration: 0.3 }}
+  initial={false}
+  className={`pt-6 px-4 md:px-8 flex-1 overflow-auto min-w-0 ${!hasSidebar && !isMobile ? "max-w-7xl mx-auto" : ""}`}
+  style={{ minWidth: `calc(100% - ${contentShift}px)` }}
+>
         <h1 className={`text-2xl md:text-3xl font-extrabold text-center mb-4 md:mb-6 ${darkMode ? "text-green-400" : "text-green-700"}`}>
           {agencyIdFilter && agencyName ? `${agencyName} Listings` : "Listings"}
         </h1>
@@ -478,7 +484,7 @@ const Listings = () => {
               <ListingsGrid
                 listings={filteredAndSortedListings}
                 userFavourites={userFavourites}
-                handleFavoriteToggle={handleFavoriteToggle}
+                handleFavouriteToggle={handleFavouriteToggle}
                 userRole={userRole}
                 userId={userId}
                 userAgencyId={userAgencyId}
@@ -505,17 +511,79 @@ const Listings = () => {
               />
             )}
 
-            {totalPages > 1 && !loading && (
-              <div className="flex justify-center items-center gap-4 mt-10 pb-8">
-                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1} className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-                  <ChevronLeft size={18} /> Prev
-                </button>
-                <span className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>Page {page} of {totalPages}</span>
-                <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages || totalPages === 0} className={`flex items-center gap-2 px-4 py-2 border rounded-full shadow-sm disabled:opacity-40 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700" : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-                  Next <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
+{totalPages > 1 && !loading && (
+  <div className="flex flex-wrap justify-center items-center gap-4 mt-10 pb-8">
+    {/* PREV BUTTON */}
+    <button
+      onClick={() => handlePageChange(page - 1)}
+      disabled={page === 1}
+      className={`flex items-center gap-2 text-sm transition-transform duration-150 disabled:opacity-40 ${
+        darkMode
+          ? "text-gray-300 hover:text-white hover:scale-105"
+          : "text-gray-700 hover:text-black hover:scale-105"
+      }`}
+    >
+      <ChevronLeft size={18} /> Prev
+    </button>
+
+    {/* PAGE INFO & SKIP TO PAGE FORM */}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (pageInput >= 1 && pageInput <= totalPages) handlePageChange(Number(pageInput));
+      }}
+      className="flex items-center gap-2"
+    >
+      <span
+        className={`font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}
+      >
+        Page
+      </span>
+
+      <div
+        className={`flex items-center border rounded-full px-1 ${
+          darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"
+        }`}
+      >
+        <input
+          type="number"
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value)}
+          placeholder={page}
+          min="1"
+          max={totalPages}
+          className={`w-8 text-center bg-transparent py-1 focus:outline-none appearance-none ${
+            darkMode ? "text-gray-200" : "text-gray-800"
+          }`}
+        />
+        <button
+          type="submit"
+          className={`ml-1 px-1.5 py-0.5 text-sm transition-transform duration-150 ${
+            darkMode
+              ? "text-gray-300 hover:text-white hover:scale-105"
+              : "text-gray-700 hover:text-black hover:scale-105"
+          }`}
+        >
+          Go
+        </button>
+      </div>
+    </form>
+
+    {/* NEXT BUTTON */}
+    <button
+      onClick={() => handlePageChange(page + 1)}
+      disabled={page === totalPages}
+      className={`flex items-center gap-2 text-sm transition-transform duration-150 disabled:opacity-40 ${
+        darkMode
+          ? "text-gray-300 hover:text-white hover:scale-105"
+          : "text-gray-700 hover:text-black hover:scale-105"
+      }`}
+    >
+      Next <ChevronRight size={18} />
+    </button>
+  </div>
+)}
+
           </motion.div>
         </main>
       </motion.div>

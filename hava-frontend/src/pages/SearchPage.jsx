@@ -153,21 +153,32 @@ function SearchPage() {
     const propertyType = params.get("property_type");
     const purchaseCategory = params.get("purchase_category");
     const state = params.get("state");
-
-    if (propertyType && purchaseCategory && state) {
-      const formatString = (str) =>
-        str
-          .replace(/[-_]/g, " ")
-          .replace(/\b\w/g, (char) => char.toUpperCase());
-
+    const sortBy = params.get("sortBy");
+  
+    const formatString = (str) =>
+      str
+        ? str
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase())
+        : "";
+  
+    // Handle "Trending" case first
+    if (sortBy === "view_count_desc") {
+      const formattedState = state ? `in ${formatString(state)}` : "";
+      setCategoryTitle(`Trending Properties ${formattedState}`);
+  
+    // Handle other specific category cases
+    } else if (propertyType && purchaseCategory && state) {
       const formattedType = formatString(propertyType);
       const pluralType = formattedType.endsWith("s")
         ? formattedType
         : `${formattedType}s`;
       const formattedCategory = `for ${formatString(purchaseCategory)}`;
       const formattedState = `in ${formatString(state)}`;
-
+  
       setCategoryTitle(`${pluralType} ${formattedCategory} ${formattedState}`);
+    
+    // Fallback for general searches
     } else {
       setCategoryTitle("");
     }
@@ -208,27 +219,27 @@ function SearchPage() {
     }
   };
 
-  const handleFavoriteToggle = useCallback(
-    async (propertyId, isCurrentlyFavorited) => {
+  const handleFavouriteToggle = useCallback(
+    async (propertyId, isCurrentlyFavourited) => {
       if (!isAuthenticated) {
-        showMessage("Please log in to manage your favorites.", "error");
+        showMessage("Please log in to manage your favourites.", "error");
         navigate("/signin");
         return;
       }
       try {
-        if (isCurrentlyFavorited) {
+        if (isCurrentlyFavourited) {
           await axiosInstance.delete(`/favourites/properties/${propertyId}`);
-          showMessage("Removed from favorites!", "success");
+          showMessage("Removed from favourites!", "success");
         } else {
           await axiosInstance.post(`/favourites/properties`, {
             property_id: propertyId,
           });
-          showMessage("Added to favorites!", "success");
+          showMessage("Added to favourites!", "success");
         }
         fetchUserFavourites();
       } catch (error) {
         showMessage(
-          error.response?.data?.message || "Failed to update favorites.",
+          error.response?.data?.message || "Failed to update favourites.",
           "error",
         );
       }
@@ -324,9 +335,14 @@ function SearchPage() {
             transition={{ duration: 0.5 }}
           >
             <span>
-              {categoryTitle}:{" "}
-              <strong className="font-bold">{totalResults} found</strong>
-            </span>
+        {categoryTitle}
+        {/* Only show count if the title does NOT start with "Trending" */}
+        {!categoryTitle.startsWith("Trending") && (
+          <>
+            : <strong className="font-bold">{totalResults} found</strong>
+          </>
+        )}
+      </span>
           </motion.div>
         ) : (
           <motion.div
@@ -373,8 +389,8 @@ function SearchPage() {
             >
               <ListingCard
                 listing={listing}
-                isFavorited={userFavourites.includes(listing.property_id)}
-                onFavoriteToggle={handleFavoriteToggle}
+                isFavourited={userFavourites.includes(listing.property_id)}
+                onFavouriteToggle={handleFavouriteToggle}
                 userRole={currentUserRole}
                 userId={currentUserId}
                 userAgencyId={currentUserAgencyId}

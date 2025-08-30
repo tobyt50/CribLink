@@ -1,36 +1,32 @@
 // src/pages/LegalDocuments.js
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+    ArrowDownIcon,
+    ArrowUpIcon,
+    ChevronDownIcon
+} from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowLeft,
+    Eye,
+    FileText,
+    LayoutGrid,
+    LayoutList,
+    Plus,
+    SlidersHorizontal,
+    Trash2
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../api/axiosInstance";
 import AdminSidebar from "../components/admin/Sidebar";
 import AgencyAdminSidebar from "../components/agency/Sidebar"; // Import the new sidebar
-import axiosInstance from "../api/axiosInstance";
-import { useNavigate, useLocation } from "react-router-dom";
-import {
-  ArrowUpIcon,
-  ArrowDownIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import API_BASE_URL from "../config";
-import {
-  Menu,
-  X,
-  Search,
-  SlidersHorizontal,
-  Plus,
-  FileText,
-  LayoutGrid,
-  LayoutList,
-  Eye,
-  Trash2,
-  ArrowLeft,
-} from "lucide-react";
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
-import { useSidebarState } from "../hooks/useSidebarState";
-import { useAuth } from "../context/AuthContext";
 import DocumentCard from "../components/DocumentCard"; // Import the new DocumentCard component
+import API_BASE_URL from "../config";
+import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useSidebarState } from "../hooks/useSidebarState";
+import { useTheme } from "../layouts/AppShell";
 
 // Reusable Dropdown component
 const Dropdown = ({
@@ -602,7 +598,7 @@ const LegalDocuments = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

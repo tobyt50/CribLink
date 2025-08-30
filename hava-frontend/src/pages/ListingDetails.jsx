@@ -1,30 +1,27 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
+import { motion } from "framer-motion";
+import {
   useCallback,
-  useMemo,
+  useEffect,
+  useRef,
+  useState
 } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
-import { motion, AnimatePresence } from "framer-motion";
 import API_BASE_URL from "../config";
-import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
-import { useTheme } from "../layouts/AppShell";
-import { useMessage } from "../context/MessageContext";
-import { useConfirmDialog } from "../context/ConfirmDialogContext";
 import { useAuth } from "../context/AuthContext";
+import { useConfirmDialog } from "../context/ConfirmDialogContext";
+import { useMessage } from "../context/MessageContext";
+import { useTheme } from "../layouts/AppShell";
 import socket from "../socket";
 
 // Import new components
-import ImageGallery from "../components/ListingDetails/ImageGallery";
-import ListingOverview from "../components/ListingDetails/ListingOverview";
-import PropertyFeatures from "../components/ListingDetails/PropertyFeatures";
-import AgentContactCard from "../components/ListingDetails/AgentContactCard";
-import LocationMap from "../components/ListingDetails/LocationMap";
-import SimilarListingsCarousel from "../components/ListingDetails/SimilarListingsCarousel";
-import ModalsContainer from "../components/ListingDetails/ModalsContainer"; // New component for modals
+import AgentContactCard from "../components/listingDetails/AgentContactCard";
+import ImageGallery from "../components/listingDetails/ImageGallery";
+import ListingOverview from "../components/listingDetails/ListingOverview";
+import LocationMap from "../components/listingDetails/LocationMap";
+import ModalsContainer from "../components/listingDetails/ModalsContainer"; // New component for modals
+import PropertyFeatures from "../components/listingDetails/PropertyFeatures";
+import SimilarListingsCarousel from "../components/listingDetails/SimilarListingsCarousel";
 
 // Loading Skeleton Component for Listing Details
 const ListingDetailsSkeleton = ({ darkMode }) => {
@@ -248,7 +245,7 @@ const ListingDetails = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [userFavourites, setUserFavourites] = useState([]);
 
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavourited, setIsFavourited] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("none");
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const optionsMenuRef = useRef(null);
@@ -355,26 +352,50 @@ const ListingDetails = () => {
   const fetchListing = useCallback(async () => {
     if (!id || userRole === "") return;
 
-    setLoading(true); // Set loading to true at the start of fetch
+    setLoading(true); 
     try {
-      const { data } = await axiosInstance.get(
+      // 1. Fetch the listing data ONCE.
+      const { data: listingData } = await axiosInstance.get(
         `${API_BASE_URL}/listings/${id}`,
       );
-      setListing(data);
+      // Set initial state so the page renders for the user.
+      setListing(listingData);
 
-      const mainImage = data.image_url ? [data.image_url] : [];
-      const gallery = data.gallery_images || [];
+      // 2. Handle the view count logic asynchronously.
+      const viewedKey = `viewed_listing_${id}`;
+      if (!sessionStorage.getItem(viewedKey)) {
+        sessionStorage.setItem(viewedKey, "true"); 
+        try {
+          const response = await axiosInstance.post(`${API_BASE_URL}/listings/${id}/view`);
+          
+          // 3. Update the state with the new, accurate view count from the backend.
+          if (response.data && response.data.newViewCount) {
+            setListing(prevListing => ({
+              ...prevListing,
+              view_count: response.data.newViewCount,
+            }));
+          }
+        } catch (viewError) {
+          console.error("Failed to log view count:", viewError);
+        }
+      }
+
+      // --- REMOVED THE SECOND, REDUNDANT GET REQUEST ---
+
+      // 4. Use the data from the FIRST request ('listingData') for everything else.
+      const mainImage = listingData.image_url ? [listingData.image_url] : [];
+      const gallery = listingData.gallery_images || [];
       setImages([...mainImage, ...gallery]);
 
-      if (data.agent_name || data.agent_email || data.agent_phone) {
+      if (listingData.agent_name || listingData.agent_email || listingData.agent_phone) {
         setAgentInfo({
-          id: data.agent_id,
-          name: data.agent_name || "N/A",
-          email: data.agent_email || "N/A",
-          phone: data.agent_phone || "N/A",
-          agency: data.agent_agency || "N/A",
+          id: listingData.agent_id,
+          name: listingData.agent_name || "N/A",
+          email: listingData.agent_email || "N/A",
+          phone: listingData.agent_phone || "N/A",
+          agency: listingData.agent_agency || "N/A",
           profilePic: `https://placehold.co/100x100/${darkMode ? "2D3748" : "E0F2F1"}/${darkMode ? "A0AEC0" : "047857"}?text=${(
-            data.agent_name || "JD"
+            listingData.agent_name || "JD"
           )
             .split(" ")
             .map((n) => n[0])
@@ -391,7 +412,7 @@ const ListingDetails = () => {
       const allListings = allListingsResponse.data.listings;
 
       const filteredSimilar = allListings.filter(
-        (item) => item.property_id !== data.property_id,
+        (item) => item.property_id !== listingData.property_id,
       );
       setSimilarListings(filteredSimilar);
     } catch (error) {
@@ -414,7 +435,7 @@ const ListingDetails = () => {
       setSimilarListings([]);
       setAgentInfo(null);
     } finally {
-      setLoading(false); // Set loading to false after fetch completes
+      setLoading(false); 
     }
   }, [id, darkMode, showMessage, userRole]);
 
@@ -469,11 +490,11 @@ const ListingDetails = () => {
   }, [userRole, userId, fetchAgentClients]);
 
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
+    const checkFavouriteStatus = async () => {
       if (userId && listing && userRole !== "guest") {
         const token = localStorage.getItem("token");
         if (!token) {
-          setIsFavorited(false);
+          setIsFavourited(false);
           return;
         }
         try {
@@ -483,10 +504,10 @@ const ListingDetails = () => {
               headers: { Authorization: `Bearer ${token}` },
             },
           );
-          setIsFavorited(response.data.isFavorited);
+          setIsFavourited(response.data.isFavourited);
         } catch (error) {
-          console.error("Error checking favorite status:", error);
-          let errorMessage = "Failed to check favorite status.";
+          console.error("Error checking favourite status:", error);
+          let errorMessage = "Failed to check favourite status.";
           if (
             error.response &&
             error.response.data &&
@@ -497,13 +518,13 @@ const ListingDetails = () => {
             errorMessage = error.message;
           }
           showMessage(errorMessage, "error");
-          setIsFavorited(false);
+          setIsFavourited(false);
         }
       } else {
-        setIsFavorited(false);
+        setIsFavourited(false);
       }
     };
-    checkFavoriteStatus();
+    checkFavouriteStatus();
   }, [userId, listing, userRole, showMessage]);
 
   useEffect(() => {
@@ -557,21 +578,29 @@ const ListingDetails = () => {
     isClientInquiryModalOpen,
   ]);
 
-  const formatPrice = (price, category) => {
+  const formatPrice = (price, period) => {
     if (price == null) return "Price not available";
+    
     const formatted = new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       minimumFractionDigits: 0,
     }).format(price);
-    switch (category) {
-      case "Rent":
-        return `${formatted} / Year`;
-      case "Short Let":
-        return `${formatted} / Night`;
-      case "Long Let":
-        return `${formatted} / Month`;
+  
+    // Now we use the actual price_period from the database
+    switch (period) {
+      case "yearly":
+        return `${formatted} / year`;
+      case "monthly":
+        return `${formatted} / month`;
+      case "weekly":
+        return `${formatted} / week`;
+      case "nightly":
+        return `${formatted} / night`;
+      case "one-time":
+        return formatted; // No period needed for one-time payments
       default:
+        // A sensible fallback if price_period is null or not set
         return formatted;
     }
   };
@@ -657,9 +686,9 @@ const ListingDetails = () => {
     setShowPreview(false);
   };
 
-  const handleToggleFavorite = async () => {
+  const handleToggleFavourite = async () => {
     if (!userId || !listing || userRole === "guest") {
-      showMessage("Please log in to add to favorites.", "info");
+      showMessage("Please log in to add to favourites.", "info");
       return;
     }
 
@@ -670,15 +699,15 @@ const ListingDetails = () => {
     }
 
     try {
-      if (isFavorited) {
+      if (isFavourited) {
         await axiosInstance.delete(
           `${API_BASE_URL}/favourites/properties/${listing.property_id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setIsFavorited(false);
-        showMessage("Removed from favorites!", "info");
+        setIsFavourited(false);
+        showMessage("Removed from favourites!", "info");
       } else {
         await axiosInstance.post(
           `${API_BASE_URL}/favourites/properties`,
@@ -687,15 +716,15 @@ const ListingDetails = () => {
             headers: { Authorization: `Bearer ${token}` },
           },
         );
-        setIsFavorited(true);
-        showMessage("Added to favorites!", "success");
+        setIsFavourited(true);
+        showMessage("Added to favourites!", "success");
       }
     } catch (err) {
       console.error(
-        "Error toggling favorite status:",
+        "Error toggling favourite status:",
         err.response?.data || err.message,
       );
-      let errorMessage = "Failed to update favorite status. Please try again.";
+      let errorMessage = "Failed to update favourite status. Please try again.";
       if (err.response && err.response.data && err.response.data.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
@@ -1277,8 +1306,8 @@ const ListingDetails = () => {
             getStatusLabel={getStatusLabel}
             getStatusColor={getStatusColor}
             getCategoryLabel={getCategoryLabel}
-            isFavorited={isFavorited}
-            handleToggleFavorite={handleToggleFavorite}
+            isFavourited={isFavourited}
+            handleToggleFavourite={handleToggleFavourite}
             userRole={userRole}
             userId={userId}
             setIsShareModalOpen={setIsShareModalOpen}
@@ -1338,7 +1367,7 @@ const ListingDetails = () => {
           similarListings={similarListings}
           darkMode={darkMode}
           userFavourites={userFavourites} // Pass the state array
-          onFavoriteToggle={handleToggleFavorite}
+          onFavouriteToggle={handleToggleFavourite}
         />
       )}
 

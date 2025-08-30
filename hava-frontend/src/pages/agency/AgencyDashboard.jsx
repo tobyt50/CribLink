@@ -1,38 +1,35 @@
-import React from "react";
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import AgencyAdminSidebar from "../../components/agency/Sidebar";
-import axiosInstance from "../../api/axiosInstance";
 import { formatDistanceToNow } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Menu,
-  User,
-  Home,
-  MessageSquare,
-  X,
-  Briefcase,
-  DollarSign,
-  BarChart2,
-  Users,
-  Settings,
-  UserCog,
-  ListChecks,
-  UserPlus,
-  CheckCircle,
-  Clock,
-  Star,
-  TrendingUp,
-  Shield,
-  ArrowLeft,
+    ArrowLeft,
+    BarChart2,
+    Briefcase,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Home,
+    ListChecks,
+    MessageSquare,
+    Settings,
+    Shield,
+    Star,
+    TrendingUp,
+    User,
+    UserCog,
+    UserPlus,
+    Users
 } from "lucide-react";
-import { useTheme } from "../../layouts/AppShell";
-import Card from "../../components/ui/Card";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance";
+import AgencyAdminSidebar from "../../components/agency/Sidebar";
 import StatCard from "../../components/StatCard";
+import Card from "../../components/ui/Card";
+import { SUBSCRIPTION_TIERS } from "../../config/subscriptionConfig"; // NEW: Import subscription config
+import { useAuth } from "../../context/AuthContext";
 import { useMessage } from "../../context/MessageContext";
 import { useSidebarState } from "../../hooks/useSidebarState";
-import { useAuth } from "../../context/AuthContext";
-import { SUBSCRIPTION_TIERS } from "../../config/subscriptionConfig"; // NEW: Import subscription config
+import { useTheme } from "../../layouts/AppShell";
 
 // Skeleton component for the Agency Dashboard (remains unchanged)
 const AgencyDashboardSkeleton = ({ darkMode }) => (
@@ -448,7 +445,7 @@ const AgencyDashboard = () => {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-4 md:px-0 min-h-screen flex flex-col`}
+      className={`${darkMode ? "bg-gray-900" : "bg-gray-50"} -mt-12 px-0 md:px-0 min-h-screen flex flex-col`}
     >
       <button
         onClick={handleBack}

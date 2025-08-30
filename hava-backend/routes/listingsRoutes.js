@@ -9,6 +9,7 @@ const {
   deleteListing,
   getPurchaseCategories,
   getFeaturedListings,
+  incrementViewCount
 } = require("../controllers/listingsController");
 
 // --- NEW: Import middleware ---
@@ -24,6 +25,7 @@ const {
 router.get("/categories", getPurchaseCategories);
 router.get("/featured", getFeaturedListings);
 router.get("/:id", getListingById);
+router.post("/:id/view", incrementViewCount);
 router.get("/", optionalAuthenticateToken, getAllListings);
 
 // Protected Routes (require authentication)

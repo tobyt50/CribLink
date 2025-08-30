@@ -1,17 +1,15 @@
-import React, { useState, useCallback } from "react"; // Added useState and useCallback back
-import { motion } from "framer-motion";
 import {
-  TrashIcon,
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ChatBubbleLeftRightIcon,
-  PhoneIcon, // Import PhoneIcon
-  StarIcon, // New import for VIP medal
-  UserCircleIcon, // New import for Regular medal
+    ChatBubbleLeftRightIcon,
+    CheckCircleIcon,
+    CheckIcon,
+    PencilIcon, // Import PhoneIcon
+    StarIcon,
+    TrashIcon, // New import for VIP medal
+    UserCircleIcon,
+    XCircleIcon,
+    XMarkIcon
 } from "@heroicons/react/24/outline";
+import { useCallback, useState } from "react"; // Added useState and useCallback back
 import Card from "../../components/ui/Card"; // Assuming Card component path is correct
 import { useTheme } from "../../layouts/AppShell"; // Ensure useTheme is imported correctly
 
@@ -37,11 +35,11 @@ const ClientCard = ({
   rejectAction,
   isPendingRequestCard = false,
   userRole, // Pass userRole to control button visibility
-  onFavoriteToggle, // New prop
-  isFavorited = false, // New prop
+  onFavouriteToggle, // New prop
+  isFavourited = false, // New prop
 }) => {
   const { darkMode } = useTheme(); // Use the hook directly
-  const [isHovered, setIsHovered] = useState(false); // State for favorite button hover
+  const [isHovered, setIsHovered] = useState(false); // State for favourite button hover
 
   const isEditing = editingNoteId === client.user_id; // Reverted to use editingNoteId prop
 
@@ -87,10 +85,10 @@ const ClientCard = ({
   const baseButtonClasses = `flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap h-6`;
   const iconOnlyButtonClasses = `flex items-center justify-center rounded-xl px-1.5 py-0.5 h-6 flex-shrink-0 text-[0.7rem]`;
 
-  const handleFavoriteClick = (e) => {
+  const handleFavouriteClick = (e) => {
     e.stopPropagation(); // Prevent card click from triggering
-    if (onFavoriteToggle) {
-      onFavoriteToggle(client.user_id, isFavorited);
+    if (onFavouriteToggle) {
+      onFavouriteToggle(client.user_id, isFavourited);
     }
   };
 
@@ -392,36 +390,35 @@ const ClientCard = ({
                 disabled={isAgencyAdmin}
               >
                 <TrashIcon className="h-4 w-4 mr-1" />
-                Disconnect
               </button>
             </div>
           )}
         </div>
         {/* Bookmark icon - always present at the bottom, aligned to the right */}
         <button
-          onClick={handleFavoriteClick}
+          onClick={handleFavouriteClick}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           className={`p-1 rounded-full transition-colors flex-shrink-0`}
-          title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+          title={isFavourited ? "Remove from Favourites" : "Add to Favourites"}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5 transition-all duration-200"
             viewBox="0 0 20 20"
             fill={
-              isFavorited || isHovered // If favorited OR hovered, it's blue
+              isFavourited || isHovered // If favourited OR hovered, it's blue
                 ? darkMode
                   ? "rgb(96, 165, 250)"
                   : "rgb(59, 130, 246)" // Tailwind blue-400/500
-                : "none" // Transparent fill when not favorited and not hovered
+                : "none" // Transparent fill when not favourited and not hovered
             }
             stroke={
-              isFavorited || isHovered // If favorited OR hovered, no stroke
+              isFavourited || isHovered // If favourited OR hovered, no stroke
                 ? "none"
-                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favorited and not hovered
+                : "rgb(156, 163, 175)" // Gray-400 for stroke when not favourited and not hovered
             }
-            strokeWidth={isFavorited || isHovered ? "0" : "1"}
+            strokeWidth={isFavourited || isHovered ? "0" : "1"}
           >
             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
           </svg>
