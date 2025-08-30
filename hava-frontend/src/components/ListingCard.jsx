@@ -417,7 +417,7 @@ function ListingCard({
     title={`${listing.view_count} views`}
   >
     <Eye
-      className="w-3 h-3 sm:w-4 sm:h-4"
+      className="w-3 -mr-1 md:mr-0 h-3 sm:w-4 sm:h-4"
       style={{
         color: isTrendingNow
           ? "#FFD700" // gold for Top Picks
